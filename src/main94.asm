@@ -70,4 +70,4 @@ Start	;($200). Power on: the Sega hardware init, then the checksum, then the gam
 	ENDIF
 	;94 has no jsr KillCrowd here (93 Start calls it after ValidationRoutine)
 
-	bra.w	Begin	;($76B8, hockey94_01). Last instruction of main94 ($306-$309). TeamData94 starts at $30A
+	bra.w	Begin	;($76B8). Last instruction of main94 ($306-$309). starts at $30A

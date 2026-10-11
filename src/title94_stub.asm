@@ -59,10 +59,10 @@ ColdIconMap = $F5D1C		;#x at $FF972
 vb2 = $15E4C			;#x at $FED70
 waitx = $11176			;jsr / jmp (x).l at $FEE32
 
-Credits = $5776			;#x at $FF224 (teamdata94)
-CreditsList = $57B8		;#x at $FF290 (teamdata94)
-ArenaGfxBank = $E9ED6		;dc.l x+n in ArenaAnims and TeamGfxList (graphics94)
-PlayoffSprite = $F3098		;#x+$12E0 at $FEDD2 (graphics94)
+Credits = $5776			;#x at $FF224
+CreditsList = $57B8		;#x at $FF290
+ArenaGfxBank = $E9ED6		;dc.l x+n in ArenaAnims and TeamGfxList
+PlayoffSprite = $F3098		;#x+$12E0 at $FEDD2
 
 ; Main segment code
 	include	title94.asm

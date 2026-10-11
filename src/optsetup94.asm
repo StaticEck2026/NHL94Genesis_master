@@ -1,12 +1,12 @@
 ; $0F739E  Adapted from hockey93.asm, expanded: game setup and options
 ;	NHL 94 (retail) segment $F739E-$F8B59
-;	The 94 game setup screen (93 hockey93_08 setoptions). 94 splits 93's setoptions: GameSetUp (called from PeriodOver) runs the menu
+;	The 94 game setup screen (93 setoptions). 94 splits 93's setoptions: GameSetUp (called from PeriodOver) runs the menu
 ;	and the start / demo exits, setoptions only builds the screen, and GameSetUp_2 waits for a pad (93 .top / .wait). The 93 setoptions
 ;	locals are 94 routines: MoveMenuFrame (.nms), GameSetUp_3 (.IncItem), WrapOption (.iilimit), PrintOptions (.ps), GameSetUp_4 (.psd),
 ;	PrintOptTeamName (.psdtp), SetFrameRect (.setrect), SetupDemo (.demo), SetupStart (.ex), OptionLimits (.pslim), OptionValueOffsets (.pl), OptionNames (.text).
 ;	94 adds the Goalies and User Records options (9 lines, 6 shown, scrolled by setupfirstline), Shootout, four way play, the team logo
 ;	blocks (DrawHomeBlock / DrawVisBlock) and player cards with user records (PlayerCardTimer, PlayerCardScreen). The 93 team block roster players
-;	(UpdateBothTeamDisplays ... AddTeamSpriteFrame) are not here (UpdateBothTeamDisplays is called in their place). VBlank_SetOptions is attract94; DefaultMenus, NewPO, MakeTree and
+;	(UpdateBothTeamDisplays ... AddTeamSpriteFrame) are not here (UpdateBothTeamDisplays is called in their place). VBlank_SetOptions; DefaultMenus, NewPO, MakeTree and
 ;	FigureJoy are hockey94_09. This range is in the 94 code at the end of the ROM, after the hot / cold player code (GetHotColdTotal) and
 ;	before wallcollduringcheck ($F8B5A).
 ;Transcribed from lst/nhl94.bin.lst lines 960187-963038. Global names are the (GameSetUp ... GameSetUp_4 are)
@@ -246,9 +246,9 @@ GameSetUp	;94 game setup screen, called from PeriodOver (93 PeriodOver called se
 	bsr.w	FixModeOptions
 	bra.w	.loop
 	rts	;no xref
-j_NewPO	;New playoffs: jmp NewPO (hockey94_09; 93 SelectRandomPlayoffTree). Called from GameSetUp and GameSetUp_3
+j_NewPO	;New playoffs: jmp NewPO (93 SelectRandomPlayoffTree). Called from GameSetUp and GameSetUp_3
 	jmp	NewPO
-GoContinuePlayoffs	;94 only. Continue playoffs: jmp ContinuePlayoffs (hockey94_09; 93 NewPO). Called from GameSetUp
+GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs (93 NewPO). Called from GameSetUp
 	jmp	ContinuePlayoffs
 MoveMenuFrame	;93 setoptions .nms: move the menu frame by d0 (+2 / -2 lines). 94 shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
 	;(0-3), setupprevline = the one before (sflags5 bit 2 set on a scroll; FixModeOptions reprints the names when they differ). Continue playoffs
@@ -347,7 +347,7 @@ MoveMenuFrame	;93 setoptions .nms: move the menu frame by d0 (+2 / -2 lines). 94
 	bsr.w	SetFrameRect	;the new frame
 	move.w	#$6000,(printa).w
 	jmp	Framer
-SetMenuArea	;94 only. Set the menu area for MoveMenuFrame: printx $10, printy $E, d0 = 23 x d1 = 13
+SetMenuArea	;Set the menu area for MoveMenuFrame: printx $10, printy $E, d0 = 23 x d1 = 13
 	jsr	(printz).l
 	String	-TXMAP1,$10,$E	;(and dropped a word)
 	move.w	#$17,d0
@@ -391,7 +391,7 @@ SetFrameRect	;93 setoptions .setrect: frame position for line d3 (row $E + d3 - 
 	moveq	#5,d1
 rtsSetup	;The shared rts; GameSetUp_3, GameSetUp_4, SetFrameRectUnused and WrapOption branch to it
 	rts
-FixModeOptions	;94 only. Fix the options a mode does not allow, then print them: Shootout and Demo set User Records Off, Demo sets both goalies to
+FixModeOptions	;Fix the options a mode does not allow, then print them: Shootout and Demo set User Records Off, Demo sets both goalies to
 	;Auto Control. Reprint the option names (PrintOptionNames) after a scroll, then the values (PrintOptions) in the setup font (sflags6 bit 3: printsmall
 	;uses setupfontchars). Called from GameSetUp
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -580,7 +580,7 @@ WrapOption	;93 setoptions .iilimit: d3 + d2, wrapped into d5 ... d4-1. Called fr
 	move.w	d5,d3
 	rts
 PrintOptions	;93 setoptions .ps: limit each option (GameSetUp_3 with d2 = 0) and print the lines shown (GameSetUp_4), the scroll marks (PrintScrollMarks),
-	;the team bitmaps (attract94 DrawMatchupBitmaps) and, unless a player card is up, reset the card timer (ResetCardTimer). Called from FixModeOptions
+	;the team bitmaps (DrawMatchupBitmaps) and, unless a player card is up, reset the card timer (ResetCardTimer). Called from FixModeOptions
 	move.w	d7,d6
 	moveq	#-2,d7
 .loop
@@ -641,7 +641,7 @@ GameSetUp_4	;93 setoptions.psd: print the value of option d7 at x $11 on its lin
 	adda.w	(a0),a0
 	dbf	d3,.loop
 	jmp	print
-PrintScrollMarks	;94 only. Print the scroll marks at x 2: '}' at row $19 when more lines follow (first line < 3), '{' at row $F when lines are above (first line > 0), else a space
+PrintScrollMarks	;Print the scroll marks at x 2: '}' at row $19 when more lines follow (first line < 3), '{' at row $F when lines are above (first line > 0), else a space
 	move.w	#$19,(printy).w
 	movea.l	#ScrollClearTxt,a1
 	cmpi.w	#3,(setupfirstline).w
@@ -725,21 +725,21 @@ PerLengthValues	;Per. Length
 	String	'10 Minutes          '
 	String	'20 Minutes          '
 	String	'30 Seconds          '
-GoaliesValues	;Goalies (94 only)
+GoaliesValues	;Goalies
 	String	'Manual Control      '
 	String	'Auto Control        '
 PenaltiesValues	;Penalties (93 'Off, Except fighting', 'On', 'On, Except Off-sides')
 	String	'Off                 '
 	String	'On                  '
 	String	'On, Except Off-sides'
-UserRecValues	;User Records (94 only), and the unread Team 1 / 2 entries
+UserRecValues	;User Records, and the unread Team 1 / 2 entries
 	String	'On                  '
 	String	'Off                 '
 LineChangeValues	;Line Changes (94 adds Auto)
 	String	'On                  '
 	String	'Off                 '
 	String	'Auto                '
-PrintOptionNames	;94 only. Print the option names from OptionNames at x 3, 2 rows apart from row $F - setupfirstline * 2, rows $F-$19 only (93 printed setoptions .text once). Called
+PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart from row $F - setupfirstline * 2, rows $F-$19 only (93 printed setoptions.text once).
 	;from
 	;GameSetUp and FixModeOptions
 	movem.l	d0-d1,-(sp)
@@ -980,7 +980,7 @@ SetupStart	;93 setoptions .ex: start. Copy Goalies to both teams, set pojoy (Set
 	bset	#0,(gmode2).w
 	jsr	(ClearShootout).l
 .1
-	jmp	maketree	;hockey94_09
+	jmp	maketree
 CheckNOPUnused	;no xref. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effect
 	tst.w	(OptNOP).w
 	beq.w	.x
@@ -993,7 +993,7 @@ CheckNOPUnused	;no xref. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effe
 	cmpi.w	#$A,(OptNOP).w
 .x
 	rts
-LoadSetupTiles	;and code. 94 only: load the TeamBitmaps+8 tiles from char 2 (where 93 setoptions called AddTeamBlock), then again remapped at
+LoadSetupTiles	;and code. load the TeamBitmaps+8 tiles from char 2 (where 93 setoptions called AddTeamBlock), then again remapped at
 	;teambitmapchars.
 	;Called
 	;from setoptions
@@ -1008,7 +1008,7 @@ LoadSetupTiles	;and code. 94 only: load the TeamBitmaps+8 tiles from char 2 (whe
 UpdateBothTeamDisplays	;An empty routine, called from GameSetUp_2 (93 bsr UpdateBothTeamDisplays). An unused rts follows
 	rts
 	rts
-EraseCard	;94 only. If a player card is up (setupcardflags bit 0, cleared here), clear both logo flags (bits 6 / 7) and erase the card: its logo
+EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear both logo flags (bits 6 / 7) and erase the card: its logo
 	;box and its 25 x 8 box. Called from DrawHomeBlock and DrawVisBlock
 	movem.l	d0-d7,-(sp)
 	bclr	#0,(setupcardflags).w
@@ -1049,7 +1049,7 @@ EraseCard	;94 only. If a player card is up (setupcardflags bit 0, cleared here),
 .x
 	movem.l	(sp)+,d0-d7
 	rts
-DrawHomeBlock	;94 only. Draw the home team block: the logo box (LogoBoxHome) and the HomeTeam logo (logoteam) at x $19, y 6. setupcardflags bit 2:
+DrawHomeBlock	;Draw the home team block: the logo box (LogoBoxHome) and the HomeTeam logo (logoteam) at x $19, y 6. setupcardflags bit 2
 	;home drawn, bit 6: home logo shown. Called from GameSetUp and GameSetUp_2
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	EraseCard
@@ -1070,7 +1070,7 @@ DrawHomeBlock	;94 only. Draw the home team block: the logo box (LogoBoxHome) and
 	String	-TXMAP1,0,0	;x3
 	move.w	#$19,(printx).w	;in the string
 	bra.w	DrawTeamLogo
-DrawVisBlock	;94 only. The same for the visitors: logo box (LogoBoxVis), logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
+DrawVisBlock	;The same for the visitors: logo box (LogoBoxVis), logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	EraseCard
 	bset	#3,(setupcardflags).w
@@ -1133,24 +1133,24 @@ DrawTeamLogo	;Draw the logo of team logoteam (TeamLogoBitmaps) at printx, y 6, 6
 	move.w	#$64,(palcount).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-TeamLogoBitmaps	;Team logo bitmaps by team number (TeamList order); also used by hockey94_07 GetTeamLogo
+TeamLogoBitmaps	;Team logo bitmaps by team number (TeamList order); also used by GetTeamLogo
 	dc.l	logoANH,logoBOS,logoBUF,logoCGY,logoCHI,logoDAL,logoDET,logoEDM
 	dc.l	logoFLA,logoHFD,logoLA,logoMTL,logoNJ,logoNYI,logoNYR,logoOTW
 	dc.l	logoPHI,logoPIT,logoQUE,logoSJ,logoSTL,logoTB,logoTOR,logoVAN
 	dc.l	logoWSH,logoWPG,logoASE,logoASW
-LogoBoxRight	;94 only. Logo box (LogoBoxMap, 8 x 8) at x $1C, y 5 with the logobox1chars tiles. Called from PlayerCardScreen
+LogoBoxRight	;Logo box (LogoBoxMap, 8 x 8) at x $1C, y 5 with the logobox1chars tiles. Called from PlayerCardScreen
 	move.w	(logobox1chars).w,d4
 	move.w	#$1C,(printx).w
 	bra.w	DrawLogoBox
-LogoBoxHome	;94 only. Logo box at x $18 (home block). Called from DrawHomeBlock
+LogoBoxHome	;Logo box at x $18 (home block). Called from DrawHomeBlock
 	move.w	(logobox1chars).w,d4
 	move.w	#$18,(printx).w
 	bra.w	DrawLogoBox
-LogoBoxLeft	;94 only. Logo box at x 3 with the logobox2chars tiles. Called from PlayerCardScreen
+LogoBoxLeft	;Logo box at x 3 with the logobox2chars tiles. Called from PlayerCardScreen
 	move.w	(logobox2chars).w,d4
 	move.w	#3,(printx).w
 	bra.w	DrawLogoBox
-LogoBoxVis	;94 only. Logo box at x 8 (visitors block). Called from DrawVisBlock
+LogoBoxVis	;Logo box at x 8 (visitors block). Called from DrawVisBlock
 	move.w	(logobox2chars).w,d4
 	move.w	#8,(printx).w
 DrawLogoBox	;Draw the LogoBoxMap box at printx, y 5 (sflags6 bit 0 set). Branched to from LogoBoxRight ... LogoBoxVis
@@ -1170,14 +1170,14 @@ DrawLogoBox	;Draw the LogoBoxMap box at printx, y 5 (sflags6 bit 0 set). Branche
 	jsr	(dobitmap).l
 	bclr	#0,(sflags6).w
 	rts
-ResetCardTimer	;94 only. Reset the player card timer cardtimer to $AA ($53 if C was pressed). Called from GameSetUp_2, PrintOptions and PlayerCardTimer
+ResetCardTimer	;Reset the player card timer cardtimer to $AA ($53 if C was pressed). Called from GameSetUp_2, PrintOptions and PlayerCardTimer
 	move.w	#$AA,(cardtimer).w
 	btst	#5,(setupcardflags).w
 	beq.w	.x
 	move.w	#$53,(cardtimer).w
 .x
 	rts
-PlayerCardTimer	;94 only. Player cards, called each frame from GameSetUp_2 in the first minute of its wait. When carddelay runs out set setupcardflags
+PlayerCardTimer	;Player cards, called each frame from GameSetUp_2 in the first minute of its wait. When carddelay runs out set setupcardflags
 	;bit 0; then count cardtimer down (C skips $50); at $52 switch sides (bit 1), forget the logos and draw the next card (PlayerCardScreen); below 0
 	;restart the timer (ResetCardTimer)
 	subq.w	#1,(carddelay).w
@@ -1208,7 +1208,7 @@ PlayerCardTimer	;94 only. Player cards, called each frame from GameSetUp_2 in th
 	rts
 .1
 	jmp	ResetCardTimer
-PlayerCardScreen	;94 only. Draw a player card on one side (setupcardflags bit 1: visitors on the left, else home on the right): erase the team block, a
+PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors on the left, else home on the right): erase the team block, a
 	;logo box, the picture of featured player featuredplayer (0-5, from the FeaturedPictures list of the team; next one after each visitors card), a
 	;framed box with the player's number and name, and with SRAM his user records (PrintRecordValue, PrintRecordHolder, PrintRecordVs; not matched yet). the
 	;routine at the last printz; the rest is with no label. Called from PlayerCardTimer

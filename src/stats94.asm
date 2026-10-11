@@ -2,13 +2,13 @@
 ;	NHL 94 (retail) segment $80D4-$9FCF
 ;	The stats screens, as 93 stats93: Scores (ShowScores), Line Editor, Team Roster, Scoring Summary, Penalty Summary, Player Stats /
 ;	Playoff Stats, Crowd Meter, the Timeout and goalie select menu items, and their helpers (SetupScreen, ExitAttributeScreen2,
-;	ReadAttributeNibble ... WaitVSyncAndReadInput). The screens are menu item handlers (the hockey94_11 menu lists) run from the pause menu (menu94).
+;	ReadAttributeNibble ... WaitVSyncAndReadInput). The screens are menu item handlers (the menu lists) run from the pause menu.
 ;	94 changes from 93: 94 RAM (PenSum, ScoreSum, VertLineScrolling ...), printz2 / printsmall for the small text, the OptLine line icon
 ;	entries (MenuIconPosTable-6, the byte before AttributeMenuTable), the crowd meter arena / league records (save RAM), GetDefenseStart and
 ;	ReloadRinkGraphics; the 93 Game Statistics screen is not here.
-;Transcribed from lst/nhl94.bin.lst lines 30583-34504. Global names are the 93 stats93 names where an auto name or no label, or where
+;Transcribed from lst/nhl94.bin.lst lines 30583-34504. Global names are the s where an auto name or no label, or where
 ;the routine is the 93 one (AttribRating, HandedTextTbl, WaitVSyncAndReadInput) ( unless generic, in an); kept
-;	names: PrintAttribHeader, getNameandAttrib, attribjmp. 94 only routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). Locals are the 93 stats93
+;	names: PrintAttribHeader, getNameandAttrib, attribjmp. New in 94 routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). Locals are the 93 stats93
 ;locals where the code matches, else named for what they do, with the unless generic, in an ;LineEditorMenu
 ;SelectAttributeItem and DisplayPlayerSelectMenu are 93 globals that as labels inside the routine before. written from the retail bytes
 ;the inline Strings after printz / printz2 / printbigz and the remap tables after DecompressGraphicsWithCallback, the
@@ -16,7 +16,7 @@
 ;	the data tables in their 93 form.
 
 ShowScores	;"Scores" screen: the other games of the night in gsstruct (DisplayGameInfo) over the Scores bitmap
-	;(ScoresMap, 93 name); up / down scroll, start exits (ExitAttributeScreen2). Menu item handler (hockey94_11 menu lists)
+	;(ScoresMap, 93 name); up / down scroll, start exits (ExitAttributeScreen2). Menu item handler (menu lists)
 	moveq	#6,d0
 	moveq	#$1A,d1
 	bsr.w	SetupScreen
@@ -875,7 +875,7 @@ PlayerStatMenuTxt	;Roster page titles; { } are the left / right arrows
 	String	'{ Power Play 2 }'
 	String	'{Penalty Kill 1}'
 	String	'{Penalty Kill 2 '
-GetNameandAttrib	;(93 GetNameandAttrib). Print player d0's name, then at x $1E the column d4 picks (attribjmp; above 2 a rating through CalcAttrib, high ROM). Saves d0-d4/a0-a1/a4-a5
+GetNameandAttrib	;Print player d0's name, then at x $1E the column d4 picks (attribjmp; above 2 a rating through CalcAttrib, high ROM). Saves d0-d4/a0-a1/a4-a5
 	movem.l	d0-d4/a0-a1/a4-a5,-(sp)
 	pea	.x(pc)
 	jsr	(getname).l
@@ -1916,7 +1916,7 @@ ExitAttributeScreen2	;Leave a stats screen: blank, then ReloadRinkGraphics
 	bsr.w	forceblack
 ReloadRinkGraphics	;93 ExitAttributeScreen2 after its forceblack (no 93 label): back to 32 cell mode and reload the rink (Rinktiles,
 	;or RevRinkTiles in a reverse angle replay), font, framer, EASN and team graphics. Falls out through setplayercolors. Also called from the
-	;replay code (hockey94_02)
+	;replay code
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	move.w	(VSCRLPM).w,d0
@@ -1950,7 +1950,7 @@ ReloadRinkGraphics	;93 ExitAttributeScreen2 after its forceblack (no 93 label): 
 	jsr	(setupIceRinkMap).l
 	jmp	setplayercolors
 TimeoutMenu	;Pause menu "Timeout" for team a2: switch the menu to PauseText2, show the team name, rest both teams
-	;(RestoreTeamEnergy, penalty94_2), wait $78 frames (waitx). Menu item handler
+	;(RestoreTeamEnergy), wait $78 frames (waitx). Menu item handler
 	subq.w	#1,(menuitem).w
 	subq.w	#1,(menuitem+2).w
 	move.l	#PauseText2,(menulist).l
@@ -2089,8 +2089,8 @@ ReadAttributeNibble	;d0 = goalies on team a2 (nibbles in the team data word at +
 	bne.s	.0
 	movem.l	(sp)+,d1/a0
 	rts
-GetDefenseStart	;94 only: d0 = goalies + forwards of team a2 (ReadAttributeNibble + ProcessNibble), the roster index of the
-	;first defenseman (roster order is goalies, forwards, defense). Called from the high ROM player cards (high94_2)
+GetDefenseStart	;d0 = goalies + forwards of team a2 (ReadAttributeNibble + ProcessNibble), the roster index of the
+	;first defenseman (roster order is goalies, forwards, defense). Called from the high ROM player cards
 	movem.l	a0,-(sp)
 	bsr.s	ReadAttributeNibble
 	move.w	d0,-(sp)

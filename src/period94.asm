@@ -4,14 +4,14 @@
 ;	(RunArenaAnim, AddArenaAnimSprite, ArenaAnims), the Period Stats and Game Statistics screens (PeriodStatsScreen, GameStatisticsScreen,
 ;	TeamStatTextTbl), the Manual Goalie menu item, ChooseSong, the shootout skate paths, the save RAM option and three stars
 ;	blocks, the player picture unpack (UnpackPicture), HiScoreScreen, newTitleScreen and the credits, clrTmPdst and chgplayer.
-;	94 only; 93 has no code here, except GameStatisticsScreen / DisplayTeamStatsScreen / FormatStatValue / TeamStatTextTbl (stats93).
+;	New in 94; 93 has no code here, except GameStatisticsScreen / DisplayTeamStatsScreen / FormatStatValue / TeamStatTextTbl.
 ;Transcribed from lst/nhl94.bin.lst lines 970645-976744. The names are kept; the names (sub_, loc_, unk_
 ;locret_) and the entries no label for are named for what they do, or the 93 name.
 ;Locals are in the 93 style (.x exit,.loop, numbered) with the unless generic, in an ;code as data at $FD6B4
 ;	$FD7D0, $FD8EC-$FE14B, $FE1D8, $FE4FC and $FEEA0: written from the retail bytes (the instructions and Strings), as are the
 ;Strings and remap table in newTitleScreen. The data tables are formatted from the retail bytes.
 
-EndShootout	;94 only. Shootout over (CountShootoutGoals, high94_2): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
+EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
 	;7-$B are set up (setplayer) above or below the view and get assscore (assinsert 7)
 	movem.l	d0-d7/a0-a6,-(sp)
 	bset	#2,(sflags2).w
@@ -89,8 +89,8 @@ PositionBoxes	;ClampPositionBox boxes: min / max of $44, then of $46, per positi
 	dc.w	$FFB5,0,0,$108,0,$4B,0,$108
 PositionBoxesTop	;ClampPositionBox boxes, top net
 	dc.w	$FFB5,0,$FEF8,0,0,$4B,$FEF8,0
-ClearGameStats	;94 only. Clear the game stats: shootoutstate (19 words), both team structs (HmShots, AwShots), PenBuf, BA_PS_flags, sflags4 / F8 /
-	;FA and setupcardflags / featuredplayer. Called from GameSetUp (hockey94_08)
+ClearGameStats	;Clear the game stats: shootoutstate (19 words), both team structs (HmShots, AwShots), PenBuf, BA_PS_flags, sflags4 / F8 /
+	;FA and setupcardflags / featuredplayer. Called from GameSetUp
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#shootoutstate,a0
 	moveq	#$12,d0
@@ -115,9 +115,9 @@ ClearGameStats	;94 only. Clear the game stats: shootoutstate (19 words), both te
 	clr.w	(featuredplayer).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-AddArenaAnimSprite	;94 only. Add the frame arenaframe of the arena animation (sprite list arenaspritelist, see RunArenaAnim) to the sprite table a6 (d6
+AddArenaAnimSprite	;Add the frame arenaframe of the arena animation (sprite list arenaspritelist, see RunArenaAnim) to the sprite table a6 (d6
 	;sprites, 64 at most) for the pieces inside the view (Hpos / Vpos). Not in a reverse angle replay (sflags4 bit 4), sflags2 bit 3 or sflags
-	;bit 7. Called from setvideo (video94_1)
+	;bit 7. Called from setvideo
 	tst.w	(arenaanim).w
 	bmi.w	.x2
 	tst.l	(arenaspritelist).w
@@ -206,8 +206,8 @@ AddArenaAnimSprite	;94 only. Add the frame arenaframe of the arena animation (sp
 	movem.l	(sp)+,d0-d5
 .x2
 	rts
-PrintPlayerNameRight	;94 only. Print the name of player d0 of team a2 (FormatPlayerName), moved left so it ends before column $29 (a trailing pad byte or
-	;two not counted), then the icon of HotColdIcon. Called from PrintMatchupRatings (hockey94_07)
+PrintPlayerNameRight	;Print the name of player d0 of team a2 (FormatPlayerName), moved left so it ends before column $29 (a trailing pad byte or
+	;two not counted), then the icon of HotColdIcon. Called from PrintMatchupRatings
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d0,(iconplayer).w
 	move.l	a2,-(sp)
@@ -244,7 +244,7 @@ SkipNameNumber	;nothing calls it (it as data). a1 = the FormatPlayerNameWithAttr
 	movem.l	(sp)+,d0-d7/a0/a2-a3
 	rts
 	String	' . '
-PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (hockey94_11 menu lists): both team logos
+PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (menu lists): both team logos
 	;(TeamLogoBitmaps, TeamLogoPalettes palettes), then the goals (matchup 0) or shots of each team by period ($342 / $34A of the team struct; OT when
 	;sflags7 bit 1) and the total. Left / right switch, start exits (ExitAttributeScreen2)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -433,7 +433,7 @@ PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (
 .13
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
-GameStatisticsScreen	;it as data; 93 name. "Game Statistics" menu item (hockey94_11 menu lists): both teams' totals
+GameStatisticsScreen	;it as data; 93 name. "Game Statistics" menu item (menu lists): both teams' totals
 	;(DisplayTeamStatsScreen). 94 has more rows than the screen: up / down scroll them (matchupvis the most, $70 or $30 without penalties,
 	;OptPen), start exits (ExitAttributeScreen2)
 	moveq	#9,d0
@@ -706,7 +706,7 @@ TeamStatTextTbl	;Label, then the team struct stat offset and the second offset (
 	dc.w	$000A
 	dc.b	'Passing',0
 	dc.w	$14,$12
-TeamStatTextTblNoPen	;94 only. The rows without the power play ones, used when penalties are off. 11 rows
+TeamStatTextTblNoPen	;The rows without the power play ones, used when penalties are off. 11 rows
 	dc.w	$0008
 	dc.b	'Score',0
 	dc.w	$C,$FFFF
@@ -742,8 +742,8 @@ TeamStatTextTblNoPen	;94 only. The rows without the power play ones, used when p
 	dc.w	$14,$12
 rtsStatTables	;rts after the stat tables (GameStatisticsScreen scroll step)
 	rts
-updatePPTeamTime	;(and comments). 94 only: one more second of power play time ($352 of the team struct) for the team on the power play
-	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime (penalty94_1)
+updatePPTeamTime	;(and comments). one more second of power play time ($352 of the team struct) for the team on the power play
+	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime
 	btst	#5,(sflags2).w	;check if PP
 	beq.w	.x	;branch if not
 	movea.l	#tmstruct,a2	;move home team struct into a2
@@ -754,7 +754,7 @@ updatePPTeamTime	;(and comments). 94 only: one more second of power play time ($
 	addq.w	#1,$352(a2)	;add 1 to PP team total
 .x
 	rts
-GetTeamRating	;94 only. d0 = the TeamRatings byte of team $28(a2). Called from PrintTeamRating (high94_2, the player card "Team Rating") and PrintMatchupRating (hockey94_07)
+GetTeamRating	;d0 = the TeamRatings byte of team $28(a2). Called from PrintTeamRating (the player card "Team Rating") and PrintMatchupRating
 	movem.l	d1-d7/a0-a6,-(sp)
 	move.w	Xvel(a2),d0
 	movea.l	#TeamRatings,a0
@@ -766,7 +766,7 @@ GetTeamRating	;94 only. d0 = the TeamRatings byte of team $28(a2). Called from P
 TeamRatings	;GetTeamRating values, one byte per team (TeamList order)
 	dc.b	$33,$4C,$49,$4B,$4E,$43,$4B,$43,$34,$42,$4A,$49,$44,$42
 	dc.b	$4A,$37,$45,$4B,$47,$38,$45,$38,$48,$47,$48,$46,$5B,$59
-ShortenMsgTimer	;94 only. Cap msgtimer at 2, unless a second pad is on (cont2team) and a3 is not the puck carrier. Called from doinput (logic94_1)
+ShortenMsgTimer	;Cap msgtimer at 2, unless a second pad is on (cont2team) and a3 is not the puck carrier. Called from doinput
 	movem.l	d0,-(sp)
 	tst.w	(cont2team).w
 	beq.w	.0

@@ -42,7 +42,7 @@ StartArenaAnim = $FE510		;jsr / jmp (x).l at $18966
 PrintPlayerAssists = $FEAE4		;jsr / jmp (x).l at $189DC
 PrintPlayerGoals = $FEAFA		;jsr / jmp (x).l at $189A0
 
-InitTeamSructure = $171BE	;hockey94_06 label. The line editor menus have dc.l InitTeamSructure+$10 (retail $171CE)
+InitTeamSructure = $171BE	;The line editor menus have dc.l InitTeamSructure+$10
 ReplayMode = $9FD0		;dc.l in the menu lists, retail value. hockey94_02
 assbench = $C710			;dc.l in asstab, retail value. logic94_2
 assbreakaway = $E6CE		;dc.l in asstab, retail value. logic94_4

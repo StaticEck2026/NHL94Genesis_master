@@ -1,8 +1,8 @@
 ; $01A050  Adapted from sram93.asm: save data
 ;	NHL 94 (retail) segment $1A050-$1A263
-;	94 only (93 sram93 drives a serial EEPROM): the battery save RAM. 94 keeps $2000 bytes on the odd bytes at $200000, copies
+;	New in 94 (93 drives a serial EEPROM): the battery save RAM. 94 keeps $2000 bytes on the odd bytes at $200000, copies
 ;	them to M68K_RAM at power on (InitSaveRAM) and protects them with a sum / complement checksum in bytes $1FFE-$1FFF.
-;	InitSaveRAM, VBcount, ValidateSRAM, ClearSRAM, WriteSRAM, MakeSRAMChecksum, ReadSRAM; p_turnoff (sound94) follows at $1A264.
+;	InitSaveRAM, VBcount, ValidateSRAM, ClearSRAM, WriteSRAM, MakeSRAMChecksum, ReadSRAM; p_turnoff follows at $1A264.
 ;Transcribed from lst/nhl94.bin.lst lines 61322-61528. Global names are the locals are the names
 ;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ;No
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp;
@@ -79,7 +79,7 @@ InitSaveRAM	;Called from Begin. Copy the $2000 byte save RAM (the odd bytes at $
 	move.w	#$E0,d3	;green
 	move.w	#$20,d4
 	bra.s	.loadcolor	;branch (screen flashes green)
-SRAMWaitVblank	;94 only. Wait for the next vblank (vcountwait, 93 MenuWaitVblank). Called from InitSaveRAM
+SRAMWaitVblank	;Wait for the next vblank (vcountwait, 93 MenuWaitVblank). Called from InitSaveRAM
 	jsr	(vcountwait).l
 	rts
 VBcount	;vbint handler while InitSaveRAM runs: vcount + 1 only

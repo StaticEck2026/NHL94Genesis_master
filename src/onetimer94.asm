@@ -2,15 +2,15 @@
 ;	NHL 94 (retail) segment $F66EE-$F739D
 ;	94 code in the high ROM, after the graphics: the one-timer (puckvzadj, OneTimerPass / OneTimerTarget pass target, assonetimer,
 ;	setonetimeranim, onetimershot), the 4 way play adaptor test (Detect4WayPlay), the crowd meter (LoadCrowdRec, Crowd_Noise),
-;	stopna2, the 94 corner wall check (checkcornercoll94, cornercollb94), the hot / cold tables (Create_HotCold_Table, AttributeCalc) and the
-;	hot / cold player lists for the MATCHUPS text (NextHomeHotPlayer ... GetHotColdTotal). 94 only; 93 has no code here.
+;	stopna2, the 94 corner wall check, the hot / cold tables (Create_HotCold_Table, AttributeCalc) and the
+;	hot / cold player lists for the MATCHUPS text (NextHomeHotPlayer ... GetHotColdTotal). New in 94; 93 has no code here.
 ;Transcribed from lst/nhl94.bin.lst lines 958869-960186. Names and most comments are the (this is
 ;commented); names and the are named for what the
 ;code does. written from the retail bytes: unused code as dc.b (Read4WayPad1
 ;Read4WayPad4, Set4WayPlayer, Clamp0to100 and three rts), and labels for the branches as $F66FC / $F6772 / *+4. Locals
 ;are named for what they do (the locals keep their name), with the unless generic, in an
 
-puckvzadj	;94 only: set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot (logic94_1)
+puckvzadj	;set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(pucky).w,d0	;move pucky into d0
 	bpl.w	.dist	;branch if positive
@@ -61,8 +61,8 @@ puckvzadj	;94 only: set puckvz for a top shelf shot from the distance to the goa
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-OneTimerPass	;94 only. One-timer pass: puckvz = sqrt(12 * onetimerheight), then puckvx / puckvy toward the target onetimertargetx / onetimertargety in puckvz
-	;/ 3 frames; flip the puck (puckflip, a3 = the puck at puckx). Called from passmode (logic94_1)
+OneTimerPass	;One-timer pass: puckvz = sqrt(12 * onetimerheight), then puckvx / puckvy toward the target onetimertargetx / onetimertargety in puckvz
+	;/ 3 frames; flip the puck (puckflip, a3 = the puck at puckx). Called from passmode
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$C,d0
 	move.w	(onetimerheight).w,d1
@@ -95,7 +95,7 @@ OneTimerPass	;94 only. One-timer pass: puckvz = sqrt(12 * onetimerheight), then 
 	jsr	(puckflip).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-OneTimerTarget	;94 only. One-timer pass target for receiver a3: an offset by facing from OneTimerNearTbl / OneTimerFarTbl (skater, near or far from the goal)
+OneTimerTarget	;One-timer pass target for receiver a3: an offset by facing from OneTimerNearTbl / OneTimerFarTbl (skater, near or far from the goal)
 	;or OneTimerGoalieTbl (goalie), +-10 at random, into onetimertargetx / onetimertargety; sflags6 bit 2 = near. Called from passmode
 	movem.l	d0-d7/a0-a6,-(sp)
 	bclr	#2,(sflags6).w
@@ -179,7 +179,7 @@ OneTimerFarTbl	;OneTimerTarget target offsets (x, y) by facing, receiver far fro
 OneTimerGoalieTbl	;OneTimerTarget target offsets (x, y) by facing, goalie
 	dc.w	$FFFB,$FFF7,$32,$FFF7,$32,$FFF7,$32,$FFF7
 	dc.w	$FFFB,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7
-assonetimer	;(and comments). 94 only: assignment $23 (asstab, hockey94_11), player a3 shooting a one-timer: take control of him
+assonetimer	;(and comments). assignment $23 (asstab), player a3 shooting a one-timer: take control of him
 	;(setc1player / setc2player, also for pads 3 and 4), start the animation (setonetimeranim), then shoot when the puck arrives (EndOneTimer)
 	bclr	#1,pflags(a3)	;pfna - clear new assignment
 	beq.w	.checkxpos	;branch if not new assignment
@@ -380,7 +380,7 @@ assonetimer	;(and comments). 94 only: assignment $23 (asstab, hockey94_11), play
 	jsr	(EndOneTimer).l
 .ex
 	rts
-setonetimeranim	;94 only: the one-timer animation: d1 = $7FC or $92E from the angle to the goal (vtoa, CheckOneTimerFacing)
+setonetimeranim	;the one-timer animation: d1 = $7FC or $92E from the angle to the goal (vtoa, CheckOneTimerFacing)
 	move.w	#$7FC,d1
 	movem.w	d0-d1,-(sp)	;push to stack d0 and d1
 	move.w	(a3),d0	;move XPos of a3 into d0
@@ -398,8 +398,7 @@ setonetimeranim	;94 only: the one-timer animation: d1 = $7FC or $92E from the an
 	move.w	#$92E,d1
 .ex
 	rts
-PuckOnAttackHalf	;94 only. d0 = 1 when the puck is on the half of the goal player a3 shoots at, else 0 (the code after the bra is never used). Called from doinput (logic94_1) and
-	;logic94_4
+PuckOnAttackHalf	;d0 = 1 when the puck is on the half of the goal player a3 shoots at, else 0 (the code after the bra is never used). Called from doinput and
 	movem.w	d0-d1,-(sp)
 	move.w	(pucky).w,d0
 	btst	#7,pflags(a3)	;pfgoal - check which goal shooting at
@@ -439,8 +438,8 @@ PuckOnAttackHalf	;94 only. d0 = 1 when the puck is on the half of the goal playe
 .ex
 	movem.w	(sp)+,d0-d1
 	rts
-onetimershot	;(and comments). 94 only: do the one-timer shot (doshot), credit the last two passers as the assists, add to crowdlevel /
-	;CwdExciteLvl and to the one-timer attempts ($35C of the team struct). Called from puckstick (hockey94_05)
+onetimershot	;(and comments). do the one-timer shot (doshot), credit the last two passers as the assists, add to crowdlevel /
+	;CwdExciteLvl and to the one-timer attempts ($35C of the team struct). Called from puckstick
 	move.w	#4,(passdir).w
 	jsr	(doshot).l
 	movem.l	d0/a0,-(sp)
@@ -463,7 +462,7 @@ onetimershot	;(and comments). 94 only: do the one-timer shot (doshot), credit th
 	bset	#1,pflags2(a3)	;set animation in progress
 	bset	#1,(sflags6).w	;set bit 1
 	rts
-CheckOneTimerFacing	;94 only, called from setonetimeranim. it does nothing, d0 and d1 are restored at the end; it seems meant to
+CheckOneTimerFacing	;called from setonetimeranim. it does nothing, d0 and d1 are restored at the end; it seems meant to
 	;change the way the one-timer player faces
 	movem.w	d0-d1,-(sp)	;push d0 and d1 on stack
 	neg.w	d0	;negate d0

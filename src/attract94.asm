@@ -1,7 +1,7 @@
 ; $017A18  NEW in 94: EA Sports attract screen
 ;	NHL 94 (retail) segment $17A18-$17C71
-;	94 only: the EA Sports screen (EASportsScreen, called from Begin) and the 94 helpers after it, then the
-;	93 setoptions vblank handler (93 hockey93_08 VBlank_SetOptions). 94 put this code just
+;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and the 94 helpers after it, then the
+;	93 setoptions vblank handler (93 VBlank_SetOptions). 94 put this code just
 ;before that handler, so the handler ends this segment and DefaultMenus ($17C72
 ;	hockey94_09) follows. HiScoreScreen ($FED70) is not next to this code and is not in this segment.
 ;Transcribed from lst/nhl94.bin.lst lines 54528-54846. $17B98-$17C41 as dc.b; it is code with
@@ -10,7 +10,7 @@
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself).
 
-EASportsScreen	;94 only. Called from Begin. Show the EA Sports screen until a button, or $50 x 4 frames (about 5 s)
+EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or $50 x 4 frames (about 5 s)
 	move.l	#vb2,(vbint).w	;vblank handler
 	bclr	#1,(disflags).w
 	move.w	#5,(Map3col1).w
@@ -55,7 +55,7 @@ EASportsScreen	;94 only. Called from Begin. Show the EA Sports screen until a bu
 .ex	move	#$2700,sr
 	rts
 
-SetPojoyMode	;94 only. Set pojoy from the number of players for play modes 2 and 3. Called from $F844A
+SetPojoyMode	;Set pojoy from the number of players for play modes 2 and 3. Called from $F844A
 	cmpi.w	#2,(OptPlayMode).w
 	blt.w	rtss2
 	cmpi.w	#4,(OptPlayMode).w
@@ -68,7 +68,7 @@ SetPojoyMode	;94 only. Set pojoy from the number of players for play modes 2 and
 	move.w	d0,(pojoy).w
 	rts
 
-DrawMatchupBitmaps	;94 only. Called from PrintOptions. Draw the VisTeam and HomeTeam bitmaps (DrawTeamBitmap)
+DrawMatchupBitmaps	;Called from PrintOptions. Draw the VisTeam and HomeTeam bitmaps (DrawTeamBitmap)
 	movem.l	d0-d7/a0-a2,-(sp)
 	cmpi.w	#4,(OptPlayMode).w
 	beq.w	.opt
@@ -100,7 +100,7 @@ DrawMatchupBitmaps	;94 only. Called from PrintOptions. Draw the VisTeam and Home
 	movem.l	(sp)+,d0-d7/a0-a2
 	rts
 
-DrawTeamBitmap	;94 only. dobitmap entry d1 of TeamBitmaps (d4 from the caller)
+DrawTeamBitmap	;dobitmap entry d1 of TeamBitmaps (d4 from the caller)
 	clr.w	d0
 	asl.w	#1,d1
 	movea.l	#TeamBitmaps,a0
@@ -113,7 +113,7 @@ DrawTeamBitmap	;94 only. dobitmap entry d1 of TeamBitmaps (d4 from the caller)
 	moveq	#0,d5
 	bra.w	dobitmap
 
-dotb	;94 only, no xref. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
+dotb	;no xref. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
 	clr.w	d0
 	asl.w	#1,d1
 	movea.l	#Teamblocksmap,a0
@@ -127,14 +127,14 @@ dotb	;94 only, no xref. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
 	moveq	#2,d5
 	bra.w	dobitmap
 
-ClearOptionDisplay	;94 only, no xref. Set the print position, then erase 12 x 2 at it
+ClearOptionDisplay	;no xref. Set the print position, then erase 12 x 2 at it
 	bsr.w	setoptions_printpos2
 	moveq	#$C,d0			;12
 	moveq	#2,d1			;2
 	move.w	#$7FF,d2
 	bra.w	eraser
 
-setoptions_printpos2	;94 only. printz position string, then printx = $1A when a2 is the home team
+setoptions_printpos2	;printz position string, then printx = $1A when a2 is the home team
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),2,$A,0
 	cmpa.w	#(tmstruct-M68K_RAM),a2	;home team struct?
@@ -142,7 +142,7 @@ setoptions_printpos2	;94 only. printz position string, then printx = $1A when a2
 	move.w	#$1A,(printx).w
 	rts
 
-SetGoalieMode	;94 only, no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
+SetGoalieMode	;no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
 	;a value from the team's .sodds
 	movem.l	d0/a0,-(sp)
 	clr.w	$26(a2)
@@ -160,7 +160,7 @@ SetGoalieMode	;94 only, no xref. $26(a2) = 0 if a pad has team a2, else (gamelev
 	bgt.w	.set
 	tst.w	(OptLine).w
 	bne.w	.set
-	movea.w	#$30E,a0		;TeamList (teamdata94)
+	movea.w	#$30E,a0		;TeamList
 	move.w	(a2),d0
 	asl.w	#2,d0
 	movea.l	0(a0,d0.w),a0		;team block
@@ -172,7 +172,7 @@ SetGoalieMode	;94 only, no xref. $26(a2) = 0 if a pad has team a2, else (gamelev
 .x	movem.l	(sp)+,d0/a0
 	rts
 
-VBlank_SetOptions	;93 hockey93_08 name: vbint handler stored by setoptions (also ROM $FB024).
+VBlank_SetOptions	;vbint handler stored by setoptions.
 	;92 vb2 (cramfade unless dfng), plus DumpSprites2 when dfok is set
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w		;dfng

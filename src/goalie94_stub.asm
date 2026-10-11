@@ -20,7 +20,7 @@ DoDMA_clearCallbackPointer = $11738	;jsr / jmp (x).l at $FE2FE
 setc1player = $C0BC		;jsr / jmp (x).l at $FE280
 setc2player = $C0DA		;jsr / jmp (x).l at $FE2BC
 
-ArenaGfxBank = $E9ED6		;dc.l x+n in ArenaAnims and TeamGfxList (graphics94)
+ArenaGfxBank = $E9ED6		;dc.l x+n in ArenaAnims and TeamGfxList
 
 ; Main segment code
 	include	goalie94.asm

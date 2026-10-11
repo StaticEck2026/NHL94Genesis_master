@@ -1,7 +1,7 @@
 ; $00B0E8  Adapted from logic93.asm: controller input and line changes
 ;	NHL 94 (retail) segment $B0E8-$C70F
 ;	92 Logic.Asm part 1, as 93 logic93_1.asm: controller input for skaters (doinput ... setpads) and
-;	check4bench. assbench (logic94_2) follows at $C710.
+;	check4bench. assbench follows at $C710.
 ;Transcribed from lst/nhl94.bin.lst lines 35886-37885. Global names are the which are the
 ;92 / 93 names here, except SetLCmode2, setpads and restorepl.
 ;Local labels are the names (_x ->.x, loop ->.loop, even ->.even) or the
@@ -388,7 +388,7 @@ ClampTargetY
 .2
 	sub.w	d3,d1
 	rts
-	;$B602: 10 SPA offsets (frames94), no reference in the listing: SPAgglover, SPAgglovel, SPAgstackr, SPAgstackl,
+	;$B602: 10 SPA offsets, no reference in the listing: SPAgglover, SPAgglovel, SPAgstackr, SPAgstackl
 	;SPAgstickr, SPAgstickl (93 goalie saves), then the 94 tables SPAghighr, SPAghighl, SPAgstick2r, SPAgstick2l
 	dc.w	$0146,$0178,$0250,$02A2,$01EC,$021E,$148E,$14C0,$14F2,$1544
 doinput_chkanim	;Global: doinput branches here across ClampTargetY
@@ -1226,7 +1226,7 @@ setc2player
 .ex
 	rts
 ; d1 = old player
-restorepl	;(93 restorepl)
+restorepl
 	movea.w	#(SortCords-M68K_RAM),a0
 	tst.w	d1
 	blt.w	.spd

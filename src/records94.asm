@@ -1,5 +1,5 @@
 ; $0FBB88  NEW in 94: name entry and record holders
-UserNameEntry	;94 only. With user records on (OptUserRec 0): the name entry (NameEntryScreen) for the pads in use. Called from PeriodOver (hockey94_06)
+UserNameEntry	;With user records on (OptUserRec 0): the name entry (NameEntryScreen) for the pads in use. Called from PeriodOver
 	tst.w	(OptUserRec).w
 	bne.w	.x
 	clr.w	(homeuser).w
@@ -22,7 +22,7 @@ UserNameEntry	;94 only. With user records on (OptUserRec 0): the name entry (Nam
 	jsr	(NameEntryScreen).l
 .x
 	rts
-SkipOtherUserName	;94 only. Name entry: step the selection namelogsel past the name the other pad picked (homeuser / awayuser), in the direction on the stack
+SkipOtherUserName	;Name entry: step the selection namelogsel past the name the other pad picked (homeuser / awayuser), in the direction on the stack
 	movem.w	d0,-(sp)
 	move.w	(awayuser).w,d0
 	tst.w	(nameentryvis).w
@@ -41,7 +41,7 @@ SkipOtherUserName	;94 only. Name entry: step the selection namelogsel past the n
 .x
 	movem.w	(sp)+,d0
 	rts
-RecordHoldersScreen	;"Record Holders" menu item (hockey94_11 menu lists): the save RAM record holders (PrintRecordTitles ... ReadTeamRecords)
+RecordHoldersScreen	;"Record Holders" menu item (menu lists): the save RAM record holders (PrintRecordTitles ... ReadTeamRecords)
 	move.w	#0,d0
 	move.w	#$1A,d1
 	jsr	(SetupScreen).l
@@ -133,11 +133,11 @@ RecordHoldersScreen	;"Record Holders" menu item (hockey94_11 menu lists): the sa
 	bra.w	.loop
 	dc.b	$4E	;N
 	dc.b	$75	;u
-PrintRecordPage	;94 only. Record Holders: print page TempWord1 (0: PrintWinRecords, else PrintPlayerRecords)
+PrintRecordPage	;Record Holders: print page TempWord1 (0: PrintWinRecords, else PrintPlayerRecords)
 	tst.w	(TempWord1).w
 	beq.w	PrintWinRecords
 	bra.w	PrintPlayerRecords
-PrintRecordTitles	;94 only. Record Holders: the record titles (WinRecTitles, GoalRecTitles, SaveRecTitles)
+PrintRecordTitles	;Record Holders: the record titles (WinRecTitles, GoalRecTitles, SaveRecTitles)
 	movea.l	#WinRecTitles,a1
 	tst.w	(TempWord1).w
 	beq.w	.0
@@ -306,7 +306,7 @@ SaveRecTitles	dc.b	0	;PrintRecordTitles Strings
 	dc.b	$72	;r
 	dc.b	$65	;e
 	dc.b	$20,$20,$F9,0
-PrintWinRecords	;94 only. Record Holders: the rows (PrintRecordName)
+PrintWinRecords	;Record Holders: the rows (PrintRecordName)
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printsmallz).l
 	String	CC_SetMapAndPosition,4,2,2,$A,CC_SetFont,0
@@ -370,7 +370,7 @@ PrintWinRecords	;94 only. Record Holders: the rows (PrintRecordName)
 	dbf	d7,.loop
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ClearRecordArea	;94 only. Record Holders: erase the record rows ($28 x $12), keeping printx / printy / printm
+ClearRecordArea	;Record Holders: erase the record rows ($28 x $12), keeping printx / printy / printm
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(printx).w,-(sp)
 	move.w	(printy).w,-(sp)
@@ -477,7 +477,7 @@ RecHolderVsTxt	dc.b	0	;PrintPlayerRecords data
 	dc.b	$73	;s
 	dc.b	$2E	;.
 	dc.b	$20,0
-PrintRecordName	;94 only. Record Holders: print a value (AppendUserName)
+PrintRecordName	;Record Holders: print a value (AppendUserName)
 	move.w	d7,-(sp)
 	neg.w	d7
 	addq.w	#7,d7
@@ -496,7 +496,7 @@ PrintRecordName	;94 only. Record Holders: print a value (AppendUserName)
 	bclr	#7,(sflags6).w
 	bsr.w	AppendUserName
 	jmp	printsmall
-CalcWinPercents	;94 only. Record Holders: for the 8 user record blocks at ThreeStars, the win % (winpcts), games (wingames) and ties (winties), then sort the rows (winsort)
+CalcWinPercents	;Record Holders: for the 8 user record blocks at ThreeStars, the win % (winpcts), games (wingames) and ties (winties), then sort the rows (winsort)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#ThreeStars,a0
 	movea.l	#winpcts,a1
@@ -580,7 +580,7 @@ CalcWinPercents	;94 only. Record Holders: for the 8 user record blocks at ThreeS
 	movea.l	(sp)+,a1
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ReadTeamRecords	;94 only. Record Holders: read the records (ReadSRAM)
+ReadTeamRecords	;Record Holders: read the records (ReadSRAM)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	#$D20,d0
 	move.l	#$80,d1
@@ -632,7 +632,7 @@ ReadTeamRecords	;94 only. Record Holders: read the records (ReadSRAM)
 	movea.l	(sp)+,a1
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round. Jumped to from PenaltyShotBox (hockey94_10)
+PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round. Jumped to from PenaltyShotBox
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l

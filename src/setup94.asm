@@ -4,8 +4,8 @@
 ;	94-only tile reloads (ReloadEnergyBarTiles ... ReloadFaceOffMap), setupTeamBlocksMap, CopyTeamBlockMapData, defaultsprites, defaultsprites2,
 ;	SprSort, resetplstuff, clearTeamStats, setteams, InitTeamSructure, setplayercolors, PeriodOver, IntermissionStart, GameOver,
 ;	ExitToOpening, Opening, Opening2, PlayoffScreen and its helpers, PlayoffScreenText, then the 94-only text player
-;	(StartScoutText, ScoutTextPlayer, ScoutTextNextLine) that ScoutingReport (hockey94_07) uses. EASportsScreen (attract94) follows at $17A18.
-;	There is no 93 ScoutingReport (hockey93_07) here: the listing has no ScoutingReport label.
+;	(StartScoutText, ScoutTextPlayer, ScoutTextNextLine) that ScoutingReport uses. EASportsScreen follows at $17A18.
+;	There is no 93 ScoutingReport here: the listing has no ScoutingReport label.
 ;Transcribed from lst/nhl94.bin.lst lines 53022-54525. Global names are the or the 93 name where an auto
 ;name or where the routine is the 93 one (setplayercolors). Local labels are the names (_x ->.x) or the 93
 ;local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
@@ -45,12 +45,12 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	clr.w	d4
 	move.w	d4,(rinkvrcset).w
 	movea.l	#Rinktiles,a2
-	btst	#4,(sflags4).w	;94 only: reverse angle replay
+	btst	#4,(sflags4).w	;reverse angle replay
 	beq.w	.0	;branch if not
 	movea.l	#RevRinkTiles,a2
 .0
 	bsr.w	DoDMA_clearCallbackPointer
-	jsr	(LoadHomeTeamGfx).l	;94 only
+	jsr	(LoadHomeTeamGfx).l
 	move.w	d4,(EASNcset).w	;93 EASNcset
 	bsr.w	setupEASNmap
 	move.w	d4,(energybarchars).w	;energy bar chars
@@ -112,14 +112,14 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	move.l	a5,(DMAlistend).w
 	bsr.w	DoDMAList
 	move.w	(sp)+,(disflags).w
-	move.l	#VBlank,(vbint).w	;video94_1
+	move.l	#VBlank,(vbint).w
 	bclr	#dfok,(disflags).w
 	bclr	#dfng,(disflags).w
 	move	#$2300,sr
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 setupice_highlight	;Rebuild the rink sprites after a highlight replay without reloading tiles, then fade in. Uses the
-	;sprite char start saved by setupice in spritechars. Called from StartHL2 (penalty94_2)
+	;sprite char start saved by setupice in spritechars. Called from StartHL2
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	forceblack
 	bclr	#sfpz,(sflags).w
@@ -171,7 +171,7 @@ setupice_highlight	;Rebuild the rink sprites after a highlight replay without re
 	bsr.w	DoDMAList
 	move.w	#$1C,(palcount).w
 	move.w	(sp)+,(disflags).w
-	move.l	#VBlank,(vbint).w	;video94_1
+	move.l	#VBlank,(vbint).w
 	bclr	#dfok,(disflags).w
 	bclr	#dfng,(disflags).w
 	move	#$2300,sr
@@ -186,33 +186,33 @@ setupIceRinkMap	;Copy the ice rink palettes (pal 0&1, 16 longs) to palfadenew. C
 	move.l	(a0)+,(a1)+
 	dbf	d0,.ipal
 	rts
-setupEASNmap	;Decompress the easn logo tiles (EASNmap+8, 93 name) to vram at EASNcset. Called from setupice, setupice_highlight and hockey94_02
+setupEASNmap	;Decompress the easn logo tiles (EASNmap+8, 93 name) to vram at EASNcset. Called from setupice, setupice_highlight
 	move.w	(EASNcset).w,d4
 	movea.l	#EASNmap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
 	dc.l	$71234567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
 	rts
-ReloadEnergyBarTiles	;94 only. Reload the energy bar tiles (EnergyBarMap+8) at energybarchars. Called from the replay code (hockey94_02) and ReloadRinkGraphics
+ReloadEnergyBarTiles	;Reload the energy bar tiles (EnergyBarMap+8) at energybarchars. Called from the replay code and ReloadRinkGraphics
 	move.w	(energybarchars).w,d4
 	movea.l	#EnergyBarMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-ReloadCrowdTiles	;94 only. Reload the crowd tiles (CrowdFrameList+8) at gamesetuptilesetindex. Called from the replay code and ReloadRinkGraphics
+ReloadCrowdTiles	;Reload the crowd tiles (CrowdFrameList+8) at gamesetuptilesetindex. Called from the replay code and ReloadRinkGraphics
 	move.w	(gamesetuptilesetindex).w,d4
 	movea.l	#CrowdFrameList+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-ReloadRefHorTiles	;94 only. Reload the horizontal ref tiles (RefMap2+8, 93 name) at ExtraChars. Called from PauseMode
+ReloadRefHorTiles	;Reload the horizontal ref tiles (RefMap2+8, 93 name) at ExtraChars. Called from PauseMode
 	move.w	(ExtraChars).w,d4
 	movea.l	#RefMap2+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-ReloadRefTiles	;94 only. Reload the ref tiles (RefsMap+8, 93 name) at ExtraChars. Called from the replay code (hockey94_02)
+ReloadRefTiles	;Reload the ref tiles (RefsMap+8, 93 name) at ExtraChars. Called from the replay code
 	move.w	(ExtraChars).w,d4
 	movea.l	#RefsMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-ReloadFaceOffTiles	;94 only. Reload the face off tiles (FaceOffSprites+8, 93 name) at faceoffvrcset. Called from the replay code
+ReloadFaceOffTiles	;Reload the face off tiles (FaceOffSprites+8, 93 name) at faceoffvrcset. Called from the replay code
 	move.w	(faceoffvrcset).w,d4
 	movea.l	#FaceOffSprites+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-ReloadFaceOffMap	;94 only. Reload the FaceOffMap+8 tiles at ExtraChars. Called from the replay code (hockey94_02)
+ReloadFaceOffMap	;Reload the FaceOffMap+8 tiles at ExtraChars. Called from the replay code
 	move.w	(ExtraChars).w,d4
 	movea.l	#FaceOffMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
@@ -663,7 +663,7 @@ clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 byt
 	move.w	(sp)+,(tmstruct+tmgoalie).w
 	st	(tmstruct+tmpdst+$34).w
 	st	(AwShots+tmpdst+$34).w
-setteams	;Use hometeam/visteam to set team structures (InitTeamSructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps (attract94)
+setteams	;Use hometeam/visteam to set team structures (InitTeamSructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps
 	movem.l	d0/a0-a2,-(sp)
 	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(HomeTeam).w,d0
@@ -722,7 +722,7 @@ setplayercolors	;Copy in correct color data for each team:.team for the home tea
 	move.l	(a2)+,(a1)+
 	dbf	d0,.loop
 	rts
-PeriodOver	;what to do if period over. Branched to from puckfaceoff (logic94_4) when the clock runs out. After period 3 a tied game goes to
+PeriodOver	;what to do if period over. Branched to from puckfaceoff when the clock runs out. After period 3 a tied game goes to
 	;overtime (gsp 3), else the game is over (gsp 4); after overtime only a tied playoff game plays on. Falls into IntermissionStart
 	addq.w	#1,(gsp).w
 	bchg	#gmdir,(gmode).w
@@ -741,8 +741,8 @@ PeriodOver	;what to do if period over. Branched to from puckfaceoff (logic94_4) 
 .0
 	bsr.w	forceblack
 IntermissionStart	;93 name; 93 PeriodOver tail: reset the clock, song $79, ticker scores, playoff stats at the end
-	;(AddPOStats), Intermission, then StartPer or GameOver. Also jumped to from StartGame (hockey94_01)
-	jsr	(ResetClock).w	;hockey94_01
+	;(AddPOStats), Intermission, then StartPer or GameOver. Also jumped to from StartGame
+	jsr	(ResetClock).w
 	move.w	d0,-(sp)
 	move.w	(vcount).w,d0
 .loop
@@ -765,7 +765,7 @@ IntermissionStart	;93 name; 93 PeriodOver tail: reset the clock, song $79, ticke
 	bsr.w	Intermission
 	cmpi.w	#4,(gsp).w
 	beq.w	GameOver
-	jmp	(StartPer).w	;hockey94_01
+	jmp	(StartPer).w
 GameOver	;EncodePW (save the password), then in playoff mode DisplayTeamStats (the playoff stats) and the playoff screen. Falls into ExitToOpening
 	bsr.w	EncodePW
 	tst.w	(OptPlayMode).w
@@ -774,11 +774,11 @@ GameOver	;EncodePW (save the password), then in playoff mode DisplayTeamStats (t
 	jsr	(DisplayTeamStats).l
 .po
 	bsr.w	PlayoffScreen
-ExitToOpening	;Song $78, then restart at Opening2. Also jumped to from demoread (hockey94_01) and NextShooter
+ExitToOpening	;Song $78, then restart at Opening2. Also jumped to from demoread and NextShooter
 	move.w	#SngTitle,-(sp)
 	bsr.w	song
 	bra.w	Opening2
-Opening	;title screen (newTitleScreen), then into Opening2. Jumped to from Begin (hockey94_01)
+Opening	;title screen (newTitleScreen), then into Opening2. Jumped to from Begin
 	bsr.w	KillCrowd
 	jsr	(newTitleScreen).l
 Opening2	;reset the stack and clear the variables, then options (GameSetUp, UserNameEntry), playoff screen and (not in a shootout) ScoutingReport, then StartGame
@@ -797,7 +797,7 @@ Opening3	bsr.w	PlayoffScreen
 	bne.w	.1
 	jsr	(ScoutingReport).l	;92 Opening4 (not a label here: 94 skips it in shootouts, .1 below is local to Opening3)
 .1
-	jmp	(StartGame).w	;hockey94_01
+	jmp	(StartGame).w
 PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver and Opening2. Runs its own vblank (PlayoffScreenDataTable) and
 	;scrolls the tree a page ($70 pixels) at a time. Returns when start is pressed (PlayoffScreenExit)
 	tst.w	(OptPlayMode).w
@@ -927,7 +927,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 .input
 	bsr.w	PlayoffScreen_waitvsync
 	movea.l	#rtss2,a0
-	jsr	(DrawPlayoffSprite).l	;94 only
+	jsr	(DrawPlayoffSprite).l
 	bsr.w	HandlePlayoffInput
 	bra.s	.input
 HandlePlayoffInput	;Read both pads: start leaves PlayoffScreen (PlayoffScreenExit), right/left set the scroll step, then falls into UpdatePlayoffScroll
@@ -1070,7 +1070,7 @@ PlayoffScreenText	;Round titles by gamelevel, printed with printsmall
 	String	'Semifinals'
 	String	'Finals'
 	String	'Champions'
-InitScoutingDisplay	;94 only. Start the text player ScoutTextPlayer: VertLineScrolling = -1, PlayerScrollCtr = -1, clear SelectedPlayerIdx / typedelay; return a0 = TestList. Called from
+InitScoutingDisplay	;Start the text player ScoutTextPlayer: VertLineScrolling = -1, PlayerScrollCtr = -1, clear SelectedPlayerIdx / typedelay; return a0 = TestList. Called from
 	;ScoutingReport
 	move.w	#$FFFF,(VertLineScrolling).w
 	st	(PlayerScrollCtr).w
@@ -1078,7 +1078,7 @@ InitScoutingDisplay	;94 only. Start the text player ScoutTextPlayer: VertLineScr
 	clr.w	(typedelay).w
 	movea.w	#(TestList-M68K_RAM),a0
 	rts
-UpdateScoutingDisplay	;94 only. Text player for ScoutingReport: prints the ScoutTextScript script word by word with a typing delay (typedelay, longer
+UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScript script word by word with a typing delay (typedelay, longer
 	;after , and .). $D ends a line; special characters ( _ + $ { } [ ] < > | \ @ # % = * ^ ; ) insert team data through the $FCxxx-$FExxx
 	;routines (GetTeamNickname / GetTeamArena for HmShots / AwShots). Line breaks scroll the text box (ScoutTextNextLine). Called from ScoutingReport
 	cmpi.w	#$1000,(typedelay).w
@@ -1290,7 +1290,7 @@ UpdateScoutingDisplay	;94 only. Text player for ScoutingReport: prints the Scout
 	bne.w	.loop4
 	subq.w	#1,d1
 	bra.w	.loop4
-ScrollDisplayUp	;94 only. Next text line for ScoutTextPlayer: VertLineScrolling + 1; at 7 lines, scroll the 8 rows up by vram dma (DoDMA_nd2)
+ScrollDisplayUp	;Next text line for ScoutTextPlayer: VertLineScrolling + 1; at 7 lines, scroll the 8 rows up by vram dma (DoDMA_nd2)
 	clr.w	(DispAttribCtr).w
 	addq.w	#1,(VertLineScrolling).w
 	cmpi.w	#7,(VertLineScrolling).l

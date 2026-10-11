@@ -129,7 +129,7 @@ pad4way1 equ $FFFFBEF6
 pad4way2 equ $FFFFBEF7
 pad4way3 equ $FFFFBEF8
 pad4way4 equ $FFFFBEF9
-pad4wayword equ $FFFFBEFA	;the pad word the unused Read4WayPad1-4 (fourway94) swap a pad's saved word into around ReadJoy1
+pad4wayword equ $FFFFBEFA	;the pad word the unused Read4WayPad1-4 swap a pad's saved word into around ReadJoy1
 pad4waysave1 equ $FFFFBEFE	;Read4WayPad1 saved pad word
 pad4waysave2 equ $FFFFBF00	;Read4WayPad2 saved pad word
 pad4waysave3 equ $FFFFBF02	;Read4WayPad3 saved pad word

@@ -3,7 +3,7 @@
 ;	94 code in the high ROM, between hockey94_08 and hockey94_07: wallcollduringcheck, setSlotBit, the team palettes (TeamPalettes) and
 ;	featured player pictures (FeaturedPictures), the save RAM records (team, player, crowd and user records), the Player Cards screens and
 ;	CalcAttrib, the user record NAME ENTRY screen, Record Holders, the playoff round screen (PlayoffRoundScreen) and the shootout (shooters
-;	menu, next shooter, "SHOOTOUT WON BY"). 94 only; 93 has no code here.
+;	menu, next shooter, "SHOOTOUT WON BY"). New in 94; 93 has no code here.
 ;Transcribed from lst/nhl94.bin.lst lines 963039-969431. There are no 93 counterparts: the names are kept, and the
 ;names and the entries no label for are named for what they do.
 ;Locals are in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; the locals keep their
@@ -11,8 +11,8 @@
 ;code), the code behind them, and the picture lists as code ($F92F4-$F98C5). The palettes
 ;as code ($F8BF4-$F92F3, TeamPalettes) are.pal incbins. The inside Strings are not labels.
 
-wallcollduringcheck	;(and comments). 94 only: during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
-	;with his size + $17 (checkcornercoll94, high94_1). Called from CCStart (hockey94_03)
+wallcollduringcheck	;(and comments). during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
+	;with his size + $17. Called from CCStart
 	tst.w	$34(a2)	;check if goalie
 	beq.w	.end
 	movem.l	d0-d7,-(sp)
@@ -30,7 +30,7 @@ wallcollduringcheck	;(and comments). 94 only: during a check, a skater a2 (not a
 	movem.l	(sp)+,d0-d7
 .end
 	rts
-setSlotBit	;(and comments). 94 only: sflags6 bit 5 (the slot) = the puck carrier is in the slot in front of the goal. Called from DoGameFrame (hockey94_01)
+setSlotBit	;(and comments). sflags6 bit 5 (the slot) = the puck carrier is in the slot in front of the goal. Called from DoGameFrame
 	bclr	#5,(sflags6).w	;clears Slot Bit
 	tst.w	(puckc).w
 	bmi.w	.ex	;exit if no puckc
@@ -56,7 +56,7 @@ setSlotBit	;(and comments). 94 only: sflags6 bit 5 (the slot) = the puck carrier
 .ex
 	rts
 TeamPalettes	;Matchup and player card palettes: 56 of 16 colors, two per team (28 teams, TeamList order). A is the matchup logo palette (the TeamLogoPalettes
-	;entry, except BOS, FLA, HFD, SJ), B the other side (A with colors 1-2 and 3-4 swapped). Used by attract94 DrawMatchupBitmaps and the player cards
+	;entry, except BOS, FLA, HFD, SJ), B the other side (A with colors 1-2 and 3-4 swapped). Used by DrawMatchupBitmaps and the player cards
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalANHA.pal	;ANH matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalANHB.pal	;ANH other side
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalBOSA.pal	;BOS matchup logo palette
@@ -114,7 +114,7 @@ TeamPalettes	;Matchup and player card palettes: 56 of 16 colors, two per team (2
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWA.pal	;ASW matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWB.pal	;ASW other side
 FeaturedPictures	;The featured player pictures
-	;of each team (TeamList order): a list of picture.l (graphics94 NoPicSkater1 ... Card<player>) and roster index.w, 0 ends
+	;of each team (TeamList order): a list of picture.l (NoPicSkater1 ... Card<player>) and roster index.w, 0 ends
 	dc.l	.ANH,.BOS,.BUF,.CGY
 	dc.l	.CHI,.DAL,.DET,.EDM
 	dc.l	.FLA,.HFD,.LA,.MTL
@@ -600,7 +600,7 @@ FeaturedPictures	;The featured player pictures
 	dc.l	CardSteveChiasson
 	dc.w	24
 	dc.l	0
-PrintRecordValue	;94 only. Record line for a player card (hockey94_08 PlayerCardScreen): copy RecordTxt to a3, then the record value of player d1 (GetRecordValue) and goals / goal or
+PrintRecordValue	;Record line for a player card (PlayerCardScreen): copy RecordTxt to a3, then the record value of player d1 (GetRecordValue) and goals / goal or
 	;saves / save. An empty String when there is no value
 	movem.l	d0-d7/a1-a6,-(sp)
 	move.l	a1,-(sp)
@@ -677,7 +677,7 @@ RecSaveTxt	dc.b	0	;PrintRecordValue text
 	dc.b	$76	;v
 	dc.b	$65	;e
 	dc.b	0
-StartText	;94 only. Copy String a1 (length word first) to a3
+StartText	;Copy String a1 (length word first) to a3
 	movem.l	d0,-(sp)
 	move.w	(a1),d0
 	subq.w	#1,d0
@@ -686,7 +686,7 @@ StartText	;94 only. Copy String a1 (length word first) to a3
 	dbf	d0,.loop
 	movem.l	(sp)+,d0
 	rts
-AppendNumber	;94 only. Write d0 (0 ... 999, no leading zeros) as a String at a1, padded to an even length
+AppendNumber	;Write d0 (0 ... 999, no leading zeros) as a String at a1, padded to an even length
 	movem.w	d0-d6/a0,-(sp)
 	move.l	a1,-(sp)
 	move.w	d0,d6
@@ -726,7 +726,7 @@ AppendNumber	;94 only. Write d0 (0 ... 999, no leading zeros) as a String at a1,
 	move.w	d1,(a0)
 	movem.w	(sp)+,d0-d6/a0
 	rts
-GetRecordValue	;94 only. d0 = record d0 of player d1 of team d0 from save RAM (ReadPlayerRecord into $FFFF0000); d1 = 1 when the player is a goalie
+GetRecordValue	;d0 = record d0 of player d1 of team d0 from save RAM (ReadPlayerRecord into $FFFF0000); d1 = 1 when the player is a goalie
 	movem.l	d2-d7/a0-a6,-(sp)
 	move.w	d0,-(sp)
 	movea.l	#$30E,a2
@@ -770,7 +770,7 @@ GetRecordValue	;94 only. d0 = record d0 of player d1 of team d0 from save RAM (R
 .x
 	movem.l	(sp)+,d2-d7/a0-a6
 	rts
-PrintRecordHolder	;94 only. Record holder line: RecByTxt ("by") then the holder's user name (AppendRecordHolder). An empty String when there is none
+PrintRecordHolder	;Record holder line: RecByTxt ("by") then the holder's user name (AppendRecordHolder). An empty String when there is none
 	movem.l	d0-d7/a1-a6,-(sp)
 	move.l	a1,-(sp)
 	movea.l	a1,a3
@@ -795,7 +795,7 @@ RecByTxt	dc.b	0	;PrintRecordHolder text
 	dc.b	$62	;b
 	dc.b	$79	;y
 	dc.b	$20,0
-PrintRecordVs	;94 only. Record line: RecVsTxt ("vs.") then the user name and the opponent team (AppendRecordVs)
+PrintRecordVs	;Record line: RecVsTxt ("vs.") then the user name and the opponent team (AppendRecordVs)
 	movem.l	d0-d7/a1-a6,-(sp)
 	move.l	a1,-(sp)
 	movea.l	a1,a3
@@ -815,7 +815,7 @@ RecVsTxt	dc.b	0	;PrintRecordVs text
 	dc.b	$73	;s
 	dc.b	$2E	;.
 	dc.b	$20
-AppendRecordHolder	;94 only. Append the user name of the record holder (byte 1 of record a0, or read record d0 / d1 when a0 is 0) to a1 (AppendUserName)
+AppendRecordHolder	;Append the user name of the record holder (byte 1 of record a0, or read record d0 / d1 when a0 is 0) to a1 (AppendUserName)
 	movem.l	d0-d7/a1-a2,-(sp)
 	cmpa.l	#0,a0
 	bne.w	.0
@@ -836,7 +836,7 @@ AppendRecordHolder	;94 only. Append the user name of the record holder (byte 1 o
 	bsr.w	AppendUserName
 	movem.l	(sp)+,d0-d7/a1-a2
 	rts
-AppendRecordVs	;94 only. Append the user name (byte 3 of record a0), a space and the opponent team name (byte 2, AppendTeamName) to a1
+AppendRecordVs	;Append the user name (byte 3 of record a0), a space and the opponent team name (byte 2, AppendTeamName) to a1
 	movem.l	d0-d7/a0-a6,-(sp)
 	cmpa.l	#0,a0
 	bne.w	.0
@@ -866,7 +866,7 @@ AppendRecordVs	;94 only. Append the user name (byte 3 of record a0), a space and
 	rts
 RecSpaceTxt	dc.b	0	;AppendRecordVs text
 	dc.b	4,$20,0
-ReadPlayerRecord	;94 only. Read the 4 byte player record d1 (PlayerRecordOffsets) of team d0 from save RAM to a0
+ReadPlayerRecord	;Read the 4 byte player record d1 (PlayerRecordOffsets) of team d0 from save RAM to a0
 	bclr	#6,(sflags6).w
 PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (ReadSRAM / WriteSRAM). Entered from WritePlayerRecord
 	movem.l	d0-d1/a0-a1,-(sp)
@@ -888,11 +888,11 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
 	rts
-WritePlayerRecord	;94 only. Write the 4 byte player record (PlayerRecordIO)
+WritePlayerRecord	;Write the 4 byte player record (PlayerRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
-clrCrowdRAM	;(clrCrowdRAM?). 94 only: read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
-	;LoadCrowdRec (high94_1) and DisplayGameStats (stats94)
+clrCrowdRAM	;(clrCrowdRAM?). read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
+	;LoadCrowdRec and DisplayGameStats
 	bclr	#6,(sflags6).w
 CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from clrCrowdRAM and WriteCrowdRecord
 	movem.l	d0-d1/a0-a1,-(sp)
@@ -909,10 +909,10 @@ CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered fr
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
 	rts
-WriteCrowdRecord	;94 only. Write the 16 byte crowd record block of team d1 (CrowdRecordIO)
+WriteCrowdRecord	;Write the 16 byte crowd record block of team d1 (CrowdRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	CrowdRecordIO
-ReadTeamRecord	;94 only. Read the 16 byte team record block of team d1 ($D20 + team * 16) to a0 (TeamRecordIO)
+ReadTeamRecord	;Read the 16 byte team record block of team d1 ($D20 + team * 16) to a0 (TeamRecordIO)
 	bclr	#6,(sflags6).w
 TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 	movem.l	d0-d1/a0-a1,-(sp)
@@ -929,13 +929,13 @@ TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
 	rts
-WriteTeamRecord	;94 only. Write the team record block (TeamRecordIO)
+WriteTeamRecord	;Write the team record block (TeamRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	TeamRecordIO
-WriteNameLog	;94 only. Write the user name log ($80 bytes at namelog) to save RAM $DA0 (NameLogIO)
+WriteNameLog	;Write the user name log ($80 bytes at namelog) to save RAM $DA0 (NameLogIO)
 	bset	#6,(sflags6).w
 	bra.w	NameLogIO
-ReadNameLog	;94 only. Read the user name log from save RAM $DA0 to namelog (NameLogIO). Called from GameSetUp (hockey94_08)
+ReadNameLog	;Read the user name log from save RAM $DA0 to namelog (NameLogIO). Called from GameSetUp
 	bclr	#6,(sflags6).w
 NameLogIO	;A user record block: read or write (sflags6 bit 6)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -973,8 +973,8 @@ PlayerRecordOffsets	dc.b	0	;Record offsets for ReadPlayerRecord
 	dc.b	2
 	dc.b	$70	;p
 	dc.b	2,$8A,2,$A4,2,$BE,2,$D8
-UpdateRecords	;94 only. With save RAM (ValidSRAM) and user records on (OptUserRec 0), update the team and player records after a game (UpdateTeamRecord,
-	;UpdateCrowdRecord, UpdatePlayerRecords), then the save RAM checksum (MakeSRAMChecksum). Called from Intermission (penalty94_2)
+UpdateRecords	;With save RAM (ValidSRAM) and user records on (OptUserRec 0), update the team and player records after a game (UpdateTeamRecord
+	;UpdateCrowdRecord, UpdatePlayerRecords), then the save RAM checksum (MakeSRAMChecksum). Called from Intermission
 	tst.w	(ValidSRAM).w
 	bmi.w	.x
 	tst.w	(OptUserRec).w
@@ -1036,7 +1036,7 @@ UpdateRecords	;94 only. With save RAM (ValidSRAM) and user records on (OptUserRe
 	movem.l	(sp)+,d0-d7/a0-a6
 .x
 	rts
-UpdateTeamRecord	;94 only. After a game: add the game to team record block d1 (games, wins, ties), and keep the biggest win and loss margins with the user names
+UpdateTeamRecord	;After a game: add the game to team record block d1 (games, wins, ties), and keep the biggest win and loss margins with the user names
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	ReadTeamRecord
 	st	d7
@@ -1103,7 +1103,7 @@ UpdateTeamRecord	;94 only. After a game: add the game to team record block d1 (g
 	bsr.w	WriteTeamRecord
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-UpdateCrowdRecord	;94 only. Update the crowd records (clrCrowdRAM, WriteCrowdRecord)
+UpdateCrowdRecord	;Update the crowd records (clrCrowdRAM, WriteCrowdRecord)
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	clrCrowdRAM
 	move.w	$C(a1),d3
@@ -1156,7 +1156,7 @@ UpdateCrowdRecord	;94 only. Update the crowd records (clrCrowdRAM, WriteCrowdRec
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-UpdatePlayerRecords	;94 only. After a game: for the 26 players of team a2, keep each new best (goals, or saves for the goalies) in his player record with the user names and opponent
+UpdatePlayerRecords	;After a game: for the 26 players of team a2, keep each new best (goals, or saves for the goalies) in his player record with the user names and opponent
 	;d6
 	clr.l	d0
 	move.w	#$19,d2
@@ -1194,7 +1194,7 @@ UpdatePlayerRecords	;94 only. After a game: for the 26 players of team a2, keep 
 	addq.w	#1,d0
 	dbf	d2,.loop
 	rts
-CountGoalies	;94 only. homegoalies / awaygoalies = goalies of the home / away team (ReadAttributeNibble). Called from hockey94_10 and PlayerCards
+CountGoalies	;homegoalies / awaygoalies = goalies of the home / away team (ReadAttributeNibble). Called from hockey94_10 and PlayerCards
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#tmstruct,a2
 	jsr	(ReadAttributeNibble).l
@@ -1204,7 +1204,7 @@ CountGoalies	;94 only. homegoalies / awaygoalies = goalies of the home / away te
 	move.w	d0,(awaygoalies).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-CountPlayers	;94 only. homeplayers / awayplayers = players of the home / away team (GetPlayerCount)
+CountPlayers	;homeplayers / awayplayers = players of the home / away team (GetPlayerCount)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#tmstruct,a2
 	jsr	(GetPlayerCount).l
@@ -1214,7 +1214,7 @@ CountPlayers	;94 only. homeplayers / awayplayers = players of the home / away te
 	move.w	d0,(awayplayers).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-AppendUserName	;94 only. Append user name d2 (12 bytes of the name log at namelog, spaces for 0) to a1, or NoNameTxt when d2 is 0; trailing spaces trimmed (TrimSpaces)
+AppendUserName	;Append user name d2 (12 bytes of the name log at namelog, spaces for 0) to a1, or NoNameTxt when d2 is 0; trailing spaces trimmed (TrimSpaces)
 	movem.l	d0-d3/a0-a3,-(sp)
 	movea.l	a1,a2
 	tst.w	d2
@@ -1251,7 +1251,7 @@ AppendUserName	;94 only. Append user name d2 (12 bytes of the name log at namelo
 	rts
 NoNameTxt	dc.b	0	;AppendUserName data
 	dc.b	2
-PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu lists), with save RAM only: the player card screens
+PlayerCards	;93 has no counterpart. "Player Cards" menu item (menu lists), with save RAM only: the player card screens
 	;(DrawPlayerCard), A / C to page, start exits (ExitAttributeScreen2)
 	tst.w	(ValidSRAM).w
 	bpl.w	.0
@@ -1281,7 +1281,7 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	dc.l	$05234167,$89ABCDEF	;remap table
 	jsr	(printz).l
 	String	-TXMAP3,0,0
-	movea.l	#PlayerCardsScreenPic,a0	;the Player Cards screen picture (graphics94)
+	movea.l	#PlayerCardsScreenPic,a0	;the Player Cards screen picture
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -1398,7 +1398,7 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 .10
 	movem.l	(sp)+,d0-d7/a0-a6
 	jmp	ExitAttributeScreen2
-WrapCardIndex	;94 only. Wrap the card index (a0) into 0 ... cardcount - 1
+WrapCardIndex	;Wrap the card index (a0) into 0 ... cardcount - 1
 	move.w	d0,-(sp)
 	move.w	(cardcount).w,d0
 	addq.w	#1,d0
@@ -1413,7 +1413,7 @@ WrapCardIndex	;94 only. Wrap the card index (a0) into 0 ... cardcount - 1
 .1
 	move.w	(sp)+,d0
 	rts
-DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Records" and "This Game" columns (PrintCardRecords, PrintSaveRecordLine, PrintGoalRecordLine), Overall
+DrawPlayerCard	;Draw a player card: picture (DrawPictureBox), name, "Records" and "This Game" columns (PrintCardRecords, PrintSaveRecordLine, PrintGoalRecordLine), Overall
 	;Rating (PrintOverallRating), Starting Line (PrintStartingLine), position (PrintCardPosition), goals / assists or saves (PrintGoalsAssists, PrintSaves)
 	movem.l	d0-d7/a1-a6,-(sp)
 	move.l	a0,-(sp)
@@ -1575,7 +1575,7 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	bsr.w	PrintCardPosition
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintCardRecords	;94 only. Player card "Records" column
+PrintCardRecords	;Player card "Records" column
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$21,d0
 	move.w	#8,d1
@@ -1640,7 +1640,7 @@ PrintCardRecords	;94 only. Player card "Records" column
 	bsr.w	PrintCrowdRecordLine
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ClearCardText	;94 only. Player card: erase the text area and redraw the team bitmap behind it (dobitmap)
+ClearCardText	;Player card: erase the text area and redraw the team bitmap behind it (dobitmap)
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
@@ -1675,7 +1675,7 @@ ClearCardText	;94 only. Player card: erase the text area and redraw the team bit
 	move.l	(sp)+,(palfadenew+$22).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintCrowdRecordLine	;94 only. Player card record line: the arena crowd record (CrowdLevelTxt, PrintCardRecordLine)
+PrintCrowdRecordLine	;Player card record line: the arena crowd record (CrowdLevelTxt, PrintCardRecordLine)
 	move.l	#CrowdLevelTxt,(TempMaxSpd).l
 	bra.w	PrintCardRecordLine
 CrowdLevelTxt	dc.b	0	;PrintCrowdRecordLine text
@@ -1695,7 +1695,7 @@ CrowdLevelTxt	dc.b	0	;PrintCrowdRecordLine text
 	dc.b	$65	;e
 	dc.b	$6C	;l
 	dc.b	0
-PrintSaveRecordLine	;94 only. Player card record line: the saves record (CardSavesTxt / CardSavesByTxt, PrintCardRecordLine)
+PrintSaveRecordLine	;Player card record line: the saves record (CardSavesTxt / CardSavesByTxt, PrintCardRecordLine)
 	movem.l	a1-a3,-(sp)
 	movea.l	#CardSavesTxt,a1
 	tst.w	d3
@@ -1740,7 +1740,7 @@ CardSavesByTxt	dc.b	0	;PrintSaveRecordLine text
 	dc.b	$20
 	dc.b	$62	;b
 	dc.b	$79	;y
-PrintGoalRecordLine	;94 only. Player card record line: the goals record (CardGoalsTxt / CardGoalsByTxt, PrintCardRecordLine)
+PrintGoalRecordLine	;Player card record line: the goals record (CardGoalsTxt / CardGoalsByTxt, PrintCardRecordLine)
 	movem.l	a1-a3,-(sp)
 	movea.l	#CardGoalsTxt,a1
 	tst.w	d3
@@ -1840,7 +1840,7 @@ CardVsTxt	dc.b	0	;PrintCardRecordLine text
 	dc.b	$2E	;.
 CardEmptyTxt	dc.b	0	;PrintCardRecordLine text
 	dc.b	4,$20,0
-AppendTeamName	;94 only. Append the city name of team d0 (TeamList block Strings) to a1 (appstring)
+AppendTeamName	;Append the city name of team d0 (TeamList block Strings) to a1 (appstring)
 	movem.l	d0/a0-a3,-(sp)
 	ext.w	d0
 	asl.w	#2,d0
@@ -1855,7 +1855,7 @@ AppendTeamName	;94 only. Append the city name of team d0 (TeamList block Strings
 	jsr	(appstring).l
 	movem.l	(sp)+,d0/a0-a3
 	rts
-PrintOverallRating	;94 only. Player card "Overall Rating" (CalcAttrib, AttribAdjust)
+PrintOverallRating	;Player card "Overall Rating" (CalcAttrib, AttribAdjust)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d1,(printx).w
 	move.w	d2,(printy).w
@@ -1942,8 +1942,8 @@ LinePosNames	;the movea.l #$FA9D2. Position names; an empty String ends the list
 	String	'C   '
 	String	'RW  '
 	dc.w	2
-CalcAttrib	;(and comments). 94 only: the overall rating of player d0: his attributes weighted by OvrPlayerWgtList (skaters) or
-	;OvrGoalWgtList (goalies), and by AttribWgtList. Called from getNameandAttrib (stats94) and PrintOverallRating
+CalcAttrib	;(and comments). the overall rating of player d0: his attributes weighted by OvrPlayerWgtList (skaters) or
+	;OvrGoalWgtList (goalies), and by AttribWgtList. Called from getNameandAttrib and PrintOverallRating
 	move.l	a6,-(sp)	;push a6 to stack
 	clr.w	(OvrDivisor).w
 	clr.w	(OvrDividend).w
@@ -2089,7 +2089,7 @@ PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the
 	tst.w	(sp)+
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintTeamRating	;94 only. Player card "Team Rating" (GetTeamRating, high ROM)
+PrintTeamRating	;Player card "Team Rating" (GetTeamRating, high ROM)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d0,(printx).w
 	move.w	d1,(printy).w
@@ -2116,7 +2116,7 @@ PrintTeamRating	;94 only. Player card "Team Rating" (GetTeamRating, high ROM)
 	movem.l	(sp)+,d0-d7/a0-a6
 .x
 	rts
-PrintCardTeam	;94 only. Player card: the city and nickname of the card's team (GetCardTeam cardvis), each centred (PrintCentered) on rows d1 and d1 + 1
+PrintCardTeam	;Player card: the city and nickname of the card's team (GetCardTeam cardvis), each centred (PrintCentered) on rows d1 and d1 + 1
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d1,(printy).w
 	movea.l	#tmstruct,a0
@@ -2135,7 +2135,7 @@ PrintCardTeam	;94 only. Player card: the city and nickname of the card's team (G
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintCentered	;94 only. printsmall String a0 centred on column $14
+PrintCentered	;printsmall String a0 centred on column $14
 	move.w	#$14,(printx).w
 	move.w	(a0),d0
 	subq.w	#2,d0
@@ -2143,7 +2143,7 @@ PrintCentered	;94 only. printsmall String a0 centred on column $14
 	sub.w	d0,(printx).w
 	movea.l	a0,a1
 	jmp	printsmall
-GetJerseyString	;94 only. Player d0 of the card's team: his jersey number as a 2 digit String at a1 (space for a leading 0)
+GetJerseyString	;Player d0 of the card's team: his jersey number as a 2 digit String at a1 (space for a leading 0)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#tmstruct,a0
 	tst.w	(cardvis).w
@@ -2178,7 +2178,7 @@ GetJerseyString	;94 only. Player d0 of the card's team: his jersey number as a 2
 	move.b	d0,(a1)+
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintGoalsAssists	;94 only. Player card "Goals" / "Assists" (GetCardTeam)
+PrintGoalsAssists	;Player card "Goals" / "Assists" (GetCardTeam)
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	GetCardTeam
 	move.l	a0,-(sp)
@@ -2212,7 +2212,7 @@ PrintGoalsAssists	;94 only. Player card "Goals" / "Assists" (GetCardTeam)
 	jsr	(printsmall).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintSaves	;94 only. Player card "Saves" / "Save %" (GetCardTeam)
+PrintSaves	;Player card "Saves" / "Save %" (GetCardTeam)
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	GetCardTeam
 	move.l	a0,-(sp)
@@ -2257,7 +2257,7 @@ PrintSaves	;94 only. Player card "Saves" / "Save %" (GetCardTeam)
 	jsr	(printsmall).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-DrawPlayerPicture	;94 only. Draw the player picture (graphics94 NoPicSkater1 ... NoPicGoalie2, Card<player>)
+DrawPlayerPicture	;Draw the player picture (NoPicSkater1 ... NoPicGoalie2, Card<player>)
 	movem.l	d0-d7/a1-a6,-(sp)
 	movea.l	#FeaturedPictures,a0
 	move.w	d1,d2
@@ -2310,7 +2310,7 @@ DrawPlayerPicture	;94 only. Draw the player picture (graphics94 NoPicSkater1 ...
 .x
 	movem.l	(sp)+,d0-d7/a1-a6
 	rts
-DrawPictureBox	;94 only. Player card picture box (DrawPlayerPicture, UnpackPicture)
+DrawPictureBox	;Player card picture box (DrawPlayerPicture, UnpackPicture)
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	GetCardPlayer
 	move.w	(HomeTeam).w,d1
@@ -2354,14 +2354,14 @@ DrawPictureBox	;94 only. Player card picture box (DrawPlayerPicture, UnpackPictu
 	jsr	(dobitmap).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-GetCardTeam	;94 only. a0 = HmShots, or AwShots when cardvis is set (the card's team)
+GetCardTeam	;a0 = HmShots, or AwShots when cardvis is set (the card's team)
 	movea.l	#tmstruct,a0
 	tst.w	(cardvis).w
 	beq.w	.x
 	movea.l	#AwShots,a0
 .x
 	rts
-TrimSpaces	;94 only. Trim the trailing spaces of String a2 and pad it to an even length
+TrimSpaces	;Trim the trailing spaces of String a2 and pad it to an even length
 	movem.l	a3,-(sp)
 	movea.l	a2,a3
 	adda.w	(a2),a3
@@ -2377,7 +2377,7 @@ TrimSpaces	;94 only. Trim the trailing spaces of String a2 and pad it to an even
 	andi.w	#$FE,(a2)
 	movem.l	(sp)+,a3
 	rts
-GetCardPlayer	;94 only. cardplayer = the roster index of card cardindex from the card's team list (homecardlist, awaycardlist)
+GetCardPlayer	;cardplayer = the roster index of card cardindex from the card's team list (homecardlist, awaycardlist)
 	movem.l	d1/a0,-(sp)
 	movea.l	#homecardlist,a0
 	tst.w	(cardvis).w
@@ -2391,7 +2391,7 @@ GetCardPlayer	;94 only. cardplayer = the roster index of card cardindex from the
 	move.w	d0,(cardplayer).w
 	movem.l	(sp)+,d1/a0
 	rts
-BuildCardPlayerLists	;94 only. Build the player card order of both teams: home at homecardlist, away at awaycardlist (BuildCardPlayerList)
+BuildCardPlayerLists	;Build the player card order of both teams: home at homecardlist, away at awaycardlist (BuildCardPlayerList)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#homecardlist,a1
 	movea.l	#tmstruct,a0
@@ -2401,7 +2401,7 @@ BuildCardPlayerLists	;94 only. Build the player card order of both teams: home a
 	bsr.w	BuildCardPlayerList
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-BuildCardPlayerList	;94 only. Player card order of team a0 into a1: the 6 starters (TeamList line at +6) first, the other players of the 26 after them
+BuildCardPlayerList	;Player card order of team a0 into a1: the 6 starters (TeamList line at +6) first, the other players of the 26 after them
 	movea.l	$1E(a0),a0
 	adda.w	6(a0),a0
 	movea.l	a1,a2
@@ -2513,7 +2513,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	move.w	(VisTeam).w,d3
 .1
 	asl.w	#2,d3
-	movea.l	#TeamLogoBitmaps,a0	;team logo maps (hockey94_08)
+	movea.l	#TeamLogoBitmaps,a0	;team logo maps
 	movea.l	0(a0,d3.w),a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -2724,7 +2724,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	bsr.w	StoreUserName
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C to select letter.", "A to go back.")
+NameLetterGrid	;Name entry: the letter grid ("D-Pad to a letter.", "C to select letter.", "A to go back.")
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),1,$14
@@ -2802,7 +2802,7 @@ NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C t
 	jsr	(Framer).l
 	bsr.w	NameEntryHelp
 	bra.s	.x
-NameEntryHelp	;94 only. Name entry help text ("D-Pad up/down to move arrows.", "Press START to select name.", "Press B to edit.")
+NameEntryHelp	;Name entry help text ("D-Pad up/down to move arrows.", "Press START to select name.", "Press B to edit.")
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),2,$15,'D-Pad up/down to    '
@@ -2823,7 +2823,7 @@ NameEntryHelp	;94 only. Name entry help text ("D-Pad up/down to move arrows.", "
 	String	'Press B to edit.    '
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintNamePrompt	;94 only. Name entry: "Enter new name:" for an empty name log slot namelogsel, else "Select or replace:"
+PrintNamePrompt	;Name entry: "Enter new name:" for an empty name log slot namelogsel, else "Select or replace:"
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(namelogsel).w,d0
 	mulu.w	#$C,d0
@@ -2836,7 +2836,7 @@ PrintNamePrompt	;94 only. Name entry: "Enter new name:" for an empty name log sl
 	jsr	(print).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-SyncLetterCursor	;94 only. Name entry: the letter grid cursor d5 = the grid index of the current letter (FindLetter), 0 when it is not in the grid
+SyncLetterCursor	;Name entry: the letter grid cursor d5 = the grid index of the current letter (FindLetter), 0 when it is not in the grid
 	movem.l	d0-d4/a0-a6,-(sp)
 	move.b	(nameentrybuf).w,d0
 	bsr.w	FindLetter
@@ -2851,7 +2851,7 @@ SyncLetterCursor	;94 only. Name entry: the letter grid cursor d5 = the grid inde
 .x
 	movem.l	(sp)+,d0-d4/a0-a6
 	rts
-FindLetter	;94 only. d0 = index of letter d0 in LetterGrid, $1E when not found
+FindLetter	;d0 = index of letter d0 in LetterGrid, $1E when not found
 	movem.l	d1-d3/a0-a6,-(sp)
 	movea.l	#LetterGrid,a0
 	move.b	d0,d1
@@ -2866,7 +2866,7 @@ FindLetter	;94 only. d0 = index of letter d0 in LetterGrid, $1E when not found
 .x
 	movem.l	(sp)+,d1-d3/a0-a6
 	rts
-PrintNameCursor	;94 only. Name entry: the " < " cursor
+PrintNameCursor	;Name entry: the " < " cursor
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),4,$13
 	add.w	d4,(printx).w
@@ -2876,7 +2876,7 @@ PrintNameCursor	;94 only. Name entry: the " < " cursor
 	String	' < '
 rtsNameCursor	;The shared rts of PrintNameCursor
 	rts
-PrintCurLetter	;94 only. Name entry: print grid letter d5 (with the cursor on, cursoron)
+PrintCurLetter	;Name entry: print grid letter d5 (with the cursor on, cursoron)
 	tst.w	(cursoron).w
 	beq.s	rtsNameCursor
 	movea.l	#ThreeStars,a1
@@ -2886,7 +2886,7 @@ PrintCurLetter	;94 only. Name entry: print grid letter d5 (with the cursor on, c
 	move.b	0(a0,d5.w),d0
 	move.b	d0,2(a1)
 	jmp	print
-LetterGridPos	;94 only. Name entry: printx / printy of grid letter d5 (6 letters a row, 2 cells apart); d0 / d1 = 3 x 3 box
+LetterGridPos	;Name entry: printx / printy of grid letter d5 (6 letters a row, 2 cells apart); d0 / d1 = 3 x 3 box
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),$18,$10
 	move.w	d5,d0
@@ -2939,7 +2939,7 @@ SelectNameTxt	dc.b	0	;PrintNamePrompt table
 	dc.b	$65	;e
 	dc.b	$3A	;:
 	dc.b	0
-PrintNameLog	;94 only. Name entry: the "Name Log" list (PrintNameField, GetLogName)
+PrintNameLog	;Name entry: the "Name Log" list (PrintNameField, GetLogName)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(namelength).w,-(sp)
 	move.w	(namelogsel).w,-(sp)
@@ -2960,7 +2960,7 @@ PrintNameLog	;94 only. Name entry: the "Name Log" list (PrintNameField, GetLogNa
 	move.w	(sp)+,(namelength).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-MoveLogArrows	;94 only. Name entry: when the name log selection namelogsel changed, erase the old ] [ arrows and print them at the new row (PrintLogArrows)
+MoveLogArrows	;Name entry: when the name log selection namelogsel changed, erase the old ] [ arrows and print them at the new row (PrintLogArrows)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(namelogsel).w,d0
 	cmp.w	(namelogarrows).w,d0
@@ -2972,7 +2972,7 @@ MoveLogArrows	;94 only. Name entry: when the name log selection namelogsel chang
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintLogArrows	;94 only. Name entry: print the two arrow Strings at a1 on name log row namelogarrows, then namelogarrows = namelogsel
+PrintLogArrows	;Name entry: print the two arrow Strings at a1 on name log row namelogarrows, then namelogarrows = namelogsel
 	tst.w	(namelogarrows).w
 	beq.w	.0
 	jsr	(printz).l
@@ -2997,7 +2997,7 @@ LogArrowsTxt	dc.b	0	;MoveLogArrows data
 	dc.b	0
 LogArrowsClrTxt	dc.b	0	;MoveLogArrows data
 	dc.b	4,$20,0,0,4,$20,0
-GetNameLength	;94 only. namelength = length of the name being entered (up to '-' or 0, at most 12)
+GetNameLength	;namelength = length of the name being entered (up to '-' or 0, at most 12)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$B,d3
 	movea.l	#nameentrybuf,a0
@@ -3012,7 +3012,7 @@ GetNameLength	;94 only. namelength = length of the name being entered (up to '-'
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PrintNameField	;94 only. Name entry: print the 12 character name field from a1, '-' past the length namelength
+PrintNameField	;Name entry: print the 12 character name field from a1, '-' past the length namelength
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#ThreeStars,a0
 	move.w	(namelength).w,d0
@@ -3064,13 +3064,13 @@ LetterGrid	dc.b	$41	;Name entry data
 	dc.b	$20
 	dc.b	$2D	;-
 	dc.b	0
-NameEntryFramer	;94 only. Framer with the name entry frame tiles (nameframechars as framercset)
+NameEntryFramer	;Framer with the name entry frame tiles (nameframechars as framercset)
 	move.w	(framercset).w,-(sp)
 	move.w	(nameframechars).w,(framercset).w
 	jsr	(Framer).l
 	move.w	(sp)+,(framercset).w
 	rts
-GetLogName	;94 only. Copy name log entry namelogsel to a1 ('-' for empty), namelength = its length
+GetLogName	;Copy name log entry namelogsel to a1 ('-' for empty), namelength = its length
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#namelog,a0
 	move.w	(namelogsel).w,d2
@@ -3091,7 +3091,7 @@ GetLogName	;94 only. Copy name log entry namelogsel to a1 ('-' for empty), namel
 	dbf	d3,.loop
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-StoreUserName	;94 only. Name entry: store the name in save RAM (WriteNameRecord, MakeSRAMChecksum)
+StoreUserName	;Name entry: store the name in save RAM (WriteNameRecord, MakeSRAMChecksum)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#namelog,a0
 	move.w	(namelogsel).w,d0
@@ -3140,7 +3140,7 @@ StoreUserName	;94 only. Name entry: store the name in save RAM (WriteNameRecord,
 	move.w	(namelogsel).w,(a5)
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-WriteNameRecord	;94 only. Write the name record (ReadSRAM / WriteSRAM)
+WriteNameRecord	;Write the name record (ReadSRAM / WriteSRAM)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$2D7,d7
 	moveq	#0,d0

@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $00B0E8-$00C70F, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l / move.l #x carry
-; the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. (hockey94_01 names for
+; the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. (names for
 ; startpause3 / startpause4).
 linelist = $191A6		;movea.l #x at $B994
 Framer = $119B8			;bsr.w at $B950
@@ -43,12 +43,12 @@ printz = $11B92			;bsr.w at $B9DE
 puckvzadj = $F66EE		;jsr (x).l at $C532
 randomd0 = $11086		;bsr.w at $BDAA
 randomd0s = $1107A		;bsr.w at $C474
-rtss8 = $A9D4			;beq.w at $BB12 (hockey94_02)
+rtss8 = $A9D4			;beq.w at $BB12
 setpde = $1577A			;jsr (x).l at $BB74
 sfx = $11132			;bsr.w at $BE1C
 sroot = $110BE			;bsr.w at $B55E
-startpause1 = $7CBC		;bne.w at $B178 (hockey94_01)
-startpause2 = $7CCA		;bne.w at $B17C (hockey94_01)
+startpause1 = $7CBC		;bne.w at $B178
+startpause2 = $7CCA		;bne.w at $B17C
 startpause3 = $7CDC		;beq.w at $B18C. hockey94_01
 startpause4 = $7CEA		;bra.w at $B190. hockey94_01
 linebar = $12E66		;bsr.w at $B9A0
@@ -60,7 +60,7 @@ ShortenMsgTimer = $FE1AA		;jsr (x).l at $B152
 CountButtonPress = $FEE60		;jsr (x).l at $B760
 vtoa = $10676			;jsr (x).l at $B4EC
 
-SPAlist = $5B1C		;#x at $B498 (frames94)
+SPAlist = $5B1C		;#x at $B498
 
 ; Main segment code
 	include	input94.asm

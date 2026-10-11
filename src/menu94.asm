@@ -1,22 +1,22 @@
 ; $007E36  Adapted from menu93.asm: menu core
 ;	NHL 94 (retail) segment $7E36-$80D3
 ;	The menu engine, as 93 menu93: InitMenuState through vcountwait (93 MenuWaitVblank). The scrolling menu of the pause screen
-;	(PauseMode in hockey94_01), also used from penalty94_2, middle94_1 and the stats code after it (stats94).
+;	(PauseMode), also used, middle94_1 and the stats code after it.
 ;	94 changes from 93: the menu state is menuitem-menudraw; printz2 (93
 ;	printsmallz); a handler can keep its own screen (sflags5 bit 1); the 94 item printer PrintMenuItem (the Manual /
 ;	Auto Goalie item); PrintTeamData copies 11 words from TeamBlockMap (93 12 words); vcountwait reads oldvcount twice.
-;Transcribed from lst/nhl94.bin.lst lines 30310-30582. Global names are the 93 menu93 names where an auto name ( unless generic
-;in an); PrintMenuItem is 94 only; vcountwait is the Locals are the 93 menu93 locals, with
-;the unless generic, in an ; the 94 only locals are named for what they do. the inline Strings after printz2 (
+;Transcribed from lst/nhl94.bin.lst lines 30310-30582. Global names are the s where an auto name ( unless generic
+;in an); PrintMenuItem is New in 94; vcountwait is the Locals are the 93 locals, with
+;the unless generic, in an ; the new 94 locals are named for what they do. the inline Strings after printz2 (
 ;ori.b / move.l / btst), and the two PrintMenuItem Strings ( no label:.manual,.auto).
 
 InitMenuState	;Start a menu: a0 = item list, a1 = screen draw routine; selection and first shown item 0. Falls into
-	;DrawMenuScreen. Called from PauseMode (hockey94_01), penalty94_2 and the stats code
+	;DrawMenuScreen. Called from PauseMode, penalty94_2 and the stats code
 	move.l	a0,(menulist).w	;item list
 	move.l	a1,(menudraw).w	;draw routine
 	clr.w	(menuitem).w	;selected item
 	clr.w	(menuitem+2).w	;first item shown
-DrawMenuScreen	;Call the draw routine, frame the menu box, print the items and fade in. Called from HandleMenuInput and penalty94_2
+DrawMenuScreen	;Call the draw routine, frame the menu box, print the items and fade in. Called from HandleMenuInput
 	movea.l	(menudraw).w,a0
 	jsr	(a0)
 	jsr	(printsmallz).l
@@ -36,7 +36,7 @@ SetMenuPrintX	;printx = the left edge of the menu box: 5 in 32 column mode, else
 	rts
 HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the selection, C runs the item's handler and
 	;redraws the menu (94: not if the handler set sflags5 bit 1). Returns eq to leave the menu (start, or C on item 0), ne to stay. Called
-	;from PauseMode (hockey94_01), middle94_1 and the stats code
+	;from PauseMode, middle94_1 and the stats code
 	btst	#7,d1	;sbut
 	bne.w	.flip	;start: Z clear, flipped to eq
 	btst	#1,d1	;dbut
@@ -149,7 +149,7 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 	String	CC_SetAttribute,5,CC_AddX,1,'}'	;(and hid the rest)
 .x
 	rts
-PrintMenuItem	;94 only. Print menu item a1 and step a1 past it. An item whose text starts with 'x' is the goalie option: it prints Manual Goalie
+PrintMenuItem	;Print menu item a1 and step a1 past it. An item whose text starts with 'x' is the goalie option: it prints Manual Goalie
 	;(.manual) when the pause team word is 0, else Auto Goalie (.auto): goaliemode2 with sflags bit 1 (sfpj) set, else goaliemode1. Called from
 	;UpdateMenuSelection
 	cmpi.b	#$78,2(a1)	;first char 'x'
@@ -199,7 +199,7 @@ PrintTeamData	;Copy 2 rows of 11 map words (93 12) from TeamBlockMap+d0 (93 $FFC
 	move.w	(sp)+,(disflags).w
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-vcountwait	;and comment (93 MenuWaitVblank): waits till vcount changes, then resyncs vcount. Saves d0. 94 reads oldvcount twice. Called from PauseMode, sram94, hockey94_02 and the stats code
+vcountwait	;and comment (93 MenuWaitVblank): waits till vcount changes, then resyncs vcount. Saves d0. 94 reads oldvcount twice. Called from PauseMode, hockey94_02 and the stats code
 	move.w	d0,-(sp)
 	move.w	(oldvcount).w,d0
 	move.w	(oldvcount).w,d0

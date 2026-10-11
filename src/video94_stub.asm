@@ -20,9 +20,9 @@ vb2 = $15E4C		;#x at $10F96. vblank handler
 play_sfx_or_music_track = $1A294		;jsr / jmp (x).l at $11144
 rtss2 = $15464			;bsr.w / Bcc.w at $10FBA
 setvideo = $15EC0		;bsr.w / Bcc.w at $11290
-HandleMenuInput = $7E88			;jsr (x).w at $1127A (93 HandleMenuInput)
+HandleMenuInput = $7E88			;jsr (x).w at $1127A
 RunArenaAnim = $FE2C8		;jsr / jmp (x).l at $111EE
-updatecrowdf = $7A9E		;jsr (x).w at $111EA (hockey94_01)
+updatecrowdf = $7A9E		;jsr (x).w at $111EA
 
 framermap = $55B7E		;#x at $119D2
 PrintStringFromList = $13508		;bsr.w / Bcc.w at $11C7E

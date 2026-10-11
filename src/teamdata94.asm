@@ -124,9 +124,9 @@ AllStarsEast	;ASE, $37E
 	String	'All Stars East'
 .ta	;abbreviation
 	String	'ASE'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	dc.w	2	;empty String
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Madison Square Garden'
 
 AllStarsWest	;ASW, $674
@@ -184,9 +184,9 @@ AllStarsWest	;ASW, $674
 	String	'All Stars West'
 .ta	;abbreviation
 	String	'ASW'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	dc.w	2	;empty String
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Madison Square Garden'
 
 Boston	;BOS, $966
@@ -244,9 +244,9 @@ Boston	;BOS, $966
 	String	'Boston'
 .ta	;abbreviation
 	String	'BOS'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Bruins'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Boston Garden'
 
 Buffalo	;BUF, $C4C
@@ -304,9 +304,9 @@ Buffalo	;BUF, $C4C
 	String	'Buffalo'
 .ta	;abbreviation
 	String	'BUF'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Sabres'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Memorial Auditorium'
 
 Calgary	;CGY, $F3A
@@ -364,9 +364,9 @@ Calgary	;CGY, $F3A
 	String	'Calgary'
 .ta	;abbreviation
 	String	'CGY'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Flames'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Olympic Saddledome'
 
 Chicago	;CHI, $1234
@@ -424,9 +424,9 @@ Chicago	;CHI, $1234
 	String	'Chicago'
 .ta	;abbreviation
 	String	'CHI'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Blackhawks'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Chicago Stadium'
 
 Detroit	;DET, $152E
@@ -484,9 +484,9 @@ Detroit	;DET, $152E
 	String	'Detroit'
 .ta	;abbreviation
 	String	'DET'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Red Wings'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Joe Louis Sports Arena'
 
 Edmonton	;EDM, $1848
@@ -544,9 +544,9 @@ Edmonton	;EDM, $1848
 	String	'Edmonton'
 .ta	;abbreviation
 	String	'EDM'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Oilers'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Northlands Coliseum'
 
 Hartford	;HFD, $1B44
@@ -604,9 +604,9 @@ Hartford	;HFD, $1B44
 	String	'Hartford'
 .ta	;abbreviation
 	String	'HFD'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Whalers'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Hartford Civic Center'
 
 LosAngeles	;LA, $1E52
@@ -664,9 +664,9 @@ LosAngeles	;LA, $1E52
 	String	'Los Angeles'
 .ta	;abbreviation
 	String	'LA'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Kings'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Great Western Forum'
 
 Dallas	;DAL, $214E. 93 Minnesota North Stars
@@ -724,9 +724,9 @@ Dallas	;DAL, $214E. 93 Minnesota North Stars
 	String	'Dallas'
 .ta	;abbreviation
 	String	'DAL'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Stars'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Reunion Arena'
 
 Montreal	;MTL, $243E
@@ -784,9 +784,9 @@ Montreal	;MTL, $243E
 	String	'Montreal'
 .ta	;abbreviation
 	String	'MTL'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Canadiens'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Montreal Forum'
 
 NewJersey	;NJ, $2740
@@ -844,9 +844,9 @@ NewJersey	;NJ, $2740
 	String	'New Jersey'
 .ta	;abbreviation
 	String	'NJ'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Devils'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Byrne Meadowlands Arena'
 
 NYIslanders	;NYI, $2A58
@@ -904,9 +904,9 @@ NYIslanders	;NYI, $2A58
 	String	'New York'
 .ta	;abbreviation
 	String	'NYI'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Islanders'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Nassau Coliseum'
 
 NYRangers	;NYR, $2D5C
@@ -964,9 +964,9 @@ NYRangers	;NYR, $2D5C
 	String	'New York'
 .ta	;abbreviation
 	String	'NYR'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Rangers'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Madison Square Garden'
 
 Ottawa	;OTW, $3054
@@ -1024,9 +1024,9 @@ Ottawa	;OTW, $3054
 	String	'Ottawa'
 .ta	;abbreviation
 	String	'OTW'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Senators'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Ottawa Civic Center'
 
 Philadelphia	;PHI, $3348
@@ -1084,9 +1084,9 @@ Philadelphia	;PHI, $3348
 	String	'Philadelphia'
 .ta	;abbreviation
 	String	'PHI'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Flyers'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Spectrum'
 
 Pittsburgh	;PIT, $3646
@@ -1144,9 +1144,9 @@ Pittsburgh	;PIT, $3646
 	String	'Pittsburgh'
 .ta	;abbreviation
 	String	'PIT'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Penguins'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Civic Arena'
 
 Quebec	;QUE, $393C
@@ -1204,9 +1204,9 @@ Quebec	;QUE, $393C
 	String	'Quebec'
 .ta	;abbreviation
 	String	'QUE'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Nordiques'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Colisee de Quebec'
 
 SanJose	;SJ, $3C42
@@ -1264,9 +1264,9 @@ SanJose	;SJ, $3C42
 	String	'San Jose'
 .ta	;abbreviation
 	String	'SJ'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Sharks'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'San Jose Arena'
 
 StLouis	;STL, $3F30
@@ -1324,9 +1324,9 @@ StLouis	;STL, $3F30
 	String	'St. Louis'
 .ta	;abbreviation
 	String	'STL'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Blues'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'St. Louis Arena'
 
 TampaBay	;TB, $4216
@@ -1384,9 +1384,9 @@ TampaBay	;TB, $4216
 	String	'Tampa Bay'
 .ta	;abbreviation
 	String	'TB'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Lightning'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Fairgrounds Expo Hall'
 
 Toronto	;TOR, $4518
@@ -1444,9 +1444,9 @@ Toronto	;TOR, $4518
 	String	'Toronto'
 .ta	;abbreviation
 	String	'TOR'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Maple Leafs'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Maple Leaf Gardens'
 
 Vancouver	;VAN, $481C
@@ -1504,9 +1504,9 @@ Vancouver	;VAN, $481C
 	String	'Vancouver'
 .ta	;abbreviation
 	String	'VAN'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Canucks'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Pacific Coliseum'
 
 Winnipeg	;WPG, $4B0A
@@ -1564,9 +1564,9 @@ Winnipeg	;WPG, $4B0A
 	String	'Winnipeg'
 .ta	;abbreviation
 	String	'WPG'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Jets'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Winnipeg Arena'
 
 Washington	;WSH, $4DFC
@@ -1623,9 +1623,9 @@ Washington	;WSH, $4DFC
 	String	'Washington'
 .ta	;abbreviation
 	String	'WSH'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Capitals'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Capital Centre'
 
 Florida	;FLA, $50E6. new in 94
@@ -1675,9 +1675,9 @@ Florida	;FLA, $50E6. new in 94
 	String	'Florida'
 .ta	;abbreviation
 	String	'FLA'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Panthers'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Miami Arena'
 
 Anaheim	;ANH, $5330. new in 94
@@ -1728,9 +1728,9 @@ Anaheim	;ANH, $5330. new in 94
 	String	'Anaheim'
 .ta	;abbreviation
 	String	'ANH'
-.tm	;nickname. 94 only
+.tm	;nickname.
 	String	'Mighty Ducks'
-.ar	;arena. 94 only
+.ar	;arena.
 	String	'Pond'
 
 playoffseats	;$5576. 93 name. movea.l #$5576 in the playoff tree setup. 32 rows of 16 team numbers (93: 34)

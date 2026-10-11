@@ -19,9 +19,9 @@ AddError = $18BFC		;Vectors $08 (bus error) and $0C (address error)
 Illinst = $18C22		;Vector $10
 ZeroDiv = $18C4C		;Vector $14
 IRQ7 = $15E6C			;(an rte). Vectors $60-$70 and $7C
-VBjsr = $76B2			;Vector $78 (hockey94_01)
-ValidationRoutine = $FFAC0	;jsr (x).l at $300 (checksum94)
-Begin = $76B8			;bra.w at $306, displacement $73B0 at $308 (hockey94_01)
+VBjsr = $76B2			;Vector $78
+ValidationRoutine = $FFAC0	;jsr (x).l at $300
+Begin = $76B8			;bra.w at $306, displacement $73B0 at $308
 
 ; Main segment code
 	include	main94.asm

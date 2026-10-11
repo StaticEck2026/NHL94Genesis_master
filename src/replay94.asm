@@ -3,7 +3,7 @@
 ;	92 hockey.asm part 1, second half, as 93 hockey93_02.asm: ReplayMode, getpzjoy, suba4 / adda4,
 ;	UpdateCameraPos, RestoreReplayFrame, updatereplay, rtss8, updateplayers, updateanim, freezewindow, checkwindow.
 ;	94 adds the reverse angle replay (sflags4 bits 4, 6, 7), the replay icon timer (ShowReplayIcon ... EraseReplayBanner),
-;	4 way play pads and the fall-down position fixes in updateplayers. doinput (logic94_1) follows at $B0E8.
+;	4 way play pads and the fall-down position fixes in updateplayers. doinput follows at $B0E8.
 ;	Transcribed from lst/nhl94.bin.lst lines 34505-35879. Global names are the 93 names where 93 has the
 ;routine ( unless generic, in an); 94-only routines keep the Local labels are the
 ;local names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
@@ -303,7 +303,7 @@ getpzjoy	;read the joystick of the pad that paused. 94: pads 3 and 4 when FourWa
 	cmpi.w	#3,(pausepad).w
 	beq.w	ReadJoy3
 	bra.w	ReadJoy4
-ShowReplayIcon	;94 only. Show the replay icon (93 ReplayMode does this inline) and start the $F0 frame replayicontimer timer
+ShowReplayIcon	;Show the replay icon (93 ReplayMode does this inline) and start the $F0 frame replayicontimer timer
 	move.w	#$F0,(replayicontimer).w
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),2,2			;and moveq #$20,d0 in ori.b / andi.b
@@ -321,14 +321,14 @@ ShowReplayIcon	;94 only. Show the replay icon (93 ReplayMode does this inline) a
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2
 	bra.w	dobitmap
-EraseReplayIcon	;94 only. Erase the 8 x 4 replay icon (replayicontimer timer ran out)
+EraseReplayIcon	;Erase the 8 x 4 replay icon (replayicontimer timer ran out)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,2			;and the three moves in ori.b / andi.b
 	move.w	#8,d0			;8 wide
 	move.w	#4,d1			;4 high
 	move.w	#$7FF,d2
 	jmp	eraser
-ShowReplayBanner	;94 only. Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
+ShowReplayBanner	;Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
 	st	(replayicontimer).w
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),2,0			;and moveq #0,d0 in ori.b
@@ -342,7 +342,7 @@ ShowReplayBanner	;94 only. Show ReplayMap at 0,0 (16 x 11) and stop the replayic
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2
 	bra.w	dobitmap
-EraseReplayBanner	;94 only. Erase the 16 x 11 area ShowReplayBanner drew
+EraseReplayBanner	;Erase the 16 x 11 area ShowReplayBanner drew
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,2			;and the three moves in ori.b / andi.b
 	move.w	#$10,d0			;16 wide
@@ -365,7 +365,7 @@ suba4	;a4 = current replay frame. Back up 1 frame and set video parameters for d
 	bsr.w	RestoreReplayFrame
 	clr.w	d7
 	rts
-adda4	;Step forward 1 frame (93 adda4). 94 first handles a reverse angle switch (sflags4 bit 6)
+adda4	;Step forward 1 frame. 94 first handles a reverse angle switch (sflags4 bit 6)
 	bclr	#6,(sflags4).w
 	beq.w	.1
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -459,7 +459,7 @@ UpdateCameraPos	;Camera struct a5 = object a3 x/y (negated for the reverse angle
 	movem.l	(sp)+,d0-d2
 	rts
 ; set flag for reverse replay setup if needed
-RevReplayAdj	;94 only. Set sflags4 bit 7 for a reverse angle replay, then fall into RestoreReplayFrame
+RevReplayAdj	;Set sflags4 bit 7 for a reverse angle replay, then fall into RestoreReplayFrame
 	btst	#4,(sflags4).w	;check if reverse angle replay
 	beq.w	RestoreReplayFrame	;branch if not
 	bset	#7,(sflags4).w	;set bit 7
@@ -623,7 +623,7 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	bclr	#7,(sflags4).w
 	movem.l	(sp)+,d0-d2/a0/a6
 	rts
-ClampReplayView	;94 only. Clamp Hpos to -$3C..$3C and Vpos to -$C8..$100
+ClampReplayView	;Clamp Hpos to -$3C..$3C and Vpos to -$C8..$100
 	move.w	d0,-(sp)
 	move.w	#$3C,d0
 	cmp.w	(Hpos).w,d0
@@ -788,17 +788,17 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	jsr	(PlaceBoardFall).l
 	bra.w	.top2
 .0
-	cmpi.w	#$193E,SPA(a3)	;SPAboardmidl (frames94). check animation
+	cmpi.w	#$193E,SPA(a3)	;SPAboardmidl. check animation
 	beq.w	.10
-	cmpi.w	#$1A00,SPA(a3)	;SPAboardmidr (frames94)
+	cmpi.w	#$1A00,SPA(a3)	;SPAboardmidr
 	beq.w	.8
-	cmpi.w	#$18CC,SPA(a3)	;SPAboardleft (frames94)
+	cmpi.w	#$18CC,SPA(a3)	;SPAboardleft
 	beq.w	.9
-	cmpi.w	#$17E8,SPA(a3)	;SPAboardright (frames94)
+	cmpi.w	#$17E8,SPA(a3)	;SPAboardright
 	beq.w	.7
-	cmpi.w	#$1776,SPA(a3)	;SPAboardtop (frames94)
+	cmpi.w	#$1776,SPA(a3)	;SPAboardtop
 	beq.w	.1
-	cmpi.w	#$185A,SPA(a3)	;SPAboardbot (frames94)
+	cmpi.w	#$185A,SPA(a3)	;SPAboardbot
 	beq.w	.4
 	bra.w	.top2
 .1
@@ -874,9 +874,9 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	jsr	(loadTeamStruct).l
 	addq.w	#1,0(a2,d0.w)	;add 1 to TOI for player
 .11
-	cmpi.w	#$145C,SPA(a3)	;SPAinjuryfall (frames94). check animation
+	cmpi.w	#$145C,SPA(a3)	;SPAinjuryfall. check animation
 	beq.w	.done
-	cmpi.w	#$1AF4,SPA(a3)	;SPAinjury1 (frames94). check animation
+	cmpi.w	#$1AF4,SPA(a3)	;SPAinjury1. check animation
 	beq.w	.done
 	moveq	#$11,d4
 	tst.w	(music_global_tick_counter).w
@@ -1089,7 +1089,7 @@ updateanim	;frame switch control on struct a3
 	bclr	#pf2aip,pflags2(a3)	;clear anim in progress
 	rts
 .ia
-	movea.l	#SPAlist,a0	;animation data tables (frames94)
+	movea.l	#SPAlist,a0	;animation data tables
 	adda.w	SPA(a3),a0	;add SPA to a0 address
 	move.w	$10(a0),d1	;16 dec - attributes for anim
 	move.w	facedir(a3),d0	;facedir into d0

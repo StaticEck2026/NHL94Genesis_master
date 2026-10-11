@@ -1,5 +1,5 @@
 ; $0FE1D8  NEW in 94: manual goalie
-ManualGoalieMenu	;it as data; 93 has no counterpart. "x Manual Goalie" menu item (hockey94_11 menu lists; PrintMenuItem prints
+ManualGoalieMenu	;it as data; 93 has no counterpart. "x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	;Manual / Auto Goalie from the same words): with OptNOP set, toggle the goalie mode of the pause pad (goaliemode2 for pad 2, sflags bit 1,
 	;else goaliemode1; both when the pads are on one team). In a penalty shot or shootout (gmode2 bit 0, BA_PS_flags bit 2) the pad then
 	;takes player 0 / 6 or 5 / $B by its mode, when BA_Sktr_SCnum is on its side (setc1player / setc2player)
@@ -68,9 +68,9 @@ ManualGoalieMenu	;it as data; 93 has no counterpart. "x Manual Goalie" menu item
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-RunArenaAnim	;94 only. Run the arena animation arenaanim (negative: none): the first time, its frame list and graphics from ArenaAnims
+RunArenaAnim	;Run the arena animation arenaanim (negative: none): the first time, its frame list and graphics from ArenaAnims
 	;(arenaframelist / arenaspritelist, tiles to VRAM d4 = arenaanimchars: DoDMA_clearCallbackPointer); then count down the frame time arenaframetime by d7
-	;and step (NextArenaFrame). Called from periodicevents (hockey94_01) and IntermissionLoop (middle94_1)
+	;and step (NextArenaFrame). Called from periodicevents and IntermissionLoop
 	tst.w	(arenaanim).w
 	bmi.w	.x2
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -97,7 +97,7 @@ RunArenaAnim	;94 only. Run the arena animation arenaanim (negative: none): the f
 	movem.l	(sp)+,d0-d7/a0-a6
 .x2
 	rts
-NextArenaFrame	;94 only. Read frame arenaframeidx of the list: arenaframe = frame, arenaframetime = time; frame $FF loops to the start, $FE ends the animation (EndArenaAnim)
+NextArenaFrame	;Read frame arenaframeidx of the list: arenaframe = frame, arenaframetime = time; frame $FF loops to the start, $FE ends the animation (EndArenaAnim)
 	movea.l	(arenaframelist).w,a0
 	move.w	(arenaframeidx).w,d0
 	add.w	d0,d0
@@ -117,7 +117,7 @@ NextArenaFrame	;94 only. Read frame arenaframeidx of the list: arenaframe = fram
 	bsr.w	EndArenaAnim
 .x
 	rts
-ArenaAnims	;The 8 arena animations (StartArenaAnim d0): frame list, then the graphics in graphics94 ArenaGfxBank (sprite list at 4(x), tiles at 8(x))
+ArenaAnims	;The 8 arena animations (StartArenaAnim d0): frame list, then the graphics in ArenaGfxBank (sprite list at 4(x), tiles at 8(x))
 	dc.l	ArenaFrames8,ArenaGfxBank+$416
 	dc.l	ArenaFrames6,ArenaGfxBank+$C3A
 	dc.l	ArenaFrames7,ArenaGfxBank+$C3A
@@ -164,8 +164,8 @@ SetCameraTop	;nothing calls it (it as data). sflags bit 6, xc1 = 0, yc1 = $160
 	move.w	#0,(xc1).w
 	move.w	#$160,(yc1).w
 	rts
-StartArenaAnim	;94 only. Start arena animation d0 (ArenaAnims): arenaanim = d0, RunArenaAnim loads it. Called from FallDown (hockey94_03, 7),
-	;DisplayPlayerAttributeMenu (hockey94_10, 0 on a home hat trick) and puckfaceoff2 (logic94_4, the one SetFaceoffAnim set)
+StartArenaAnim	;Start arena animation d0 (ArenaAnims): arenaanim = d0, RunArenaAnim loads it. Called from FallDown (7)
+	;DisplayPlayerAttributeMenu (0 on a home hat trick) and puckfaceoff2 (the one SetFaceoffAnim set)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d0,(arenaanim).w
 	move.l	#0,(arenaframelist).w
@@ -175,11 +175,11 @@ StartArenaAnim	;94 only. Start arena animation d0 (ArenaAnims): arenaanim = d0, 
 	st	(faceoffanim).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-SetFaceoffAnim	;94 only. Set the faceoff animation: sflags7 bit 0, faceoffanim = d0. Called from puckfaceoff (logic94_4)
+SetFaceoffAnim	;Set the faceoff animation: sflags7 bit 0, faceoffanim = d0. Called from puckfaceoff
 	bset	#0,(sflags7).w
 	move.w	d0,(faceoffanim).w
 	rts
-EndArenaAnim	;94 only. End the arena animation: arenaanim = -1, sflags7 bit 0 cleared. Called from NextArenaFrame and puckfaceoff2 (logic94_4)
+EndArenaAnim	;End the arena animation: arenaanim = -1, sflags7 bit 0 cleared. Called from NextArenaFrame and puckfaceoff2
 	move.w	#$FFFF,(arenaanim).w
 	bclr	#0,(sflags7).w
 	rts

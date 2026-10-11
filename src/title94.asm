@@ -1,6 +1,6 @@
 ; $0FE556  NEW in 94: song select, title, credits
-ChooseSong	;94 only: SongNum = byte SongIndex of the 6 song bytes of team HmTeam (TeamSongs), or one of the 8 of RandomSongs at random
-	;when 0; $FFFF with gmode bit 4. Called from StartPer (hockey94_01), checkgoal (hockey94_04), puckshootout (logic94_4) and LeadSong
+ChooseSong	;SongNum = byte SongIndex of the 6 song bytes of team HmTeam (TeamSongs), or one of the 8 of RandomSongs at random
+	;when 0; $FFFF with gmode bit 4. Called from StartPer, checkgoal, puckshootout and LeadSong
 	movem.l	d0-d1/a0-a1,-(sp)
 	btst	#4,(gmode).w
 	beq.w	.0
@@ -55,8 +55,8 @@ TeamSongs	;ChooseSong: 6 songs per team (TeamList order), 0 = random (RandomSong
 	dc.b	$54,$55,$53,0,$5A,0
 RandomSongs	;ChooseSong: the 8 songs for a random pick
 	dc.b	$34,$40,$42,$49,$58,$5C,$65,$66
-ReadLineData	;94 only. Read the $100 bytes at save RAM $1EF6 to databuffer (ReadSRAM); sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin (hockey94_01) and
-	;GameSetUp (hockey94_08)
+ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer (ReadSRAM); sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin and
+	;GameSetUp
 	movem.l	d0-d1/a0,-(sp)
 	move.l	#$100,d1
 	move.l	#$1EF6,d0
@@ -67,8 +67,7 @@ ReadLineData	;94 only. Read the $100 bytes at save RAM $1EF6 to databuffer (Read
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
 	rts
-WriteLineData	;94 only. Write databuffer back to save RAM $1EF6 (WriteSRAM, MakeSRAMChecksum); as ReadLineData after. Called from EncodePW (hockey94_09) and EncodePlayerAttributes
-	;(stats94)
+WriteLineData	;Write databuffer back to save RAM $1EF6 (WriteSRAM, MakeSRAMChecksum); as ReadLineData after. Called from EncodePW and EncodePlayerAttributes
 	movem.l	d0-d1/a0,-(sp)
 	move.l	#$100,d1
 	move.l	#$1EF6,d0
@@ -80,8 +79,8 @@ WriteLineData	;94 only. Write databuffer back to save RAM $1EF6 (WriteSRAM, Make
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
 	rts
-ClearWinRecords	;94 only. Clear bytes 8-$B of the 8 ThreeStars records and write the $80 bytes to save RAM $D20 (WriteSRAM, MakeSRAMChecksum). Called from RecordHoldersScreen
-	;(high94_2, Record Holders)
+ClearWinRecords	;Clear bytes 8-$B of the 8 ThreeStars records and write the $80 bytes to save RAM $D20 (WriteSRAM, MakeSRAMChecksum). Called from RecordHoldersScreen
+	;(Record Holders)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#ThreeStars,a0
 	move.w	#7,d7
@@ -99,8 +98,8 @@ ClearWinRecords	;94 only. Clear bytes 8-$B of the 8 ThreeStars records and write
 	jsr	(MakeSRAMChecksum).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PSandSOpassdir	;(and comments). 94 only: penalty shot / shootout: passdir = sopathdir (the end of the skate path, NextPathPoint), turned by
-	;passdirlist for the bottom net. Called from shotdiradj (logic94_1)
+PSandSOpassdir	;(and comments). penalty shot / shootout: passdir = sopathdir (the end of the skate path, NextPathPoint), turned by
+	;passdirlist for the bottom net. Called from shotdiradj
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(sopathdir).w,d0
 	btst	#7,pflags(a3)	;check what net shooting at
@@ -121,8 +120,8 @@ passdirlist	dc.w	0	;PSandSOpassdir: passdir for the other net
 	dc.w	2
 	dc.w	1
 	dc.w	8
-StartShootoutPath	;94 only. Shootout: pick one of the 7 skate paths (ShootoutPaths) at random (sopath) and start it (NextPathPoint). Called from NextShooter (high94_2) and
-	;puckshootout (logic94_4)
+StartShootoutPath	;Shootout: pick one of the 7 skate paths (ShootoutPaths) at random (sopath) and start it (NextPathPoint). Called from NextShooter and
+	;puckshootout
 	movem.l	d0-d7/a0-a6,-(sp)
 .loop
 	move.w	#7,d0
@@ -158,7 +157,7 @@ ShootoutPath6	;ShootoutPaths path: x, y points; $80 in the high byte ends it (lo
 	dc.w	$1C,$F4,8,$E0,$8020,6
 ShootoutPath7	;ShootoutPaths path: x, y points; $80 in the high byte ends it (low byte: sopathend, then sopathdir)
 	dc.w	$FFE6,$F8,0,$E0,$8020,2
-NextPathPoint	;94 only. Next point of shootout path sopath (sopathpoint): sopathx / sopathy = x (turned by bit 0 of $76(a3)) / y; at
+NextPathPoint	;Next point of shootout path sopath (sopathpoint): sopathx / sopathy = x (turned by bit 0 of $76(a3)) / y; at
 	;the end ($80) sflags7 bit 3, sopathend and sopathdir (passdir)
 	movem.l	d0-d7/a0-a6,-(sp)
 	cmpi.b	#$80,(sopathx).w
@@ -185,8 +184,8 @@ NextPathPoint	;94 only. Next point of shootout path sopath (sopathpoint): sopath
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-SkatePath	;94 only. Shootout skate path: d0 / d1 = the point (mirrored for the bottom net); within $A of it ($12 while $28 / $2A(a3) are 0) take
-	;the next one (NextPathPoint). Called from asspuckc (logic94_3)
+SkatePath	;Shootout skate path: d0 / d1 = the point (mirrored for the bottom net); within $A of it ($12 while $28 / $2A(a3) are 0) take
+	;the next one (NextPathPoint). Called from asspuckc
 	movem.l	d2-d7/a0-a6,-(sp)
 	cmpi.b	#$80,(sopathx).w
 	beq.w	.x
@@ -232,8 +231,8 @@ SkatePath	;94 only. Shootout skate path: d0 / d1 = the point (mirrored for the b
 .x
 	movem.l	(sp)+,d2-d7/a0-a6
 	rts
-ShootoutShootCheck	;94 only. Shootout, skater a3 has the puck (gmode2 bit 1): Z set (d0 is restored) = shoot now: after 3 (shootoutclock) at the path
-	;end, within sopathend of its last point, or with the puck stopped before $F. Called from asspuckc (logic94_3)
+ShootoutShootCheck	;Shootout, skater a3 has the puck (gmode2 bit 1): Z set (d0 is restored) = shoot now: after 3 (shootoutclock) at the path
+	;end, within sopathend of its last point, or with the puck stopped before $F. Called from asspuckc
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#1,(gmode2).w
 	beq.w	.5
@@ -281,8 +280,8 @@ ShootoutShootCheck	;94 only. Shootout, skater a3 has the puck (gmode2 bit 1): Z 
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-UnpackPicture	;94 only. Unpack a picture a2: count.w, then 3 bytes per row of 8 pixels to 4 bit pixels + 5 at picturebuf (count first). Called from
-	;DrawPictureBox (high94_2), DrawMatchupPicture (hockey94_07) and PlayerCardScreen (hockey94_08)
+UnpackPicture	;Unpack a picture a2: count.w, then 3 bytes per row of 8 pixels to 4 bit pixels + 5 at picturebuf (count first). Called from
+	;DrawPictureBox, DrawMatchupPicture and PlayerCardScreen
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#picturebuf,a0
 	movea.l	#picturebits,a1
@@ -342,8 +341,8 @@ UnpackPicture	;94 only. Unpack a picture a2: count.w, then 3 bytes per row of 8 
 	dbf	d0,.loop
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-LoadHomeTeamGfx	;94 only. Load the HomeTeam graphics of TeamGfxList to VRAM d4 - $18 (DoDMA_clearCallbackPointer). Called from setupice (hockey94_06), ClrHor (penalty94_1) and
-	;ReloadRinkGraphics (stats94)
+LoadHomeTeamGfx	;Load the HomeTeam graphics of TeamGfxList to VRAM d4 - $18 (DoDMA_clearCallbackPointer). Called from setupice, ClrHor and
+	;ReloadRinkGraphics
 	move.w	d0,-(sp)
 	subi.w	#$18,d4
 	movea.l	#TeamGfxList,a2
@@ -354,7 +353,7 @@ LoadHomeTeamGfx	;94 only. Load the HomeTeam graphics of TeamGfxList to VRAM d4 -
 	jsr	(DoDMA_clearCallbackPointer).l
 	move.w	(sp)+,d0
 	rts
-TeamGfxList	;LoadHomeTeamGfx: one address per team (TeamList order) in graphics94 ArenaGfxBank
+TeamGfxList	;LoadHomeTeamGfx: one address per team (TeamList order) in ArenaGfxBank
 	dc.l	ArenaGfxBank+$3FB4,ArenaGfxBank+$8BAE,ArenaGfxBank+$42BE,ArenaGfxBank+$45C8
 	dc.l	ArenaGfxBank+$48D2,ArenaGfxBank+$4BDC,ArenaGfxBank+$4EE6,ArenaGfxBank+$51F0
 	dc.l	ArenaGfxBank+$54FA,ArenaGfxBank+$5804,ArenaGfxBank+$5B0E,ArenaGfxBank+$5E18
@@ -362,13 +361,13 @@ TeamGfxList	;LoadHomeTeamGfx: one address per team (TeamList order) in graphics9
 	dc.l	ArenaGfxBank+$6D4A,ArenaGfxBank+$7054,ArenaGfxBank+$735E,ArenaGfxBank+$7668
 	dc.l	ArenaGfxBank+$7972,ArenaGfxBank+$7C7C,ArenaGfxBank+$7F86,ArenaGfxBank+$8290
 	dc.l	ArenaGfxBank+$859A,ArenaGfxBank+$88A4,ArenaGfxBank+$8EB8,ArenaGfxBank+$8EB8
-PrintPlayerAssists	;94 only. Print " (n)": byte $CE + d0 of team a2, then the next row at x $E. Called from DisplayPlayerAttributeMenu (hockey94_10)
+PrintPlayerAssists	;Print " (n)": byte $CE + d0 of team a2, then the next row at x $E. Called from DisplayPlayerAttributeMenu
 	movem.l	d0/a2,-(sp)
 	jsr	(printz).l
 	String	' ('
 	adda.w	#$CE,a2
 	bra.w	PrintParenNumber
-PrintPlayerGoals	;94 only. As PrintPlayerAssists with byte $B4 + d0. Called from DisplayPlayerAttributeMenu (hockey94_10)
+PrintPlayerGoals	;As PrintPlayerAssists with byte $B4 + d0. Called from DisplayPlayerAttributeMenu
 	movem.l	d0/a2,-(sp)
 	jsr	(printz).l
 	String	' ('
@@ -392,9 +391,9 @@ PrintParenNumber	;PrintPlayerAssists / PrintPlayerGoals: the number (1 to 3 digi
 	move.w	#$E,(printx).w
 	movem.l	(sp)+,d0/a2
 	rts
-PlaceBoardFall	;94 only. A player falling into the boards (frames94 SPAboardtop ... SPAboardmidl). For frames $1776 / $185A (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and $17E8
+PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl). For frames $1776 / $185A (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and $17E8
 	;/ $1A00 / $18CC / $193E (x to +-$82 /
-	;$88 by bit 3 of 4(a3)) of $58(a3): move player a3 half way there. Called from updateplayers (hockey94_02)
+	;$88 by bit 3 of 4(a3)) of $58(a3): move player a3 half way there. Called from updateplayers
 	cmpi.w	#$193E,SPA(a3)
 	beq.w	.12
 	cmpi.w	#$1A00,SPA(a3)
@@ -477,7 +476,7 @@ PlaceBoardFall	;94 only. A player falling into the boards (frames94 SPAboardtop 
 	add.w	d0,(a3)
 .x
 	rts
-GetLeagueCrowdRecord	;94 only. d0 = the team (of 28) with the highest crowd record byte 8 (clrCrowdRAM; 0 counts as $50). Called from DisplayGameStats (stats94)
+GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8 (clrCrowdRAM; 0 counts as $50). Called from DisplayGameStats
 	movem.l	d1-d7/a0-a6,-(sp)
 	move.w	#$1B,d1
 	ext.l	d1
@@ -498,15 +497,15 @@ GetLeagueCrowdRecord	;94 only. d0 = the team (of 28) with the highest crowd reco
 	dbf	d1,.loop
 	movem.l	(sp)+,d1-d7/a0-a6
 	rts
-getFgtbyte	;(and comments). 94 only. Called from setInjuryType (hockey94_03)
+getFgtbyte	;(and comments). Called from setInjuryType
 	clr.w	d0	;clear d0
 	move.b	fighting(a2),d0	;move H/F bit into d0 (this is always even)
 	lsr.w	#2,d0	;shift 2 right (divide by 4)
 	rts
-chkFgtBit1	;94 only: test bit 1 of $74(a2). Called from setInjuryType (hockey94_03)
+chkFgtBit1	;test bit 1 of $74(a2). Called from setInjuryType
 	btst	#1,fighting(a2)
 	rts
-RandomFaceoffAnim	;94 only. d0 = a random faceoff animation from FaceoffAnims (StartArenaAnim), 6 when fox <= -$40 and foy <= $C0. Called from puckfaceoff (logic94_4)
+RandomFaceoffAnim	;d0 = a random faceoff animation from FaceoffAnims (StartArenaAnim), 6 when fox <= -$40 and foy <= $C0. Called from puckfaceoff
 	movem.l	a0,-(sp)
 	movea.l	#FaceoffAnims,a0
 	move.w	#$64,d0
@@ -524,7 +523,7 @@ RandomFaceoffAnim	;94 only. d0 = a random faceoff animation from FaceoffAnims (S
 	rts
 FaceoffAnims	;RandomFaceoffAnim animations
 	dc.w	3,5,3,1,5,2,3,3,$FFFF
-CheckScoreLeader	;94 only. Compare the scores ($24 of HmShots / AwShots) and test $28 of the leader for $13; the result is not used (bne.w *+4). Called from puckfaceoff (logic94_4)
+CheckScoreLeader	;Compare the scores ($24 of HmShots / AwShots) and test $28 of the leader for $13; the result is not used (bne.w *+4). Called from puckfaceoff
 	movem.l	d0-d2/a0-a2,-(sp)
 	movea.l	#tmstruct,a0
 	movea.l	#AwShots,a1
@@ -539,8 +538,7 @@ CheckScoreLeader	;94 only. Compare the scores ($24 of HmShots / AwShots) and tes
 .x
 	movem.l	(sp)+,d0-d2/a0-a2
 	rts
-DrawPlayoffSprite	;94 only. The PlayoffSprite sprite at playoffspritex / playoffspritey (SetSframe) in Satt, then end the sprite list (Sattsize = its size). Called from PlayoffScreen
-	;(hockey94_06)
+DrawPlayoffSprite	;The PlayoffSprite sprite at playoffspritex / playoffspritey (SetSframe) in Satt, then end the sprite list (Sattsize = its size). Called from PlayoffScreen
 	movea.w	#(Satt-M68K_RAM),a6
 	moveq	#1,d6
 	movea.l	#PlayoffSprite,a0
@@ -561,7 +559,7 @@ DrawPlayoffSprite	;94 only. The PlayoffSprite sprite at playoffspritex / playoff
 	lsr.w	#1,d0
 	move.w	d0,(Sattsize).w
 	rts
-HiScoreScreen	;94 only: vb2, the $F4378 bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (hockey94_01, attract mode)
+HiScoreScreen	;vb2, the $F4378 bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (attract mode)
 	move.l	#vb2,(vbint).w
 	bclr	#1,(disflags).w
 	move.w	#5,(Map3col1).w
@@ -619,15 +617,14 @@ HiScoreScreen	;94 only: vb2, the $F4378 bitmap and HiScoreImg, then wait up to $
 .0
 	move	#$2700,sr
 	rts
-GetTeamStruct	;94 only. a2 = HmShots, or AwShots when team d2 is not $28 of HmShots. Called from PrintStartingLine (high94_2)
+GetTeamStruct	;a2 = HmShots, or AwShots when team d2 is not $28 of HmShots. Called from PrintStartingLine
 	movea.l	#tmstruct,a2
 	cmp.w	Xvel(a2),d2
 	beq.w	.x
 	movea.l	#AwShots,a2
 .x
 	rts
-CountButtonPress	;94 only. Not in gmode bit 0: add 1 to homepresses (awaypresses for d4), and to the next long unless TempWord1 is 8 or $54(a3). Called from doinput_ispc
-	;(logic94_1)
+CountButtonPress	;Not in gmode bit 0: add 1 to homepresses (awaypresses for d4), and to the next long unless TempWord1 is 8 or $54(a3). Called from doinput_ispc
 	movem.l	d1-d7/a0,-(sp)
 	btst	#0,(gmode).w
 	bne.w	.x
@@ -657,7 +654,7 @@ TerminateLogName	;nothing calls it (it as data). The GetLogName String at lognam
 	move.w	d0,-2(a1)
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PlayedByHome	;94 only. a1 = String "(played by NAME)" for homeuser (GetLogName name), or an empty String for 0. Called from ScoutTextPlayer (hockey94_06)
+PlayedByHome	;a1 = String "(played by NAME)" for homeuser (GetLogName name), or an empty String for 0. Called from ScoutTextPlayer
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(homeuser).w,d0
 PlayedByText	;PlayedByHome / PlayedByAway body
@@ -694,11 +691,11 @@ PlayedByEmptyTxt	;PlayedByHome: the empty String
 PlayedByNone	;PlayedByHome: no name
 	movea.l	#PlayedByEmptyTxt,a1
 	bra.s	PlayedByExit
-PlayedByAway	;94 only. As PlayedByHome for awayuser. Called from ScoutTextPlayer (hockey94_06)
+PlayedByAway	;As PlayedByHome for awayuser. Called from ScoutTextPlayer
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(awayuser).w,d0
 	bra.w	PlayedByText
-SetSflags8Bit1	;94 only. Always sets sflags8 bit 1 (the bclr is skipped). Called from updateplayers (hockey94_02)
+SetSflags8Bit1	;Always sets sflags8 bit 1 (the bclr is skipped). Called from updateplayers
 	bra.w	.set
 	bclr	#1,(sflags8).w
 	bra.w	.ex
@@ -706,7 +703,7 @@ SetSflags8Bit1	;94 only. Always sets sflags8 bit 1 (the bclr is skipped). Called
 	bset	#1,(sflags8).w	;set bit 1 of sflags8
 .ex
 	rts
-AttribAdjust	;(and comments). 94 only: an attribute under $32 becomes d0 / 2 + $19. Called from AttribRating (stats94), PrintOverallRating (high94_2) and PrintMatchupRatings (hockey94_07)
+AttribAdjust	;(and comments). an attribute under $32 becomes d0 / 2 + $19. Called from AttribRating, PrintOverallRating and PrintMatchupRatings
 	cmp.w	#$32,d0	;'2'   ; compare $32 to d0
 	bge.w	.exit	;branch if greater than
 	asr.w	#1,d0	;divide by 2
@@ -733,8 +730,8 @@ PuckComingToward	;nothing calls it. Z clear when the puck is within $1E of playe
 .x
 	movem.w	(sp)+,d0-d1
 	rts
-ReadGoaliePulled	;(and comments). 94 only: Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
-	;(logic94_1), assdefo (logic94_2), asspuckc (logic94_3) and assnearest (logic94_4)
+ReadGoaliePulled	;(and comments). Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
+	;assdefo, asspuckc and assnearest
 	movem.l	a1,-(sp)
 	movea.l	#tmstruct,a1
 	btst	#6,pflags(a3)	;check if home or away 0=home 1=away
@@ -744,8 +741,7 @@ ReadGoaliePulled	;(and comments). 94 only: Z clear when the team of a3 pulled it
 	tst.w	$26(a1)
 	movem.l	(sp)+,a1
 	rts
-EndOneTimer	;94 only. End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA $50C, then assexit (goalie) or Setplass. Called from assonetimer (high94_1) and checkgoal (.setass, hockey94_04)
-	;(hockey94_04)
+EndOneTimer	;End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA $50C, then assexit (goalie) or Setplass. Called from assonetimer and checkgoal (.setass)
 	movem.l	d0/a0,-(sp)
 	bclr	#pf3onetimer,pflags3(a3)
 	bclr	#5,pflags(a3)
@@ -767,8 +763,8 @@ EndOneTimer	;94 only. End a one-timer for a3: bits cleared, onetimerplayer = -1,
 	move.w	(sp)+,d1
 	movem.l	(sp)+,d0/a0
 	rts
-newTitleScreen	;94 only: the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, TitleImg) with the vblank TitleVBlank, song $78, then the
-	;scrolling credits (Credits, CreditsList text; CreditsPrintRow, CreditsWait) until start. Called from Opening (hockey94_06)
+newTitleScreen	;the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, TitleImg) with the vblank TitleVBlank, song $78, then the
+	;scrolling credits (Credits, CreditsList text; CreditsPrintRow, CreditsWait) until start. Called from Opening
 	move	#$2700,sr
 	move.w	(VDP_CNTR).l,(seed).w
 	move.w	(VDP_CNTR).l,(seed+2).w
@@ -922,7 +918,7 @@ newTitleScreen	;94 only: the title screen (TitleScreenImg, NHLShieldImg, PAlogoI
 	tst.w	2(a1)
 	bpl.s	.loop3
 	rts
-CreditsPrintRow	;94 only. Credits: clear the row below the screen (Vscroll / 8 + $1C) and print the Strings from a1 centred there
+CreditsPrintRow	;Credits: clear the row below the screen (Vscroll / 8 + $1C) and print the Strings from a1 centred there
 	move.w	(Vscroll).w,d0
 	asr.w	#3,d0
 	addi.w	#$1C,d0
@@ -947,7 +943,7 @@ CreditsPrintRow	;94 only. Credits: clear the row below the screen (Vscroll / 8 +
 	tst.w	2(a1)
 	bpl.s	.loop
 	rts
-CreditsWait	;94 only. Credits: wait for vcount, run the clampcounter count down; start (orjoy bit 7) returns from the caller too
+CreditsWait	;Credits: wait for vcount, run the clampcounter count down; start (orjoy bit 7) returns from the caller too
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(vcount).w,d0
 .loop
@@ -989,7 +985,7 @@ VBlank_TitleScreen	;newTitleScreen vblank: line scroll table (SortCords) and Vsc
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
-CreditsLineScroll	;94 only. Credits: the line scroll table at SortCords
+CreditsLineScroll	;Credits: the line scroll table at SortCords
 	movem.l	d0-d1,-(sp)
 	move.w	#$14,(Hscroll).w
 	move.w	#$50,(TempWord2).w
@@ -1011,7 +1007,7 @@ CreditsLineScroll	;94 only. Credits: the line scroll table at SortCords
 	dbf	d0,.loop2
 	movem.l	(sp)+,d0-d1
 	rts
-CreditsScrollStep	;94 only. Credits: line scroll step, every TempWord2 frames
+CreditsScrollStep	;Credits: line scroll step, every TempWord2 frames
 	subq.w	#1,(TempWord2).w
 	bmi.w	.0
 	rts
@@ -1044,38 +1040,38 @@ CreditsScrollStep	;94 only. Credits: line scroll step, every TempWord2 frames
 	dbf	d0,.loop
 	movem.l	(sp)+,d0-d2/a0
 	rts
-TeamLogoPalettes	;Team logo palettes, 16 colors per team. Used by PeriodStatsScreen, ClearCardText (high94_2), DrawMatchupLogo (hockey94_07) and DrawTeamLogo (hockey94_08)
-	;24 are the matchup logo palettes of TeamPalettes (high94_2) and incbin those files; BOS, FLA, HFD and SJ differ and have their own
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalANHA.pal	;ANH, the TeamPalettes (high94_2) matchup logo palette
+TeamLogoPalettes	;Team logo palettes, 16 colors per team. Used by PeriodStatsScreen, ClearCardText, DrawMatchupLogo and DrawTeamLogo
+	;24 are the matchup logo palettes of TeamPalettes and incbin those files; BOS, FLA, HFD and SJ differ and have their own
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalANHA.pal	;ANH, the TeamPalettes matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\TeamLogoPalBOS.pal	;BOS: differs from MatchupPalBOSA.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalBUFA.pal	;BUF, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalCGYA.pal	;CGY, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalCHIA.pal	;CHI, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalDALA.pal	;DAL, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalDETA.pal	;DET, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalEDMA.pal	;EDM, the TeamPalettes (high94_2) matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalBUFA.pal	;BUF, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalCGYA.pal	;CGY, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalCHIA.pal	;CHI, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalDALA.pal	;DAL, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalDETA.pal	;DET, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalEDMA.pal	;EDM, the TeamPalettes matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\TeamLogoPalFLA.pal	;FLA: differs from MatchupPalFLAA.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\TeamLogoPalHFD.pal	;HFD: differs from MatchupPalHFDA.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalLAA.pal	;LA, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalMTLA.pal	;MTL, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalNJA.pal	;NJ, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalNYIA.pal	;NYI, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalNYRA.pal	;NYR, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalOTWA.pal	;OTW, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalPHIA.pal	;PHI, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalPITA.pal	;PIT, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalQUEA.pal	;QUE, the TeamPalettes (high94_2) matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalLAA.pal	;LA, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalMTLA.pal	;MTL, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalNJA.pal	;NJ, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalNYIA.pal	;NYI, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalNYRA.pal	;NYR, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalOTWA.pal	;OTW, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalPHIA.pal	;PHI, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalPITA.pal	;PIT, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalQUEA.pal	;QUE, the TeamPalettes matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\TeamLogoPalSJ.pal	;SJ: differs from MatchupPalSJA.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalSTLA.pal	;STL, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalTBA.pal	;TB, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalTORA.pal	;TOR, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalVANA.pal	;VAN, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalWSHA.pal	;WSH, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalWPGA.pal	;WPG, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASEA.pal	;ASE, the TeamPalettes (high94_2) matchup logo palette
-	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWA.pal	;ASW, the TeamPalettes (high94_2) matchup logo palette
-LeadSong	;94 only. Not in a shootout (gmode2 bit 1), scores not level: once (sflags2 bit 5), ChooseSong with SongIndex 1 (home ahead) or 4
-	;and sflags8 bit 6; sflags2 is put back on exit. Called from puckfaceoff2 (logic94_4)
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalSTLA.pal	;STL, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalTBA.pal	;TB, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalTORA.pal	;TOR, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalVANA.pal	;VAN, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalWSHA.pal	;WSH, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalWPGA.pal	;WPG, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASEA.pal	;ASE, the TeamPalettes matchup logo palette
+	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWA.pal	;ASW, the TeamPalettes matchup logo palette
+LeadSong	;Not in a shootout (gmode2 bit 1), scores not level: once (sflags2 bit 5), ChooseSong with SongIndex 1 (home ahead) or 4
+	;and sflags8 bit 6; sflags2 is put back on exit. Called from puckfaceoff2
 	movem.l	d0/a0-a3,-(sp)
 	move.w	(sflags2).w,-(sp)
 	btst	#1,(gmode2).w
@@ -1113,14 +1109,14 @@ LeadSong	;94 only. Not in a shootout (gmode2 bit 1), scores not level: once (sfl
 	move.w	#4,(SongIndex).w
 	jsr	(ChooseSong).l
 	bra.s	.loop
-ClearLeadSong	;94 only. Clear sflags2 bit 5
+ClearLeadSong	;Clear sflags2 bit 5
 	bclr	#5,(sflags2).w
 	rts
 LeadSongExit	;LeadSong exit
 	move.w	(sp)+,(sflags2).w
 	movem.l	(sp)+,d0/a0-a3
 	rts
-ClearPenalties	;94 only. Clear the penalties: PBnum, Penaltytimer, Pencntdwn, PenBuf and both teams' penalty slots (clrTmPdst). Called from clockcont_0 (hockey94_01)
+ClearPenalties	;Clear the penalties: PBnum, Penaltytimer, Pencntdwn, PenBuf and both teams' penalty slots (clrTmPdst). Called from clockcont_0
 	movem.l	d0/a0,-(sp)
 	clr.w	(PBnum).w
 	clr.w	(Penaltytimer).w
@@ -1136,7 +1132,7 @@ ClearPenalties	;94 only. Clear the penalties: PBnum, Penaltytimer, Pencntdwn, Pe
 	bsr.w	clrTmPdst
 	movem.l	(sp)+,d0/a0
 	rts
-clrTmPdst	;(and comments). 94 only
+clrTmPdst	;(and comments).
 	move.w	#$19,d0	;19 = 25 decimal (max roster size)
 	adda.w	#$66,a0	;'f'   ; Starting at (C734-home, CA98-away) and decrementing
 .loop
@@ -1144,7 +1140,7 @@ clrTmPdst	;(and comments). 94 only
 	dbf	d0,.loop
 	move.w	#$FFFF,(a0)	;-1 = ice
 	rts
-HotColdIcon	;94 only. The icon by the name of player iconplayer of team a2 at x iconx, y $19: HotIconMap when he is awayhotplayer /
+HotColdIcon	;The icon by the name of player iconplayer of team a2 at x iconx, y $19: HotIconMap when he is awayhotplayer /
 	;homehotplayer, ColdIconMap when awaycoldplayer / homecoldplayer, else clear it (eraser)
 	movem.l	d0/a0-a1,-(sp)
 	movea.l	#awayhotplayer,a0
@@ -1202,9 +1198,9 @@ HotColdIcon	;94 only. The icon by the name of player iconplayer of team a2 at x 
 .x
 	movem.l	(sp)+,d0/a0-a1
 	rts
-chgplayer	;(and comments). 94 only: the pad d4 takes the nearest free skater to where the puck is going (not a goalie, not locked or
+chgplayer	;(and comments). the pad d4 takes the nearest free skater to where the puck is going (not a goalie, not locked or
 	;unavailable; in a penalty shot / shootout only BA_Sktr_SCnum or BA_Goalie_SCnum), or sweep checks when it is the same one. Called from
-	;changeplayer (logic94_1)
+	;changeplayer
 	btst	#6,(sflags5).w	;Check bit 6. This is never set anywhere
 	bne.w	exit
 	movem.l	d0-d6/a0-a1,-(sp)
@@ -1282,7 +1278,7 @@ chgplayer	;(and comments). 94 only: the pad d4 takes the nearest free skater to 
 	movem.l	(sp)+,d0-d6/a0-a1
 exit
 	rts
-swpchk	;Sweepcheck (logic94_1)
+swpchk	;Sweepcheck
 	jmp	Sweepcheck
 j_setc1player	;(a thunk its target's name)
 	jmp	setc1player

@@ -3,7 +3,7 @@
 ;	92 Middle.Asm part 1, as 93 middle93_1.asm: remap, forceblack / forceblack2, forcefade, cramfade,
 ;	CopyPaletteToCRAM, randomd0s / randomd0, sroot, sfx, song, waitx, IntermissionLoop, waitjoy, orjoy, nodiag,
 ;	ProcessInputWithRepeat, ReadJoy1-4 (94: pads 3 and 4), ReadJoy, jdtab, DoDMApro, DoDMA, DoDMA_nd2, DoFill,
-;	WaitDMA, setvram, Vmaddr. dobitmap (middle94_2) follows at $1169A.
+;	WaitDMA, setvram, Vmaddr. dobitmap follows at $1169A.
 ;Transcribed from lst/nhl94.bin.lst lines 44006-44864. Global names are the except CopyPaletteToCRAM
 ;ProcessInputWithRepeat, DoDMA_nd2 and IntermissionLoop (92 and), the 93 names.
 ;/ nd (inside DoDMA) are the locals.dd /.nd. ? is dmaram (? stripped).
@@ -316,7 +316,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	addq.w	#1,(zamx).w
 .0
 	moveq	#1,d7
-	jsr	(updatecrowdf).w		;4EB8: target below $8000 (hockey94_01)
+	jsr	(updatecrowdf).w		;4EB8: target below $8000
 	jsr	(RunArenaAnim).l
 	clr.w	(pausepad).w
 	bclr	#1,(sflags).w
@@ -664,7 +664,7 @@ setvram
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
 setVram_0	;second half of 92 setVram (no fade): clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
-	;Falls in from setvram, called from EASportsScreen (attract94) and HiScoreScreen (high94_3)
+	;Falls in from setvram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
 	move.w	#VDPR_AUTOINC+$02,(VDP_CTRL).l
@@ -736,7 +736,7 @@ Vmaddr
 ;	DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode, jump_table, the Opcode_* handlers,
 ;	FlushOutputBuffer), xyVmMap, eraser, Framer, printz2 / printsmall and the control codes, printz / print,
 ;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber, PushNumberWidth, appendz / appstring, printbigz /
-;	printbig, the 94 PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. AddPenalty (penalty94_1) follows
+;	printbig, the 94 PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. AddPenalty follows
 ;	at $11F2C.
 ;	Transcribed from lst/nhl94.bin.lst lines 44878-45933. Global names are the 93 names where 93 has the routine
 ;( unless generic, in an); printz2 keeps the that the earlier segments call (93

@@ -2,12 +2,12 @@
 ;	NHL 94 (retail) segment $138AC-$14549
 ;	92 hockey.asm part 2, first half, as 93 hockey93_03.asm: checkcoll, checkplcoll, checkcx, newcheck, checkint (with
 ;ci), checkcheck and CCStart, checkinglist, checkagr, holdcheck, Bcheck, FallDown, setInjuryType. checkfight
-;	(hockey94_04, an rts in 94) follows at $1454A (bsr.w displacement at $13B1E).
+;	(an rts in 94) follows at $1454A (bsr.w displacement at $13B1E).
 ;Transcribed from lst/nhl94.bin.lst lines 48480-49542. Global names are the (this range has no names).
 ;that would split a routine are locals:.ci in checkint (93.ci),.PlayerControlled and.CheckingCalc in CCStart,.CmpPlayerStk
 ;AddChktoPlayerStats and.FallList in FallDown. Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop
 ;numbered), with the unless generic, in an
-;	SPA values are frames94 table offsets, written as numbers with the frames94 name in the comment.
+;	SPA values are table offsets, written as numbers with the frames94 name in the comment.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20 OldYpos, $28 Xvel, $2A Yvel,
@@ -210,7 +210,7 @@ checkcx	;d4 = obj. # * 2 for possible collision so check x range and distance fo
 .n1
 	bsr.w	checkint
 	bsr.w	checkcheck
-	bsr.w	checkfight	;94: an rts (hockey94_04)
+	bsr.w	checkfight	;94: an rts
 .not
 	move.w	d1,d4	;d1 = V1n
 	movem.w	(sp)+,d0-d1
@@ -393,7 +393,7 @@ CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SP
 	beq.w	rtss2
 	cmp.w	#$14,d4	;d4 = impact value
 	blt.w	rtss2
-	moveq	#$78,d0	;NHL92 uses 60 decimal, this is 120 decimal (most likely due to change in attribute math)
+	moveq	#$78,d0	;uses 60 decimal, this is 120 decimal (most likely due to change in attribute math)
 	btst	#3,pflags(a3)	;checks if player a3 is player controlled
 	beq.w	.CheckingCalc
 .PlayerControlled	;(no xref; a label inside CCStart). Changes d0 from 120 to 240
@@ -404,7 +404,7 @@ CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SP
 	add.b	$67(a2),d0	;add wgt of a2 player to d0
 	lsr.w	#1,d0	;shift d0 1 right word length (divide by 2)
 	exg	a2,a3	;swap addresses in a2 and a3 registers
-	jsr	(wallcollduringcheck).l	;94 only
+	jsr	(wallcollduringcheck).l
 	exg	a2,a3
 	sub.w	impact(a2),d0	;subtract impact value of player getting checked (a2)
 	beq.w	.down	;If result=0, branch
@@ -426,7 +426,7 @@ CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SP
 	move.b	(VDP_CNTR).l,d0	;HVcount
 	andi.w	#2,d0
 	addi.w	#$16,d0	;#PenCharging
-	jsr	(PenShotChk).l	;penalty shot on a breakaway (penalty94_1)
+	jsr	(PenShotChk).l	;penalty shot on a breakaway
 	bra.w	AddPenalty
 .down
 	bsr.w	checkagr
@@ -437,7 +437,7 @@ CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SP
 	move.b	(VDP_CNTR).l,d0	;HVcount
 	andi.w	#2,d0
 	addi.w	#$1A,d0	;#PenRoughing2
-	jsr	(PenShotChk).l	;penalty shot on a breakaway (penalty94_1)
+	jsr	(PenShotChk).l	;penalty shot on a breakaway
 	bsr.w	AddPenalty
 .dn2
 	bra.w	FallDown
@@ -587,7 +587,7 @@ Bcheck	;a2 = player that is B checking (SPAsweepchk), a3 = player being checked.
 	move.w	#$20,d0	;20 hex starting value
 	add.b	checking(a2),d0	;add Chk of player B checking
 	sub.b	legstr(a3),d0	;sub Agl of player being checked
-	btst	#1,(sflags8).w	;94 only
+	btst	#1,(sflags8).w
 	bne.w	.sub2
 	btst	#6,(sflags7).w
 	beq.w	.rnd
@@ -801,7 +801,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	blt.w	.1	;branch if lower
 	move.w	d0,-(sp)
 	move.w	#7,d0
-	jsr	(StartArenaAnim).l	;94 only
+	jsr	(StartArenaAnim).l
 	move.w	(sp)+,d0
 	move.w	#$193E,d1	;SPAboardmidl. anim value
 	btst	#3,4(a2)
@@ -974,7 +974,7 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 ;	NHL 94 (retail) segment $1454A-$150E3
 ;	92 hockey.asm part 2, second half, as 93 hockey93_04.asm: checkfight (an rts in 94; 93 SetInst is gone), checkwallcoll,
 ;	checkgoal (with the 93 Goal code as .goal, and the 93 Goal local .setass), GetPeriodTimeRemaining, checkgoalp, CheckBump, wallcollb, wallcoll,
-;	checkpuckcoll_sfx and checkpuckcoll. puckstick (hockey94_05) follows at $150E4 (bsr.w displacement at $14EC8).
+;	checkpuckcoll_sfx and checkpuckcoll. puckstick follows at $150E4 (bsr.w displacement at $14EC8).
 ;Transcribed from lst/nhl94.bin.lst lines 49543-50531. Global names are the or the 93 name where an auto
 ;name or a 2 suffix (checkwallcoll, wallcollb). (before checkpuckcoll, entered from it) is the global checkpuckcoll_sfx.
 ;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
@@ -986,11 +986,11 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 ;	94 team struct from HmShots / AwShots (tmsize $364): $C tmscore, $18-$1C scorer and assists, $22 tmsort, $24 tmap,
 ;	$26 tmgoalie, $B4 / $CE goal / assist bytes per player, $342 goals by period, $356 PP goals, $35A BA goals, $362 SH goals.
 
-checkfight	;94: an rts. 93 checkfight looked for the start of a fight between players a2 and a3 (94 has no fight code). Called from checkcx (hockey94_03)
+checkfight	;94: an rts. 93 checkfight looked for the start of a fight between players a2 and a3 (94 has no fight code). Called from checkcx
 	rts
 checkwallcoll	;d2/d3 = x/y to test, a3 = object, wcradiusx/wcradiusy = radius. Check the corner circles, the goals
 	;(checkgoal with a2 = SortCords+(13*SCstruct) top, SortCords+(12*SCstruct) bottom) and then the side and end boards. Calls wallcollb on a hit, with d0/d1 = cos/sin of
-	;the wall. Called from checkcoll (hockey94_03)
+	;the wall. Called from checkcoll
 	bclr	#pf3wall,pflags3(a3)	;wall collision bit
 	move.w	#$88,d4	;92 Sideline (a RAM word); 136
 	sub.w	(wcradiusx).w,d4
@@ -1209,7 +1209,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	tst.w	(pucky).w
 	bpl.w	rtss2
 .4
-	bset	#5,(sflags4).w	;94 only: penalty shot / shootout goal
+	bset	#5,(sflags4).w	;penalty shot / shootout goal
 	tst.w	(shootoutteam).w
 	beq.w	.5
 	addq.w	#1,(awayshootgoals).w
@@ -1224,10 +1224,10 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	btst	#0,(gmode).w
 	bne.w	rtss2
 .8
-	bset	#0,(sflags4).w	;94 only
+	bset	#0,(sflags4).w
 	bclr	#3,(sflags8).w
 	bsr.w	ChkShotStat
-	bsr.w	play_new_song	;94 only
+	bsr.w	play_new_song
 	move.w	d0,-(sp)
 	move.w	(vcount).w,d0
 .loop
@@ -1249,7 +1249,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	exg	a2,a1
 .10
 	addq.w	#1,$C(a2)	;tmscore: add to Goals
-	btst	#5,(sflags4).w	;94 only: goal stats
+	btst	#5,(sflags4).w	;goal stats
 	beq.w	.11
 	btst	#0,(gmode2).w	;94: no new assignments in a shootout
 	bne.w	.11
@@ -1336,10 +1336,10 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	addq.b	#1,0(a1,d0.w)
 .20
 	bsr.w	ChkShotStat
-	bsr.w	PenGoalStuff	;penalty94_1
+	bsr.w	PenGoalStuff
 	bclr	#3,(BA_PS_flags).w
 	bsr.w	printscores1
-	move.w	#$2710,(crowdnoisedelay).w	;94 only
+	move.w	#$2710,(crowdnoisedelay).w
 	btst	#0,(gmode2).w
 	beq.w	.21
 	bra.w	.22
@@ -1389,7 +1389,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	btst	#0,pflags2(a3)	;pf2fight
 	bne.w	.nl
 	bclr	#2,pflags(a3)	;pfnc
-	bclr	#pf3onetimer,pflags3(a3)	;94 only
+	bclr	#pf3onetimer,pflags3(a3)
 	beq.w	.insert
 	jsr	(EndOneTimer).l
 .insert
@@ -1399,7 +1399,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	dbf	d3,.loop3
 	movea.l	(sp)+,a3
 	rts
-GetPeriodTimeRemaining	;Return d0 = (gsp << 14 | PerTimeTotal) - gameclock. Called from checkgoal (ScoreSum entry) and InProgress (penalty94_1)
+GetPeriodTimeRemaining	;Return d0 = (gsp << 14 | PerTimeTotal) - gameclock. Called from checkgoal (ScoreSum entry) and InProgress
 	move.w	(gsp).w,d0
 	swap	d0
 	clr.w	d0
@@ -1592,7 +1592,7 @@ wallcoll	;d0 = cosine, d1 = sine of angle of incidence with wall, a3 = object. B
 .player
 	cmp.w	#$3E8,d2	;#1000
 	bgt.w	.nocoll
-	bclr	#4,(sflags6).w	;94 only: set by checkgoalp
+	bclr	#4,(sflags6).w	;set by checkgoalp
 	bne.w	.0
 	bset	#pf3wall,pflags3(a3)	;set wall collision bit
 .0
@@ -1636,7 +1636,7 @@ checkpuckcoll_sfx	;(a local of wallcoll in, entered from checkpuckcoll; a global
 	bra.w	sfx
 checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the back boards, then walks up and down the OOlist from the puck and
 	;runs .ccx on each object within 22 in y: stick (puckstick), body (puckbody) or goalie (puckgoalie). 94: in a penalty shot only the shooter
-	;and the goalie touch the puck, and the goalie reach comes from .cbg / .cbgsq by Agl. Entered from pucknorm (logic94_4)
+	;and the goalie touch the puck, and the goalie reach comes from.cbg /.cbgsq by Agl. Entered from pucknorm
 	cmpi.w	#$190,Ypos(a3)	;compare 190 hex to Ypos (back board?)
 	bgt.w	.resetYvel	;branch if greater than
 	cmpi.w	#$FE70,Ypos(a3)	;compare -190 to Ypos (back board?)
@@ -2037,7 +2037,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	bra.w	.stdef
 .onetimer
 	exg	a2,a3
-	jsr	(onetimershot).l	;94 only
+	jsr	(onetimershot).l
 	exg	a2,a3
 	rts
 .3
@@ -2129,15 +2129,15 @@ puckglue	;a local of puckstick that puckgoalie also branches to. Player a2 takes
 	beq.w	.3
 	cmp.w	(cont1team).w,d1
 	bne.w	.3
-	jmp	setc1player	;logic94_1
+	jmp	setc1player
 .3
 	cmp.w	(cont2team).w,d1
 	bne.w	.4
-	jmp	setc2player	;logic94_1
+	jmp	setc2player
 .4
 	cmp.w	(cont1team).w,d1
 	bne.w	rtss2
-	jmp	setc1player	;logic94_1
+	jmp	setc1player
 puckbody	;puck hits player a2. a3 = puck, d0 = distance^2 (from checkpuckcoll .ccx). The puck bounces off. A high puck (Zpos > 8) that is fast
 	;makes a2 fall (FallDown, Zpos > $C); a slower one starts SPAcatch ($10D0) on a2
 	btst	#pf3onetimer,pflags3(a2)
@@ -2224,7 +2224,7 @@ puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save 
 	eori.w	#2,d2	;XOR d2 with 2
 .3
 	move.w	frame(a2),d0	;move frame into d0
-	move.w	#$197,-(sp)	;SPFgoalie (frames94)
+	move.w	#$197,-(sp)	;SPFgoalie
 	cmp.w	#$233,d0	;compare 233 hex to d0 (goal light frame, all frames before are goalie frames)
 	blt.w	.32	;branch if less than (old goalie frame)
 	move.w	#$292,(sp)	;94: the goalie frames added in 94
@@ -2503,7 +2503,7 @@ makepde	;pass d0 as value to be scaled by player a0's energy level (94: full ene
 	movem.l	d1/a2-a3,-(sp)
 	movea.l	a0,a3
 	bsr.w	getpde
-	btst	#4,(sflags7).w	;94 only
+	btst	#4,(sflags7).w
 	beq.w	.0
 	move.w	#$1000,d0
 .0
@@ -2531,7 +2531,7 @@ setpde	;d1 = rostnum of player * 2, a2 = team struct, d0 = new energy level (0 i
 .0
 	move.w	d0,tmpde(a2,d1.w)
 	rts
-setpersonel	;(93 setpersonel). This will set personnel on team a2 according to team a2's registers: PlList (SetPlList) gives the players
+setpersonel	;This will set personnel on team a2 according to team a2's registers: PlList (SetPlList) gives the players
 	;wanted on the ice; each sort obj gets newpos / newpnum
 	movem.l	d0-d5/a0-a4,-(sp)
 	movea.w	tmsort(a2),a3	;#tmsort
@@ -2677,7 +2677,7 @@ TryAddPlayerToList	;d0 = player number (1 based), d4 = PlList slot. Put d0 in th
 .0
 	clr.w	d1
 	rts
-SetupPenaltyShot	;94 only. Penalty shot set up for team a2 (called from puckpenshot): the shooter (BA_Sktr_SCnum) plays center from BA_Skater_Offset,
+SetupPenaltyShot	;Penalty shot set up for team a2 (called from puckpenshot): the shooter (BA_Sktr_SCnum) plays center from BA_Skater_Offset
 	;the goalie (BA_Goalie_SCnum) stays; every other player is made unavailable with assignment $20 (assgoaliebreakwait)
 	movem.l	d0-d5/a0-a3,-(sp)
 	movea.w	$22(a2),a3

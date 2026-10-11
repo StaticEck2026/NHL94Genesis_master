@@ -1,10 +1,10 @@
 ; $0FCB9A  NEW in 94: matchups and scouting report
 ;	NHL 94 (retail) segment $FCB9A-$FD617
-;	The 94 ScoutingReport (93 hockey93_07), rewritten as the pregame MATCHUPS screen, with its 94-only helpers: ScoutCrowdRecord and
+;	The 94 ScoutingReport, rewritten as the pregame MATCHUPS screen, with its 94-only helpers: ScoutCrowdRecord and
 ;	GetTeamNickname / GetTeamArena (team data for the text player's '@', '=' '*' and '^' ';'), the unused ScoutCrowdRecordBy / GetTeamCity, the matchup
 ;	pager PageMatchup, the rating, picture and position helpers, StatsText, and the advantage marks (PrintAdvantageMarks). 94 moved this screen
-;	to the end of the ROM with the menu code (setoptions is hockey94_08). The text player itself (93 InitScoutingDisplay /
-;	UpdateScoutingDisplay / ScrollDisplayUp) is hockey94_06 StartScoutText / ScoutTextPlayer / ScoutTextNextLine. The rest of hockey93_07 (Stanley Cup
+;	to the end of the ROM with the menu code (setoptions). The text player itself (93 InitScoutingDisplay /
+;	UpdateScoutingDisplay / ScrollDisplayUp) is StartScoutText / ScoutTextPlayer / ScoutTextNextLine. The rest of hockey93_07 (Stanley Cup
 ;	screen, TitleScreen, the sprite list helpers, CheckSound) is not here. EndShootout follows (called from CountShootoutGoals).
 ;Transcribed from lst/nhl94.bin.lst lines 969432-970644. Global names are the or the 93 name where an auto
 ;name. Local labels are the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
@@ -17,7 +17,7 @@
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $DF / $DE the same with printa
 ;	$4000). printz2 (93 printsmallz) codes: $F8 attribute,map,x,y; $F9 char set. Pad bits: dbut 1, cbut 5, abut 6, sbut 7.
 
-ScoutCrowdRecord	;94 only. The text player's '@' (ScoutTextPlayer): return a1 = the home team's crowd record in dB as a String at TempBuffer (SRAM team record
+ScoutCrowdRecord	;The text player's '@' (ScoutTextPlayer): return a1 = the home team's crowd record in dB as a String at TempBuffer (SRAM team record
 	;byte 8, 80 if 0). clrCrowdRAM reads the 16 byte SRAM record of team d1 ($B60 + d1 * 16) to a0
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(HomeTeam).w,d1
@@ -37,7 +37,7 @@ ScoutCrowdRecord	;94 only. The text player's '@' (ScoutTextPlayer): return a1 = 
 	movea.l	(sp)+,a1
 	movem.l	(sp)+,d0-d7/a0/a2-a6
 	rts
-ScoutCrowdRecordBy	;no xref. 94 only, unused: return a1 = 'by <name> ' for the home team's crowd record (SRAM record byte 9 =
+ScoutCrowdRecordBy	;no xref. unused: return a1 = 'by <name> ' for the home team's crowd record (SRAM record byte 9 =
 	;name number, AppendUserName reads that 12 char name from namelog), or an empty String if byte 9 is 0
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(HomeTeam).w,d1
@@ -71,7 +71,7 @@ ScoutCrowdRecordBy	;no xref. 94 only, unused: return a1 = 'by <name> ' for the h
 ScoutEmptyTxt	String	''
 ScoutByTxt	String	'by '
 ScoutSpaceTxt	String	' '
-GetTeamCity	;no xref. 94 only, unused: return a1 = the city String of team byte $A(a0) (TeamList, Teamname offset)
+GetTeamCity	;no xref. unused: return a1 = the city String of team byte $A(a0) (TeamList, Teamname offset)
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	clr.w	d2
 	move.b	$A(a0),d2
@@ -83,7 +83,7 @@ GetTeamCity	;no xref. 94 only, unused: return a1 = the city String of team byte 
 	rts
 ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron Barr picture, the text box and the matchup
 	;matchup 0 is both team logos with the team ratings, 1-6 the two players at center, left forward, right forward, left defense, right defense
-	;and goalie with their ratings, with marks toward the side that has the advantage. The text player (hockey94_06 ScoutTextPlayer, 93
+	;and goalie with their ratings, with marks toward the side that has the advantage. The text player (ScoutTextPlayer, 93
 	;UpdateScoutingDisplay) types the paragraph list. A / C page the matchups (the page also turns by itself about every $10E frames), down types fast, start leaves
 	jsr	(ReadNameLog).l	;read the $80 byte SRAM name list at $DA0 to $FFD45A
 	jsr	(BuildHotColdLists).l	;hot / cold players for the text (not matched yet)
@@ -260,7 +260,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 .7
 	move.w	#0,(printfontset).w	;char set 0
 	rts
-PageMatchup	;94 only. Page the matchup by d0 (+1 / -1, 0-6 wrapping), restart the page timer and redraw. Called from ScoutingReport
+PageMatchup	;Page the matchup by d0 (+1 / -1, 0-6 wrapping), restart the page timer and redraw. Called from ScoutingReport
 	move.w	#$10E,(matchuptimer).w
 	add.w	(matchup).w,d0
 	bmi.w	.0
@@ -276,7 +276,7 @@ PageMatchup	;94 only. Page the matchup by d0 (+1 / -1, 0-6 wrapping), restart th
 	bsr.w	DrawMatchupPictures
 	bsr.w	PrintMatchupRatings
 	rts
-PrintMatchupRating	;94 only. Print the team rating of team a0 (GetTeamRating: the TeamRatings byte for team number $28(a0)) as 2 digits at printx / printy; return d0 = the rating.
+PrintMatchupRating	;Print the team rating of team a0 (GetTeamRating: the TeamRatings byte for team number $28(a0)) as 2 digits at printx / printy; return d0 = the rating.
 	;Called from PrintMatchupRatings
 	bsr.w	PrintTwoSpaces	;clear the old number
 	move.l	a2,-(sp)
@@ -289,7 +289,7 @@ PrintMatchupRating	;94 only. Print the team rating of team a0 (GetTeamRating: th
 	jsr	(printsmall).l
 	move.l	(sp)+,d0
 	rts
-PrintTwoSpaces	;94 only. Print 2 spaces at printx / printy (TwoSpacesTxt) and keep printx
+PrintTwoSpaces	;Print 2 spaces at printx / printy (TwoSpacesTxt) and keep printx
 	move.l	a1,-(sp)
 	move.w	(printx).w,-(sp)
 	movea.l	#TwoSpacesTxt,a1
@@ -299,7 +299,7 @@ PrintTwoSpaces	;94 only. Print 2 spaces at printx / printy (TwoSpacesTxt) and ke
 	rts
 TwoSpacesTxt	;A two space String (printsmall by PrintTwoSpaces)
 	String	'  '
-StatsText	;The 93 rating names (93 StatsText). 94 prints only ' Overall ' (PrintMatchupRatings, matchup 0); -1 ends the list
+StatsText	;The 93 rating names. 94 prints only ' Overall ' (PrintMatchupRatings, matchup 0); -1 ends the list
 	String	'Shooting'
 	String	'Skating'
 	String	'Passing'
@@ -311,7 +311,7 @@ StatsText	;The 93 rating names (93 StatsText). 94 prints only ' Overall ' (Print
 	String	'-    Home Team Adv.    '
 	String	'    Overall     '
 	dc.w	-1
-DrawMatchupPictures	;94 only. Draw the matchup's 6 x 6 pictures, visitors at x 2, home at x $20, y $F: matchup 0 the team logos (GetTeamLogo, DrawMatchupLogo),
+DrawMatchupPictures	;Draw the matchup's 6 x 6 pictures, visitors at x 2, home at x $20, y $F: matchup 0 the team logos (GetTeamLogo, DrawMatchupLogo)
 	;1-6 the two players' pictures (DrawPlayerPicture, DrawMatchupPicture). Called from ScoutingReport and PageMatchup
 	movem.l	d0-d7/a0-a6,-(sp)
 	tst.w	(matchup).w
@@ -357,7 +357,7 @@ DrawMatchupPictures	;94 only. Draw the matchup's 6 x 6 pictures, visitors at x 2
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-DrawMatchupPicture	;94 only. Draw player picture a0 at printx / printy with the PicturePalette palette. A picture with no map (offset 0) uses the PicturePalette
+DrawMatchupPicture	;Draw player picture a0 at printx / printy with the PicturePalette palette. A picture with no map (offset 0) uses the PicturePalette
 	;map. UnpackPicture (not matched yet) then the $FFDA1E tiles. Falls into DrawMatchupBitmap
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -376,7 +376,7 @@ DrawMatchupPicture	;94 only. Draw player picture a0 at printx / printy with the 
 	bsr.w	UnpackPicture
 	movea.l	#picturebuf,a2	;tiles
 	bra.w	DrawMatchupBitmap
-DrawMatchupLogo	;94 only. Draw team logo a0 at printx / printy, palette TeamLogoPalettes + team d3 * 8 - $20 (d5 = 4: - $40). Falls into DrawMatchupBitmap
+DrawMatchupLogo	;Draw team logo a0 at printx / printy, palette TeamLogoPalettes + team d3 * 8 - $20 (d5 = 4: - $40). Falls into DrawMatchupBitmap
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -391,7 +391,7 @@ DrawMatchupLogo	;94 only. Draw team logo a0 at printx / printy, palette TeamLogo
 	movea.l	#TeamLogoPalettes,a0
 	adda.w	d3,a0
 	adda.l	(a2)+,a1
-DrawMatchupBitmap	;94 only. 6 x 6 dobitmap, then erase the 8 x 3 name area at y $19 on that side (x 2 or $20). Branched to from DrawMatchupPicture
+DrawMatchupBitmap	;6 x 6 dobitmap, then erase the 8 x 3 name area at y $19 on that side (x 2 or $20). Branched to from DrawMatchupPicture
 	move.w	#6,d3
 	move.w	#6,d2
 	clr.w	d0
@@ -410,12 +410,12 @@ DrawMatchupBitmap	;94 only. 6 x 6 dobitmap, then erase the 8 x 3 name area at y 
 	move.w	#$7FF,d2	;blank char
 	jsr	(eraser).l
 	rts
-GetTeamLogo	;94 only. Return a0 = the logo bitmap of team d3 (TeamLogoBitmaps table)
+GetTeamLogo	;Return a0 = the logo bitmap of team d3 (TeamLogoBitmaps table)
 	asl.w	#2,d3
 	movea.l	#TeamLogoBitmaps,a0
 	movea.l	0(a0,d3.w),a0
 	rts
-PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at y $13, the team ratings (PrintMatchupRating), home at x $22, visitors at x 4, y
+PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, the team ratings (PrintMatchupRating), home at x $22, visitors at x 4, y
 	;$16. 1-6: the position name at y $13, the player names on y $17 (PrintPlayerNameRight; home right justified), and the player ratings at x $22 / 4, y
 	;$16: CalcAttrib with the PAttribOverallMask (skater) or GAttribOverallMask (goalie) long in d4, * 100 / d1, AttribAdjust. The ratings go to homerating
 	;(home) / visrating (visitors) for PrintAdvantageMarks. Called from ScoutingReport and PageMatchup
@@ -528,7 +528,7 @@ MatchupPosNames	;Position names of matchups 1-6
 	String	'left defenseman '
 	String	'right defenseman'
 	String	'     goalie     '
-GetMatchupPlayers	;94 only. matchuphome / matchupvis = the home / visitors player of the matchup (GetMatchupPlayer). Called from ScoutingReport and PageMatchup
+GetMatchupPlayers	;matchuphome / matchupvis = the home / visitors player of the matchup (GetMatchupPlayer). Called from ScoutingReport and PageMatchup
 	movem.l	d0/a0-a1,-(sp)
 	movea.l	#tmstruct,a0
 	bsr.w	GetMatchupPlayer
@@ -538,7 +538,7 @@ GetMatchupPlayers	;94 only. matchuphome / matchupvis = the home / visitors playe
 	move.w	d0,(matchupvis).w
 	movem.l	(sp)+,d0/a0-a1
 	rts
-GetMatchupPlayer	;94 only. Return d0 = the roster index of team a0's player for matchup: the first line of the team's line sets, slot
+GetMatchupPlayer	;Return d0 = the roster index of team a0's player for matchup: the first line of the team's line sets, slot
 	;MatchupLineSlots[matchup] (matchupslot; 0 goalie, 1 left defense, 2 right defense, 3 left wing, 4 center, 5 right wing)
 	movea.l	$1E(a0),a0	;tmdata
 	adda.w	6(a0),a0	;LineSets
@@ -554,11 +554,11 @@ GetMatchupPlayer	;94 only. Return d0 = the roster index of team a0's player for 
 MatchupLineSlots	;Line slot by matchup 0-6 (0 for the teams, then 4 center, 3 left forward, 5 right forward, 1 left defense, 2 right defense,
 	;0 goalie), and a pad byte
 	dc.b	0,4,3,5,1,2,0,0
-RestartAdvantageMarks	;94 only. Restart the advantage marks (PrintAdvantageMarks)
+RestartAdvantageMarks	;Restart the advantage marks (PrintAdvantageMarks)
 	clr.w	(advcount).w
 	clr.w	(advframe).w
 	rts
-PrintAdvantageMarks	;94 only. Called every frame by ScoutingReport. Print the advantage marks at x $13, y $16: ']' marks growing toward the home
+PrintAdvantageMarks	;Called every frame by ScoutingReport. Print the advantage marks at x $13, y $16: ']' marks growing toward the home
 	;side (right) when the home rating is higher, '[' marks toward the visitors (left) when lower, one more every 7 frames up to 3; blank if equal
 	movem.l	d0-d7/a0-a6,-(sp)
 	addq.w	#1,(advcount).w
@@ -604,7 +604,7 @@ VisAdv1Txt	String	'  ['
 VisAdv2Txt	String	' [['
 VisAdv3Txt	String	'[[['
 EvenAdvTxt	String	'   '	;Even teams
-GetTeamNickname	;94 only. The text player's '=' (a2 = HmShots) and '*' (AwShots): return a1 = the team nickname String, or 'Home' / 'Visitors' when it is empty (the all star teams)
+GetTeamNickname	;The text player's '=' (a2 = HmShots) and '*' (AwShots): return a1 = the team nickname String, or 'Home' / 'Visitors' when it is empty (the all star teams)
 	movem.l	d0/a0/a2,-(sp)
 	movea.l	a2,a1
 	movea.l	$1E(a1),a1	;tmdata
@@ -622,7 +622,7 @@ GetTeamNickname	;94 only. The text player's '=' (a2 = HmShots) and '*' (AwShots)
 	rts
 HomeTxt	String	'Home'
 VisitorsTxt	String	'Visitors'
-GetTeamArena	;94 only. The text player's '^' (a2 = HmShots) and ';' (AwShots): return a1 = the team arena String
+GetTeamArena	;The text player's '^' (a2 = HmShots) and ';' (AwShots): return a1 = the team arena String
 	movem.l	d0/a0/a2,-(sp)
 	movea.l	a2,a1
 	movea.l	$1E(a1),a1	;tmdata

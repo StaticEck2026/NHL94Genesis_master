@@ -2,7 +2,7 @@
 ;	NHL 94 (retail) segment $15D9A-$162FD
 ;	92 Video.asm first half, as 93 video93_1.asm: VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAlist, SetScroll2,
 ;	setvideo and the sprite builders it calls (updatescroll, showref, checkfo, showzam, SetSframe, showcrowd). showclock
-;	(video94_2) follows at $162FE.
+;	follows at $162FE.
 ;Transcribed from lst/nhl94.bin.lst lines 51765-52286. Global names are the or the 93 name where an
 ;auto name. The 93 writes as locals are
 ;locals: showzam.ftab, showcrowd.pb and.sc. Local labels are the names
@@ -25,12 +25,12 @@ VBlank	;93 name; 93 Main vblank code for game play (vbint target, set by setupic
 .nograph
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	.c
-	btst	#2,(gmode2).w	;94 only
+	btst	#2,(gmode2).w
 	bne.w	.0
 	btst	#0,(gmode).w	;gmclock: game clock stopped
 	bne.w	.c
 .0
-	btst	#1,(gmode2).w	;94 only: penalty shot / shootout clock
+	btst	#1,(gmode2).w	;penalty shot / shootout clock
 	bne.w	.1
 	tst.w	(gameclock).w
 	beq.w	.c
@@ -72,12 +72,12 @@ IRQ7	;rte only. vb2 falls in; the vector table ($60, $64, ...) points here
 	rte
 DumpSprites	;Transfer (by dma) scroll stuff, sprite table, vram data in dmalist. Called from VBlank when dfok was set. Falls into DumpSprites2
 	bsr.w	SetScroll2
-DumpSprites2	;Transfer sprite table, then the dma list. Falls into DoDMAlist. Also called from VBlank_SetOptions (attract94)
+DumpSprites2	;Transfer sprite table, then the dma list. Falls into DoDMAlist. Also called from VBlank_SetOptions
 	movea.w	#(Satt-M68K_RAM),a0
 	move.w	(Sattsize).w,d0	;93 Sattsize: words
 	move.w	(VSPRITES).w,d1
 	bsr.w	DoDMA
-DoDMAList	;(93 DoDMAList; symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
+DoDMAList	;(symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
 	movea.l	(DMAlistend).w,a6
 	cmpa.l	#DMAList,a6
 	beq.w	rtss2	;list empty
@@ -112,10 +112,10 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 	bsr.w	setffo
 	bsr.w	showclock
 	bsr.w	showzam
-	jsr	(AddArenaAnimSprite).l	;94 only
+	jsr	(AddArenaAnimSprite).l
 	bsr.w	showcrowd
 	bsr.w	showref
-	jsr	(Crowd_Noise).l	;94 only (?)
+	jsr	(Crowd_Noise).l	;(?)
 	cmpa.w	#(Satt-M68K_RAM),a6	;no sprites: one blank sprite
 	bne.w	.n
 	clr.l	(a6)+
@@ -148,7 +148,7 @@ updatescroll	;(92 name; 93 show_rink). Using hpos and vpos set scroll cords; que
 	cmp.w	d4,d1
 	beq.w	rtss2	;same row as last frame
 	movea.l	#Rinktilelist,a0
-	btst	#4,(sflags4).w	;94 only: reverse angle replay
+	btst	#4,(sflags4).w	;reverse angle replay
 	beq.w	.0
 	movea.l	#RevRinkTilelist,a0
 .0
@@ -451,7 +451,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 ;	NHL 94 (retail) segment $162FE-$169F9
 ;	92 Video.asm second half, as 93 video93_2.asm: showclock, checksso, setsortcords, setffo, uppads, FormatControllerDisplay,
 ;	RenderSmallFontChar, ButtonLabelCharTable, addframe, addframe2, find3d, updatesound and KillCrowd. setupice
-;	(hockey94_06) follows at $169FA.
+;	follows at $169FA.
 ;Transcribed from lst/nhl94.bin.lst lines 52287-53021. Global names are the or the 93 name where an
 ;auto name. The 93 writes as locals are locals: showclock.char
 ;	checksso .ca and .tab; the 94 horizontal clock code's .digit and .digits
@@ -469,7 +469,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	;dfclock is set; with gmode2 bit 1 (penalty shot / shootout) shootoutclock is shown instead of gameclock. a5 = dma list
 	btst	#7,(sflags).w	;sfhor
 	beq.w	.3
-	btst	#0,(gmode2).w	;94 only: shootout
+	btst	#0,(gmode2).w	;shootout
 	bne.w	.x
 	move.l	a1,-(sp)
 	jsr	(printz).l
@@ -527,7 +527,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 .3	;The 93 showclock body: returns unless dfclock is set
 	bclr	#3,(disflags).w	;dfclock
 	beq.w	rtss2
-	btst	#3,(sflags2).w	;94 only
+	btst	#3,(sflags2).w
 	bne.w	rtss2
 	cmpi.w	#4,(gsp).w	;no clock update when gsp = 4
 	beq.w	rtss2
@@ -539,7 +539,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	ori.w	#$8000,d0
 	move.w	d0,(clockram).w	;colon (93 clockram)
 	move.w	(gameclock).w,d0
-	btst	#1,(gmode2).w	;94 only: penalty shot / shootout clock
+	btst	#1,(gmode2).w	;penalty shot / shootout clock
 	beq.w	.4
 	move.w	(shootoutclock).w,d0
 .4
@@ -800,7 +800,7 @@ FormatControllerDisplay	;Queue the 3 character label of a pad object. d1 = label
 	moveq	#1,d0
 	bsr.w	RenderSmallFontChar
 	move.w	d1,d2
-	btst	#7,(sflags7).w	;94 only
+	btst	#7,(sflags7).w
 	beq.w	.0
 	clr.w	d2
 .0

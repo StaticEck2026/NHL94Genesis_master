@@ -32,10 +32,10 @@ Begin	;cold start, entered from Start. Clear RAM, init sound and menus, go to ti
 	jsr	(KillCrowd).l
 	jsr	(Detect4WayPlay).l
 	move.w	#$FFFF,(PadControlBits34).w
-	jsr	(EASportsScreen).l	;94 only (attract94)
-	jsr	(InitSaveRAM).l		;94 only (sram94)
+	jsr	(EASportsScreen).l
+	jsr	(InitSaveRAM).l
 	jsr	(ReadLineData).l
-	jsr	(HiScoreScreen).l	;94 only (attract94)
+	jsr	(HiScoreScreen).l
 	jsr	(DefaultMenus).l	;hockey94_09
 	move.w	(OptLine).w,(TmpOptLine2).w
 	move.w	(OptPlayMode).w,(TempOptPlayMode).w
@@ -416,11 +416,11 @@ startpause
 	bset	#0,(sflags).w		;sfpz
 	rts
 
-startpause3	;94 only: pause initiated by cont 3 (4 way play). Also from doinput+A4
+startpause3	;pause initiated by cont 3 (4 way play). Also from doinput+A4
 	move.w	#3,(pausepad).w
 	bclr	#1,(sflags).w		;sfpj
 	bra.s	startpause
-startpause4	;94 only: pause initiated by cont 4 (4 way play). Also from doinput+A8
+startpause4	;pause initiated by cont 4 (4 way play). Also from doinput+A8
 	move.w	#4,(pausepad).w
 	bset	#1,(sflags).w		;sfpj
 	bra.s	startpause
@@ -439,7 +439,7 @@ Pausemode	;Game is in pause mode now
 	lea	SetupPauseScreen(pc),a1	;screen draw routine
 	btst	#0,(gmode2).w
 	beq.w	.chk2
-	movea.l	#PauseMenuItems,a0		;94 only: third item list
+	movea.l	#PauseMenuItems,a0		;third item list
 	bra.w	.0
 .chk2	btst	#2,tmflags(a2)		;tmflags
 	beq.w	.0

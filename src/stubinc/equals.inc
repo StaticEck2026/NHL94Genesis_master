@@ -53,7 +53,7 @@ Wallcos equ $4E		;cos of angle of last collision
 Wallsin equ $50		;sin of angle of last collision
 SCnum equ $52		;index number for this struct
 facedir equ $54		;direction of facing
-SPA equ $58		;animation (frames94 SPA offset)
+SPA equ $58		;animation (SPA offset)
 SPAnum equ $5A		;index into animation
 SPAcnt equ $5C		;count down to next frame of animation
 nopuck equ $5E		;no puck coll until zero

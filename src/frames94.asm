@@ -1193,7 +1193,7 @@ SPAflip_table:	;$6E86
 .6	dc.w	SPFflip+4,6,SPFflip+5,6,SPFflip+6,6,SPFflip+7,6,SPFfallback+26,100,SPFfallback+27,8,SPFduck+6,-8
 .7	dc.w	SPFflip,6,SPFflip+1,6,SPFflip+2,6,SPFflip+3,6,SPFfallback+30,100,SPFfallback+31,8,SPFduck+7,-8
 
-SPAinjuryfall	=	*-SPAlist	; $145C. 94 only. Fall back and stay down: the injured player (FallDown, before setInjuryType). Was SPA_145C
+SPAinjuryfall	=	*-SPAlist	; $145C. Fall back and stay down: the injured player (FallDown, before setInjuryType). Was SPA_145C
 SPAinjuryfall_table:	;$6F78. Frames 273-291
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1215,7 +1215,7 @@ SPAinjuryfall_table:	;$6F78. Frames 273-291
 .5
 .6	dc.w	SPFfallback+16,6,SPFfallback+17,6,SPFfallback+18,30,SPFfallback+18,-1024
 
-SPAghighr	=	*-SPAlist	; $148E. 94 only. Goalie high shoulder save right (goaliesave .saveanim 6). Was SPA_148E
+SPAghighr	=	*-SPAlist	; $148E. Goalie high shoulder save right (goaliesave.saveanim 6). Was SPA_148E
 SPAghighr_table:	;$6FAA. Frames 658-672
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1237,7 +1237,7 @@ SPAghighr_table:	;$6FAA. Frames 658-672
 .6	dc.w	670,-32
 .7	dc.w	672,-32
 
-SPAghighl	=	*-SPAlist	; $14C0. 94 only. Goalie high shoulder save left (goaliesave .saveanim 7). Was SPA_14C0
+SPAghighl	=	*-SPAlist	; $14C0. Goalie high shoulder save left (goaliesave.saveanim 7). Was SPA_14C0
 SPAghighl_table:	;$6FDC. Frames 659-673
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1259,7 +1259,7 @@ SPAghighl_table:	;$6FDC. Frames 659-673
 .6	dc.w	671,-32
 .7	dc.w	673,-32
 
-SPAgstick2r	=	*-SPAlist	; $14F2. 94 only. Goalie stick save right, 2 frames (goaliesave .saveanim 8). Was SPA_14F2
+SPAgstick2r	=	*-SPAlist	; $14F2. Goalie stick save right, 2 frames (goaliesave.saveanim 8). Was SPA_14F2
 SPAgstick2r_table:	;$700E. Frames 674-703
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1281,7 +1281,7 @@ SPAgstick2r_table:	;$700E. Frames 674-703
 .6	dc.w	698,4,699,-32
 .7	dc.w	702,4,703,-32
 
-SPAgstick2l	=	*-SPAlist	; $1544. 94 only. Goalie stick save left, 2 frames (goaliesave .saveanim 9). Was SPA_1544
+SPAgstick2l	=	*-SPAlist	; $1544. Goalie stick save left, 2 frames (goaliesave.saveanim 9). Was SPA_1544
 SPAgstick2l_table:	;$7060. Frames 676-705
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1303,7 +1303,7 @@ SPAgstick2l_table:	;$7060. Frames 676-705
 .6	dc.w	700,4,701,-32
 .7	dc.w	704,4,705,-32
 
-SPAgslamtop	=	*-SPAlist	; $1596. 94 only. Goalie in the top net (pfgoal 0) turns and slams his stick after a goal: sfx $1C on frame 708 (assgoaliecpu). Was SPA_1596
+SPAgslamtop	=	*-SPAlist	; $1596. Goalie in the top net (pfgoal 0) turns and slams his stick after a goal: sfx $1C on frame 708 (assgoaliecpu). Was SPA_1596
 SPAgslamtop_table:	;$70B2. Frames 407-709
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1326,7 +1326,7 @@ SPAgslamtop_table:	;$70B2. Frames 407-709
 .6	dc.w	SPFGoalie+18,8,SPFGoalie+21,8,SPFGoalie+21,8,706,5,707,5,708,10,709,-5
 .7	dc.w	SPFGoalie+21,8,SPFGoalie+24,8,706,5,707,5,708,10,709,-5
 
-SPAgslambot	=	*-SPAlist	; $1684. 94 only. Goalie in the bottom net (pfgoal 1) turns and slams his stick after a goal: sfx $1C on frame 712 (assgoaliecpu). Was SPA_1684
+SPAgslambot	=	*-SPAlist	; $1684. Goalie in the bottom net (pfgoal 1) turns and slams his stick after a goal: sfx $1C on frame 712 (assgoaliecpu). Was SPA_1684
 SPAgslambot_table:	;$71A0. Frames 407-713
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1349,7 +1349,7 @@ SPAgslambot_table:	;$71A0. Frames 407-713
 .6	dc.w	SPFGoalie+18,8,SPFGoalie+15,8,SPFGoalie+15,8,710,5,711,5,712,10,713,-5
 .7	dc.w	SPFGoalie+21,8,SPFGoalie+18,8,SPFGoalie+18,8,SPFGoalie+18,8,710,5,711,5,712,10,713,-5
 
-SPAboardtop	=	*-SPAlist	; $1776. 94 only. Checked into the end boards behind the top goal line (FallDown .FallList 0). Was SPA_1776
+SPAboardtop	=	*-SPAlist	; $1776. Checked into the end boards behind the top goal line (FallDown.FallList 0). Was SPA_1776
 SPAboardtop_table:	;$7292. Frames 276-753
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1371,7 +1371,7 @@ SPAboardtop_table:	;$7292. Frames 276-753
 .6
 .7	dc.w	750,6,751,6,752,6,753,60,SPFfallfwd+27,8,SPFduck+6,-8
 
-SPAboardright	=	*-SPAlist	; $17E8. 94 only. Checked into the right side boards (FallDown .FallList 1; flipped sprites swap it with SPAboardleft). Was SPA_17E8
+SPAboardright	=	*-SPAlist	; $17E8. Checked into the right side boards (FallDown.FallList 1; flipped sprites swap it with SPAboardleft). Was SPA_17E8
 SPAboardright_table:	;$7304. Frames 284-769
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1393,7 +1393,7 @@ SPAboardright_table:	;$7304. Frames 284-769
 .6
 .7	dc.w	766,6,767,6,768,6,769,60,SPFfallback+27,8,SPFduck+6,-8
 
-SPAboardbot	=	*-SPAlist	; $185A. 94 only. Checked into the end boards behind the bottom goal line (FallDown .FallList 2). Was SPA_185A
+SPAboardbot	=	*-SPAlist	; $185A. Checked into the end boards behind the bottom goal line (FallDown.FallList 2). Was SPA_185A
 SPAboardbot_table:	;$7376. Frames 292-785
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1416,7 +1416,7 @@ SPAboardbot_table:	;$7376. Frames 292-785
 .6
 .7	dc.w	782,6,783,6,784,6,785,60,SPFfallfwd+27,8,SPFduck+6,-8
 
-SPAboardleft	=	*-SPAlist	; $18CC. 94 only. Checked into the left side boards (FallDown .FallList 3; flipped sprites swap it with SPAboardright). Was SPA_18CC
+SPAboardleft	=	*-SPAlist	; $18CC. Checked into the left side boards (FallDown.FallList 3; flipped sprites swap it with SPAboardright). Was SPA_18CC
 SPAboardleft_table:	;$73E8. Frames 284-801
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1438,7 +1438,7 @@ SPAboardleft_table:	;$73E8. Frames 284-801
 .6
 .7	dc.w	798,6,799,6,800,6,801,60,SPFfallback+27,8,SPFduck+6,-8
 
-SPAboardmidl	=	*-SPAlist	; $193E. 94 only. Checked into the left boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip). Was SPA_193E
+SPAboardmidl	=	*-SPAlist	; $193E. Checked into the left boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip). Was SPA_193E
 SPAboardmidl_table:	;$745A. Frames 284-815
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1464,7 +1464,7 @@ SPAboardmidl_table:	;$745A. Frames 284-815
 .7	dc.w	798,6,815,6,804,6,805,6,806,6,807,6,808,6,800,6
 	dc.w	769,6,SPFfallback+27,80,SPFduck+6,-8
 
-SPAboardmidr	=	*-SPAlist	; $1A00. 94 only. Checked into the right boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip). Was SPA_1A00
+SPAboardmidr	=	*-SPAlist	; $1A00. Checked into the right boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip). Was SPA_1A00
 SPAboardmidr_table:	;$751C. Frames 284-829
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1490,7 +1490,7 @@ SPAboardmidr_table:	;$751C. Frames 284-829
 .7	dc.w	766,6,825,6,826,6,827,6,828,6,829,6,825,6,800,6
 	dc.w	769,6,SPFfallback+27,80,SPFduck+6,-8
 
-SPAboardchk	=	*-SPAlist	; $1AC2. 94 only. The checker stops after a hit into the boards away from the crease (FallDown sets it on a3). Was SPA_1AC2
+SPAboardchk	=	*-SPAlist	; $1AC2. The checker stops after a hit into the boards away from the crease (FallDown sets it on a3). Was SPA_1AC2
 SPAboardchk_table:	;$75DE. Frames 830-837
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t

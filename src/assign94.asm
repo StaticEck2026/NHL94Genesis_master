@@ -1,6 +1,6 @@
 ; $00C710  Adapted from logic93.asm: player assignments
 ;	NHL 94 (retail) segment $C710-$D09B
-;	92 Logic.Asm part 2, as 93 logic93_2.asm: the player assignments assbench ... asswingd. asswingo (logic94_3)
+;	92 Logic.Asm part 2, as 93 logic93_2.asm: the player assignments assbench ... asswingd. asswingo
 ;	follows at $D09C. 94 has no fight code: assfight and assfwatch are an rts, and the 93 chkhit, ShowInjuryMsg,
 ;	banner and addinfo are not here. assgoaliebreakwait is new.
 ;Transcribed from lst/nhl94.bin.lst lines 37886-38681. Global names are the except asseben (
@@ -109,7 +109,7 @@ assbench
 rtss4
 	rts
 ; player a3 should exit bench area
-asseben	;(93 asseben). Player a3 should exit the bench area
+asseben	;Player a3 should exit the bench area
 	btst	#5,pflags(a3)
 	bne.s	rtss4
 	bclr	#1,pflags(a3)
@@ -274,7 +274,7 @@ assepen
 	bra.w	assexit
 ; moves the goalie not being used during shootout/pen shot off the screen
 ; a3 = goalie who is to be taken off ice
-assgoaliebreakwait	;94 only (asstab entry $18DFC)
+assgoaliebreakwait	;(asstab entry $18DFC)
 	btst	#5,pflags(a3)	;check if animation locked
 	bne.w	.exit	;exit if so
 	btst	#2,(BA_PS_flags).w	;check if pen shot

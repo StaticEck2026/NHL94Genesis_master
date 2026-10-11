@@ -3,7 +3,7 @@
 ;92 hockey.asm DefaultMenus, NewPO, MakeTree, FigureJoy and the playoff password code, as 93 hockey93_09: DefaultMenus (
 ;	LoadDefMenuOptions), ContinuePlayoffs (93 NewPO), NewPO (93 SelectRandomPlayoffTree), MakeTree, FigureJoy, InitializeGameStructures, OptionRNG,
 ;	ReadPassBits ... SuperDiv, GetShifter, and the playoff stat packing (AddPOStats, BitWidthTable, ReadTeamStats). It follows
-;	attract94 ($17C71) with no gap. ResolveGames starts hockey94_10.
+;	($17C71) with no gap. ResolveGames starts hockey94_10.
 ;94 keeps the playoff bits in pwddatabuffer and saves them through WriteLineData (where 93 calls BitsToPW).
 ;	94 adds FourWayPlay (cont3team / cont4team, the Three and Four player choices) and Shootout, and has 9 menu options (93 7).
 ;Transcribed from lst/nhl94.bin.lst lines 54836-55537. Global names are the or the 93 name where an auto name.
@@ -26,7 +26,7 @@ DefaultMenus	;Set the default menu choices for the beginning of the game: the 9 
 	dbf	d0,.loop
 	rts
 defmenuoptions	;(93 DefaultMenus.defom). Regular Season, One - Home, MTL, LA, 10 Minutes, Manual Control, User Records Off, Penalties Off
-	;Line Changes Off (the hockey94_08 value lists; 93 0,1,$F,3,1,0,1)
+	;Line Changes Off (the value lists; 93 0,1,$F,3,1,0,1)
 	dc.w	0	;Play Mode
 	dc.w	1	;Players
 	dc.w	$B	;Team 1
@@ -72,7 +72,7 @@ ContinuePlayoffs	;kept: this is 93 NewPO, but the name NewPO to the next routine
 .x
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-NewPO	;(92 NewPO, 93 SelectRandomPlayoffTree). New playoff generates tree with same team 1. Called from hockey94_08 (j_NewPO). Falls into MakeTree
+NewPO	;(93 SelectRandomPlayoffTree). New playoff generates tree with same team 1. Called from hockey94_08 (j_NewPO). Falls into MakeTree
 	moveq	#$20,d0	;' '   ; 20 = 32 decimal
 	bsr.w	randomd0
 .top
@@ -106,8 +106,8 @@ NewPO	;(92 NewPO, 93 SelectRandomPlayoffTree). New playoff generates tree with s
 	clr.w	6(a0)	;gspobwins
 	adda.w	#$10,a0	;gssize
 	dbf	d0,.cg	;falls into MakeTree
-maketree	;(93 maketree, 92 MakeTree). Make the playoff tree (potree, 93 name) from playoffseats and the winbits (WinBits, 93
-	;WinBits), clear the scores of this round's games and set their teams (.sett), then FigureJoy. Called from ContinuePlayoffs, EncodePW and hockey94_08
+maketree	;Make the playoff tree (potree, 93 name) from playoffseats and the winbits (WinBits, 93
+	;WinBits), clear the scores of this round's games and set their teams (.sett), then FigureJoy. Called from ContinuePlayoffs, EncodePW
 	;(SetupStart); falls in from NewPO
 	movem.l	d0-d4/a0-a3,-(sp)
 	move.w	(postarts).w,d1
@@ -167,7 +167,7 @@ maketree	;(93 maketree, 92 MakeTree). Make the playoff tree (potree, 93 name) fr
 FigureJoy	;(92 / 93 FigureJoy). Set contteams appropriately: cont1team ... cont4team (94 adds 3 and 4 for FourWayPlay). In the playoffs
 	;(not Shootout, gmode2 bit 0) find this round's game of the po team and set the teams and pads from .pojoylist (.pojoylist2 with
 	;FourWayPlay); otherwise from .noplist by OptNOP. After a demo (demoflag clear), and outside the playoffs, fill gsstruct with random matchups
-	;(InitializeGameStructures). Called from MakeTree and hockey94_08 GameSetUp
+	;(InitializeGameStructures). Called from MakeTree and GameSetUp
 	movem.l	d0-d3/a0-a1,-(sp)
 	clr.w	(cont1team).w
 	clr.w	(cont2team).w
@@ -341,7 +341,7 @@ GetRandomUnusedTeam	;Calls randomd0 when changing options: return d0 = a random 
 	bne.s	GetRandomUnusedTeam
 	rts
 ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables; the 5 words are kept. 94: pojoy has 8
-	;values (93 4), and without FourWayPlay pojoy 1 / 2 become 4. Called from ContinuePlayoffs, EncodePW and hockey94_08 GameSetUp
+	;values (93 4), and without FourWayPlay pojoy 1 / 2 become 4. Called from ContinuePlayoffs, EncodePW and GameSetUp
 	moveq	#4,d0
 	lea	$A(a3),a0
 .save
@@ -402,7 +402,7 @@ ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables;
 	rts
 EncodePW	;After a playoff game compute winners and save the bits if needed. 94 returns at once for Demo, Regular
 	;Season and Shootout, and sets TempOptPlayMode with OptPlayMode. The bits are pwddatabuffer ; WriteLineData (not matched yet) is
-	;where 93 calls BitsToPW. Called from GameOver (hockey94_06)
+	;where 93 calls BitsToPW. Called from GameOver
 	tst.w	(OptNOP).w
 	beq.w	rtss2
 	tst.w	(OptPlayMode).w
@@ -411,7 +411,7 @@ EncodePW	;After a playoff game compute winners and save the bits if needed. 94 r
 	beq.w	rtss2
 	move.w	#1,(OptPlayMode).w	;continue playoffs
 	move.w	#1,(TempOptPlayMode).w
-	bsr.w	ResolveGames	;93 ResolveGames (hockey94_10)
+	bsr.w	ResolveGames	;93 ResolveGames
 	bsr.w	maketree
 	cmpi.w	#4,(gamelevel).w
 	beq.w	.0	;finished playoffs
@@ -436,7 +436,7 @@ EncodePW	;After a playoff game compute winners and save the bits if needed. 94 r
 	move.w	#3,(OptPlayMode).w	;new playoffs best of 7
 	move.w	#3,(TempOptPlayMode).w
 	rts
-WritePassBits	;Transfer the game variables to the bits at a3 (pojoy range 8, 93 4). Called from EncodePW and ResolveGames (hockey94_10)
+WritePassBits	;Transfer the game variables to the bits at a3 (pojoy range 8, 93 4). Called from EncodePW and ResolveGames
 	bsr.w	ClrPassBits
 	move.w	(postarts).w,d0
 	moveq	#$20,d1
@@ -634,7 +634,7 @@ ReadTeamStats	;Unpack the $68 playoff stat totals from the bit stream into stats
 ;	92 hockey.asm ResolveGames and the 92 exception handlers, as 93 hockey93_10: ResolveGames, the end of game Stars of the Game box
 ;	(DisplayPeriodOver, FindMaxAttributeTEam, CalculateTeamAttributes / Values), the injury box (ShowInjuryBox), the 94-only penalty
 ;	shot box (PenaltyShotBox), the goal box (DisplayPlayerAttributeMenu), box, the player name formatters (GetTempPlayerName, getname ...
-;	FinalizeTextBuffer, getplayername, d0toascii) and AddError, Illinst, ZeroDiv and crash. cd0 (hockey94_11) follows at $18CFC.
+;	FinalizeTextBuffer, getplayername, d0toascii) and AddError, Illinst, ZeroDiv and crash. cd0 follows at $18CFC.
 ;Transcribed from lst/nhl94.bin.lst lines 55538-56542. Global names are the or the 93 name where an auto name
 ;( unless generic, in an); the exception handlers have the main94 vector names. Locals are the names (_x ->.x)
 ;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; crash's helper is the 93 local.ri.
@@ -646,7 +646,7 @@ ReadTeamStats	;Unpack the $68 playoff stat totals from the bit stream into stats
 ;	gsstruct game ($10 bytes, 93 gstruct): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2, $E gsflags.
 ;	Team struct: $C goals, $28 team, $B4 / $CE / $E8 goals / assists / shots bytes per roster slot, $136 frames on ice; tmsize $364.
 
-ResolveGames	;Compute winners and losers for playoff matchups (92 ResolveGames). Called from EncodePW (hockey94_09)
+ResolveGames	;Compute winners and losers for playoff matchups. Called from EncodePW
 	move.w	(gamenum).w,d0
 	mulu.w	#gssize,d0
 	movea.w	#(gsstruct-M68K_RAM),a0
@@ -765,7 +765,7 @@ ResolveGames	;Compute winners and losers for playoff matchups (92 ResolveGames).
 	or.w	d3,(WinBits).w
 	addq.w	#1,(gamelevel).w
 	rts
-DisplayPeriodOver	;End of game Stars of the Game box. Called from UpdatePA (penalty94_1) while RefPen is the game over
+DisplayPeriodOver	;End of game Stars of the Game box. Called from UpdatePA while RefPen is the game over
 	;penalty. Waits for RefCnt <= $40 and runs once (gmode bit 7); 94 then sets disflags bit 3 and waits a vblank. Frames the box, draws a bitmap
 	;from Rinktilelist (93 IceRinkMap), then the three best star scores (FindMaxAttributeTEam): team abbreviation and getname. Song $F when the
 	;home team won
@@ -937,7 +937,7 @@ CalculateTeamAttributeValues	;Star scores of team a2 (a3 = other team) to (a4)+,
 	rts
 ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset (GetPlayerNameWithAttrib), 'Out for period', or 'Out for game'
 	;when sflags7 bit 5 is set (94), and 'the game' over 'period' when puck_pflags2 bit 0 (93 pf2fight) is set. Jumped to from CheckInjury
-	;(hockey94_01), so global
+	;so global
 	movem.l	d0-d2/a0-a4,-(sp)
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$B,3	;/ btst
@@ -962,7 +962,7 @@ ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset (GetPlayerNameWithAt
 .ex
 	movem.l	(sp)+,d0-d2/a0-a4	;/ move.b ( in the string)
 	rts
-PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1). Sets gmode2 bit 7; in Shootout (bit 0) jumps to PlayoffRoundScreen
+PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in Shootout (bit 0) jumps to PlayoffRoundScreen
 	;instead. Otherwise: printbig 'PENALTY SHOT!', the shooter (BA_Sktr_SCnum, BA_Team), the penalty name (PenaltyList, pspenalty) and ' by' the
 	;player BA_Checker_Offset of the other team
 	bset	#7,(gmode2).w
@@ -1023,7 +1023,7 @@ PenShotBigTxt	String	$BF,4,3,'PENALTY SHOT!',$BF,4,5	;printbig String for Penalt
 DisplayPlayerAttributeMenu	;Goal box. Closes both line change boxes, then printbig 'GOAL!' ('PP GOAL!' when DelayedPen
 	;bit 0 is set, cleared here), or 'HAT TRICK!' on the scorer's third goal when the scorer's slot is at least scorergoalies (homegoalies home /
 	;awaygoalies visitors), then the scorer and up to two assists of the last goal entry (FormatPlayerName). 94 calls CountGoalies, StartArenaAnim (home
-	;hat trick), PrintPlayerGoals and PrintPlayerAssists (not matched yet); BA_PS_flags bit 2 sets sflags2 bit 2. Called from SetPA (penalty94_1)
+	;hat trick), PrintPlayerGoals and PrintPlayerAssists (not matched yet); BA_PS_flags bit 2 sets sflags2 bit 2. Called from SetPA
 	movem.l	d0-d2/a0-a4,-(sp)
 	btst	#2,(BA_PS_flags).w
 	beq.w	.0
@@ -1127,15 +1127,15 @@ GoalBigTxt	String	$BF,$F,3,'GOAL!',$BF,$C,5	;printbig Strings for DisplayPlayerA
 	String	$BF,$C,3,'HAT TRICK!',$BF,$C,5
 PPGoalBigTxt	String	$BF,$D,3,'PP GOAL!',$BF,$C,5	;The same after DelayedPen bit 0: PP GOAL!, then HAT TRICK!
 	String	$BF,$C,3,'HAT TRICK!',$BF,$C,5
-box	;(93 box). Fill a $13 x 8 rectangle at printz position $FF,$B,2 with char $7FF (eraser). Called from SetLCmode2 (logic94_1)
+box	;Fill a $13 x 8 rectangle at printz position $FF,$B,2 with char $7FF (eraser). Called from SetLCmode2
 	bsr.w	printz
 	String	-TXMAP1,$B,2
 	moveq	#$13,d0	;in the string
 	moveq	#8,d1
 	move.l	#$7FF,d2
 	bra.w	eraser
-GetPlayerName	;93 GetPlayerName, but that is the same symbol as getplayername (SNASM symbols are case-insensitive).
-	;a1 = mesarea "NN First Last" (getname) for player TempPlOffset (bit 15 set: away team). Called from UpdatePA (penalty94_1)
+GetPlayerName	;but that is the same symbol as getplayername (SNASM symbols are case-insensitive).
+	;a1 = mesarea "NN First Last" (getname) for player TempPlOffset (bit 15 set: away team). Called from UpdatePA
 	movem.l	d0/a2,-(sp)
 	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(TempPlOffset).w,d0
@@ -1146,7 +1146,7 @@ GetPlayerName	;93 GetPlayerName, but that is the same symbol as getplayername (S
 	bsr.w	getname
 	movem.l	(sp)+,d0/a2
 	rts
-getname	;(93 getname). gets player number and name, appends to string: a1 = mesarea "NN First Last" for player d0 (roster offset) of team struct a2. The number is the bcd byte after the name
+getname	;gets player number and name, appends to string: a1 = mesarea "NN First Last" for player d0 (roster offset) of team struct a2. The number is the bcd byte after the name
 	movem.l	d0-d3/a0/a2-a3,-(sp)	;push to stack
 	bsr.w	GetPlayerNamePointer	;get to start of player name
 	move.l	a0,-(sp)	;push a0 (address to start of player name) to stack
@@ -1220,7 +1220,7 @@ FormatPlayerName	;a1 = mesarea string "NN Last" for player d0 of team a2, built 
 	bsr.w	FinalizeTextBuffer
 	movem.l	(sp)+,d0-d3/a0/a2
 	rts
-FormatPlayerNameLast	;94 only. FormatPlayerNameShort without the leading space ("Last", space padded). Branches into FormatLastName
+FormatPlayerNameLast	;FormatPlayerNameShort without the leading space ("Last", space padded). Branches into FormatLastName
 	movem.l	d0-d3/a0/a2,-(sp)
 	bsr.w	GetPlayerNamePointer
 	movea.w	#(TextBuffer-M68K_RAM),a1
@@ -1364,7 +1364,7 @@ crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs fr
 ;	its handler is rtss2. String $FF ends.
 
 cd0	;$fftt = frame/time for various levels of crowd excitement. 92 updatecrowdf.cd0, same bytes as 93.
-	;Used by updatecrowdf (hockey94_01), indexed by crowd level and crowdstep
+	;Used by updatecrowdf, indexed by crowd level and crowdstep
 	dc.w	$010c,$020c,$030c,$040c,$050c,$0a0c,$090c,$080c
 	dc.w	$060c,$070c,$080c,$090c,$0a0c,$050c,$040c,$030c
 
@@ -1407,16 +1407,16 @@ asstab	;jump table of all the player logic assignments. 92 / 93 asstab; 94 adds 
 	dc.l	puckunflip	;$1A (93 pucknothing)
 	dc.l	puckfaceoff	;$1B
 	dc.l	puckfaceoff2	;$1C
-	dc.l	assgoaliectrl	;$1D 94 only
-	dc.l	puckshootout	;$1E 94 only
-	dc.l	puckpenshot	;$1F 94 only
-	dc.l	assgoaliebreakwait	;$20 94 only
-	dc.l	chkpuckc		;$21 94 only
-	dc.l	assbreakaway	;$22 94 only
-	dc.l	assonetimer	;$23 94 only (high ROM)
+	dc.l	assgoaliectrl	;$1D
+	dc.l	puckshootout	;$1E
+	dc.l	puckpenshot	;$1F
+	dc.l	assgoaliebreakwait	;$20
+	dc.l	chkpuckc		;$21
+	dc.l	assbreakaway	;$22
+	dc.l	assonetimer	;$23(high ROM)
 
-Penaltylist	;92 Penaltylist, 93 numbers. Penalty number = word offset into this table; 94 adds 8 entries ($2E-$3C: the penalty shot
-	;versions of 7 penalties, minutes byte $FF, and a second Face Off). Used by AddPenalty, SetPA2, PenaltyShotBox (hockey94_10), ...
+Penaltylist	;93 numbers. Penalty number = word offset into this table; 94 adds 8 entries ($2E-$3C: the penalty shot
+	;versions of 7 penalties, minutes byte $FF, and a second Face Off). Used by AddPenalty, SetPA2, PenaltyShotBox, ...
 	dc.w	$0000
 	dc.w	.eop-Penaltylist	;$2 period over
 	dc.w	.eog-Penaltylist	;$4 game over
@@ -1542,14 +1542,13 @@ Penaltylist	;92 Penaltylist, 93 numbers. Penalty number = word offset into this 
 	String	'Fight Instigator'
 	dc.w	$0004,$0d01,$0e01,$0d01,$0e01,$0d01,$0e01,$0d01,$0e01,-$0101
 
-PenShotPenalties	;94 only: the penalty shot penalty number for penalty number d0 (word offset), -1 none. Used by PenShotChk
-	;(penalty94_1)
+PenShotPenalties	;the penalty shot penalty number for penalty number d0 (word offset), -1 none. Used by PenShotChk
 	dc.w	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,$38,$3C
 	dc.w	$36,$3A,$2E,$30,$34,-1,-1,-1,-1,-1,-1,-1
 
 bfasciicon	;equates to find each char definition for bigfont.map. 92 bfasciicon, 93 values. Indexed by ascii
-	;- $20 in PrintBigChar (middle94_2, called from printbig)
-;	 -  -!  "  #  $  %  &  -'  (  )  *  +  ,  -  -.  /
+	;- $20 in PrintBigChar (called from printbig)
+;	 - -! " # $ % & -' * +, - -. /
 	dc.b	-76,-73,00,00,00,00,00,-71,00,00,00,00,00,00,-72,00
 ;	 0   1  2  3  4  5  6  7  8  9   :  ;  <  =  >  ?
 	dc.b	51,-53,54,56,58,60,62,64,66,68,-71,00,00,00,00,74
@@ -1559,7 +1558,7 @@ bfasciicon	;equates to find each char definition for bigfont.map. 92 bfasciicon,
 	dc.b	29,31,33,35,37,39,41,43,45,47,49
 	dc.b	$FF			;pad (93 $F0)
 
-linelist	String	'Sc1'	;(93 linelist). text list for line choices. Used by SetLCmode2 and puckfaceoff2
+linelist	String	'Sc1'	;text list for line choices. Used by SetLCmode2 and puckfaceoff2
 	String	'Sc2'
 	String	'Chk'
 	String	'PP1'
@@ -1579,7 +1578,7 @@ PerLabels	String	'1',$12	;text list for periods; 94 ' F' (93 'Final'). Used by P
 	String	'OT'
 	String	' F'
 
-PenShotPenalties2	String	'1',$12	;94 only: the same with a blank last entry. Used by PrintScores1
+PenShotPenalties2	String	'1',$12	;the same with a blank last entry. Used by PrintScores1
 	String	'2',$13
 	String	'3',$14
 	String	'OT'
@@ -1618,7 +1617,7 @@ priolist	dc.b	0,1,2,4,3,5,6	;positions in order of importance. 92 priolist. Used
 	dc.b	$FF			;pad (93 $23)
 
 PlayoffTreeSetup	;Playoff tree layout by gamelevel. 92 PlayoffScreen.setup, same layout with 94
-	;columns. Used by PlayoffScreen (hockey94_06)
+	;columns. Used by PlayoffScreen
 	dc.w	.l0-PlayoffTreeSetup
 	dc.w	.l1-PlayoffTreeSetup
 	dc.w	.l2-PlayoffTreeSetup
@@ -1681,10 +1680,10 @@ PlayoffTreeSetup	;Playoff tree layout by gamelevel. 92 PlayoffScreen.setup, same
 	dc.b	-1			;no scores
 	dc.b	$FF			;pad (93 $47)
 
-PAttribColumns	;(93 PAttribColumns). Skater attribute columns for PrintAttribHeader / the player list. String header
+PAttribColumns	;Skater attribute columns for PrintAttribHeader / the player list. String header
 	;then a long for getNameandAttrib: high word = mask of rating nibbles to average, low word = attribjmp offset (0 status, 2 energy,
 	;4 handed, 6 weight, 8 fighting, $A rating). A negative word ends the list. 94 has no Fighting column. PAttribOverall / PAttribOverallMask (the
-	;Overall entry) are read by PrintShooterList, PrintOverallRating and hockey94_07
+	;Overall entry) are read by PrintShooterList, PrintOverallRating
 	String	'     Status    ]'
 	dc.w	$0000,$0		;status
 PAttribOverall	String	'[   Overall    ]'
@@ -1719,8 +1718,8 @@ PAttribOverallMask	dc.w	$1fba,$a
 	dc.w	$0080,$a
 	dc.w	-1
 
-GAttribColumns	;(93 GAttribColumns). Goalie attribute columns, same format as PAttribColumns. GAttribOverall /
-	;GAttribOverallMask (the Overall entry) are read by PrintShooterList, PrintOverallRating and hockey94_07
+GAttribColumns	;Goalie attribute columns, same format as PAttribColumns. GAttribOverall /
+	;GAttribOverallMask (the Overall entry) are read by PrintShooterList, PrintOverallRating
 	String	'     Status    ]'
 	dc.w	$0000,$0		;status
 GAttribOverall	String	'[   Overall    ]'
@@ -1747,7 +1746,7 @@ GAttribOverallMask	dc.w	$130f,$a
 	dc.w	$2000,$6		;weight
 	dc.w	-1
 
-PauseMenuItems	;94 only: pause menu item list (PauseMode; hockey94_01)
+PauseMenuItems	;pause menu item list (PauseMode)
 	String	$FE,5
 	String	$FE,4
 	String	'   Resume Game    '
@@ -1757,14 +1756,14 @@ PauseMenuItems	;94 only: pause menu item list (PauseMode; hockey94_01)
 	String	'   Team Roster    '
 	dc.l	TeamRosterScreen	;93 TeamRosterScreen
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	'x Manual Goalie   '
-	dc.l	ManualGoalieMenu	;94 only
+	dc.l	ManualGoalieMenu
 	String	$FF
 
-PauseText	;Pause menu item list (PauseMode, hockey94_01)
+PauseText	;Pause menu item list (PauseMode)
 	String	$FE,5
 	String	$FE,4
 	String	'   Resume Game    '
@@ -1792,13 +1791,13 @@ PauseText	;Pause menu item list (PauseMode, hockey94_01)
 	String	'     Timeout      '
 	dc.l	TimeoutMenu	;93 TimeoutMenu
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	'   Period Stats   '
-	dc.l	PeriodStatsScreen	;94 only
+	dc.l	PeriodStatsScreen
 	String	'x Manual Goalie   '
-	dc.l	ManualGoalieMenu	;94 only
+	dc.l	ManualGoalieMenu
 	String	$FF
 
 PauseText2	;Pause menu item list without Timeout (PauseMode)
@@ -1827,28 +1826,28 @@ PauseText2	;Pause menu item list without Timeout (PauseMode)
 	String	'   Crowd Meter    '
 	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	'   Period Stats   '
-	dc.l	PeriodStatsScreen	;94 only
+	dc.l	PeriodStatsScreen
 	String	'x Manual Goalie   '
-	dc.l	ManualGoalieMenu	;94 only
+	dc.l	ManualGoalieMenu
 	String	$FF
 
-ShootoutIntermissionMenu	;94 only: Intermission menu in Shootout (gmode2 bit 0; penalty94_2)
+ShootoutIntermissionMenu	;Intermission menu in Shootout (gmode2 bit 0)
 	String	$FE,5
 	String	$FE,4
 	String	'  Start Shootout  '
 	dc.l	rtss2
 	String	'  Shootout SetUp  '
-	dc.l	ShootoutShooters	;94 only
+	dc.l	ShootoutShooters
 	String	'   Team Roster    '
 	dc.l	TeamRosterScreen	;93 TeamRosterScreen
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	$FF
 
 StartGameText	;Intermission menu for gsp 0 (penalty94_2.sslist)
@@ -1865,9 +1864,9 @@ StartGameText	;Intermission menu for gsp 0 (penalty94_2.sslist)
 	String	'   Other Scores   '
 	dc.l	ShowScores	;93 ShowScores
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	$FF
 
 StartGameTextPO	;Intermission menu for gsp 0 in the playoffs (penalty94_2.sslist)
@@ -1886,9 +1885,9 @@ StartGameTextPO	;Intermission menu for gsp 0 in the playoffs (penalty94_2.sslist
 	String	'   Other Scores   '
 	dc.l	ShowScores	;93 ShowScores
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	$FF
 
 IntermissionText	;Intermission menu for gsp 1-3 (penalty94_2.sslist)
@@ -1915,13 +1914,13 @@ IntermissionText	;Intermission menu for gsp 1-3 (penalty94_2.sslist)
 	String	'    Edit Lines    '
 	dc.l	LineEditor	;93 LineEditor
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	'   Period Stats   '
-	dc.l	PeriodStatsScreen	;94 only
+	dc.l	PeriodStatsScreen
 	String	'x Manual Goalie   '
-	dc.l	ManualGoalieMenu	;94 only
+	dc.l	ManualGoalieMenu
 	String	$FF
 
 ExitGameText	;Intermission menu for gsp 4 (penalty94_2.sslist)
@@ -1944,11 +1943,11 @@ ExitGameText	;Intermission menu for gsp 4 (penalty94_2.sslist)
 	String	'   Crowd Meter    '
 	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	'   Period Stats   '
-	dc.l	PeriodStatsScreen	;94 only
+	dc.l	PeriodStatsScreen
 	String	$FF
 
 ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs (penalty94_2.sslist)
@@ -1971,11 +1970,11 @@ ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs (penalty94_2.sslist)
 	String	'   Crowd Meter    '
 	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
 	String	'   Player Cards   '
-	dc.l	PlayerCards	;94 only
+	dc.l	PlayerCards
 	String	'  Record Holders  '
-	dc.l	RecordHoldersScreen	;94 only
+	dc.l	RecordHoldersScreen
 	String	'   Period Stats   '
-	dc.l	PeriodStatsScreen	;94 only
+	dc.l	PeriodStatsScreen
 	String	$FF
 
 AttributeScreenText	;Line editor exit menu (the line editor at $882E)
@@ -1984,7 +1983,7 @@ AttributeScreenText	;Line editor exit menu (the line editor at $882E)
 	String	'       Exit       '
 	dc.l	rtss2
 	String	'Set Original lines'
-	dc.l	InitTeamSructure+$10	;the line copy loop of InitTeamSructure (hockey94_06), as 93
+	dc.l	InitTeamSructure+$10	;the line copy loop of InitTeamSructure, as 93
 	String	'  Save Team Line  '
 	dc.l	EncodePlayerAttributes	;93 EncodePlayerAttributes
 	String	'  Load Team Line  '
@@ -1997,7 +1996,7 @@ ExitAttribText	;Line editor exit menu without Load Team Line ($8844)
 	String	'       Exit       '
 	dc.l	rtss2
 	String	'Set Original lines'
-	dc.l	InitTeamSructure+$10	;the line copy loop of InitTeamSructure (hockey94_06), as 93
+	dc.l	InitTeamSructure+$10	;the line copy loop of InitTeamSructure, as 93
 	String	'  Save Team Line  '
 	dc.l	EncodePlayerAttributes	;93 EncodePlayerAttributes
 	String	$FF
