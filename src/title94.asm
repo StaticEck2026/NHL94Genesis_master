@@ -698,12 +698,12 @@ PlayedByAway	;94 only. As PlayedByHome for awayuser. Called from ScoutTextPlayer
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(awayuser).w,d0
 	bra.w	PlayedByText
-set_bit1_C2FE	;IDA name (and comments). 94 only. Called from updateplayers (hockey94_02)
+SetSflags8Bit1	;IDA: set_bit1_C2FE. 94 only. Always sets sflags8 bit 1 (the bclr is skipped). Called from updateplayers (hockey94_02)
 	bra.w	.set
 	bclr	#1,(sflags8).w
 	bra.w	.ex
 .set
-	bset	#1,(sflags8).w	;set bit 1 of C2FE
+	bset	#1,(sflags8).w	;set bit 1 of sflags8
 .ex
 	rts
 AttribAdjust	;IDA name (and comments). 94 only: an attribute under $32 becomes d0 / 2 + $19. Called from AttribRating (stats94), PrintOverallRating (high94_2) and PrintMatchupRatings (hockey94_07)

@@ -761,7 +761,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	blt.w	.nobreak	;branch if less than
 	bset	#6,(sflags7).w	;set Crowd Meter bit
 .nobreak
-	jsr	(set_bit1_C2FE).l	;jump to turn on bit 1 of C2FE
+	jsr	(SetSflags8Bit1).l	;turn on bit 1 of sflags8
 	tst.w	(puckc).w
 	bmi.w	.scload	;branch if no puck carrier
 	bclr	#7,(sflags8).w
