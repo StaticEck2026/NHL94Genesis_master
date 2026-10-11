@@ -1343,8 +1343,8 @@ AutoLineChange
 	cmp.w	#$C00,d0
 	bhi.w	rtss2
 	bsr.w	CompLine
-	bsr.w	SetPersonel
-	bsr.w	PrintScores1
+	bsr.w	setpersonel
+	bsr.w	printscores1
 	bra.w	compshoot
 ; return z flag set if killing penalty
 ; return z flag clr if not
@@ -2413,10 +2413,10 @@ puckpenshot
 	move.w	#$3C,(yleader).w
 	bsr.w	ResetBench
 	movea.w	#(HmShots-M68K_RAM),a2
-	bsr.w	SetPersonel
+	bsr.w	setpersonel
 	bsr.w	SetupPenaltyShot
 	adda.w	#$364,a2
-	bsr.w	SetPersonel
+	bsr.w	setpersonel
 	bsr.w	SetupPenaltyShot
 	jsr	(resetplstuff).l
 	move.l	a3,-(sp)
@@ -2753,8 +2753,8 @@ SetFaceoffComputerLine
 	beq.w	rtss2
 .dochange
 	bsr.w	CompLine
-	bsr.w	SetPersonel
-	bsr.w	PrintScores1
+	bsr.w	setpersonel
+	bsr.w	printscores1
 	move.w	#$2710,(crowdnoisedelay).w
 	rts
 StartFaceoffLineChange
@@ -2848,7 +2848,7 @@ ChkGoalies
 	btst	#gmpendel,(gmode).w	;#gmpendel - delayed penalty called
 	beq.w	.nopen
 	st	tmgoalie(a2)	;sets to FFFF (no goalie)
-	bra.w	SetPersonel
+	bra.w	setpersonel
 .nopen
 	cmp.w	(cont1team).w,d0
 	beq.w	rtss2	;exit if team is joy controlled
@@ -2895,7 +2895,7 @@ CPgoalie
 	tst.w	d1
 	bmi.w	rtss2	;exit if d1 negative (faceoff in own zone)
 	st	tmgoalie(a2)	;set to FFFF (no goalie)
-	bra.w	SetPersonel
+	bra.w	setpersonel
 ; find good line for comp to switch to
 CompLine
 	movem.l	d0-d2/a0,-(sp)
@@ -3071,10 +3071,10 @@ puckfaceoff2
 	move.w	#$3C,(yleader).w
 	bsr.w	ResetBench
 	movea.w	#(HmShots-M68K_RAM),a2
-	bsr.w	SetPersonel
+	bsr.w	setpersonel
 	bsr.w	forcepldata
 	adda.w	#tmsize,a2
-	bsr.w	SetPersonel
+	bsr.w	setpersonel
 	bsr.w	forcepldata
 	bsr.w	resetplstuff
 	move.l	a3,-(sp)
@@ -3208,7 +3208,7 @@ puckfaceoff2
 	bclr	#0,(sflags6).w
 	tst.w	(OptLine).w
 	bne.w	.setdroptime
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_ADDY,$A,TXS_ATTR,4		;$FBC2. IDA shows ori.b #$A,d6 and drops the $FE04 word
 	moveq	#$C,d0
 	moveq	#3,d1
@@ -3219,7 +3219,7 @@ puckfaceoff2
 	bne.w	.printline2
 	exg	d0,d1
 .printline2
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_ADDX,1,TXS_ADDY,$FE		;$FBE8. IDA shows ori.b #1,d6 and drops the $FAFE word
 	movea.l	#linelist,a1
 	bsr.w	PrintStringFromList

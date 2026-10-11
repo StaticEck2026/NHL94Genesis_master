@@ -36,7 +36,7 @@ ShowScores	;93 name. "Scores" screen: the other games of the night in gsstruct (
 	move.w	2(a1),d3
 	clr.w	d5
 	jsr	(dobitmap).l
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,2,4,0
 	clr.w	(VertLineScrolling).w
 	bsr.w	UpdateVertScrollReg
@@ -136,7 +136,7 @@ PrintGameInfo	;93 name. Print team d0's name (TeamList, $30E) at x 6 and score d
 	jmp	print
 DrawScrollArrows	;93 name. ShowScores up / down arrows (ScrollArrowTable). Saves d0-d1/a1
 	movem.l	d0-d1/a1,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,4,6,TXS_FONT,1
 	clr.w	d0
 	move.w	(VertLineScrolling).w,d1
@@ -166,7 +166,7 @@ LineEditor	;93 name. "Line Editor" screen for team a2: line slot cursor (TestLis
 	clr.w	(PlayerScrollCtr).w
 	move.w	#1,(TestList).w
 LineEditorRedraw	;93 name. Clear the screen and redraw everything. Also entered from ExitAttributeScreen
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_MAP,2,TXS_X,0,TXS_Y
 	moveq	#$28,d0
 	moveq	#$1C,d1
@@ -241,17 +241,17 @@ SelectAttributeItem	;93 name. Line editor: C pressed on slot TestList (93 name).
 	addq.w	#1,d2
 	dbf	d0,.fill
 	bsr.w	ClearAttributeArea2
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,0,3,1,0
 	moveq	#$12,d0
 	moveq	#3,d1
 	jsr	(Framer).l
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_X,$15,TXS_Y
 	moveq	#$12,d0	;IDA hid this
 	moveq	#3,d1	;IDA hid this
 	jsr	(Framer).l	;IDA hid this
-	jsr	(printz2).l	;IDA hid this
+	jsr	(printsmallz).l	;IDA hid this
 	String	TXS_ALL,4,2,2,1,'{Select  Player}'
 	clr.w	d0
 	bra.w	.vert
@@ -338,7 +338,7 @@ PrintAttribHeader	;IDA name (93 name). Line editor player list: the column heade
 .4
 	move.w	#2,(printy).w
 .row
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ATTR,4,TXS_X,5,TXS_ADDY,1,'                      ',TXS_X,5
 	cmp.w	(VertLineScrolling).w,d2
 	bne.w	.5
@@ -346,7 +346,7 @@ PrintAttribHeader	;IDA name (93 name). Line editor player list: the column heade
 .5
 	clr.w	d0
 	move.b	0(a3,d2.w),d0
-	bsr.w	getNameandAttrib
+	bsr.w	GetNameandAttrib
 	addq.w	#1,d2
 	dbf	d1,.row
 	rts
@@ -371,12 +371,12 @@ DrawAttributeMenu	;93 name. Line editor: draw the line icons for the cursor's li
 	bsr.w	DrawMenuIcon
 .2
 	dbf	d5,.1
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,2,8,7,TXS_FONT,1
 	moveq	#$18,d0
 	moveq	#3,d1
 	jsr	(Framer).l
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_X,$15,TXS_Y,8
 	move.w	d6,d0
 	jsr	(getname).l
@@ -405,7 +405,7 @@ DrawMenuIcon	;93 name. Line editor: draw line d5 (its name from linelist, 93 lin
 	movea.l	#linelist,a1
 	move.w	#$8000,(printa).w
 	jsr	(PrintStringFromList).l
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	' Line'
 	move.w	(a0),(printx).w	;IDA: bvs.s / bcs.w / cmp.b (misaligned)
 	move.w	d5,d4
@@ -416,7 +416,7 @@ DrawMenuIcon	;93 name. Line editor: draw line d5 (its name from linelist, 93 lin
 	lea	$16A(a2),a3
 .1
 	move.w	(a0),(printx).w
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ADDX,$FF,TXS_ADDY,2,TXS_ATTR,6
 	clr.w	d0
 	move.b	0(a3,d4.w),d0
@@ -434,7 +434,7 @@ DrawMenuIcon	;93 name. Line editor: draw line d5 (its name from linelist, 93 lin
 	dbf	d3,.1
 	rts
 ClearAttributeArea	;93 name. Line editor: erase the line area and print the position header (LD RD LW C RW)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_MAP,2,TXS_X,0,TXS_Y,$A
 .erase
 	moveq	#$28,d0
@@ -447,7 +447,7 @@ ClearAttributeArea	;93 name. Line editor: erase the line area and print the posi
 	beq.w	.0
 	move.w	(MenuIconPosTable-6).l,(printx).l
 .0
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	dc.w	$0022	;String length: too many arguments for the String macro (as 93)
 	dc.b	$FE,4,$FB,$FD,$FA,2,'LD',$FB,$FE,$FA,2,'RD',$FB,$FE,$FA,2,'LW',$FB,$FE,$FA,2,'C ',$FB,$FE,$FA,2,'RW'
 	rts
@@ -527,7 +527,7 @@ ExitAttributeScreen	;93 name. Line editor: start pressed. Run the exit menu (Att
 	beq.w	.0
 	movea.l	#ExitAttribText,a0
 .0
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_MAP,2
 	bsr.w	InitMenuState
 .1
@@ -539,7 +539,7 @@ ExitAttributeScreen	;93 name. Line editor: start pressed. Run the exit menu (Att
 	move.w	(sp)+,d1
 	andi.w	#$A0,d1
 	beq.s	.1
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_FONT
 	move.w	(menuitem).w,d0
 	move.l	(sp)+,(menudraw).w
@@ -670,7 +670,7 @@ TeamRosterScreen	;93 name. "Team Roster" screen for team a2: pages of players (D
 .home
 	bsr.w	PrintTeamData
 .header
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	dc.w	$0034	;String length: too many arguments for the String macro (as 93)
 	dc.b	$F8,6,3,2,$C,$F9,1,'Pos.^Player',$FD,$1E,$FC,$C,'Rating',$FD,$C,$FC,$1A,'A^-^Switch^Teams',$F9,0
 	jsr	(printz).l
@@ -792,13 +792,13 @@ DisplayPlayerListDown	;93 name. Draw the page after the quotient in the high wor
 	rts
 DisplayPlayerList	;93 name. Draw roster page SelectedPlayerIdx (0 goalies, 1-7 lines): title (PlayerStatMenuTxt), column header, then
 	;the rows (GoalieRowText / PlayerPositionText, getNameandAttrib)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,7,3,2,9,TXS_FONT,1
 	move.w	(SelectedPlayerIdx).w,d0
 	lea	PlayerStatMenuTxt(pc),a1
 	jsr	(AdvanceStringPtr).l
 	jsr	(printsmall).l
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_X,$16,TXS_Y,9
 .0
 	movea.l	#PAttribColumns,a1
@@ -819,7 +819,7 @@ DisplayPlayerList	;93 name. Draw roster page SelectedPlayerIdx (0 goalies, 1-7 l
 .3
 	jsr	(printsmall).l
 	move.l	(a1),d4
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,2,0,0,TXS_FONT,0
 	btst	#0,(SelectedPlayerIdx+1).w	;IDA hid this
 	beq.w	.4
@@ -857,7 +857,7 @@ DisplayPlayerList	;93 name. Draw roster page SelectedPlayerIdx (0 goalies, 1-7 l
 	clr.w	d0
 	move.b	(a3)+,d0
 	subq.w	#1,d0
-	bsr.w	getNameandAttrib
+	bsr.w	GetNameandAttrib
 	addq.w	#2,(printy).w
 	dbf	d1,.5
 	rts
@@ -875,7 +875,7 @@ PlayerStatMenuTxt	;93 name. Roster page titles; { } are the left / right arrows
 	String	'{ Power Play 2 }'
 	String	'{Penalty Kill 1}'
 	String	'{Penalty Kill 2 '
-getNameandAttrib	;IDA name (93 GetNameandAttrib). Print player d0's name, then at x $1E the column d4 picks (attribjmp; above 2 a rating through CalcAttrib, high ROM). Saves d0-d4/a0-a1/a4-a5
+GetNameandAttrib	;IDA name (93 GetNameandAttrib). Print player d0's name, then at x $1E the column d4 picks (attribjmp; above 2 a rating through CalcAttrib, high ROM). Saves d0-d4/a0-a1/a4-a5
 	movem.l	d0-d4/a0-a1/a4-a5,-(sp)
 	pea	.x(pc)
 	jsr	(getname).l
@@ -990,7 +990,7 @@ ScoringSummaryScreen	;93 name. "Scoring Summary": one 4 row entry per goal (6 by
 	addq.w	#4,(printx).w
 	clr.w	d0
 	bsr.w	PrintTeamData
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,6,3,0,8,TXS_FONT,1,'^Per^^Time^^Tm^^Goal/Assist^^^^^^^^P/S^^',TXS_FONT,0
 	clr.l	d0	;IDA dc.b
 	move.w	(ScoreSumbytes).w,d0
@@ -1164,7 +1164,7 @@ PenaltySummaryScreen	;93 name; IDA dc.b. "Penalty Summary": one 3 row entry per 
 	addq.w	#4,(printx).w
 	clr.w	d0
 	bsr.w	PrintTeamData
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,6,3,0,8,TXS_FONT,1,'^Per^^Time^^Tm^^Player/Penalty^^^^min^^^',TXS_FONT,0
 	clr.l	d0
 	move.w	(PenSumLength).w,d0
@@ -1316,7 +1316,7 @@ DisplayPenaltyEntry	;93 name; IDA dc.b. Print PenSum entry d3: time, team (bit 7
 	jmp	(print).l
 DrawScrollArrowsPenalty	;93 name. Summary screen up / down arrows (ScrollArrowTbl). Saves d0-d1/a1. Also used by UpdateGameStatScroll
 	movem.l	d0-d1/a1,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,4,9,TXS_FONT,1
 	clr.w	d0	;IDA hid this
 	move.w	(VertLineScrolling).w,d1
@@ -1374,7 +1374,7 @@ DisplayAttributeScreen	;93 name. Stats screen for team a2, d7 = 0 game / 1 playo
 	String	-(TXPRI+TXMAP3),7,4,'Playoff  Stats',-(TXPRI+TXMAP3),$E,1
 	bra.w	.team
 .title
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,6,3,$C,$1A,TXS_FONT,1,'A^-^Switch^Teams',TXS_FONT,0
 	jsr	(printbigz).l	;IDA hid this
 	String	-(TXPRI+TXMAP3),8,4,'Player  Stats',-(TXPRI+TXMAP3),$E,1
@@ -1478,7 +1478,7 @@ DisplayAttributeLineDown	;93 name. Draw the row below the window
 	bra.w	DisplayAttributeEntry
 DisplayAttributeMenu	;93 name. Stats screen: column headers (sort column highlighted), the title of the sort column
 	;(AttributeTitleTxt), then the players sorted by it into Satt and the rows drawn
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,6,3,4,$B,TXS_FONT,1,'Player',TXS_ADDX,7
 	lea	AttributeMenuTxt(pc),a1
 	moveq	#5,d3
@@ -1496,7 +1496,7 @@ DisplayAttributeMenu	;93 name. Stats screen: column headers (sort column highlig
 	addq.w	#1,d3
 	cmp.w	#5,d3
 	blt.s	.0
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,9,7
 	moveq	#$16,d0
 	moveq	#3,d1
@@ -1727,7 +1727,7 @@ AttributeTitleTxt	;93 name; IDA hid the lea in DisplayAttributeMenu. Sort column
 	String	'[ Penalty Minutes   '
 DrawScrollArrowsAttribute	;93 name. Stats screen up / down arrows (ScrollArrowTbl2). Saves d0-d1/a1
 	movem.l	d0-d1/a1,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,2,$B,TXS_FONT,1
 	clr.w	d0	;IDA hid this
 	move.w	(VertLineScrolling).w,d1
@@ -1774,16 +1774,16 @@ CrowdMeterScreen	;93 name. "Crowd Meter": current, average and peak level (Displ
 DisplayGameStats	;93 name. Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteLvl / NumCwdExciteLvl) and MaxCwdExciteLvl
 	;in dB (FormatPercentage). 94: with save RAM (ValidSRAM) the arena record of HomeTeam and the league record (GetLeagueCrowdRecord), read into the buffer
 	;at ThreeStars by clrCrowdRAM (high ROM); 0 reads as $50
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_ALL,4,2,4,$C,'Current Level',TXS_X,$1C
 	move.w	(CwdExciteLvl).w,d0
 	bsr.w	FormatPercentage
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_X,4,TXS_ADDY,2,'Average Level',TXS_X,$1C
 	move.l	(SumCwdExciteLvl).w,d0	;IDA hid this
 	divu.w	(NumCwdExciteLvl).w,d0
 	bsr.w	FormatPercentage
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_X,4,TXS_ADDY,2,'Peak Level',TXS_X,$1C
 	move.w	(MaxCwdExciteLvl).w,d0
 	bsr.w	FormatPercentage
@@ -1801,7 +1801,7 @@ DisplayGameStats	;93 name. Crowd meter rows: CwdExciteLvl, the average (SumCwdEx
 	andi.w	#$FF,d0
 	move.w	d0,-(sp)
 .arena
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_X,4,TXS_ADDY,2,'Arena Record',TXS_X,$1C
 	move.w	(sp)+,d0
 	move.w	#3,d1
@@ -1822,7 +1822,7 @@ DisplayGameStats	;93 name. Crowd meter rows: CwdExciteLvl, the average (SumCwdEx
 .gotleague
 	andi.w	#$FF,d0
 	move.w	d0,-(sp)
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_X,4,TXS_ADDY,2,'League Record',TXS_X,$1C
 	move.w	(sp)+,d0
 .leaguew
@@ -2022,7 +2022,7 @@ SelectGoalieMenu	;93 name; IDA hid it in TimeoutMenu's String. Pick team a2's go
 	blt.w	.x
 .set
 	move.w	d0,tmgoalie(a2)
-	jsr	(SetPersonel).l
+	jsr	(setpersonel).l
 .x
 	move.w	(sp)+,(menuitem+2).w
 	move.w	(sp)+,(menuitem).w

@@ -45,7 +45,7 @@ ContinuePlayoffs	;IDA name, kept: this is 93 NewPO, but IDA gives the name NewPO
 	move.w	(gamelevel).w,d0
 	or.w	(bosgames).w,d0
 	beq.w	.x	;level 0, game 0: nothing played yet
-	bsr.w	MakeTree
+	bsr.w	maketree
 	moveq	#7,d0
 	tst.w	(FourWayPlay).w
 	beq.w	.0
@@ -97,7 +97,7 @@ NewPO	;IDA name (92 NewPO, 93 SelectRandomPlayoffTree). New playoff generates tr
 	clr.w	(gamelevel).w	;0-3 for the depth into the playoff tree
 	move.w	#7,(bosgames).w	;0-6 game of series or 7 if not in best of seven
 	cmpi.w	#2,(OptPlayMode).w	;play mode on Main Menu
-	beq.w	MakeTree	;jump to make playoff tree if play mode is 2
+	beq.w	maketree	;jump to make playoff tree if play mode is 2
 	clr.w	(bosgames).w	;best of seven: game 0
 	moveq	#7,d0	;clr games won
 	movea.w	#(gsstruct-M68K_RAM),a0	;Game struct variables start
@@ -106,7 +106,7 @@ NewPO	;IDA name (92 NewPO, 93 SelectRandomPlayoffTree). New playoff generates tr
 	clr.w	6(a0)	;gspobwins
 	adda.w	#$10,a0	;gssize
 	dbf	d0,.cg	;falls into MakeTree
-MakeTree	;IDA name (93 maketree, 92 MakeTree). Make the playoff tree (potree, 93 name) from playoffseats and the winbits (WinBits, 93
+maketree	;IDA name (93 maketree, 92 MakeTree). Make the playoff tree (potree, 93 name) from playoffseats and the winbits (WinBits, 93
 	;WinBits), clear the scores of this round's games and set their teams (.sett), then FigureJoy. Called from ContinuePlayoffs, EncodePW and hockey94_08
 	;(SetupStart); falls in from NewPO
 	movem.l	d0-d4/a0-a3,-(sp)
@@ -327,18 +327,18 @@ InitializeGameStructures	;93 name. Random team pairs for all 8 gsstruct games, n
 	movea.w	#(gsstruct-M68K_RAM),a1
 	moveq	#7,d2
 .loop
-	bsr.w	OptionRNG
+	bsr.w	GetRandomUnusedTeam
 	move.w	d0,(a1)
-	bsr.w	OptionRNG
+	bsr.w	GetRandomUnusedTeam
 	move.w	d0,gst2(a1)
 	adda.w	#gssize,a1
 	dbf	d2,.loop
 	rts
-OptionRNG	;IDA name (93 GetRandomUnusedTeam). Calls randomd0 when changing options: return d0 = a random team 0-25 (93 0-23) not yet set in d3, and set its bit. Called from InitializeGameStructures
+GetRandomUnusedTeam	;93 name (IDA: OptionRNG). Calls randomd0 when changing options: return d0 = a random team 0-25 (93 0-23) not yet set in d3, and set its bit. Called from InitializeGameStructures
 	moveq	#$1A,d0
 	bsr.w	randomd0
 	bset	d0,d3
-	bne.s	OptionRNG
+	bne.s	GetRandomUnusedTeam
 	rts
 ReadPassBits	;93 name. Translate the saved bits at a3 (5 words) to the playoff variables; the 5 words are kept. 94: pojoy has 8
 	;values (93 4), and without FourWayPlay pojoy 1 / 2 become 4. Called from ContinuePlayoffs, EncodePW and hockey94_08 GameSetUp
@@ -412,7 +412,7 @@ EncodePW	;93 name. After a playoff game compute winners and save the bits if nee
 	move.w	#1,(OptPlayMode).w	;continue playoffs
 	move.w	#1,(TempOptPlayMode).w
 	bsr.w	ResolveGames	;93 ResolveGames (hockey94_10)
-	bsr.w	MakeTree
+	bsr.w	maketree
 	cmpi.w	#4,(gamelevel).w
 	beq.w	.0	;finished playoffs
 	tst.w	(gamenum).w
@@ -424,7 +424,7 @@ EncodePW	;93 name. After a playoff game compute winners and save the bits if nee
 	beq.w	rtss2
 	movea.w	#(tpassbits-M68K_RAM),a3	;bits before all games resolved (93 tpassbits)
 	bsr.w	ReadPassBits
-	bra.w	MakeTree
+	bra.w	maketree
 .0
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	ClrPassBits
@@ -546,7 +546,7 @@ GetShifter	;IDA name (92 / 93 GetShifter). Returns d1 = number of games - 1, d2 
 	subq.w	#1,d1
 	move.l	(sp)+,d0
 	rts
-AddPOStats	;IDA name (93 DisplayTeamStatsForPlayoffs). Add the po team's game stats to its packed playoff totals: unpack them (ReadTeamStats),
+DisplayTeamStatsForPlayoffs	;93 name (IDA: AddPOStats). Add the po team's game stats to its packed playoff totals: unpack them (ReadTeamStats),
 	;add the $68 stat bytes at team struct + $B4, then pack each total back into the bit stream below outputbuffer + $DE (93 + $5E), clamped to its
 	;BitWidthTable width. Called from PeriodOver
 	cmpi.w	#1,(OptPlayMode).w
@@ -1148,14 +1148,14 @@ GetTempPlayerName	;93 GetPlayerName, but that is the same symbol as getplayernam
 	rts
 getname	;IDA name (93 getname). gets player number and name, appends to string: a1 = mesarea "NN First Last" for player d0 (roster offset) of team struct a2. The number is the bcd byte after the name
 	movem.l	d0-d3/a0/a2-a3,-(sp)	;push to stack
-	bsr.w	getplayername	;get to start of player name
+	bsr.w	GetPlayerNamePointer	;get to start of player name
 	move.l	a0,-(sp)	;push a0 (address to start of player name) to stack
 	movea.w	#(mesarea-M68K_RAM),a3	;move mesarea to a3 address
 	move.w	#4,(a3)	;move 4 into a3 address location
 	lea	2(a3),a1	;move long address at a3+2 into a1
 	adda.w	(a0),a0	;add data at a0 (player name length) to a0
 	move.b	(a0),d0	;move a0 data (jersey #) to d0
-	bsr.w	d0toascii	;convert JNo to ascii
+	bsr.w	ConverByteToDigits	;convert JNo to ascii
 	bsr.w	appendz	;add space after JNo
 	String	' '
 	movea.l	(sp)+,a1	;pop from stack into a1 (address to start of player name)
@@ -1176,12 +1176,12 @@ GetPlayerNameWithAttrib	;93 name. a1 = mesarea "NN F. Last" (FormatPlayerNameWit
 	rts
 FormatPlayerNameWithAttrib	;93 name. a1 = mesarea string "NN F. Last" for player d0 of team a2, built in TextBuffer (93 name). Called from PenaltyShotBox and others
 	movem.l	d0-d3/a0/a2,-(sp)
-	bsr.w	getplayername
+	bsr.w	GetPlayerNamePointer
 	move.l	a0,-(sp)
 	movea.w	#(TextBuffer-M68K_RAM),a1
 	adda.w	(a0),a0
 	move.b	(a0),d0
-	bsr.w	d0toascii
+	bsr.w	ConverByteToDigits
 	move.b	#$20,(a1)+
 	movea.l	(sp)+,a0
 	move.w	(a0)+,d0
@@ -1200,12 +1200,12 @@ FormatPlayerNameWithAttrib	;93 name. a1 = mesarea string "NN F. Last" for player
 	rts
 FormatPlayerName	;93 name. a1 = mesarea string "NN Last" for player d0 of team a2, built in TextBuffer. Called from DisplayPlayerAttributeMenu and others
 	movem.l	d0-d3/a0/a2,-(sp)
-	bsr.w	getplayername
+	bsr.w	GetPlayerNamePointer
 	move.l	a0,-(sp)
 	movea.w	#(TextBuffer-M68K_RAM),a1
 	adda.w	(a0),a0
 	move.b	(a0),d0
-	bsr.w	d0toascii
+	bsr.w	ConverByteToDigits
 	move.b	#$20,(a1)+
 	movea.l	(sp)+,a0
 	move.w	(a0)+,d0
@@ -1222,12 +1222,12 @@ FormatPlayerName	;93 name. a1 = mesarea string "NN Last" for player d0 of team a
 	rts
 FormatPlayerNameLast	;94 only. FormatPlayerNameShort without the leading space ("Last", space padded). Branches into FormatLastName
 	movem.l	d0-d3/a0/a2,-(sp)
-	bsr.w	getplayername
+	bsr.w	GetPlayerNamePointer
 	movea.w	#(TextBuffer-M68K_RAM),a1
 	bra.w	FormatLastName
 FormatPlayerNameShort	;93 name. a1 = mesarea string " Last" for player d0 of team a2, space padded to 12 characters; a 0 byte also ends the name
 	movem.l	d0-d3/a0/a2,-(sp)
-	bsr.w	getplayername
+	bsr.w	GetPlayerNamePointer
 	movea.w	#(TextBuffer-M68K_RAM),a1
 	move.b	#$20,(a1)+
 FormatLastName	;Skip the first name, copy the last name, pad; branched to from FormatPlayerNameLast, so global
@@ -1262,7 +1262,7 @@ FinalizeTextBuffer	;93 name. mesarea length word = a1 - mesarea, with a 0 pad by
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	d0,(a1)
 	rts
-getplayername	;IDA name (93 GetPlayerNamePointer). loops through team roster to get to d0 player: a0 = name string of player d0 (roster offset) of
+GetPlayerNamePointer	;93 name (IDA: getplayername). loops through team roster to get to d0 player: a0 = name string of player d0 (roster offset) of
 	;team struct a2. Each record is a length word String and 8 more bytes
 	movea.l	$1E(a2),a0	;offset $1E - ROM address of team data?
 	adda.w	(a0),a0	;add offset (player data start) to a0 address
@@ -1273,7 +1273,7 @@ getplayername	;IDA name (93 GetPlayerNamePointer). loops through team roster to 
 .loop
 	dbf	d0,.skip	;loop until at player offset
 	rts
-d0toascii	;IDA name (93 ConverByteToDigits). converts decimal number in d0 to ascii: two ascii digits of bcd byte d0 to (a1)+, a leading 0 becomes a space ($F0 + '0')
+ConverByteToDigits	;93 name (IDA: d0toascii). converts decimal number in d0 to ascii: two ascii digits of bcd byte d0 to (a1)+, a leading 0 becomes a space ($F0 + '0')
 	move.w	d0,-(sp)	;push to stack
 	lsr.b	#4,d0	;divide by 16 (get upper digit in d0)
 	bne.w	.n0	;branch if not 0

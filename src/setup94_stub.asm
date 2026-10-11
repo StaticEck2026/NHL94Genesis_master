@@ -17,7 +17,7 @@
 ; External addresses outside $0169FA-$017A17, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
 AddFramer = $11F12		;bsr.w / Bcc.w at $16ACA. middle94_2
-AddPOStats = $182A2		;bsr.w / Bcc.w at $172B2
+DisplayTeamStatsForPlayoffs = $182A2		;bsr.w / Bcc.w at $172B2
 AddSmallFont = $11F04		;bsr.w / Bcc.w at $173BA. middle94_2
 AddTeamBlock = $11F20		;bsr.w / Bcc.w at $173B6. middle94_2
 AdvanceStringPtr = $13510		;bsr.w / Bcc.w at $174D4
@@ -26,7 +26,7 @@ DecompressGraphicsWithCallback = $1172C	;bsr.w / Bcc.w at $16AD8. middle94_2
 DoDMA = $113E4			;bsr.w / Bcc.w at $176B4
 DoDMA_clearCallbackPointer = $11738	;bsr.w / Bcc.w at $16A88. middle94_2
 DoDMA_nd2 = $114B8		;bsr.w / Bcc.w at $16D94. middle94_1
-DoDMAlist = $15E82		;bsr.w / Bcc.w at $16B86
+DoDMAList = $15E82		;bsr.w / Bcc.w at $16B86
 DoFill = $11544			;bsr.w / Bcc.w at $16A68
 GameSetUp = $F739E		;jsr / jmp (x).l at $17312
 Intermission = $130E6		;bsr.w / Bcc.w at $172B6
@@ -53,7 +53,7 @@ newTitleScreen = $FF042		;jsr / jmp (x).l at $172F4
 print = $11BA4			;bsr.w / Bcc.w at $17622
 printsmall = $11A48			;bsr.w / Bcc.w at $174E0
 printz = $11B92			;bsr.w / Bcc.w at $17386
-printz2 = $11A36			;bsr.w / Bcc.w at $174C0
+printsmallz = $11A36			;bsr.w / Bcc.w at $174C0
 rtss2 = $15464			;bsr.w / Bcc.w at $1733A. hockey94_05 (an rts)
 setvram = $11594			;bsr.w / Bcc.w at $16A36
 song = $11156			;bsr.w / Bcc.w at $172A0

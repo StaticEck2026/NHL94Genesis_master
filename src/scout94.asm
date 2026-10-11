@@ -421,7 +421,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	;(home) / visrating (visitors) for PrintAdvantageMarks. Called from ScoutingReport and PageMatchup
 	tst.w	(matchup).w
 	bne.w	.2
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,0,1,$16,$16,TXS_FONT,1	;IDA: ori.b / btst / move.b
 	lea	StatsText(pc),a1	;IDA hid this in the string (and dropped its displacement)
 	move.w	#0,d7
@@ -470,7 +470,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	adda.w	(a1),a1
 .3
 	dbf	d0,.loop2
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,0,1,$D,$13,TXS_FONT,1	;IDA: ori.b / movep.w / btst
 	jsr	(printsmall).l
 	move.w	#$16,(printy).w

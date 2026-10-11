@@ -19,7 +19,7 @@ InitMenuState	;93 name. Start a menu: a0 = item list, a1 = screen draw routine; 
 DrawMenuScreen	;93 name. Call the draw routine, frame the menu box, print the items and fade in. Called from HandleMenuInput and penalty94_2
 	movea.l	(menudraw).w,a0
 	jsr	(a0)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ATTR,4,TXS_Y,$C	;IDA: ori.b
 	bsr.w	SetMenuPrintX
 	moveq	#$16,d0	;22 wide
@@ -106,7 +106,7 @@ UpdateMenuSelection	;93 name. Clamp the selection, scroll the 4 rows shown and p
 	move.w	#$D,(printy).w
 	movea.l	(menulist).w,a1
 	jsr	(printsmall).l	;the menu title
-	jsr	(printz2).l	;clear the 4 item rows (93 printsmallz)
+	jsr	(printsmallz).l	;clear the 4 item rows (93 printsmallz)
 	dc.w	$0026	;String length, 36 bytes: too many for the macro (as 93). IDA: ori.b / move.l / btst
 	dc.b	$FB,$01,$20,$FB,$FF,$FA,$01,$20,$FB,$FF,$FA,$01
 	dc.b	$20,$FB,$FF,$FA,$01,$20,$FB,$12,$20,$FB,$FF,$FA
@@ -124,11 +124,11 @@ UpdateMenuSelection	;93 name. Clamp the selection, scroll the 4 rows shown and p
 	bsr.w	SetMenuPrintX
 	move.w	(menuitem+2).w,d0
 	beq.w	.7
-	jsr	(printz2).l	;more items above
+	jsr	(printsmallz).l	;more items above
 	String	TXS_ATTR,5,TXS_ADDX,1,TXS_ADDY,1,'{',TXS_ADDY,$FF	;IDA: ori.b (and hid the rest)
 .7
 	bsr.w	SetMenuPrintX
-	jsr	(printz2).l	;start of an item row
+	jsr	(printsmallz).l	;start of an item row
 	String	TXS_ADDX,2,TXS_ADDY,1	;IDA: ori.b
 	move.l	a1,-(sp)
 	movea.l	(menulist).w,a1
@@ -145,7 +145,7 @@ UpdateMenuSelection	;93 name. Clamp the selection, scroll the 4 rows shown and p
 	dbmi	d1,.7
 	bmi.w	.x
 	bsr.w	SetMenuPrintX
-	jsr	(printz2).l	;more items below
+	jsr	(printsmallz).l	;more items below
 	String	TXS_ATTR,5,TXS_ADDX,1,'}'	;IDA: ori.b (and hid the rest)
 .x
 	rts

@@ -980,7 +980,7 @@ SetupStart	;93 setoptions .ex: start. Copy Goalies to both teams, set pojoy (Set
 	bset	#0,(gmode2).w
 	jsr	(ClearShootout).l
 .1
-	jmp	MakeTree	;hockey94_09
+	jmp	maketree	;hockey94_09
 CheckNOPUnused	;no xref. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effect
 	tst.w	(OptNOP).w
 	beq.w	.x
@@ -1342,7 +1342,7 @@ PlayerCardScreen	;94 only. Draw a player card on one side (setupcardflags bit 1:
 	adda.w	(a2),a2
 	move.b	(a2),d0
 	ext.w	d0
-	jsr	(d0toascii).l	;uniform number
+	jsr	(ConverByteToDigits).l	;uniform number
 	move.w	#$2000,4(a3)
 	movea.l	(sp)+,a1
 	jsr	(appstring).l	;and the name

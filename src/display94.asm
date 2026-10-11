@@ -77,7 +77,7 @@ DumpSprites2	;93 name. Transfer sprite table, then the dma list. Falls into DoDM
 	move.w	(Sattsize).w,d0	;93 Sattsize: words
 	move.w	(VSPRITES).w,d1
 	bsr.w	DoDMA
-DoDMAlist	;IDA name (93 DoDMAList; symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
+DoDMAList	;IDA name (93 DoDMAList; symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
 	movea.l	(DMAlistend).w,a6
 	cmpa.l	#DMAList,a6
 	beq.w	rtss2	;list empty

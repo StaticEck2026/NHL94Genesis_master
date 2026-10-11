@@ -17,9 +17,9 @@
 ; External addresses outside $00D09C-$010EDF, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
 AddPenalty2 = $11F62		;jsr / jmp (x).l at $D408
-PrintScores1 = $12C04		;bsr.w / Bcc.w at $E25C
+printscores1 = $12C04		;bsr.w / Bcc.w at $E25C
 ReadGoaliePulled = $FEFCC	;jsr / jmp (x).l at $E016
-SetPersonel = $15788		;bsr.w / Bcc.w at $E258
+setpersonel = $15788		;bsr.w / Bcc.w at $E258
 assnothing = $CBE4		;bsr.w / Bcc.w at $D0AC. logic94_2
 check4bench = $C67A		;bsr.w / Bcc.w at $D0B0. logic94_1
 dopass = $BC64			;jsr / jmp (x).l at $E2DA. logic94_1
@@ -60,7 +60,7 @@ freezewindow = $AFB6		;jsr / jmp (x).l at $F37C
 getlinee = $12EB4		;bsr.w / Bcc.w at $F7AA
 lcfound = $BB06			;bsr.w / Bcc.w at $F69E
 printz = $11B92			;bsr.w / Bcc.w at $FB54
-printz2 = $11A36			;bsr.w / Bcc.w at $FBBE
+printsmallz = $11A36			;bsr.w / Bcc.w at $FBBE
 resetplstuff = $170B0		;jsr / jmp (x).l at $F096
 setc1player = $C0BC		;jsr / jmp (x).l at $F254
 setc2player = $C0DA		;jsr / jmp (x).l at $F266

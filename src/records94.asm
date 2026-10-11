@@ -79,7 +79,7 @@ RecordHoldersScreen	;"Record Holders" menu item (hockey94_11 menu lists): the sa
 	jsr	(Framer).l
 	jsr	(printbigz).l
 	String	-(TXPRI+TXMAP3),$E,2,'Record',-(TXPRI+TXMAP3),$D,5,'Holders',-(TXPRI+TXMAP3),1,9
-	jsr	(printz2).l	;IDA hid this
+	jsr	(printsmallz).l	;IDA hid this
 	String	TXS_ALL,6,3,5,8,TXS_FONT,1,'Name',TXS_FONT,0
 	bsr.w	ReadNameLog	;IDA hid this
 	clr.w	(TempWord1).w
@@ -308,7 +308,7 @@ SaveRecTitles	dc.b	0	;PrintRecordTitles Strings
 	dc.b	$20,$20,$F9,0
 PrintWinRecords	;94 only. Record Holders: the rows (PrintRecordName)
 	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,2,2,$A,TXS_FONT,0
 	move.w	#6,d7	;IDA hid this
 	movea.l	#winsort,a0	;IDA hid this
@@ -375,7 +375,7 @@ ClearRecordArea	;94 only. Record Holders: erase the record rows ($28 x $12), kee
 	move.w	(printx).w,-(sp)
 	move.w	(printy).w,-(sp)
 	move.w	(printm).w,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,2,0,$A
 	move.w	#$28,d0
 	move.w	#$12,d1
@@ -387,7 +387,7 @@ ClearRecordArea	;94 only. Record Holders: erase the record rows ($28 x $12), kee
 	rts
 PrintPlayerRecords	;Record Holders: the rows of the other page (PrintRecordName)
 	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,2,2,$A,TXS_FONT,0
 	move.w	#6,d7	;IDA hid this
 	movea.l	#recsort1,a0	;IDA hid this

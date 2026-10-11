@@ -528,28 +528,28 @@ rtsStatScroll	;rts of StatScrollRow / StatScrollRowEnd
 	rts
 PrintStatScrollArrows	;GameStatisticsScreen scroll arrows (printz2): up ($7B) when VertLineScrolling > 0, down ($7D) when it is below matchupvis
 	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_FONT,1
 	tst.w	(VertLineScrolling).w
 	beq.w	.0
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,'&',8,TXS_FONT,1,'{'
 	bra.w	.1
 .0
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,'&',8,TXS_FONT,1,' '
 .1
 	move.w	(matchupvis).w,d0
 	cmp.w	(VertLineScrolling).w,d0
 	beq.w	.2
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,'&',$1A,TXS_FONT,1,'}'
 	bra.w	.3
 .2
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_ALL,4,3,'&',$1A,TXS_FONT,1,' '
 .3
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	TXS_FONT
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts

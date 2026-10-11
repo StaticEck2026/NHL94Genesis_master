@@ -764,7 +764,7 @@ lcfound
 	bsr.w	loadTeamStruct
 	bclr	#1,tmflags(a2)
 	move.w	d0,tmline(a2)
-	jsr	(SetPersonel).l
+	jsr	(setpersonel).l
 lcfound2
 	btst	#7,(sflags).w
 	bne.w	rtss
@@ -776,7 +776,7 @@ lcfound2
 	addq.w	#1,d1
 	move.w	#$7FF,d2
 	bsr.w	eraser
-	bra.w	PrintScores1
+	bra.w	printscores1
 ; c button press check/speed
 burst
 	jsr	(getpde).l	;get players energy

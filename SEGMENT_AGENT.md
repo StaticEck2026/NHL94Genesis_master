@@ -386,3 +386,8 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 - Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
 - VDP commands: `ports.inc` adds `VRAM_W`, `CRAM_W`, `VSRAM_W` (long control words; add `(addr&$3FFF)<<16 + addr>>14`): `move.l #VSRAM_W+(2<<16),Vctrl-Vdata(a0)`.
 - Original names: where NHL92Genesis `src/ram.asm` (EA original source) has a name it is used: `pflags3`, `pf3oside`, `aggress`, `SFXsiren` ... `SFXoooh` (92 names, 94 values), `SngTitle`, `SngEOG`, `Vdata` / `Vctrl` (`Vctrl-Vdata(a0)`). Names 92 lacks follow its style (`SFXhomewin`, `SFX0D`, `SngScout`).
+
+## Naming lineage
+
+Naming lineage: 92G (abdulahmad/NHL92Genesis, EA original source) is the root. 93G (abdulahmad/NHLPA93Genesis) follows 92G. 94G follows 93G then 92G. 95G follows 94G, then 93G, then 92G. For a field, constant, bit, sound id, hardware name, macro, routine or RAM variable that an earlier game has, use that game's name (in this order); keep the IDA / older name in the comment.
+- Lineage renames (93G names over IDA names): printz2 -> printsmallz, DoDMAList, setpersonel, GetNameandAttrib, printscores1, maketree, NewTicker3 -> CheckGameTickerStatus and NewTicker3pt2 -> NewTicker3, OptionRNG -> GetRandomUnusedTeam, AddPOStats -> DisplayTeamStatsForPlayoffs, getplayername -> GetPlayerNamePointer, d0toascii -> ConverByteToDigits.

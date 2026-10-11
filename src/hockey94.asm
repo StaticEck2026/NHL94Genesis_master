@@ -466,7 +466,7 @@ Pausemode	;IDA: PauseMode. Game is in pause mode now
 	move.w	#VDPR_WINY,Vctrl-Vdata(a0)
 	bset	#dfclock,(disflags).w		;dfclock: clock needs update
 	bclr	#sfpz,(sflags).w		;sfpz
-	jsr	(PrintScores1).l
+	jsr	(printscores1).l
 	jsr	(setvideo).l
 	move.w	#$18,(palcount).w
 .wait	tst.w	(palcount).w
@@ -482,7 +482,7 @@ SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
 	jsr	(SetHor).l
 	jsr	(setvideo).l
 	jsr	(KillCrowd).l
-	jsr	(printz2).l		;erase playfield 3
+	jsr	(printsmallz).l		;erase playfield 3
 	String	TXS_MAP,3,TXS_X,0,TXS_Y,0	;IDA hid this in ori.b #3,a0
 	moveq	#$20,d0			;32
 	moveq	#$1C,d1			;28

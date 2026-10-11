@@ -1338,7 +1338,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	bsr.w	ChkShotStat
 	bsr.w	PenGoalStuff	;penalty94_1
 	bclr	#3,(BA_PS_flags).w
-	bsr.w	PrintScores1
+	bsr.w	printscores1
 	move.w	#$2710,(crowdnoisedelay).w	;94 only
 	btst	#0,(gmode2).w
 	beq.w	.21
@@ -2531,7 +2531,7 @@ setpde	;d1 = rostnum of player * 2, a2 = team struct, d0 = new energy level (0 i
 .0
 	move.w	d0,tmpde(a2,d1.w)
 	rts
-SetPersonel	;IDA name (93 setpersonel). This will set personnel on team a2 according to team a2's registers: PlList (SetPlList) gives the players
+setpersonel	;IDA name (93 setpersonel). This will set personnel on team a2 according to team a2's registers: PlList (SetPlList) gives the players
 	;wanted on the ice; each sort obj gets newpos / newpnum
 	movem.l	d0-d5/a0-a4,-(sp)
 	movea.w	tmsort(a2),a3	;#tmsort

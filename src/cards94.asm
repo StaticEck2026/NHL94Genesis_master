@@ -1507,20 +1507,20 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	move.w	#$15,(printx).l
 	move.w	#$C,(printy).l
 	move.w	(printx).w,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'  Records'
 	move.w	(sp)+,(printx).w
 	addq.w	#1,(printy).w
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'-----------'
 	move.w	#$15,(printx).l
 	move.w	#$12,(printy).l
 	move.w	(printx).w,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	' This Game '
 	move.w	(sp)+,(printx).w
 	addq.w	#1,(printy).w
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'-----------'
 	move.w	(HomeTeam).w,d1
 	tst.w	(cardvis).w
@@ -1599,11 +1599,11 @@ PrintCardRecords	;94 only. Player card "Records" column
 	move.w	#$15,(printx).w	;IDA hid this
 	move.w	#$C,(printy).w
 	move.w	(printx).w,-(sp)	;IDA hid this
-	jsr	(printz2).l	;IDA hid this
+	jsr	(printsmallz).l	;IDA hid this
 	String	'  Records'
 	move.w	(sp)+,(printx).w	;IDA hid this
 	addq.w	#1,(printy).w	;IDA hid this
-	jsr	(printz2).l	;IDA hid this
+	jsr	(printsmallz).l	;IDA hid this
 	String	'-----------'
 	move.w	(HomeTeam).w,d1
 	tst.w	(cardvis).w
@@ -1860,11 +1860,11 @@ PrintOverallRating	;94 only. Player card "Overall Rating" (CalcAttrib, AttribAdj
 	move.w	d1,(printx).w
 	move.w	d2,(printy).w
 	move.w	d1,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Overall'
 	move.w	(sp)+,(printx).w	;IDA hid this
 	addq.w	#1,(printy).w	;IDA hid this
-	jsr	(printz2).l	;IDA hid this
+	jsr	(printsmallz).l	;IDA hid this
 	String	'Rating   '
 	movea.l	#HmShots,a2
 	tst.w	(cardvis).w
@@ -1908,7 +1908,7 @@ PrintStartingLine	;Player card "Starting Line": the line slots the player starts
 	move.w	d0,(printx).w
 	move.w	d1,(printy).w
 	move.w	d0,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Starting Line'
 	addq.w	#2,(printy).w	;IDA hid this
 	move.w	(sp),(printx).w	;IDA hid this
@@ -2075,15 +2075,15 @@ PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the
 	jsr	(ReadAttributeNibble).l
 	cmp.w	(sp),d0
 	ble.w	.1
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	' Goalie'
 	bra.w	.3	;IDA hid this
 .1
-	jsr	(printz2).l	;IDA hid this
+	jsr	(printsmallz).l	;IDA hid this
 	String	' Forward'
 	bra.w	.3
 .2
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	' Defenseman'
 .3
 	tst.w	(sp)+	;IDA hid this
@@ -2094,11 +2094,11 @@ PrintTeamRating	;94 only. Player card "Team Rating" (GetTeamRating, high ROM)
 	move.w	d0,(printx).w
 	move.w	d1,(printy).w
 	move.w	d0,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Team'
 	move.w	(sp)+,(printx).w
 	addq.w	#1,(printy).w
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Rating  '
 .0
 	movea.l	#HmShots,a0
@@ -2192,7 +2192,7 @@ PrintGoalsAssists	;94 only. Player card "Goals" / "Assists" (GetCardTeam)
 	move.w	d1,(printx).w
 	move.w	d2,(printy).w
 	move.w	d1,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Goals    '
 	move.w	d0,-(sp)
 	move.w	d3,d0
@@ -2203,7 +2203,7 @@ PrintGoalsAssists	;94 only. Player card "Goals" / "Assists" (GetCardTeam)
 	jsr	(printsmall).l
 	move.w	(sp)+,(printx).w
 	addq.w	#1,(printy).w
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Assists  '
 	move.w	d4,d0
 	movea.l	#mesarea,a1
@@ -2229,7 +2229,7 @@ PrintSaves	;94 only. Player card "Saves" / "Save %" (GetCardTeam)
 	move.w	d1,(printx).w
 	move.w	d2,(printy).w
 	move.w	d1,-(sp)
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Saves    '
 	move.w	d7,d0
 	movea.l	#mesarea,a1
@@ -2239,7 +2239,7 @@ PrintSaves	;94 only. Player card "Saves" / "Save %" (GetCardTeam)
 	jsr	(printsmall).l
 	move.w	(sp)+,(printx).w
 	addq.w	#1,(printy).w
-	jsr	(printz2).l
+	jsr	(printsmallz).l
 	String	'Save %   '
 	move.w	d7,d0
 	mulu.w	#$64,d0

@@ -138,7 +138,7 @@ chkprogress	;control progress of ref and game control thru penalty events. 94: w
 	movea.l	#RefMap2+8,a2	;93 RefMap2+8
 	bsr.w	DoDMA_clearCallbackPointer
 	bsr.w	NewTicker
-	bsr.w	NewTicker3pt2	;93 NewTicker3
+	bsr.w	NewTicker3	;93 NewTicker3
 	st	(puckc).w
 	movea.w	#(puckx-M68K_RAM),a3
 	move.l	#$1A,d0	;puckunflip (asstab $18DE4)
@@ -969,7 +969,7 @@ ClrHor	;revert the graphics back to vertical ice rink mode. 94 reloads Rinktiles
 	moveq	#$1C,d1	;28
 	move.w	#$7FF,d2	;blank tile
 	bsr.w	eraser
-	bsr.w	PrintScores1
+	bsr.w	printscores1
 .ex
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
@@ -1025,7 +1025,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 ;	period, $354 power play shots. Game struct (gsstruct, $10 each): 0 gst1, 2 gst2, 8 gsper, $A gss1, $C gss2, $E gsflags
 ;	(bit 1 gsfhl, bit 2 gsfso).
 
-PrintScores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period box and the score box (team names and scores). Horizontal rink
+printscores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period box and the score box (team names and scores). Horizontal rink
 	;(.sbscreen, 93 .sbscreen): period and both team logos with big scores. 94: the period name is gsp of PerLabels, or name 4 of PenShotPenalties2
 	;when gmode2 bit 1 is set; the horizontal rink uses PenShotPenalties2 (name 4 when bit 0 is set). sflags5 bit 7 sets crowdnoisedelay = $78.
 	;Called from USBoard, Pausemode, lcfound2 and others
@@ -1145,7 +1145,7 @@ EASNLogo	;93 name. Draw the EASN logo map at x 1, y $19 on the vertical ice rink
 USBoard	;93 name. Update score board, including the players in the penalty box and their time remaining. Called from InProgress and SetHor
 	movem.l	d0-d7/a0-a3,-(sp)
 	bset	#dfclock,(disflags).w	;dfclock
-	bsr.w	PrintScores1
+	bsr.w	printscores1
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),$14,8
 	movea.w	#(HmShots-M68K_RAM),a2	;home team. IDA hid this in the string (ori.b / #$7C / mulu.w)
@@ -1193,7 +1193,7 @@ pplpen	;93 IDA pplpen?. Print one penalty box line: player number and time remai
 	move.b	-8(a1),d0	;player number (BCD)
 	move.w	(printx).w,-(sp)
 	movea.w	#(TextBuffer-M68K_RAM),a1	;93 TextBuffer (mesarea+2)
-	bsr.w	d0toascii	;93 ConverByteToDigits
+	bsr.w	ConverByteToDigits	;93 ConverByteToDigits
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	#4,(a1)	;string length: 2 digits
 	bsr.w	print
@@ -1451,7 +1451,7 @@ Intermission	;end of period junk (zamboni/stats). As 93: opens the pause menu sc
 	tst.w	(TickerNum).w
 	bmi.w	.doh	;no more ticker games
 	bsr.w	NewTicker2
-	bsr.w	NewTicker3pt2	;93 NewTicker3
+	bsr.w	NewTicker3	;93 NewTicker3
 	move.w	#$96,d0	;150 frames
 	bsr.w	IntermissionLoop
 	btst	#7,d1	;sbut
@@ -1598,7 +1598,7 @@ NewTicker2	;goto next ticker. Return d3 = game, or neg if none left. Falls into 
 	subq.w	#1,(TickerNum).w
 	cmp.w	(gamenum).w,d3	;don't show current game as ticker
 	beq.s	NewTicker2
-NewTicker3	;IDA name (93 CheckGameTickerStatus). d3 = game. Return a0 = its gstruct; skip to the next ticker game if a highlight is coming up or the series is over. Called from StartHL2
+CheckGameTickerStatus	;93 name (IDA: NewTicker3). d3 = game. Return a0 = its gstruct; skip to the next ticker game if a highlight is coming up or the series is over. Called from StartHL2
 	moveq	#$10,d0	;gssize
 	mulu.w	d3,d0
 	movea.w	#(gsstruct-M68K_RAM),a0
@@ -1608,7 +1608,7 @@ NewTicker3	;IDA name (93 CheckGameTickerStatus). d3 = game. Return a0 = its gstr
 	btst	#2,$E(a0)	;gsfso
 	bne.s	NewTicker2	;don't show if the series is over for this game
 	rts
-NewTicker3pt2	;IDA name (93 NewTicker3). Display ticker score for game d3 (a0 = gstruct entry), skip if d3 is negative. Called from chkprogress, Intermission and StartHL2
+NewTicker3	;93 name (IDA: NewTicker3pt2). Display ticker score for game d3 (a0 = gstruct entry), skip if d3 is negative. Called from chkprogress, Intermission and StartHL2
 	tst.w	d3
 	bmi.w	rtss2
 	bsr.w	SetTickerAreaPosition
@@ -1718,8 +1718,8 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	bne.w	.nhl0
 	bsr.w	.sv
 	move.w	d1,d3
-	bsr.w	NewTicker3
-	bsr.w	NewTicker3pt2	;show score from hilight game
+	bsr.w	CheckGameTickerStatus
+	bsr.w	NewTicker3	;show score from hilight game
 	btst	#sf3sbut,(sflags3).w
 	bne.w	.nhl1
 	move.w	#4,(printx).w
@@ -1862,8 +1862,8 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	beq.w	StartHL2	;still tied: play another hilite
 	move.w	#5,8(a0)	;final
 	move.w	d1,d3
+	bsr.w	CheckGameTickerStatus
 	bsr.w	NewTicker3
-	bsr.w	NewTicker3pt2
 	move.w	#$B4,d0
 	bsr.w	IntermissionLoop
 	btst	#7,d1
@@ -1887,7 +1887,7 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	bra.s	.exit
 .setteam	;93 .setteam, IDA SetupTeamForReplay. Refill energy, set personnel; 94 also clears sflags8 bit 7
 	jsr	(reenergizeteam).l
-	bsr.w	SetPersonel
+	bsr.w	setpersonel
 	bsr.w	forcepldata
 	st	$18(a2)
 	bclr	#7,(sflags8).w

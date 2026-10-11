@@ -1105,7 +1105,7 @@ Framer
 	rts
 ; see print
 ; string macro should follow jsr to this routine
-printz2	;IDA name (93 printsmallz). String macro follows the call
+printsmallz	;93 name (IDA: printz2). String macro follows the call
 	move.l	a1,-(sp)
 	movea.l	4(sp),a1
 	bsr.w	printsmall

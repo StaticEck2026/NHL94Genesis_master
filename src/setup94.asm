@@ -110,7 +110,7 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	adda.w	#$1C,a3
 	bsr.w	addframe2	;?? addframe
 	move.l	a5,(DMAlistend).w
-	bsr.w	DoDMAlist
+	bsr.w	DoDMAList
 	move.w	(sp)+,(disflags).w
 	move.l	#VBlank,(vbint).w	;video94_1
 	bclr	#dfok,(disflags).w
@@ -168,7 +168,7 @@ setupice_highlight	;93 name. Rebuild the rink sprites after a highlight replay w
 	adda.w	#$1C,a3
 	bsr.w	addframe2
 	move.l	a5,(DMAlistend).w
-	bsr.w	DoDMAlist
+	bsr.w	DoDMAList
 	move.w	#$1C,(palcount).w
 	move.w	(sp)+,(disflags).w
 	move.l	#VBlank,(vbint).w	;video94_1
@@ -760,7 +760,7 @@ IntermissionStart	;93 name; 93 IDA _sp. PeriodOver tail: reset the clock, song $
 	bsr.w	UpdateScores
 	cmpi.w	#4,(gsp).w
 	bne.w	.1
-	bsr.w	AddPOStats
+	bsr.w	DisplayTeamStatsForPlayoffs
 .1
 	bsr.w	Intermission
 	cmpi.w	#4,(gsp).w
@@ -902,7 +902,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	adda.w	#$10,a2
 	dbf	d4,.top3
 .noscr
-	bsr.w	printz2
+	bsr.w	printsmallz
 	String	TXS_ALL,1,1,$41,$1A	;IDA: ori.b / bchg / move.b
 	lea	PlayoffScreenText(pc),a1
 	move.w	(gamelevel).w,d0
