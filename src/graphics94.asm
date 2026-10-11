@@ -123,7 +123,7 @@ ReplayMap		;the replay map ShowReplayBanner shows at 0,0 (16 x 11)
 HorRinkMap	;SetHor
 	incbin	..\Extracted\NHL94\Graphics\PauseScreen.map.jim
 	even
-icerinkmap	equ	HorRinkMap+8	;the tiles (SetHor)
+HorRinkTiles	equ	HorRinkMap+8	;the tiles (SetHor)
 PrintFont2Map		;the second print font (print, printsmall)
 	incbin	..\Extracted\NHL94\Graphics\SmallFont94.map.jim
 	even

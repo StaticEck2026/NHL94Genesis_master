@@ -33,7 +33,7 @@ dobitmap = $1169A		;bsr.w / Bcc.w.
 eraser = $1197E			;jsr / jmp (x).l.
 forceblack = $10F32		;bsr.w / Bcc.w.
 getGoalieSCnum = $B86A		;jsr / jmp (x).l.
-icerinkmap = $BC064		;#x
+HorRinkTiles = $BC064		;#x
 DisplayPlayerAttributeMenu = $1889A		;bsr.w / Bcc.w.
 print = $11BA4			;bsr.w / Bcc.w.
 printz = $11B92			;bsr.w / Bcc.w.
@@ -51,7 +51,7 @@ ShootoutWonBy = $FC5AE		;jsr / jmp (x).l
 LoadHomeTeamGfx = $FEA52		;jsr / jmp (x).l
 PenShotPenalties = $1913A		;#x. penalty shot penalty per penalty number
 RefMap2 = $5CF64		;#x.
-HorRinkMap = $BC05C		;#x. hidden in the SetHor string. ; icerinkmap is +8
+HorRinkMap = $BC05C		;#x. hidden in the SetHor string. ; HorRinkTiles is +8
 updatePPTeamTime = $FE14C	;jsr / jmp (x).l
 
 p_turnoff = $1A264		;jsr / jmp (x).l.

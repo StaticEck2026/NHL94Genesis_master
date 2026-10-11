@@ -980,7 +980,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 	String	-TXMAP2,0,0
 	movea.l	#HorRinkMap,a1	;tiles start at HorRinkMap+8
 	adda.l	4(a1),a1
-	movea.l	#icerinkmap,a2	;rink tiles
+	movea.l	#HorRinkTiles,a2	;rink tiles
 	clr.w	d0
 	move.w	#0,d1
 	moveq	#$20,d2	;32
