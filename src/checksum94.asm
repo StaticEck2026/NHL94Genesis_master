@@ -10,23 +10,23 @@ ValidationRoutine	;IDA: Calc_Checksum (92 / 93 name, which main94 calls). Called
 	moveq	#0,d0			;sum
 	suba.l	a0,a0			;a0 = ROM address 0
 	move.l	#ValidationRoutine/4,d1	;number of longs below this routine ($3FEB0)
-.loop	cmpa.w	#$18C,a0		;92 ValidationLoop. header long $18C-$18F holds the checksum word $18E
-	bne.s	.add
+ValidationLoop	cmpa.w	#$18C,a0		;92 name (was: .loop). header long $18C-$18F holds the checksum word $18E
+	bne.s	SkipIncrement
 	addq.w	#4,a0			;skip it, not summed
-	bra.s	.next
-.add	add.l	(a0)+,d0		;92 SkipIncrement
-.next	subq.l	#1,d1			;92 ContinueValidation
-	bgt.s	.loop
+	bra.s	ContinueValidation
+SkipIncrement	add.l	(a0)+,d0		;92 name (was: .add)
+ContinueValidation	subq.l	#1,d1			;92 name (was: .next)
+	bgt.s	ValidationLoop
 	cmpi.l	#$8AB9F121,d0		;94 retail sum (93 retail $EB689746). Real CMPI (0C80), not EA cmp
-	bne.s	.bad			;wrong sum: red screen
+	bne.s	VDPErrorSetup			;wrong sum: red screen
 	rts
-.bad	movea.l	#VDP_CTRL,a4		;92 VDPErrorSetup
+VDPErrorSetup	movea.l	#VDP_CTRL,a4		;92 name (was: .bad)
 	move.w	#VDPR_AUTOINC+$02,(a4)		;auto increment 2
 	move.w	#VDPR_MODE1+$04,(a4)		;mode 1: h interrupt off
 	move.w	#VDPR_BGCOL,(a4)		;backdrop = colour 0
 	move.w	#VDPR_MODE2+$44,(a4)		;mode 2: display on, v interrupt off, dma off
 	move.w	#$C000,(a4)		;cram write, colour 0 (first command word only)
 	move.w	#$3F,d1			;64 colours
-.fill	move.w	#$E,(VDP_DATA).l	;92 VRAMWriteLoop. colour = $00E, full red
-	dbf	d1,.fill
-.halt	bra.s	.halt			;92 Halt. hang
+VRAMWriteLoop	move.w	#$E,(VDP_DATA).l	;92 name (was: .fill). colour = $00E, full red
+	dbf	d1,VRAMWriteLoop
+Halt	bra.s	Halt			;92 name (was: .halt). hang

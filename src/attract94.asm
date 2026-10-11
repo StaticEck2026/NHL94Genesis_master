@@ -113,7 +113,7 @@ DrawTeamBitmap	;94 only. dobitmap entry d1 of TeamBitmaps (d4 from the caller)
 	moveq	#0,d5
 	bra.w	dobitmap
 
-DrawTeamBlockBitmap	;94 only, no xref (IDA dc.b). Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
+dotb	;94 only, no xref (IDA dc.b). Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2 (was: DrawTeamBlockBitmap)
 	clr.w	d0
 	asl.w	#1,d1
 	movea.l	#Teamblocksmap,a0

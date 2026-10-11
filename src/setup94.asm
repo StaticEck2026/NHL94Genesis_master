@@ -792,10 +792,10 @@ Opening2	;reset the stack and clear the variables, then options (GameSetUp, User
 	blt.s	.0
 	jsr	(GameSetUp).l
 	jsr	(UserNameEntry).l
-	bsr.w	PlayoffScreen
+Opening3	bsr.w	PlayoffScreen	;92 name
 	btst	#0,(gmode2).w
 	bne.w	.1
-	jsr	(ScoutingReport).l
+	jsr	(ScoutingReport).l	;92 Opening4 (not a label here: 94 skips it in shootouts, .1 below is local to Opening3)
 .1
 	jmp	(StartGame).w	;hockey94_01
 PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver and Opening2. Runs its own vblank (PlayoffScreenDataTable) and

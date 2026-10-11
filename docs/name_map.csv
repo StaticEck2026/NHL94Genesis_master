@@ -13,3 +13,7 @@ ScoutTextPlayer,UpdateScoutingDisplay,93G
 ScoutTextNextLine,ScrollDisplayUp,93G
 ClearTextBox,ClearOptionDisplay,93G
 SetTeamPrintPos,setoptions_printpos2,93G
+shotdirmath,CalcAngleOffset,93G
+DrawTeamBlockBitmap,dotb,92G/93G
+.loop/.add/.next/.bad/.fill/.halt (checksum94),ValidationLoop/SkipIncrement/ContinueValidation/VDPErrorSetup/VRAMWriteLoop/Halt,92G promoted
+(new label),Opening3,92G
