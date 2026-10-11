@@ -37,7 +37,7 @@ FaceOffMap		;: puckfaceoff2
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.map.jim
 	even
 ;FaceOffMap+8: the tiles (puckfaceoff2, ReloadFaceOffMap)
-Rinktilelist		;the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, ShowThreeStars, crash)
+Rinktilelist		;the ice rink (updatescroll, setupIceRinkPal, ShowReplayIcon, ShowThreeStars, crash)
 	incbin	..\Extracted\NHL94\Graphics\IceRink94.map.jim
 	even
 Rinktiles	equ	Rinktilelist+8	;the rink tiles (setupice, ClrHor)

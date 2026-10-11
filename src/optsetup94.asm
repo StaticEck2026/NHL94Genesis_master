@@ -6,7 +6,7 @@
 ;	New in 94: the Goalies and User Records options (9 lines, 6 shown,
 ;	scrolled by setupfirstline), Shootout, four way play, the team logo
 ;	blocks (DrawHomeBlock / DrawVisBlock) and player cards with user records
-;	(PlayerCardTimer, PlayerCardScreen). UpdateBothTeamDisplays is an empty
+;	(PlayerCardTimer, PlayerCardScreen). UpdateRosterPlayers is an empty
 ;	routine kept where the animated roster players used to be updated.
 ;	SetFrameRectUnused and CheckNOPUnused are unreferenced. Each
 ;	DecompressGraphicsWithCallback is followed by its 8 byte remap table.
@@ -856,7 +856,7 @@ setoptions	;options screen display: build the game setup screen only: vblank
 	addi.w	#$24,d4
 	move.w	d4,(logobox1chars).w
 	movea.l	#LogoBoxMap+8,a2	;logo box tiles
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	move.w	d4,(logobox2chars).w
 	movea.l	#LogoBoxMap+8,a2	;again, remapped
 	jsr	(DecompressGraphicsWithCallback).l
@@ -878,7 +878,7 @@ ReadSetupPads	;wait up to $5460 frames (6 minutes) for a press on any pad (4 wit
 	beq.s	.loop
 	move.w	(vcount).w,(oldvcount).w
 	bclr	#5,(setupcardflags).w
-	jsr	(UpdateBothTeamDisplays).l
+	jsr	(UpdateRosterPlayers).l
 	jsr	(ReadJoy1).l
 	jsr	(ProcessInputWithRepeat).l
 	tst.w	d1
@@ -991,13 +991,13 @@ LoadSetupTiles	;Load the TeamBitmaps+8 tiles from char 2, then again remapped
 	;from setoptions
 	moveq	#2,d4	;vram char 2
 	movea.l	#TeamBitmaps+8,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	move.w	d4,(teambitmapchars).w
 	movea.l	#TeamBitmaps+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$03412567,$89ABCDEF	;remap table (/ move.l / dc.b)
 	rts
-UpdateBothTeamDisplays	;An empty routine, called from ReadSetupPads. An unused rts follows
+UpdateRosterPlayers	;An empty routine, called from ReadSetupPads. An unused rts follows
 	rts
 	rts
 EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear both logo flags (bits 6 / 7) and erase the card: its logo
@@ -1334,7 +1334,7 @@ PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors
 	adda.w	(a2),a2
 	move.b	(a2),d0
 	ext.w	d0
-	jsr	(ConverByteToDigits).l	;uniform number
+	jsr	(ConvertByteToDigits).l	;uniform number
 	move.w	#$2000,4(a3)
 	movea.l	(sp)+,a1
 	jsr	(appstring).l	;and the name

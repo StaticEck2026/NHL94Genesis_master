@@ -505,7 +505,7 @@ LineCursorTable	;The slot after a cursor move: indexed by slot + 8 (up / down / 
 	dc.b	$1D,$29,$2A,$2B,$2C,$2C,1,1
 	dc.b	$25,$31,$32,$33,$34,$34,1,1
 	dc.b	$25,$31,$32,$33,$34,$34,1,1
-LineEditorExit	;Line editor: start pressed. Run the exit menu (AttributeScreenText, or ExitAttribText when
+LineEditorExit	;Line editor: start pressed. Run the exit menu (LineEditorMenuText, or LineEditorMenuNoLoad when
 	;databuffer holds another team), then redraw the editor or leave (ExitStatsScreen)
 	bsr.w	ClearMenuFlags
 	move.w	#$18,(palcount).w
@@ -513,13 +513,13 @@ LineEditorExit	;Line editor: start pressed. Run the exit menu (AttributeScreenTe
 	move.l	(menulist).w,-(sp)
 	move.l	(menudraw).w,-(sp)
 	movea.l	#rtss2,a1
-	movea.l	#AttributeScreenText,a0
+	movea.l	#LineEditorMenuText,a0
 	movea.w	#(databuffer-M68K_RAM),a3
 	move.w	Xvel(a2),d0
 	addq.w	#1,d0
 	cmp.b	(a3),d0
 	beq.w	.0
-	movea.l	#ExitAttribText,a0
+	movea.l	#LineEditorMenuNoLoad,a0
 .0
 	jsr	(printsmallz).l
 	String	CC_SetMap,2
@@ -1929,7 +1929,7 @@ ReloadRinkGraphics	;after the forceblack: back to 32 cell mode and reload the ri
 	beq.w	.load	;branch if not
 	movea.l	#RevRinkTiles,a2	;load reverse rink address
 .load
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	jsr	(LoadHomeTeamGfx).l
 	move.w	(smallfontchars).w,d4
 	movea.l	#SmallFontMap+8,a2
@@ -1940,7 +1940,7 @@ ReloadRinkGraphics	;after the forceblack: back to 32 cell mode and reload the ri
 	jsr	(setupEASNmap).l
 	jsr	(ReloadEnergyBarTiles).l
 	jsr	(ReloadCrowdTiles).l
-	jsr	(setupIceRinkMap).l
+	jsr	(setupIceRinkPal).l
 	jmp	setplayercolors
 TimeoutMenu	;Pause menu "Timeout" for team a2: switch the menu to PauseText2, show the team name, rest both teams
 	;(RestoreTeamEnergy), wait $78 frames (waitx). Menu item handler

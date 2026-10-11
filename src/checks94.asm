@@ -2363,7 +2363,7 @@ puckpenshot
 .setuprink
 	move.w	(ExtraChars).w,d4
 	movea.l	#RefsMap+8,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	bset	#3,(disflags).w
 	bclr	#0,(sflags).w
 	bclr	#0,(sflags3).w
@@ -3157,10 +3157,10 @@ puckfaceoff2
 	bsr.w	ResetAndSelectPlayers
 	move.w	(ExtraChars).w,d4
 	movea.l	#FaceOffMap+8,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	move.w	d4,(faceoffvrcset).w
 	movea.l	#FaceOffSprites+8,a2
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	move.w	#$FFFF,(arenaanim).w
 	btst	#0,(sflags7).w
 	beq.w	.drawfaceoffwindow
@@ -3366,7 +3366,7 @@ Endfaceoff	;drop the puck: pick the faceoff winner and send the puck off
 	move.w	#$3C,(holdreset).w
 	move.w	(ExtraChars).w,d4
 	movea.l	#RefsMap+8,a2
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	bclr	#sf2drec,(sflags2).w
 	bclr	#gmclock,(gmode).w
 	bclr	#pf2fight,pflags2(a3)

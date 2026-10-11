@@ -426,7 +426,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	move.w	6(a0),d5
 	andi.w	#$F800,d5
 	add.w	4(a0),d5
-	add.w	(gamesetuptilesetindex).w,d5	;crowd start char
+	add.w	(animchars).w,d5	;crowd start char
 	move.w	d5,(a6)+
 	move.w	(a0),d5
 	addi.w	#$70,d5
@@ -443,7 +443,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 .x
 	rts
 ;	showclock, checksso, setsortcords, setffo, uppads, the pad label code
-;	(FormatControllerDisplay, RenderSmallFontChar, ButtonLabelCharTable),
+;	(QueuePadLabel, RenderSmallFontChar, ButtonLabelCharTable),
 ;	addframe, addframe2, find3d, updatesound and KillCrowd.
 ;	The horizontal clock's .digit and .digits tables sit inside showclock.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
@@ -709,7 +709,7 @@ setffo	;draw the 7 objects tied to icerink scrolling (gloves and pads), moving e
 	adda.w	#$1C,a3	;move to next struct
 	dbf	d0,.top
 	rts
-uppads	;update the gloves object and the 6 pad objects, and queue new pad labels (FormatControllerDisplay). The pad players
+uppads	;update the gloves object and the 6 pad objects, and queue new pad labels (QueuePadLabel). The pad players
 	;come from the PadControlBits / PadControlBits34 nibbles ($E = no change, $F = none)
 	movea.w	#(glovestruct-M68K_RAM),a0
 	st	Zpos(a0)	;set Zpos
@@ -755,14 +755,14 @@ uppads	;update the gloves object and the 6 pad objects, and queue new pad labels
 	cmp.w	(a1),d1
 	beq.w	.next
 	move.w	d1,(a1)
-	bsr.w	FormatControllerDisplay
+	bsr.w	QueuePadLabel
 .next
 	lsr.w	#4,d3
 	adda.w	#$1C,a0
 	addq.w	#2,a1
 	dbf	d4,.top
 	rts
-FormatControllerDisplay	;Queue the 3 character label of a pad object. d1 = label code: bits 7-4 and 3-0 are digits ($F =
+QueuePadLabel	;Queue the 3 character label of a pad object. d1 = label code: bits 7-4 and 3-0 are digits ($F =
 	;blank), bits 10-8 index ButtonLabelCharTable (none while sflags7 bit 7 is set). a0 = pad object, a5 = dma list. Falls into
 	;RenderSmallFontChar for the last char
 	lea	ButtonLabelCharTable(pc),a4

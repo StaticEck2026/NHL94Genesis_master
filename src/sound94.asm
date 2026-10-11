@@ -1,5 +1,5 @@
 ;	68k side of the sound driver: p_turnoff, play_sfx_or_music_track,
-;	play_new_song, the pad readers (ReadJoyData ... ResetZ80Bus, run from
+;	stop_current_song, the pad readers (ReadJoyData ... ResetZ80Bus, run from
 ;	p_music_vblank), p_music_vblank, UploadCommandBufferToZ80,
 ;	ProcessOneMusicTrack and the event handlers,
 ;	UpdateChannelFrequencyAndVolume, SetChannelVolume, p_initialZ80 and
@@ -28,19 +28,19 @@ p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute ev
 	move.b	#$7F,(a0)+	;$7F = silent
 	dbf	d0,.loop
 	bsr.w	UploadCommandBufferToZ80
-	bsr.w	ClearZ80SpecialEffectsFlags
+	bsr.w	StopPCMChannel
 	movem.l	(sp)+,d0-d7/a0-a2
 rtsfx	;The shared rts; play_sfx_or_music_track and ProcessOneMusicTrack branch to it
 	rts
 play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowest pointer. $30 and up are
-	;songs: the song already playing is stopped first (play_new_song). Takes the event stream from the long pointer table
-	;MusicTrackPointerTable and also sets each voice volume (+4) to $7F. Called from sfx and song
+	;songs: the song already playing is stopped first (stop_current_song). Takes the event stream from the long pointer table
+	;SoundStreamTable and also sets each voice volume (+4) to $7F. Called from sfx and song
 	cmp.w	#$7A,d0
 	bhi.s	rtsfx	;out of range
 	movem.l	d0-d3/a0-a2,-(sp)
 	cmp.w	#$30,d0
 	blt.w	.0
-	bsr.w	play_new_song	;song: stop the current song
+	bsr.w	stop_current_song	;song: stop the current song
 .0
 	lea	(fm_track_slots).w,a1	;8 x 6 bytes
 	moveq	#7,d3
@@ -56,7 +56,7 @@ play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowes
 	tst.w	(a2)
 	bpl.w	.x	;no free slot (lowest pointer is in use): do nothing
 	asl.w	#2,d0
-	lea	(MusicTrackPointerTable).l,a0
+	lea	(SoundStreamTable).l,a0
 	movea.l	0(a0,d0.w),a0
 	move.l	a0,(a2)
 	clr.w	4(a2)
@@ -75,7 +75,7 @@ play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowes
 .x
 	movem.l	(sp)+,d0-d3/a0-a2
 	rts
-play_new_song	;Stop the song in progress: free the first slot whose pointer is at or past the first song ($30, SongPointerTable)
+stop_current_song	;Stop the song in progress: free the first slot whose pointer is at or past the first song ($30, SongPointerTable)
 	;and key off its channels. Called from play_sfx_or_music_track, DoGameFrame and others
 	movem.l	d0-d3/a0-a3,-(sp)
 	move	sr,-(sp)
@@ -341,16 +341,16 @@ handle_command_00	;Event $0x: key off note +2 on channel +1 bits 3-0 of track d7
 	btst	#0,6(a2)
 	dbne	d1,.find
 	beq.w	rtsfx
-ReleaseChannelAndNote	;Key off channel struct a2 if it is on. The PCM patches ($60 up) stop the PCM channel (ClearZ80SpecialEffectsFlags)
+ReleaseChannelAndNote	;Key off channel struct a2 if it is on. The PCM patches ($60 up) stop the PCM channel (StopPCMChannel)
 	bclr	#0,6(a2)
 	beq.w	rtsfx
 	cmpi.b	#$60,3(a2)
-	bge.w	ClearZ80SpecialEffectsFlags
+	bge.w	StopPCMChannel
 	move.b	4(a2),d0
 	bset	d0,(Z80_command_buffer).w
 	st	(music_needs_z80_update).w
 	rts
-ClearZ80SpecialEffectsFlags	;Clear Z80 RAM $8E (Z80_RAM+$8E, the PCM rate byte written by UpdateChannelFrequencyAndVolume): stops the PCM channel
+StopPCMChannel	;Clear Z80 RAM $8E (Z80_RAM+$8E, the PCM rate byte written by UpdateChannelFrequencyAndVolume): stops the PCM channel
 	move.w	#$100,(IO_Z80BUS).l
 .loop
 	btst	#0,(IO_Z80BUS).l
@@ -787,7 +787,7 @@ sfx_puckget_pcm
 fm_instrument_patches	;32 FM patches x 32 bytes, byte $1E = pitch bend scale (UpdateChannelFrequencyAndVolume)
 	incbin	..\Extracted\NHL94\Sound\fm_instrument_patches.bin	;32 FM patches x 32 bytes (byte $1E = pitch bend scale)
 	even
-MusicTrackPointerTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_music_track)
+SoundStreamTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_music_track)
 	dc.l	sfx_siren_cmdstream	;sound $0
 	dc.l	sfx_beep1_cmdstream	;sound $1
 	dc.l	sfx_beep2_cmdstream	;sound $2
@@ -836,7 +836,7 @@ MusicTrackPointerTable	;event stream of sounds 0-$7A as long pointers (play_sfx_
 	dc.l	sfx_puckice2_cmdstream	;sound $2D
 	dc.l	sfx_puckice3_cmdstream	;sound $2E
 	dc.l	sfx_puckice4_cmdstream	;sound $2F
-SongPointerTable	;the songs $30-$7A of MusicTrackPointerTable (play_new_song reads the first)
+SongPointerTable	;the songs $30-$7A of SoundStreamTable (stop_current_song reads the first)
 	dc.l	fmtune_id_30_cmdstream	;song $30
 	dc.l	fmtune_id_31_cmdstream	;song $31
 	dc.l	fmtune_id_32_cmdstream	;song $32

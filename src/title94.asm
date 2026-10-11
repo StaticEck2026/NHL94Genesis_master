@@ -340,7 +340,7 @@ UnpackPicture	;Unpack a picture a2: count.w, then 3 bytes per row of 8 pixels to
 	dbf	d0,.loop
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-LoadHomeTeamGfx	;Load the HomeTeam graphics of TeamGfxList to VRAM d4 - $18 (DoDMA_clearCallbackPointer). Called from setupice, ClrHor and
+LoadHomeTeamGfx	;Load the HomeTeam graphics of TeamGfxList to VRAM d4 - $18 (DecompressGraphicsPlain). Called from setupice, ClrHor and
 	;ReloadRinkGraphics
 	move.w	d0,-(sp)
 	subi.w	#$18,d4
@@ -349,7 +349,7 @@ LoadHomeTeamGfx	;Load the HomeTeam graphics of TeamGfxList to VRAM d4 - $18 (DoD
 	asl.w	#2,d0
 	movea.l	0(a2,d0.w),a2
 	addq.w	#8,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	move.w	(sp)+,d0
 	rts
 TeamGfxList	;LoadHomeTeamGfx: one address per team (TeamList order) in ArenaGfxBank

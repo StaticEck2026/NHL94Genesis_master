@@ -1216,7 +1216,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	bset	#0,(sflags4).w
 	bclr	#3,(sflags8).w
 	bsr.w	ChkShotStat
-	bsr.w	play_new_song
+	bsr.w	stop_current_song
 	move.w	d0,-(sp)
 	move.w	(vcount).w,d0
 .loop

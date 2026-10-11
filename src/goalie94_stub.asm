@@ -16,7 +16,7 @@
 
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
-DoDMA_clearCallbackPointer = $11738	;jsr / jmp (x).l
+DecompressGraphicsPlain = $11738	;jsr / jmp (x).l
 setc1player = $C0BC		;jsr / jmp (x).l
 setc2player = $C0DA		;jsr / jmp (x).l
 

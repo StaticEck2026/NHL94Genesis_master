@@ -16,7 +16,7 @@
 
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
-DoDMA_clearCallbackPointer = $11738	;bsr.w / Bcc.w.
+DecompressGraphicsPlain = $11738	;bsr.w / Bcc.w.
 DoFill = $11544			;bsr.w / Bcc.w.
 Framer = $119B8			;bsr.w / Bcc.w.
 Penaltylist = $18E0C		;#x
@@ -46,7 +46,7 @@ GetPeriodTimeRemaining = $14A94		;bsr.w / Bcc.w.
 ShowThreeStars = $1850A		;bsr.w / Bcc.w.
 PenaltyShotBox = $187B8		;jsr / jmp (x).l
 GetPlayerName = $18A6E		;bsr.w / Bcc.w.
-play_new_song = $1A304		;jsr / jmp (x).l
+stop_current_song = $1A304		;jsr / jmp (x).l
 ShootoutWonBy = $FC5AE		;jsr / jmp (x).l
 LoadHomeTeamGfx = $FEA52		;jsr / jmp (x).l
 PenShotPenalties = $1913A		;#x. penalty shot penalty per penalty number
@@ -66,7 +66,7 @@ setplayercolors = $1720C		;bsr.w / Bcc.w.
 SetupPauseScreen = $7DCE		;jsr (x).w. (also movea.l #x)
 WeightedRandomSelect = $10EB4	;bsr.w / Bcc.w.
 clearTeamStats = $17102		;jsr / jmp (x).l
-ConverByteToDigits = $18BDC		;bsr.w / Bcc.w.
+ConvertByteToDigits = $18BDC		;bsr.w / Bcc.w.
 forcepldata = $159A8		;bsr.w / Bcc.w
 orjoy = $112BC			;bsr.w / Bcc.w
 printsmall = $11A48			;bsr.w / Bcc.w

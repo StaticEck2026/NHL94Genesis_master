@@ -628,7 +628,7 @@ ReadTeamStats	;Unpack the $68 playoff stat totals from the bit stream into stats
 ;	ResolveGames, the end of game box (ShowThreeStars,
 ;	TakeTopStarScore, CalcStarScores / Values), the injury box,
 ;	the penalty shot box, the goal box, box, the player name formatters
-;	(GetPlayerName, getname ... ConverByteToDigits) and the exception
+;	(GetPlayerName, getname ... ConvertByteToDigits) and the exception
 ;	handlers AddError, Illinst, ZeroDiv and crash.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
@@ -1144,7 +1144,7 @@ getname	;gets player number and name, appends to string: a1 = mesarea "NN First 
 	lea	2(a3),a1	;move long address at a3+2 into a1
 	adda.w	(a0),a0	;add data at a0 (player name length) to a0
 	move.b	(a0),d0	;move a0 data (jersey #) to d0
-	bsr.w	ConverByteToDigits	;convert JNo to ascii
+	bsr.w	ConvertByteToDigits	;convert JNo to ascii
 	bsr.w	appendz	;add space after JNo
 	String	' '
 	movea.l	(sp)+,a1	;pop from stack into a1 (address to start of player name)
@@ -1170,7 +1170,7 @@ FormatPlayerNumInitial	;a1 = mesarea string "NN F. Last" for player d0 of team a
 	movea.w	#(TextBuffer-M68K_RAM),a1
 	adda.w	(a0),a0
 	move.b	(a0),d0
-	bsr.w	ConverByteToDigits
+	bsr.w	ConvertByteToDigits
 	move.b	#$20,(a1)+
 	movea.l	(sp)+,a0
 	move.w	(a0)+,d0
@@ -1194,7 +1194,7 @@ FormatPlayerName	;a1 = mesarea string "NN Last" for player d0 of team a2, built 
 	movea.w	#(TextBuffer-M68K_RAM),a1
 	adda.w	(a0),a0
 	move.b	(a0),d0
-	bsr.w	ConverByteToDigits
+	bsr.w	ConvertByteToDigits
 	move.b	#$20,(a1)+
 	movea.l	(sp)+,a0
 	move.w	(a0)+,d0
@@ -1262,7 +1262,7 @@ GetPlayerNamePointer	;loops through team roster to get to d0 player: a0 = name s
 .loop
 	dbf	d0,.skip	;loop until at player offset
 	rts
-ConverByteToDigits	;converts decimal number in d0 to ascii: two ascii digits of bcd byte d0 to (a1)+, a leading 0 becomes a space ($F0 + '0')
+ConvertByteToDigits	;converts decimal number in d0 to ascii: two ascii digits of bcd byte d0 to (a1)+, a leading 0 becomes a space ($F0 + '0')
 	move.w	d0,-(sp)	;push to stack
 	lsr.b	#4,d0	;divide by 16 (get upper digit in d0)
 	bne.w	.n0	;branch if not 0
@@ -1966,7 +1966,7 @@ ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs
 	dc.l	PeriodStatsScreen
 	String	$FF
 
-AttributeScreenText	;Line editor exit menu 
+LineEditorMenuText	;Line editor exit menu 
 	String	$FE,6,$F9,1
 	String	$FE,4,$F9,1
 	String	'       Exit       '
@@ -1979,7 +1979,7 @@ AttributeScreenText	;Line editor exit menu
 	dc.l	DecodeTeamLines
 	String	$FF
 
-ExitAttribText	;Line editor exit menu without Load Team Line
+LineEditorMenuNoLoad	;Line editor exit menu without Load Team Line
 	String	$FE,6,$F9,1
 	String	$FE,4,$F9,1
 	String	'       Exit       '

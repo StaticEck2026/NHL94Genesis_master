@@ -1,6 +1,6 @@
 ;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and
 ;	the helpers after it (SetPojoyMode, DrawMatchupBitmaps, DrawTeamBitmap,
-;	dotb, ClearOptionDisplay, setoptions_printpos2, SetGoalieMode), then the
+;	dotb, ClearRosterName, setoptions_printpos2, PickStartingGoalie), then the
 ;	options screen vblank handler (VBlank_SetOptions).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
@@ -123,7 +123,7 @@ dotb	;unreferenced. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
 	moveq	#2,d5
 	bra.w	dobitmap
 
-ClearOptionDisplay	;unreferenced. Set the print position, then erase 12 x 2 at it
+ClearRosterName	;unreferenced. Set the print position, then erase 12 x 2 at it
 	bsr.w	setoptions_printpos2
 	moveq	#$C,d0			;12
 	moveq	#2,d1			;2
@@ -138,7 +138,7 @@ setoptions_printpos2	;printz position string, then printx = $1A when a2 is the h
 	move.w	#$1A,(printx).w
 	rts
 
-SetGoalieMode	;unreferenced. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
+PickStartingGoalie	;unreferenced. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
 	;a value from the team's .sodds
 	movem.l	d0/a0,-(sp)
 	clr.w	$26(a2)

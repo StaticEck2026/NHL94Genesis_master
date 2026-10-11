@@ -16,7 +16,7 @@ smallfontchars equ $FFFFB012
 smallfont2chars equ $FFFFB014
 energybarchars equ $FFFFB016
 rinkvrcset equ $FFFFB018
-gamesetuptilesetindex equ $FFFFB01A	;94 keeps the crowd tiles 1st vram char here
+animchars equ $FFFFB01A	;94 keeps the crowd tiles 1st vram char here
 faceoffvrcset equ $FFFFB01C
 framercset equ $FFFFB01E
 EASNcset equ $FFFFB020
@@ -313,7 +313,7 @@ TmpOptLine equ $FFFFD062
 demoflag equ $FFFFD064
 seed equ $FFFFD066
 dmaram equ $FFFFD06A
-music_global_tick_counter equ $FFFFD06E
+PalMode equ $FFFFD06E
 music_tick_divider equ $FFFFD070
 TmpOptLine2 equ $FFFFD072
 TempOptPlayMode equ $FFFFD074

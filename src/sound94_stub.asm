@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside: none. The sound data the driver reads (Z80_Program_Code, pcm_sample_table
-; MusicTrackPointerTable, SongPointerTable) is in this segment. Run npm run extractassets first (npm run seg:does).
+; SoundStreamTable, SongPointerTable) is in this segment. Run npm run extractassets first (npm run seg:does).
 
 ; Main segment code
 	include	sound94.asm

@@ -17,7 +17,7 @@
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 DecompressGraphicsWithCallback = $1172C	;jsr / jmp (x).l
-DoDMA_clearCallbackPointer = $11738	;jsr / jmp (x).l
+DecompressGraphicsPlain = $11738	;jsr / jmp (x).l
 FigureJoy = $17E42		;jsr / jmp (x).l
 Framer = $119B8			;jsr / jmp (x).l
 maketree = $17D80		;jsr / jmp (x).l
@@ -30,7 +30,7 @@ ReadJoy4 = $11388		;jsr / jmp (x).l
 TeamList = $30E			;movea.w #x operand
 VBlank_SetOptions = $17C42	;#x
 appstring = $11D9E		;jsr / jmp (x).l
-ConverByteToDigits = $18BDC		;jsr / jmp (x).l
+ConvertByteToDigits = $18BDC		;jsr / jmp (x).l
 defaultsprites2 = $16E82		;jsr / jmp (x).l
 dobitmap = $1169A		;jsr / jmp (x).l
 eraser = $1197E			;jsr / jmp (x).l

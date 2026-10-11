@@ -25,7 +25,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	bsr.w	DoFill
 	move.w	(ExtraChars).w,d4
 	movea.l	#ReplayMap+8,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	jsr	(ShowReplayIcon).l
 	bclr	#sfscrl,(sflags).w
 	bclr	#5,(sflags3).w
@@ -877,7 +877,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	cmpi.w	#$1AF4,SPA(a3)	;SPAinjury1. check animation
 	beq.w	.done
 	moveq	#$11,d4
-	tst.w	(music_global_tick_counter).w
+	tst.w	(PalMode).w
 	beq.w	.notoside
 	moveq	#$16,d4
 .notoside

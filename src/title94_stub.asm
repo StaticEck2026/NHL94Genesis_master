@@ -18,7 +18,7 @@
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 DecompressGraphicsWithCallback = $1172C	;jsr / jmp (x).l at $FF20A
 DoDMA = $113E4			;jsr / jmp (x).l at $FF362
-DoDMA_clearCallbackPointer = $11738	;jsr / jmp (x).l
+DecompressGraphicsPlain = $11738	;jsr / jmp (x).l
 HiScoreImg = $F5338		;#x
 MakeSRAMChecksum = $1A206	;jsr / jmp (x).l
 p_music_vblank = $1A50A			;jsr / jmp (x).l at $FF3A4

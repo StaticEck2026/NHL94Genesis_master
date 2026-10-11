@@ -41,7 +41,7 @@ freezewindow = $AFB6		;jsr / jmp (x).l.
 puckflip = $102D2		;bsr.w / Bcc.w.
 randomd0s = $1107A		;bsr.w / Bcc.w.
 sroot = $110BE			;bsr.w / Bcc.w.
-play_new_song = $1A304		;bsr.w / Bcc.w
+stop_current_song = $1A304		;bsr.w / Bcc.w
 EndPenaltyShotPlay = $F37C		;jsr / jmp (x).l.
 EndOneTimer = $FEFF0		;jsr / jmp (x).l
 

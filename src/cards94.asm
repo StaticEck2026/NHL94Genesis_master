@@ -2458,7 +2458,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	moveq	#$1C,d1
 	move.w	#$7FF,d2
 	jsr	(eraser).l
-	jsr	(setupIceRinkMap).l
+	jsr	(setupIceRinkPal).l
 	jsr	(printz).l
 	String	-TXMAP2,0,0
 	movea.l	#ScoutMap,a0	;(and printz Strings)
@@ -2476,7 +2476,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	addi.w	#$24,d4
 	move.w	d4,(logobox1chars).w
 	movea.l	#LogoBoxMap+8,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	move.w	d4,(BigFontChars).w
 	movea.l	#BigFontMap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l

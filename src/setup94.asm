@@ -1,4 +1,4 @@
-;	setupice, setupice_highlight, setupIceRinkMap, setupEASNmap, the tile
+;	setupice, setupice_highlight, setupIceRinkPal, setupEASNmap, the tile
 ;	reloads (ReloadEnergyBarTiles ... ReloadFaceOffMap), setupTeamBlocksMap,
 ;	CopyTeamBlockMapData, defaultsprites, defaultsprites2, SprSort,
 ;	resetplstuff, clearTeamStats, setteams, InitTeamStructure,
@@ -11,7 +11,7 @@
 ;	Bits: disflags 0 dfok, 1 df32c, 2 dfng; sflags 0 sfpz, 1 sfpj, 7 sfhor; gmode 1 gmdir.
 
 setupice	;set all variables, send non purgeable graphics, build sprite frame lists for ice rink. Called from StartGame and StartPer.
-	;Decompresses the tile sets with DoDMA_clearCallbackPointer / DecompressGraphicsWithCallback. Loads RevRinkTiles in a reverse angle replay
+	;Decompresses the tile sets with DecompressGraphicsPlain / DecompressGraphicsWithCallback. Loads RevRinkTiles in a reverse angle replay
 	;(sflags4 bit 4) and calls LoadHomeTeamGfx
 	movem.l	d0-d7/a0-a6,-(sp)
 	bset	#df32c,(disflags).w	;df32c
@@ -43,21 +43,21 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	beq.w	.0	;branch if not
 	movea.l	#RevRinkTiles,a2
 .0
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	jsr	(LoadHomeTeamGfx).l
 	move.w	d4,(EASNcset).w
 	bsr.w	setupEASNmap
 	move.w	d4,(energybarchars).w	;energy bar chars
 	movea.l	#EnergyBarMap+8,a2
-	bsr.w	DoDMA_clearCallbackPointer
-	move.w	d4,(gamesetuptilesetindex).w	;crowd chars
+	bsr.w	DecompressGraphicsPlain
+	move.w	d4,(animchars).w	;crowd chars
 	movea.l	#CrowdFrameList+8,a2
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	move.w	d4,(arenaanimchars).w
 	addi.w	#$32,d4
 	move.w	d4,(spritechars).w
 	bsr.w	defaultsprites
-	bsr.w	setupIceRinkMap
+	bsr.w	setupIceRinkPal
 	bsr.w	AddFramer
 	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
@@ -125,7 +125,7 @@ setupice_highlight	;Rebuild the rink sprites after a highlight replay without re
 	st	(zamx).w
 	move.w	(spritechars).w,d4
 	bsr.w	defaultsprites
-	bsr.w	setupIceRinkMap
+	bsr.w	setupIceRinkPal
 	btst	#gmdir,(gmode).w
 	beq.w	.gok
 	movea.w	#(SortCords-M68K_RAM),a3
@@ -171,7 +171,7 @@ setupice_highlight	;Rebuild the rink sprites after a highlight replay without re
 	move	#$2300,sr
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-setupIceRinkMap	;Copy the ice rink palettes (pal 0&1, 16 longs) to palfadenew. Called from setupice, setupice_highlight and the stats screens
+setupIceRinkPal	;Copy the ice rink palettes (pal 0&1, 16 longs) to palfadenew. Called from setupice, setupice_highlight and the stats screens
 	movea.l	#Rinktilelist,a0
 	adda.l	(a0),a0
 	moveq	#$F,d0
@@ -189,27 +189,27 @@ setupEASNmap	;Decompress the easn logo tiles (EASNmap+8) to vram at EASNcset. Ca
 ReloadEnergyBarTiles	;Reload the energy bar tiles (EnergyBarMap+8) at energybarchars. Called from the replay code and ReloadRinkGraphics
 	move.w	(energybarchars).w,d4
 	movea.l	#EnergyBarMap+8,a2
-	bra.w	DoDMA_clearCallbackPointer
-ReloadCrowdTiles	;Reload the crowd tiles (CrowdFrameList+8) at gamesetuptilesetindex. Called from the replay code and ReloadRinkGraphics
-	move.w	(gamesetuptilesetindex).w,d4
+	bra.w	DecompressGraphicsPlain
+ReloadCrowdTiles	;Reload the crowd tiles (CrowdFrameList+8) at animchars. Called from the replay code and ReloadRinkGraphics
+	move.w	(animchars).w,d4
 	movea.l	#CrowdFrameList+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 ReloadRefHorTiles	;Reload the horizontal ref tiles (RefMap2+8) at ExtraChars. Called from PauseMode
 	move.w	(ExtraChars).w,d4
 	movea.l	#RefMap2+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 ReloadRefTiles	;Reload the ref tiles (RefsMap+8) at ExtraChars. Called from the replay code
 	move.w	(ExtraChars).w,d4
 	movea.l	#RefsMap+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 ReloadFaceOffTiles	;Reload the face off tiles (FaceOffSprites+8) at faceoffvrcset. Called from the replay code
 	move.w	(faceoffvrcset).w,d4
 	movea.l	#FaceOffSprites+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 ReloadFaceOffMap	;Reload the FaceOffMap+8 tiles at ExtraChars. Called from the replay code
 	move.w	(ExtraChars).w,d4
 	movea.l	#FaceOffMap+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 setupTeamBlocksMap	;Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C and copy the home and visitor team
 	;blocks to vram at basetileoffset and basetileoffset+$16. d4 = 1st vram char; return d4 = basetileoffset+$2C. Called from setupice
 	move.w	d4,(basetileoffset).w
@@ -217,7 +217,7 @@ setupTeamBlocksMap	;Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C and 
 	movea.w	#(TeamBlockMap-M68K_RAM),a1
 	movea.l	#Teamblocksmap,a0
 	lea	8(a0),a2
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	adda.l	4(a0),a0
 	move.l	a0,-(sp)
 	move.w	(HomeTeam).w,d0
@@ -824,7 +824,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	AddSmallFont
 	movea.l	#Arrowsmap+8,a2
 	move.w	d4,(ExtraChars).w
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	bsr.w	printz
 	String	-(TXPAL3+TXMAP2),0,0
 	movea.l	#ScoutMap,a0
@@ -849,7 +849,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.l	-$20(a0),(a0)+
 	dbf	d0,.pal
 	move.w	d4,(energybarchars).w
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	move.w	#$104,(clampcounter).w
 	move.w	#$A0,(playoffspritey).w
 	movea.l	#VDP_CTRL,a0

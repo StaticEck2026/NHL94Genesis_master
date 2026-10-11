@@ -130,7 +130,7 @@ chkprogress	;control progress of ref and game control thru penalty events. While
 	bsr.w	SetHor
 	move.w	(ExtraChars).w,d4	;load horizontal ref tiles
 	movea.l	#RefMap2+8,a2	;+8
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	bsr.w	NewTicker
 	bsr.w	NewTicker3
 	st	(puckc).w
@@ -429,7 +429,7 @@ checkfornewpen	;look for new penalty (entered thru addpenalty(2)). Stops play at
 	move.w	#$2C,d0	;delayed penalty (92 used $24)
 	bsr.w	SetPA
 	bra.s	.next
-Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot from the penalty type, blow the whistle, with play_new_song before the whistle. Also entered from puckfaceoff
+Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot from the penalty type, blow the whistle, with stop_current_song before the whistle. Also entered from puckfaceoff
 	bset	#gmclock,(gmode).w	;gmclock
 	bne.w	.skipfo
 	clr.w	d0
@@ -488,7 +488,7 @@ Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot fro
 .skipfo
 	clr.w	(Pencntdwn).w
 	bset	#gmpen,(gmode).w	;gmpen
-	jsr	(play_new_song).l
+	jsr	(stop_current_song).l
 	move.w	#SFXwhistle,-(sp)	;whistle (92 used 10)
 	bsr.w	sfx
 	move.w	#$A,d0	;whistle (92 used $26)
@@ -952,7 +952,7 @@ ClrHor	;revert the graphics back to vertical ice rink mode. Reloads Rinktiles an
 	move.w	#$3E8,(Oldrow).w	;1000
 	move.w	(rinkvrcset).w,d4
 	movea.l	#Rinktiles,a2
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	jsr	(LoadHomeTeamGfx).l
 	bsr.w	SprSort
 	btst	#sfpz,(sflags).w	;sfpz
@@ -1180,7 +1180,7 @@ pplpen	;print one penalty box line: player number and time remaining. a2 = team,
 	move.b	-8(a1),d0	;player number (BCD)
 	move.w	(printx).w,-(sp)
 	movea.w	#(TextBuffer-M68K_RAM),a1	;mesarea+2
-	bsr.w	ConverByteToDigits
+	bsr.w	ConvertByteToDigits
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	#4,(a1)	;string length: 2 digits
 	bsr.w	print
@@ -1415,7 +1415,7 @@ Intermission	;end of period junk (zamboni/stats). Opens the pause menu screen (i
 	dbf	d0,.0
 	move.w	(ExtraChars).w,d4
 	movea.l	#ZamFrameList+8,a2	;+8
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	move.w	#$140,(zamx).w	;320
 	move.w	(gsp).w,d0
 	tst.w	(OptPlayMode).w
@@ -1767,7 +1767,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	move.w	#VDPR_WINY,Vctrl-Vdata(a0)	;window V position 0
 	move.w	(ExtraChars).w,d4	;ref cam chars
 	movea.l	#RefsMap+8,a2	;+8
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 	clr.w	(Vpos).w
 	clr.w	(Hpos).w
 	bsr.w	ResetBench

@@ -2,7 +2,7 @@
 ;	ScoutCrowdRecord, GetTeamNickname / GetTeamArena (team data for the text
 ;	player's '@', '=', '*', '^' and ';' codes), the unused ScoutCrowdRecordBy
 ;	/ GetTeamCity, the matchup pager PageMatchup, the rating, picture and
-;	position helpers, StatsText, and the advantage marks
+;	position helpers, ScoutRatingText, and the advantage marks
 ;	(PrintAdvantageMarks). The text player itself (StartScoutText,
 ;	ScoutTextPlayer, ScoutTextNextLine) is with the setup code.
 ;	Each DecompressGraphicsWithCallback is followed by its 8 byte remap table.
@@ -164,10 +164,10 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	jsr	(dobitmap).l
 	movea.l	#HotIconMap+8,a2
 	move.w	d4,(hoticonchars).w	;tiles: 1st vram char
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	movea.l	#ColdIconMap+8,a2
 	move.w	d4,(coldiconchars).w	;tiles: 1st vram char
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	clr.w	(matchup).w	;matchup 0: the teams
 	clr.w	(scoutunused).w
 	move.w	#$10D,(matchuptimer).l	;frames to the next matchup
@@ -293,7 +293,7 @@ PrintTwoSpaces	;Print 2 spaces at printx / printy and keep printx
 	rts
 TwoSpacesTxt	;A two space String (printsmall by PrintTwoSpaces)
 	String	'  '
-StatsText	;rating names; only ' Overall ' is printed (PrintMatchupRatings, matchup 0); -1 ends the list
+ScoutRatingText	;rating names; only ' Overall ' is printed (PrintMatchupRatings, matchup 0); -1 ends the list
 	String	'Shooting'
 	String	'Skating'
 	String	'Passing'
@@ -417,7 +417,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	bne.w	.2
 	jsr	(printsmallz).l
 	String	CC_SetMapAndPosition,0,1,$16,$16,CC_SetFont,1
-	lea	StatsText(pc),a1
+	lea	ScoutRatingText(pc),a1
 	move.w	#0,d7
 .loop
 	move.w	(a1),d0

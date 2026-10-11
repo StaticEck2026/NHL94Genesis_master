@@ -1,6 +1,6 @@
 ;	Player assignments assbench ... asswingd.
 ;	There is no fight code: assfight and assfwatch are just an rts, and
-;	ShowInjuryMsg, banner and addinfo are gone. assgoaliebreakwait is new.
+;	ClearMessageLine, banner and addinfo are gone. assgoaliebreakwait is new.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx).
 ;	The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44, temp4 $46

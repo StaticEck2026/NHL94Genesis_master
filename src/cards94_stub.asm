@@ -19,7 +19,7 @@
 AddSmallFont = $11F04		;jsr / jmp (x).l
 AttribAdjust = $FEF7C		;bsr.w / Bcc.w
 DecompressGraphicsWithCallback = $1172C	;jsr / jmp (x).l
-DoDMA_clearCallbackPointer = $11738	;jsr / jmp (x).l
+DecompressGraphicsPlain = $11738	;jsr / jmp (x).l
 ExitStatsScreen = $9CD8	;jsr / jmp (x).l
 FormatPlayerNameShort = $18B6E	;jsr / jmp (x).l
 Framer = $119B8			;jsr / jmp (x).l
@@ -49,7 +49,7 @@ printsmall = $11A48			;jsr / jmp (x).l
 printbigz = $11DE2		;jsr / jmp (x).l
 printz = $11B92			;jsr / jmp (x).l
 printsmallz = $11A36			;jsr / jmp (x).l
-setupIceRinkMap = $16C96		;jsr / jmp (x).l
+setupIceRinkPal = $16C96		;jsr / jmp (x).l
 setVram = $11594			;jsr / jmp (x).l
 FormatPlayerNameLast = $18B5E		;jsr / jmp (x).l
 GetDefenseStart = $9F5C			;jsr / jmp (x).l

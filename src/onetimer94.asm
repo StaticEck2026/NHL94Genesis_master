@@ -25,7 +25,7 @@ puckvzadj	;set puckvz for a top shelf shot from the distance to the goal line ($
 	neg.w	d1	;negate d1
 .speed
 	move.w	#$11,d2	;move 11 into d2
-	tst.w	(music_global_tick_counter).w	;This byte is never set
+	tst.w	(PalMode).w	;This byte is never set
 	beq.w	.div	;branch if equal (always is)
 	move.w	#$16,d2	;move 16 into d2
 .div
@@ -306,7 +306,7 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	neg.w	d2
 .speed
 	move.w	#$11,d1
-	tst.w	(music_global_tick_counter).w
+	tst.w	(PalMode).w
 	beq.w	.chkzero
 	move.w	#$16,d1
 .chkzero

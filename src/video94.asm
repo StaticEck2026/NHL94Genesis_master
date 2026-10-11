@@ -726,7 +726,7 @@ Vmaddr
 	move.l	d0,Vctrl-Vdata(a0)
 	rts
 ;	dobitmap, the tile decompressor (DecompressGraphicsWithCallback,
-;	DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode,
+;	DecompressGraphicsPlain, DecompressGraphics, DecompressBytecode,
 ;	jump_table, the Opcode_* handlers, FlushOutputBuffer), xyVmMap, eraser,
 ;	Framer, printz2 / printsmall and the control codes, printz / print,
 ;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber,
@@ -780,7 +780,7 @@ dobitmap	;transfer palette data/map data/tiles data to vram. a0 = palette, a1 = 
 	dbf	d2,.loop2
 	btst	#0,(sflags6).w
 	bne.w	.0
-	bsr.w	DoDMA_clearCallbackPointer
+	bsr.w	DecompressGraphicsPlain
 .0
 	movem.l	(sp)+,d0-d3/d5-d6/a0-a3
 	move.w	(sp)+,(disflags).w
@@ -791,7 +791,7 @@ DecompressGraphicsWithCallback	;DecompressGraphics, then return 8 bytes past the
 	bsr.w	DecompressGraphics
 	addq.l	#8,(sp)
 	rts
-DoDMA_clearCallbackPointer	;Clear callbackPtr, fall into DecompressGraphics
+DecompressGraphicsPlain	;Clear callbackPtr, fall into DecompressGraphics
 	clr.l	(callbackPtr).w
 DecompressGraphics	;a2 = graphics data, d4 = start char
 	movem.l	d0-d1/a0-a6,-(sp)
@@ -1582,12 +1582,12 @@ PutBigTile	;write one big font tile to the map at printx / printy
 AddSmallFont	;transfer smallfont.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
 	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 AddFramer	;transfer framer.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
 	movea.l	#FramerMap+8,a2
 	move.w	d4,(framercset).w
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain
 AddTeamBlock	;transfer TeamBlocks.map tiles to vram at char 2. Return d4 = end of tiles + 1. Goes through DecompressGraphics
 	moveq	#2,d4
 	movea.l	#Teamblocksmap+8,a2
-	bra.w	DoDMA_clearCallbackPointer
+	bra.w	DecompressGraphicsPlain

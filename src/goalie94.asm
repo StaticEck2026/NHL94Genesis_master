@@ -68,7 +68,7 @@ ManualGoalieMenu	;"x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 RunArenaAnim	;Run the arena animation arenaanim (negative: none): the first time, its frame list and graphics from ArenaAnims
-	;(arenaframelist / arenaspritelist, tiles to VRAM d4 = arenaanimchars: DoDMA_clearCallbackPointer); then count down the frame time arenaframetime by d7
+	;(arenaframelist / arenaspritelist, tiles to VRAM d4 = arenaanimchars: DecompressGraphicsPlain); then count down the frame time arenaframetime by d7
 	;and step (NextArenaFrame). Called from periodicevents and waitxsr
 	tst.w	(arenaanim).w
 	bmi.w	.x2
@@ -83,7 +83,7 @@ RunArenaAnim	;Run the arena animation arenaanim (negative: none): the first time
 	movea.l	4(a0,d0.w),a2
 	addq.w	#8,a2
 	move.w	(arenaanimchars).w,d4
-	jsr	(DoDMA_clearCallbackPointer).l
+	jsr	(DecompressGraphicsPlain).l
 	clr.w	(arenaframeidx).w
 	bsr.w	NextArenaFrame
 	bra.w	.x

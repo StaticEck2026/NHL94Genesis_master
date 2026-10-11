@@ -19,7 +19,7 @@ Begin	;cold start, entered from Start. Clear RAM, init sound and menus, go to ti
 	clr.w	(PALflag).w		;clear the PAL flag
 	move.w	(VDP_CTRL).l,d0
 	andi.w	#1<<PAL_MODE,d0		;VDP status bit 0 = PAL (50 Hz). it DMA busy; that is bit 1
-	move.w	d0,(music_global_tick_counter).w
+	move.w	d0,(PalMode).w
 	beq.w	.ntsc
 	bset	#0,(PALflag).w	;PAL
 .ntsc	jsr	(p_initialZ80).l		;sound stuff
@@ -102,7 +102,7 @@ ResetClock	;set period length and stop clock
 	move.w	#$258,d0		;OptPlayMode 0 overtime is always 10:00
 .0	move.w	d0,(gameclock).w
 	move.w	d0,(PerTimeTotal).w
-	move.w	d0,(periodendtime).w	;CheckPeriodEnd trigger time =
+	move.w	d0,(periodendtime).w	;CheckLateGameSong trigger time =
 	asr.w	#1,d0
 	jsr	(randomd0).l
 	sub.w	d0,(periodendtime).w	;length - random(length/2)
@@ -182,7 +182,7 @@ DoGameFrame	;wait for at least one vblank, then run one frame of game logic
 	bmi.w	.nosong
 	subq.w	#1,(songdelay).w
 	bne.w	.nosong
-	jsr	(play_new_song).l
+	jsr	(stop_current_song).l
 	move.w	(delayedsong).w,-(sp)
 	jsr	(song).l
 .nosong	jsr	(setSlotBit).l
@@ -203,8 +203,8 @@ periodicevents	;Called every time thru game loop with d7 = elapsed frames
 	addi.w	#$18,(lldisp).w		;jps: only update once per second
 	bsr.w	ChkGoalies
 	bsr.w	UpdateCwdExcite
-	bsr.w	CheckPeriodEnd
-	bsr.w	UpdateLineChange
+	bsr.w	CheckLateGameSong
+	bsr.w	RestoreBenchEnergy
 	bsr.w	CheckInjury
 	jmp	updatepwrplay
 
@@ -213,7 +213,7 @@ CheckInjury	;Called once per second. Count down InjCntDown, act on it at zero
 	bne.w	rtss8
 	jmp	ShowInjuryBox		;countdown expired
 
-UpdateLineChange	;Called once per second. Restore energy for players on the bench
+RestoreBenchEnergy	;Called once per second. Restore energy for players on the bench
 	tst.w	(OptLine).w
 	bne.w	.ex			;exit if line changes are off
 	movea.w	#(tmstruct-M68K_RAM),a2	;team 1
@@ -231,7 +231,7 @@ UpdateLineChange	;Called once per second. Restore energy for players on the benc
 	bpl.s	.b0
 .ex	rts
 
-CheckPeriodEnd	;Called once per second. 3rd period: choose and play a song once at the
+CheckLateGameSong	;Called once per second. 3rd period: choose and play a song once at the
 		;random trigger time set by ResetClock
 	cmpi.w	#2,(gsp).w		;3rd period only
 	bne.w	.x
@@ -307,7 +307,7 @@ clockcont	;monitor period clock and initiate various clock activated events
 	tst.w	(gameclock).w
 	bne.w	rtss8
 	bset	#3,(disflags).w		;dfclock: clock needs update
-	jsr	(play_new_song).l
+	jsr	(stop_current_song).l
 	move.w	#SFXhorn,-(sp)		;horn
 	jsr	(sfx).l
 	bsr.w	freezewindow
@@ -381,22 +381,22 @@ demoread	;monitor joystick if in demo mode (called every game loop)
 	jsr	(ReadJoy1).l
 	btst	#7,d1			;sbut
 	bne.w	startpause1		;start on pad 1 pauses
-	bsr.w	HandleJoy1
+	bsr.w	EndDemoOnPress
 	jsr	(ReadJoy2).l
 	btst	#7,d1
 	bne.w	startpause2
 	tst.w	(FourWayPlay).w		;pads 3 and 4 on the 4 way play adapter
-	beq.w	HandleJoy1
+	beq.w	EndDemoOnPress
 	jsr	(ReadJoy3).l
 	btst	#7,d1
 	bne.w	startpause3
-	bsr.w	HandleJoy1
+	bsr.w	EndDemoOnPress
 	jsr	(ReadJoy4).l
 	btst	#7,d1
 	bne.w	startpause4
-	;falls into HandleJoy1 with pad 4 in d1
+	;falls into EndDemoOnPress with pad 4 in d1
 
-HandleJoy1	;Any button on the pad just read (d1) ends the demo
+EndDemoOnPress	;Any button on the pad just read (d1) ends the demo
 	tst.w	d1
 	beq.w	rtss8			;nothing pressed
 	jmp	ExitToOpening		;exit demo
