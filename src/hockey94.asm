@@ -312,7 +312,7 @@ clockcont	;monitor period clock and initiate various clock activated events
 	bne.w	rtss8
 	bset	#3,(disflags).w		;dfclock: clock needs update
 	jsr	(play_new_song).l
-	move.w	#4,-(sp)		;horn
+	move.w	#SFX_HORN,-(sp)		;horn
 	jsr	(sfx).l
 	bsr.w	freezewindow
 clockcont_0	;End of period. Also entered from puckfaceoff+B2

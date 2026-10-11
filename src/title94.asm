@@ -891,7 +891,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	clr.w	(asv).w
 	move.w	#$FFCE,(DispAttribCtr).w
 	move.w	#$20,(palcount).w
-	move.w	#$78,-(sp)
+	move.w	#SONG_TITLE,-(sp)
 	jsr	(song).l
 	bsr.w	CreditsLineScroll
 	move	#$2500,sr

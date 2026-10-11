@@ -184,3 +184,39 @@ TXS_ADDX equ $FB		;-5: add signed byte to printx
 TXS_ADDY equ $FA		;-6: add signed byte to printy
 TXS_FONT equ $F9		;-7: char set
 TXS_ALL equ $F8		;-8: attribute, map, x, y
+
+;game sound effect numbers (sfx / song argument; 92 / 93 SFX names). 95 maps them through SfxTable
+SFX_SIREN equ $0
+SFX_BEEP1 equ $1
+SFX_BEEP2 equ $2
+SFX_WHISTLE equ $3
+SFX_HORN equ $4
+SFX_SHOTWIFF equ $5
+SFX_STDEF equ $6
+SFX_PUCKGET equ $7
+SFX_OOOH equ $8
+SFX_HITHIGH equ $9
+SFX_HITLOW equ $A
+SFX_CROWDCHEER equ $B
+SFX_CROWDBOO equ $C
+SFX_0D equ $D
+SFX_0E equ $E
+SFX_HOMEWIN equ $F		;home team won
+SFX_PASS equ $10		;4 variants, +0-3
+SFX_SHOTBH equ $14		;+0-3
+SFX_SHOTFH equ $18		;+0-3
+SFX_CHECK equ $1C		;+0-3
+SFX_PLAYERWALL equ $20
+SFX_21 equ $21
+SFX_22 equ $22
+SFX_23 equ $23
+SFX_PUCKBODY equ $24
+SFX_PUCKPOST equ $25
+SFX_26 equ $26
+SFX_27 equ $27
+SFX_PUCKWALL equ $28		;+0-3
+SFX_PUCKICE equ $2C		;+0-3
+;94 song numbers
+SONG_TITLE equ $78
+SONG_EOG equ $79
+SONG_SCOUTING equ $7A

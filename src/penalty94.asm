@@ -495,7 +495,7 @@ Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot fro
 	clr.w	(Pencntdwn).w
 	bset	#gmpen,(gmode).w	;gmpen
 	jsr	(play_new_song).l	;94 only
-	move.w	#3,-(sp)	;whistle (92 SFXwhistle = 10)
+	move.w	#SFX_WHISTLE,-(sp)	;whistle (92 SFXwhistle = 10)
 	bsr.w	sfx
 	move.w	#$A,d0	;whistle (92 PenWhistle = $26)
 	bra.w	SetPA
@@ -1853,7 +1853,7 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	jsr	(SetupPauseScreen).w	;pause menu screen
 	jsr	(DrawMenuScreen).w	;93 DrawMenuScreen
 	move.w	#$18,(palcount).w
-	move.w	#$79,-(sp)	;song $79 (93 $36)
+	move.w	#SONG_EOG,-(sp)	;song $79 (93 $36)
 	bsr.w	song
 	movem.l	(sp),d0-d7/a0-a6
 	move.w	#4,8(a0)	;gsper: OT

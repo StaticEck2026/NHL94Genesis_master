@@ -42,7 +42,7 @@ VBlank	;93 name; 93 IDA VBlank_org. Main vblank code for game play (vbint target
 	bgt.w	.c
 	cmpi.w	#$3C,(gameclock).w	;60
 	blt.w	.c
-	move.w	#2,-(sp)	;SFXbeep2, played when gameclock reaches 60
+	move.w	#SFX_BEEP2,-(sp)	;SFXbeep2, played when gameclock reaches 60
 	bsr.w	sfx
 .c
 	addq.w	#1,(vcount).w	;92 Vcount

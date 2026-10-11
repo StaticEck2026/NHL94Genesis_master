@@ -818,7 +818,7 @@ DisplayPeriodOver	;93 name. End of game Stars of the Game box. Called from Updat
 .1
 	sub.w	(AwGoals).w,d0
 	ble.w	.nosong
-	move.w	#$F,-(sp)	;song $F: home team won
+	move.w	#SFX_HOMEWIN,-(sp)	;song $F: home team won
 	jsr	(song).l
 .nosong
 	movem.l	(sp)+,d0-d5/a0-a4
