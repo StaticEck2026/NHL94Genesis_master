@@ -170,7 +170,7 @@ MakeSRAMChecksum	;Read the whole save RAM to M68K_RAM, put the sum of bytes 0-$1
 	move.l	#$1FFE,d0
 	bsr.s	WriteSRAM
 	rts
-ReadSRAM	;move into a0 location and increment: copy d1 save RAM bytes from byte d0 (the odd bytes + d0 * 2) to (a0)+. Called from InitSaveRAM, MakeSRAMChecksum and the save code
+ReadSRAM	;Copy d1 save RAM bytes from byte d0 (the odd bytes + d0 * 2) to (a0)+. Called from InitSaveRAM, MakeSRAMChecksum and the save code
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.l	#$200000,a1
 	add.l	d0,d0

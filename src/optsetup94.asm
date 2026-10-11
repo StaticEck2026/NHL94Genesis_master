@@ -19,7 +19,7 @@
 ;	5 C pressed, 6 / 7 home / visitors logo shown. Pad bits: ubut 0, dbut 1, lbut 2, rbut 3, cbut 5, sbut 7.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $BF map 1 + priority).
 
-GameSetUp	;game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
+GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
 	;right change the option (ChangeOption) and redraw (FixModeOptions), start begins the game (SetupStart), and $5460 frames without a
 	;press start a demo (SetupDemo).
 	jsr	(ReadLineData).l
@@ -243,7 +243,7 @@ j_NewPO	;New playoffs: jmp NewPO. Called from GameSetUp and ChangeOption
 	jmp	NewPO
 GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs. Called from GameSetUp
 	jmp	ContinuePlayoffs
-MoveMenuFrame	;move the menu frame by d0 (+2 / -2 lines). Shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
+MoveMenuFrame	;Move the menu frame by d0 (+2 / -2 lines). Shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
 	;(0-3), setupprevline = the one before (sflags5 bit 2 set on a scroll; FixModeOptions reprints the names when they differ). Continue playoffs
 	;skips lines 1-3, new playoffs line 3 (Team 2). The old frame is erased by redrawing the SetupMenuMap background under it. Called from GameSetUp
 	move.w	d7,d3
@@ -365,7 +365,7 @@ SetFrameRectUnused	;An unused copy of SetFrameRect without its printz that uses 
 	bne.w	rtsSetup
 	moveq	#5,d1
 	rts
-SetFrameRect	;setrect: frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs.
+SetFrameRect	;Frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs.
 	;MoveMenuFrame
 	jsr	(printz).l
 	String	-TXMAP1,$10,$E	;(and dropped a word)
@@ -560,7 +560,7 @@ ChangeOption	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its ran
 	cmp.w	#4,d7
 	beq.w	j_NewPO
 	rts
-WrapOption	;iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from ChangeOption
+WrapOption	;d3 + d2, wrapped into d5 ... d4-1. Called from ChangeOption
 	add.w	d2,d3
 	cmp.w	d5,d3
 	bge.w	.0
@@ -571,7 +571,7 @@ WrapOption	;iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from ChangeOption
 	blt.w	rtsSetup
 	move.w	d5,d3
 	rts
-PrintOptions	;ps: limit each option (ChangeOption with d2 = 0) and print the lines shown (PrintOptionValue), the scroll marks (PrintScrollMarks)
+PrintOptions	;Limit each option (ChangeOption with d2 = 0) and print the lines shown (PrintOptionValue), the scroll marks (PrintScrollMarks)
 	;the team bitmaps (DrawMatchupBitmaps) and, unless a player card is up, reset the card timer (ResetCardTimer). Called from FixModeOptions
 	move.w	d7,d6
 	moveq	#-2,d7
@@ -655,7 +655,7 @@ PrintScrollMarks	;Print the scroll marks at x 2: '}' at row $19 when more lines 
 ScrollUpTxt	String	'{'	;Scroll marks for PrintScrollMarks
 ScrollDownTxt	String	'}'
 ScrollClearTxt	String	' '
-PrintOptTeamName	;psdtp: print team name d3 of option d7 (TeamList city; 'New York Islanders' / 'New York Rangers' for teams $D / $E).
+PrintOptTeamName	;Print team name d3 of option d7 (TeamList city; 'New York Islanders' / 'New York Rangers' for teams $D / $E).
 	;PrintOptionValue
 	move.w	(printx).w,-(sp)
 	movea.l	#BlankValueTxt,a1
@@ -941,7 +941,7 @@ ReadSetupPads	;wait up to $5460 frames (6 minutes) for a press on any pad (4 wit
 	dbf	d6,.loop
 .x
 	rts
-SetupDemo	;demo: no press for $5460 frames. Clear demoflag, seed RNGseed, Regular Season, Demo, line changes On
+SetupDemo	;Demo after no press for $5460 frames. Clear demoflag, seed RNGseed, Regular Season, Demo, line changes On
 	;penalties On. Falls into SetupStart. Branched to from GameSetUp
 	clr.w	(demoflag).w
 	move.w	(VDP_CNTR).l,(seed).w
@@ -950,7 +950,7 @@ SetupDemo	;demo: no press for $5460 frames. Clear demoflag, seed RNGseed, Regula
 	clr.w	(OptNOP).w	;Demo
 	clr.w	(OptLine).w
 	move.w	#1,(OptPen).w	;On
-SetupStart	;ex: start. Copy Goalies to both teams, set pojoy, seed RNGseed, and keep OptLine / OptPlayMode
+SetupStart	;Start pressed: Copy Goalies to both teams, set pojoy, seed RNGseed, and keep OptLine / OptPlayMode
 	;in TmpOptLine2 / TempOptPlayMode: Auto line changes play as On with sflags7 bit 4, Shootout as Regular Season with gmode2 bit 0
 	;(ClearShootout). Then jmp MakeTree. Branched to from GameSetUp
 	move.w	(OptGoalie).w,-(sp)
@@ -985,7 +985,7 @@ CheckNOPUnused	;unreferenced. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no
 	cmpi.w	#$A,(OptNOP).w
 .x
 	rts
-LoadSetupTiles	;and code. load the TeamBitmaps+8 tiles from char 2, then again remapped
+LoadSetupTiles	;Load the TeamBitmaps+8 tiles from char 2, then again remapped
 	;teambitmapchars.
 	;Called
 	;from setoptions
