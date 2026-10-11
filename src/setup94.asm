@@ -1,7 +1,7 @@
 ;	setupice, setupice_highlight, setupIceRinkMap, setupEASNmap, the tile
 ;	reloads (ReloadEnergyBarTiles ... ReloadFaceOffMap), setupTeamBlocksMap,
 ;	CopyTeamBlockMapData, defaultsprites, defaultsprites2, SprSort,
-;	resetplstuff, clearTeamStats, setteams, InitTeamSructure,
+;	resetplstuff, clearTeamStats, setteams, InitTeamStructure,
 ;	setplayercolors, PeriodOver, IntermissionStart, GameOver, ExitToOpening,
 ;	Opening, Opening2, PlayoffScreen and its helpers, PlayoffScreenText, then
 ;	the text player (StartScoutText, ScoutTextPlayer, ScoutTextNextLine) used
@@ -657,19 +657,19 @@ clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 byt
 	move.w	(sp)+,(tmstruct+tmgoalie).w
 	st	(tmstruct+tmpdst+$34).w
 	st	(AwShots+tmpdst+$34).w
-setteams	;Use hometeam/visteam to set team structures (InitTeamSructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps
+setteams	;Use hometeam/visteam to set team structures (InitTeamStructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps
 	movem.l	d0/a0-a2,-(sp)
 	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(HomeTeam).w,d0
 	move.w	#(SortCords-M68K_RAM),tmsort(a2)
-	bsr.w	InitTeamSructure
+	bsr.w	InitTeamStructure
 	movea.w	#(AwShots-M68K_RAM),a2
 	move.w	(VisTeam).w,d0
 	move.w	#(SortCords-M68K_RAM)+(6*SCstruct),tmsort(a2)
-	bsr.w	InitTeamSructure
+	bsr.w	InitTeamStructure
 	movem.l	(sp)+,d0/a0-a2
 	rts
-InitTeamSructure	;Set up team struct a2 for team d0: store the team number at $28, the team data address
+InitTeamStructure	;Set up team struct a2 for team d0: store the team number at $28, the team data address
 	;at $1E (tmdata), and copy the line sets to $16A (two layouts by OptLine)
 	move.w	d0,Xvel(a2)
 	movea.w	#$30E,a0	;TeamList
@@ -754,18 +754,18 @@ IntermissionStart	;reset the clock, song $79, ticker scores, playoff stats at th
 	bsr.w	UpdateScores
 	cmpi.w	#4,(gsp).w
 	bne.w	.1
-	bsr.w	DisplayTeamStatsForPlayoffs
+	bsr.w	AddPlayoffTeamStats
 .1
 	bsr.w	Intermission
 	cmpi.w	#4,(gsp).w
 	beq.w	GameOver
 	jmp	(StartPer).w
-GameOver	;EncodePW (save the password), then in playoff mode DisplayTeamStats (the playoff stats) and the playoff screen. Falls into ExitToOpening
+GameOver	;EncodePW (save the password), then in playoff mode PlayoffStatsScreen (the playoff stats) and the playoff screen. Falls into ExitToOpening
 	bsr.w	EncodePW
 	tst.w	(OptPlayMode).w
 	beq.w	.po
 	bclr	#sfpj,(sflags).w
-	jsr	(DisplayTeamStats).l
+	jsr	(PlayoffStatsScreen).l
 .po
 	bsr.w	PlayoffScreen
 ExitToOpening	;Song $78, then restart at Opening2. Also jumped to from demoread and NextShooter
@@ -796,7 +796,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	;scrolls the tree a page ($70 pixels) at a time. Returns when start is pressed (PlayoffScreenExit)
 	tst.w	(OptPlayMode).w
 	beq.w	rtss2
-	move.l	#PlayoffScreenDataTable,(vbint).l
+	move.l	#VBlank_Playoff,(vbint).l
 	bclr	#df32c,(disflags).w
 	move.w	#0,(VSCRLPM).w
 	move.w	#$BC00,(VSPRITES).w
@@ -879,7 +879,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.b	(a0)+,(printx+1).w
 	clr.w	d0
 	move.b	(a0)+,d0
-	bsr.w	DrawPlayoffBracket
+	bsr.w	DrawTreeArrow
 	dbf	d4,.top2
 	bsr.w	printz
 	String	-(TXPAL1+TXMAP1),0,0
@@ -892,7 +892,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 .top3
 	move.b	(a0)+,(printx+1).w
 	move.b	(a0)+,(printy+1).w
-	bsr.w	FormatScore
+	bsr.w	PrintSeriesScore
 	adda.w	#$10,a2
 	dbf	d4,.top3
 .noscr
@@ -985,7 +985,7 @@ PlayoffScreen_waitvsync	;Each time palcount runs out, eor the color word at palf
 	beq.s	.wait
 	move.w	d0,(oldvcount).w
 	rts
-FormatScore	;Print best of 7 wins "t-b" for game struct a2 at printx/printy
+PrintSeriesScore	;Print best of 7 wins "t-b" for game struct a2 at printx/printy
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	#6,(a1)+
 	move.w	4(a2),d0
@@ -998,7 +998,7 @@ FormatScore	;Print best of 7 wins "t-b" for game struct a2 at printx/printy
 	clr.b	(a1)+
 	movea.w	#(mesarea-M68K_RAM),a1
 	bra.w	print
-DrawPlayoffBracket	;Draw tree arrow d0 from the arrows map (Arrowsmap) at printx/printy
+DrawTreeArrow	;Draw tree arrow d0 from the arrows map (Arrowsmap) at printx/printy
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.l	#Arrowsmap,a0
 	movea.l	a0,a1
@@ -1035,7 +1035,7 @@ DrawTeamBlocks	;Draw team block d1 (team*2) from the TeamBlocks map (Teamblocksm
 	bsr.w	dobitmap
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-PlayoffScreenDataTable	;the PlayoffScreen vblank handler (vbint): dma the sprite table, write
+VBlank_Playoff	;the PlayoffScreen vblank handler (vbint): dma the sprite table, write
 	;$FEA0+DispAttribCtr to the hscroll, cramfade. Always vcount+1, p_music_vblank, rte
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w

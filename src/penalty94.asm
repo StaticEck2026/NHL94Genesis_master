@@ -1,7 +1,7 @@
 ;	AddPenalty, AddPenalty2, PenaltyManager, chkprogress, PenShotChk and
 ;	getBAplayerInfo (penalty shot on a breakaway), InProgress, coinsearch,
 ;	checkfornewpen, Stop4Pen, limitfo, UpdatePA, SetPA, SetPA2, PushRef,
-;	prefmes, PrintPenaltyMessagesString, PenGoalStuff, ClearPenaltyBuffer,
+;	prefmes, ClearPenaltyMessage, PenGoalStuff, ClearPenaltyBuffer,
 ;	updatepentime, ProcessPenaltyList, RemovePlayerFromList, chkatop,
 ;	releasepl, GetLowestPen, updatepwrplay, ClrHor and SetHor.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
@@ -528,7 +528,7 @@ limitfo	;limit face off to 5-20 feet from walls of rink. Checks every player in 
 .1
 	move.w	d0,(fox).w
 	rts
-UpdatePA	;animate ref in ref window. Runs DisplayPeriodOver for game over, and the horizontal penalty message line is reprinted when penmsgtimer runs out
+UpdatePA	;animate ref in ref window. Runs ShowThreeStars for game over, and the horizontal penalty message line is reprinted when penmsgtimer runs out
 	tst.w	(RefCnt).w
 	bmi.w	rtss2
 	sub.w	d7,(RefCnt).w
@@ -537,12 +537,12 @@ UpdatePA	;animate ref in ref window. Runs DisplayPeriodOver for game over, and t
 .0
 	cmpi.w	#4,(RefPen).l	;game over (92 used 4)
 	bne.w	.1
-	bsr.w	DisplayPeriodOver
+	bsr.w	ShowThreeStars
 .1
 	sub.w	d7,(penmsgtimer).w
 	bpl.w	rtss2
 	move.w	#$7FFF,(penmsgtimer).w
-	bsr.w	PrintPenaltyMessagesString
+	bsr.w	ClearPenaltyMessage
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$11,$B
 	bsr.w	GetPlayerName
@@ -551,7 +551,7 @@ UpdatePA	;animate ref in ref window. Runs DisplayPeriodOver for game over, and t
 	sub.w	d0,(printx).w	;center it
 	bra.w	print
 SetPA	;start ref animation. d0 = animation (penalty number). Animations from $2E up are ignored, and ShootoutWonBy is called when gmode2 bits 0
-	;and 3 are set. Goal calls DisplayPlayerAttributeMenu. Falls into SetPA2
+	;and 3 are set. Goal calls ShowGoalBox. Falls into SetPA2
 	move.w	d0,(RefPen).w
 	cmp.w	#$2E,d0	;not on the penalty list
 	blt.w	.1
@@ -561,7 +561,7 @@ SetPA	;start ref animation. d0 = animation (penalty number). Animations from $2E
 	bsr.w	prefmes
 	cmp.w	#$E,d0	;goal (92 used 6)
 	bne.w	.2
-	bsr.w	DisplayPlayerAttributeMenu
+	bsr.w	ShowGoalBox
 .2
 	btst	#0,(gmode2).w
 	beq.w	.0
@@ -690,7 +690,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 	bsr.w	print
 	bra.w	.ex
 .hor
-	bsr.w	PrintPenaltyMessagesString	;clear the line first
+	bsr.w	ClearPenaltyMessage	;clear the line first
 	tst.w	d0
 	bmi.w	.ex
 	bsr.w	printz
@@ -705,7 +705,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 .ex
 	movem.l	(sp)+,d0-d2/a1
 	rts
-PrintPenaltyMessagesString	;Blank the horizontal mode penalty message line (22 spaces at x 5, y $B). Called from UpdatePA and prefmes
+ClearPenaltyMessage	;Blank the horizontal mode penalty message line (22 spaces at x 5, y $B). Called from UpdatePA and prefmes
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),5,$B,'                      ',0	;22 spaces
 	rts

@@ -242,7 +242,7 @@ SkipNameNumber	;Unreferenced. A1 = the FormatPlayerNameWithAttrib String without
 	String	' . '
 PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	;(TeamLogoBitmaps, TeamLogoPalettes palettes), then the goals (matchup 0) or shots of each team by period ($342 / $34A of the team struct; OT when
-	;sflags7 bit 1) and the total. Left / right switch, start exits (ExitAttributeScreen2)
+	;sflags7 bit 1) and the total. Left / right switch, start exits (ExitStatsScreen)
 	movem.l	d0-d7/a0-a6,-(sp)
 	clr.w	(matchup).w
 	moveq	#0,d0
@@ -356,7 +356,7 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	bra.s	.loop2
 .4
 	movem.l	(sp)+,d0-d7/a0-a6
-	jmp	(ExitAttributeScreen2).l
+	jmp	(ExitStatsScreen).l
 .5
 	tst.w	(matchup).w
 	beq.w	.6
@@ -430,7 +430,7 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
 GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' totals (DisplayTeamStatsScreen). There are more rows than the screen:
-	;up / down scroll them (matchupvis the most, $70 or $30 without penalties, OptPen), start exits (ExitAttributeScreen2)
+	;up / down scroll them (matchupvis the most, $70 or $30 without penalties, OptPen), start exits (ExitStatsScreen)
 	moveq	#9,d0
 	moveq	#$1A,d1
 	jsr	(SetupScreen).l
@@ -461,7 +461,7 @@ GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' tota
 	jsr	(getpzjoy).l
 	btst	#7,d3
 	beq.w	.1
-	jmp	(ExitAttributeScreen2).l
+	jmp	(ExitStatsScreen).l
 .1
 	jsr	(nodiag).l
 	move.w	#$FFFE,d0

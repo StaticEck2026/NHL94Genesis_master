@@ -95,7 +95,7 @@ RecordHoldersScreen	;"Record Holders" menu item (menu lists): the save RAM recor
 	jsr	(ProcessInputWithRepeat).l
 	btst	#7,d3
 	beq.w	.1
-	jmp	ExitAttributeScreen2
+	jmp	ExitStatsScreen
 .1
 	tst.w	(TempWord1).w
 .2

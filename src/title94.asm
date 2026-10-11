@@ -66,7 +66,7 @@ ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer; sflags bit 4 
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
 	rts
-WriteLineData	;Write databuffer back to save RAM $1EF6 (WriteSRAM, MakeSRAMChecksum); as ReadLineData after. Called from EncodePW and EncodePlayerAttributes
+WriteLineData	;Write databuffer back to save RAM $1EF6 (WriteSRAM, MakeSRAMChecksum); as ReadLineData after. Called from EncodePW and EncodeTeamLines
 	movem.l	d0-d1/a0,-(sp)
 	move.l	#$100,d1
 	move.l	#$1EF6,d0
@@ -360,13 +360,13 @@ TeamGfxList	;LoadHomeTeamGfx: one address per team (TeamList order) in ArenaGfxB
 	dc.l	ArenaGfxBank+$6D4A,ArenaGfxBank+$7054,ArenaGfxBank+$735E,ArenaGfxBank+$7668
 	dc.l	ArenaGfxBank+$7972,ArenaGfxBank+$7C7C,ArenaGfxBank+$7F86,ArenaGfxBank+$8290
 	dc.l	ArenaGfxBank+$859A,ArenaGfxBank+$88A4,ArenaGfxBank+$8EB8,ArenaGfxBank+$8EB8
-PrintPlayerAssists	;Print " (n)": byte $CE + d0 of team a2, then the next row at x $E. Called from DisplayPlayerAttributeMenu
+PrintPlayerAssists	;Print " (n)": byte $CE + d0 of team a2, then the next row at x $E. Called from ShowGoalBox
 	movem.l	d0/a2,-(sp)
 	jsr	(printz).l
 	String	' ('
 	adda.w	#$CE,a2
 	bra.w	PrintParenNumber
-PrintPlayerGoals	;As PrintPlayerAssists with byte $B4 + d0. Called from DisplayPlayerAttributeMenu
+PrintPlayerGoals	;As PrintPlayerAssists with byte $B4 + d0. Called from ShowGoalBox
 	movem.l	d0/a2,-(sp)
 	jsr	(printz).l
 	String	' ('
@@ -474,7 +474,7 @@ PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl).
 	add.w	d0,(a3)
 .x
 	rts
-GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8 (ReadCrowdRecord; 0 counts as $50). Called from DisplayGameStats
+GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8 (ReadCrowdRecord; 0 counts as $50). Called from PrintCrowdMeter
 	movem.l	d1-d7/a0-a6,-(sp)
 	move.w	#$1B,d1
 	ext.l	d1

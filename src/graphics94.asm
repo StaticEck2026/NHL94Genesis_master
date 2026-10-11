@@ -37,7 +37,7 @@ FaceOffMap		;: puckfaceoff2
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.map.jim
 	even
 ;FaceOffMap+8: the tiles (puckfaceoff2, ReloadFaceOffMap)
-Rinktilelist		;the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, DisplayPeriodOver, crash)
+Rinktilelist		;the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, ShowThreeStars, crash)
 	incbin	..\Extracted\NHL94\Graphics\IceRink94.map.jim
 	even
 Rinktiles	equ	Rinktilelist+8	;the rink tiles (setupice, ClrHor)
@@ -98,7 +98,7 @@ EASNmap		;the EASN logo (EASNLogo)
 	incbin	..\Extracted\NHL94\Graphics\EASN.map.jim
 	even
 ;EASNmap+8: the tiles (setupEASNmap)
-Arrowsmap		;same size: the playoff tree arrows (DrawPlayoffBracket)
+Arrowsmap		;same size: the playoff tree arrows (DrawTreeArrow)
 	incbin	..\Extracted\NHL94\Graphics\Arrows.map.jim
 	even
 ;Arrowsmap+8: the tiles (PlayoffScreen)

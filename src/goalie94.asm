@@ -164,7 +164,7 @@ SetCameraTop	;Unreferenced. Sflags bit 6, xc1 = 0, yc1 = $160
 	move.w	#$160,(yc1).w
 	rts
 StartArenaAnim	;Start arena animation d0 (ArenaAnims): arenaanim = d0, RunArenaAnim loads it. Called from FallDown (7)
-	;DisplayPlayerAttributeMenu (0 on a home hat trick) and puckfaceoff2 (the one SetFaceoffAnim set)
+	;ShowGoalBox (0 on a home hat trick) and puckfaceoff2 (the one SetFaceoffAnim set)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d0,(arenaanim).w
 	move.l	#0,(arenaframelist).w

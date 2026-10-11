@@ -148,8 +148,8 @@ ShootersLoop	;Shootout shooters: the input loop
 	btst	#5,d1
 	bne.w	ShooterSelectList
 	bra.s	ShootersLoop
-ShootersExit	;Leave (ExitAttributeScreen2)
-	jmp	ExitAttributeScreen2
+ShootersExit	;Leave (ExitStatsScreen)
+	jmp	ExitStatsScreen
 ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	move.w	#$C000,d7
 	movea.l	#homeshooters,a0

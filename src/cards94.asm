@@ -889,7 +889,7 @@ WritePlayerRecord	;Write the 4 byte player record
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
 ReadCrowdRecord	;Read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
-	;LoadCrowdRec and DisplayGameStats
+	;LoadCrowdRec and PrintCrowdMeter
 	bclr	#6,(sflags6).w
 CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from ReadCrowdRecord and WriteCrowdRecord
 	movem.l	d0-d1/a0-a1,-(sp)
@@ -1249,7 +1249,7 @@ AppendUserName	;Append user name d2 (12 bytes of the name log at namelog, spaces
 NoNameTxt	dc.b	0	;AppendUserName data
 	dc.b	2
 PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the player card screens
-	;(DrawPlayerCard), A / C to page, start exits (ExitAttributeScreen2)
+	;(DrawPlayerCard), A / C to page, start exits (ExitStatsScreen)
 	tst.w	(ValidSRAM).w
 	bpl.w	.0
 	rts
@@ -1394,7 +1394,7 @@ PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the play
 	bra.w	.loop
 .10
 	movem.l	(sp)+,d0-d7/a0-a6
-	jmp	ExitAttributeScreen2
+	jmp	ExitStatsScreen
 WrapCardIndex	;Wrap the card index (a0) into 0 ... cardcount - 1
 	move.w	d0,-(sp)
 	move.w	(cardcount).w,d0

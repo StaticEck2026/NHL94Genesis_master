@@ -17,7 +17,7 @@
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddFramer = $11F12		;bsr.w / Bcc.w.
-DisplayTeamStatsForPlayoffs = $182A2		;bsr.w / Bcc.w
+AddPlayoffTeamStats = $182A2		;bsr.w / Bcc.w
 AddSmallFont = $11F04		;bsr.w / Bcc.w.
 AddTeamBlock = $11F20		;bsr.w / Bcc.w.
 AdvanceStringPtr = $13510		;bsr.w / Bcc.w
@@ -58,7 +58,7 @@ rtss2 = $15464			;bsr.w / Bcc.w. (an rts)
 setVram = $11594			;bsr.w / Bcc.w
 song = $11156			;bsr.w / Bcc.w
 EncodePW = $180FC		;bsr.w / Bcc.w
-DisplayTeamStats = $9428			;jsr / jmp (x).l
+PlayoffStatsScreen = $9428			;jsr / jmp (x).l
 NextHomeHotPlayer = $F7144		;jsr / jmp (x).l
 NextAwayHotPlayer = $F7172		;jsr / jmp (x).l
 NextHomeColdPlayer = $F727C		;jsr / jmp (x).l
