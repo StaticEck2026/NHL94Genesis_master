@@ -1093,11 +1093,11 @@ PrintTeamNameAndScore	;Print the team name of team a2 at printx/printy, then its
 	moveq	#2,d1
 	bsr.w	PushNumberWidth
 	bra.w	print
-PrintTeamLogoAndScore	;Draw the team logo map (PrintTeamData, d0 = offset) 5 columns left of printx
+PrintTeamLogoAndScore	;Draw the team logo map (PutTeamBlock, d0 = offset) 5 columns left of printx
 	;then the score of team a2 in big font, centered 2 rows lower; a 2 digit score is moved one more left. Called twice from printscores1
 	move.w	(printx).w,-(sp)
 	subq.w	#5,(printx).w
-	jsr	(PrintTeamData).l
+	jsr	(PutTeamBlock).l
 	move.w	(sp)+,(printx).w
 	addq.w	#2,(printy).w
 	move.w	tmscore(a2),d0	;tmscore

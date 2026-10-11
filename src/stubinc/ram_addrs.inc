@@ -232,7 +232,7 @@ cont3team equ $FFFFC32C
 cont4team equ $FFFFC32E
 HomeTeam equ $FFFFC330
 VisTeam equ $FFFFC332
-TeamBlockMap equ $FFFFC334	;Map word buffer for CopyTeamBlockMapData and PrintTeamData
+TeamBlockMap equ $FFFFC334	;Map word buffer for CopyTeamBlockMapData and PutTeamBlock
 PenBuf equ $FFFFC3A4
 Pencntdwn equ $FFFFC3E6
 Penaltytimer equ $FFFFC3E8

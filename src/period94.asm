@@ -442,10 +442,10 @@ GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' tota
 	jsr	(printbigz).l
 	String	-(TXPRI+TXMAP3),6,4,'Game  Statistics',-(TXPRI+TXMAP3),7,1
 	move.w	#$2C,d0
-	jsr	(PrintTeamData).l
+	jsr	(PutTeamBlock).l
 	addq.w	#4,(printx).w
 	clr.w	d0
-	jsr	(PrintTeamData).l
+	jsr	(PutTeamBlock).l
 	clr.w	(DispAttribCtr).w
 	clr.w	(VertLineScrolling).w
 	clr.w	(PlayerScrollCtr).w
@@ -548,16 +548,16 @@ PrintStatScrollArrows	;GameStatisticsScreen scroll arrows (printz2): up ($7B) wh
 	String	CC_SetFont
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-DisplayTeamStatsScreen	;Team logos (PrintTeamData), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
-	;off, OptPen) centred, with the home value at x $22 and the visitors' at x 9 (FormatStatValue); SetStatScroll first
+DisplayTeamStatsScreen	;Team logos (PutTeamBlock), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
+	;off, OptPen) centred, with the home value at x $22 and the visitors' at x 9 (PrintStatValue); SetStatScroll first
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,7
 	move.w	#$2C,d0
-	jsr	(PrintTeamData).l
+	jsr	(PutTeamBlock).l
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),$1A,7
 	moveq	#0,d0
-	jsr	(PrintTeamData).l
+	jsr	(PutTeamBlock).l
 	bsr.w	SetStatScroll
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
@@ -577,15 +577,15 @@ DisplayTeamStatsScreen	;Team logos (PrintTeamData), then each TeamStatTextTbl ro
 	movea.l	a1,a0
 	move.w	#$22,(printx).w
 	movea.w	#(tmstruct-M68K_RAM),a2
-	bsr.w	FormatStatValue
+	bsr.w	PrintStatValue
 	move.w	#9,(printx).w
 	lea	$364(a2),a2
-	bsr.w	FormatStatValue
+	bsr.w	PrintStatValue
 	lea	4(a0),a1
 	addq.w	#2,(printy).w
 	dbf	d6,.loop
 	rts
-FormatStatValue	;Print TeamStatTextTbl entry a0 for team a2 centred at printx: the value (offsets $A and $352 are times
+PrintStatValue	;Print TeamStatTextTbl entry a0 for team a2 centred at printx: the value (offsets $A and $352 are times
 	;PushTime), "/second" if any, " (pct%)" for passing. Offset $FFFF is the shooting percentage (goals $C * 100 / shots 0), printed with a
 	;"%"
 	movea.w	#(mesarea-M68K_RAM),a3

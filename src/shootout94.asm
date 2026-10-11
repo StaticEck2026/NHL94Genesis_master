@@ -386,7 +386,7 @@ ShootersBackground	;Shootout shooters background and "Shootout" title
 	beq.w	.0
 	move.w	#$2C,d0
 .0
-	jmp	PrintTeamData
+	jmp	PutTeamBlock
 ClearShooterScreen	;Shootout shooters: erase the screen
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
