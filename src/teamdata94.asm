@@ -20,8 +20,8 @@ TeamList	;$30E. IDA: Team List Pointer Table Start. Team number = index (ANH 0 .
 	dc.l	LosAngeles	;10 LA
 	dc.l	Montreal	;11 MTL
 	dc.l	NewJersey	;12 NJ
-	dc.l	LongIsland	;13 NYI
-	dc.l	NewYork	;14 NYR
+	dc.l	NYIslanders	;13 NYI
+	dc.l	NYRangers	;14 NYR
 	dc.l	Ottawa	;15 OTW
 	dc.l	Philadelphia	;16 PHI
 	dc.l	Pittsburgh	;17 PIT
@@ -849,7 +849,7 @@ NewJersey	;NJ, $2740
 .ar	;arena. 94 only
 	String	'Byrne Meadowlands Arena'
 
-LongIsland	;NYI, $2A58
+NYIslanders	;NYI, $2A58
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -909,7 +909,7 @@ LongIsland	;NYI, $2A58
 .ar	;arena. 94 only
 	String	'Nassau Coliseum'
 
-NewYork	;NYR, $2D5C
+NYRangers	;NYR, $2D5C
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0

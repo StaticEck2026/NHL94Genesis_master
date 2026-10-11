@@ -1134,7 +1134,7 @@ DrawTeamLogo	;Draw the logo of team logoteam (TeamLogoBitmaps) at printx, y 6, 6
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 TeamLogoBitmaps	;Team logo bitmaps by team number (TeamList order); also used by hockey94_07 GetTeamLogo
-	dc.l	logoANA,logoBOS,logoBUF,logoCGY,logoCHI,logoDAL,logoDET,logoEDM
+	dc.l	logoANH,logoBOS,logoBUF,logoCGY,logoCHI,logoDAL,logoDET,logoEDM
 	dc.l	logoFLA,logoHFD,logoLA,logoMTL,logoNJ,logoNYI,logoNYR,logoOTW
 	dc.l	logoPHI,logoPIT,logoQUE,logoSJ,logoSTL,logoTB,logoTOR,logoVAN
 	dc.l	logoWSH,logoWPG,logoASE,logoASW

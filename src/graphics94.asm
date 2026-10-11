@@ -143,7 +143,7 @@ LogoBoxMap		;retail $BF702-$BF8CF (462 bytes). the logo box (DrawLogoBox, LogoBo
 	incbin	..\Extracted\NHL94\Graphics\GameSetupLogoBorder.map.jim
 	even
 ;LogoBoxMap+8: retail $BF70A. the tiles (setoptions, BuildCardPlayerList)
-logoANA		;retail $BF8D0-$BFD65 (1174 bytes). the ANA logo, team 0 in TeamLogoBitmaps (hockey94_08 DrawTeamLogo, hockey94_07 GetTeamLogo)
+logoANH		;retail $BF8D0-$BFD65 (1174 bytes). the ANH logo, team 0 in TeamLogoBitmaps (hockey94_08 DrawTeamLogo, hockey94_07 GetTeamLogo)
 	incbin	..\Extracted\NHL94\Graphics\logoANA.map.jim
 	even
 logoBOS		;retail $BFD66-$C00BB (854 bytes). the BOS logo, team 1 in TeamLogoBitmaps (hockey94_08 DrawTeamLogo, hockey94_07 GetTeamLogo)

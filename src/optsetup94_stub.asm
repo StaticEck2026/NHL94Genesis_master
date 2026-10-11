@@ -64,7 +64,7 @@ LogoBoxMap = $BF702		;#x at $F87A0
 PicturePalette = $C63F8		;#x at $F8962
 TeamLogoPalettes = $FF462		;#x at $F8692
 
-logoANA = $BF8D0		;dc.l x in TeamLogoBitmaps (graphics94)
+logoANH = $BF8D0		;dc.l x in TeamLogoBitmaps (graphics94)
 logoBOS = $BFD66		;dc.l x in TeamLogoBitmaps (graphics94)
 logoBUF = $C00BC		;dc.l x in TeamLogoBitmaps (graphics94)
 logoCGY = $C0412		;dc.l x in TeamLogoBitmaps (graphics94)

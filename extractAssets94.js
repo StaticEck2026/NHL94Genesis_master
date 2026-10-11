@@ -243,7 +243,7 @@ const assets = [
     { name: 'GameSetupBkgd1.map.jim', folder: 'NHL94/Graphics', start: 0x000BEFB8, end: 0x000BF542 }, // unk_BEFB8
     { name: 'GameSetupBkgd2.map.jim', folder: 'NHL94/Graphics', start: 0x000BF542, end: 0x000BF702 }, // unk_BF542
     { name: 'GameSetupLogoBorder.map.jim', folder: 'NHL94/Graphics', start: 0x000BF702, end: 0x000BF8D0 }, // unk_BF702
-    { name: 'logoANA.map.jim', folder: 'NHL94/Graphics', start: 0x000BF8D0, end: 0x000BFD66 }, // logoANA
+    { name: 'logoANA.map.jim', folder: 'NHL94/Graphics', start: 0x000BF8D0, end: 0x000BFD66 }, // logoANH
     { name: 'logoBOS.map.jim', folder: 'NHL94/Graphics', start: 0x000BFD66, end: 0x000C00BC }, // logoBOS
     { name: 'logoBUF.map.jim', folder: 'NHL94/Graphics', start: 0x000C00BC, end: 0x000C0412 }, // logoBUF
     { name: 'logoCGY.map.jim', folder: 'NHL94/Graphics', start: 0x000C0412, end: 0x000C08A8 }, // logoCGY
