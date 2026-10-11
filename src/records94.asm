@@ -693,7 +693,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	jsr	(print).l
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),4,$C,'Round '
-	move.w	(playoffround).w,d0
+	move.w	(shootoutround).w,d0
 	move.w	#2,d1
 	jsr	(PushNumberWidth).l
 	jsr	(print).l

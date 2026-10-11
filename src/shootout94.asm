@@ -5,7 +5,7 @@ ClearShootout	;Clear the player structs (SortCords) and the shootout state.
 	clr.w	(a0)+
 	dbf	d0,.loop
 	clr.w	(shootoutdelay).w
-	move.w	#1,(playoffround).w
+	move.w	#1,(shootoutround).w
 	bclr	#3,(gmode2).w
 	clr.w	(homeshootgoals).w
 	clr.w	(awayshootgoals).w
@@ -42,7 +42,7 @@ CountShootoutGoals	;Shootout: count the goals and end it when one team cannot ca
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#0,(shootoutteam+1).w
 	beq.w	.0
-	cmpi.w	#5,(playoffround).w
+	cmpi.w	#5,(shootoutround).w
 	blt.w	.0
 	move.w	(homeshootgoals).w,d0
 	cmp.w	(awayshootgoals).w,d0
@@ -58,7 +58,7 @@ CountShootoutGoals	;Shootout: count the goals and end it when one team cannot ca
 	blt.w	.1
 	clr.w	(homeshootnum).w
 .1
-	addq.w	#1,(playoffround).w
+	addq.w	#1,(shootoutround).w
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts

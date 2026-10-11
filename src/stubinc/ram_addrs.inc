@@ -396,10 +396,10 @@ winsort equ $FFFFD542	;Record Holders win row order (CalcWinPercents), read by P
 winpcts equ $FFFFD54A	;the win % byte of each of the 8 records (CalcWinPercents)
 winties equ $FFFFD552	;the ties word of each record (record bytes $C-$D)
 wingames equ $FFFFD562	;the games word of each record (record bytes $A-$B)
-shootoutstate equ $FFFFD572	;first of the 19 words ClearGameStats clears ($FFD572-$FFD597: shootout goals, playoffround, shooter lists ...)
+shootoutstate equ $FFFFD572	;first of the 19 words ClearGameStats clears ($FFD572-$FFD597: shootout goals, shootoutround, shooter lists ...)
 homeshootgoals equ $FFFFD574
 awayshootgoals equ $FFFFD576
-playoffround equ $FFFFD578
+shootoutround equ $FFFFD578
 homeshooters equ $FFFFD57A	;the home shootout shooter list (6 words, homeshootnum the index)
 ;$FFFFD585 is homeshootnum-1
 homeshootnum equ $FFFFD586
