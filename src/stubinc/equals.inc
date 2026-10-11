@@ -220,3 +220,34 @@ SFX_PUCKICE equ $2C		;+0-3
 SONG_TITLE equ $78
 SONG_EOG equ $79
 SONG_SCOUTING equ $7A
+
+
+; team numbers (TeamList order in teamdata): schedule, playoffseats and other team-indexed tables
+ANH equ 0
+BOS equ 1
+BUF equ 2
+CGY equ 3
+CHI equ 4
+DAL equ 5
+DET equ 6
+EDM equ 7
+FLA equ 8
+HFD equ 9
+LA equ 10
+MTL equ 11
+NJ equ 12
+NYI equ 13
+NYR equ 14
+OTW equ 15
+PHI equ 16
+PIT equ 17
+QUE equ 18
+SJ equ 19
+STL equ 20
+TB equ 21
+TOR equ 22
+VAN equ 23
+WSH equ 24
+WPG equ 25
+ASE equ 26
+ASW equ 27

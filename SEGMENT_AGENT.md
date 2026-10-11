@@ -383,3 +383,4 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 - Text codes: `stubinc/equals.inc` adds `TXMAP1-3`, `TXHF`, `TXVF`, `TXPAL1-3`, `TXPRI` for the print/printz/printbigz position byte (`String -(TXPRI+TXMAP1),x,y,...`) and `TXS_MAP` ... `TXS_ALL` ($FF-$F8) for printsmall/printz2 control codes (`String TXS_X,4,TXS_Y,2,...`). Inline Strings after jsr printz/printz2/printbigz use them; tables read by other routines keep raw bytes.
 - Sound: `stubinc/equals.inc` adds `SFX_*` game sound numbers (0-$2F, 92/93 names; +0-3 variants for pass/shot/check/puckwall/puckice) used at the sfx / song call sites.
   94 also has `SONG_TITLE` ($78), `SONG_EOG` ($79), `SONG_SCOUTING` ($7A).
+- Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
