@@ -253,17 +253,17 @@ PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" me
 	moveq	#$1C,d1
 	jsr	(SetupScreen).l
 	jsr	(printz).l
-	String	$BE,1,$B
+	String	-(TXPRI+TXMAP2),1,$B
 	move.w	#8,d0
 	move.w	#8,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$BE,1,$13
+	String	-(TXPRI+TXMAP2),1,$13
 	move.w	#8,d0
 	move.w	#8,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$9E,2,$C
+	String	-(TXPRI+TXPAL2+TXMAP2),2,$C
 	movea.l	#TeamLogoBitmaps,a0
 	move.w	(VisTeam).w,d0
 	asl.w	#2,d0
@@ -289,7 +289,7 @@ PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" me
 	move.l	(a0)+,(a1)+
 	dbf	d0,.loop
 	jsr	(printz).l
-	String	$8E,2,$14
+	String	-(TXPRI+TXPAL3+TXMAP2),2,$14
 	movea.l	#TeamLogoBitmaps,a0
 	move.w	(HomeTeam).w,d0
 	asl.w	#2,d0
@@ -309,12 +309,12 @@ PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" me
 	moveq	#4,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BD,4,1
+	String	-(TXPRI+TXMAP3),4,1
 	moveq	#$20,d0
 	moveq	#6,d1
 	jsr	(Framer).l
 	jsr	(printbigz).l
-	String	$BD,6,3,'  Period Stats  ',$BE,6,1
+	String	-(TXPRI+TXMAP3),6,3,'  Period Stats  ',-(TXPRI+TXMAP2),6,1
 	btst	#1,(sflags7).w
 	beq.w	.0
 	jsr	(printz).l
@@ -365,16 +365,16 @@ PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" me
 	tst.w	(matchup).w
 	beq.w	.6
 	jsr	(printz).l
-	String	$BE,$12,7,'Shots',$BE,$F,$1A,'[ For Goals'
+	String	-(TXPRI+TXMAP2),$12,7,'Shots',-(TXPRI+TXMAP2),$F,$1A,'[ For Goals'
 	rts
 .6
 	jsr	(printz).l
-	String	$BE,$12,7,'Goals',$BE,$F,$1A,'For Shots ]'
+	String	-(TXPRI+TXMAP2),$12,7,'Goals',-(TXPRI+TXMAP2),$F,$1A,'For Shots ]'
 	rts
 .7
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	movea.l	#AwShots,a2
 	move.w	#$E,(printy).w
 	bsr.w	.8
@@ -440,12 +440,12 @@ GameStatisticsScreen	;IDA left it as data; 93 name. "Game Statistics" menu item 
 	moveq	#$1A,d1
 	jsr	(SetupScreen).l
 	jsr	(printz).l
-	String	$BD,4,1
+	String	-(TXPRI+TXMAP3),4,1
 	moveq	#$20,d0
 	moveq	#6,d1
 	jsr	(Framer).l
 	jsr	(printbigz).l
-	String	$BD,6,4,'Game  Statistics',$BD,7,1
+	String	-(TXPRI+TXMAP3),6,4,'Game  Statistics',-(TXPRI+TXMAP3),7,1
 	move.w	#$2C,d0
 	jsr	(PrintTeamData).l
 	addq.w	#4,(printx).w
@@ -529,43 +529,43 @@ rtsStatScroll	;rts of StatScrollRow / StatScrollRowEnd
 PrintStatScrollArrows	;GameStatisticsScreen scroll arrows (printz2): up ($7B) when VertLineScrolling > 0, down ($7D) when it is below matchupvis
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz2).l
-	String	$F9,1
+	String	TXS_FONT,1
 	tst.w	(VertLineScrolling).w
 	beq.w	.0
 	jsr	(printz2).l
-	String	$F8,4,3,'&',8,$F9,1,'{'
+	String	TXS_ALL,4,3,'&',8,TXS_FONT,1,'{'
 	bra.w	.1
 .0
 	jsr	(printz2).l
-	String	$F8,4,3,'&',8,$F9,1,' '
+	String	TXS_ALL,4,3,'&',8,TXS_FONT,1,' '
 .1
 	move.w	(matchupvis).w,d0
 	cmp.w	(VertLineScrolling).w,d0
 	beq.w	.2
 	jsr	(printz2).l
-	String	$F8,4,3,'&',$1A,$F9,1,'}'
+	String	TXS_ALL,4,3,'&',$1A,TXS_FONT,1,'}'
 	bra.w	.3
 .2
 	jsr	(printz2).l
-	String	$F8,4,3,'&',$1A,$F9,1,' '
+	String	TXS_ALL,4,3,'&',$1A,TXS_FONT,1,' '
 .3
 	jsr	(printz2).l
-	String	$F9
+	String	TXS_FONT
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 DisplayTeamStatsScreen	;93 name. Team logos (PrintTeamData), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
 	;off, OptPen) centred, with the home value at x $22 and the visitors' at x 9 (FormatStatValue); SetStatScroll first
 	jsr	(printz).l
-	String	$BD,2,7
+	String	-(TXPRI+TXMAP3),2,7
 	move.w	#$2C,d0
 	jsr	(PrintTeamData).l
 	jsr	(printz).l
-	String	$BD,$1A,7
+	String	-(TXPRI+TXMAP3),$1A,7
 	moveq	#0,d0
 	jsr	(PrintTeamData).l
 	bsr.w	SetStatScroll
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	moveq	#$E,d6
 	lea	TeamStatTextTbl(pc),a1
 	tst.w	(OptPen).w

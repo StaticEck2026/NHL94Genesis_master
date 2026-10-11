@@ -3209,7 +3209,7 @@ puckfaceoff2
 	tst.w	(OptLine).w
 	bne.w	.setdroptime
 	bsr.w	printz2
-	String	$FA,$A,$FE,4		;$FBC2. IDA shows ori.b #$A,d6 and drops the $FE04 word
+	String	TXS_ADDY,$A,TXS_ATTR,4		;$FBC2. IDA shows ori.b #$A,d6 and drops the $FE04 word
 	moveq	#$C,d0
 	moveq	#3,d1
 	bsr.w	Framer
@@ -3220,7 +3220,7 @@ puckfaceoff2
 	exg	d0,d1
 .printline2
 	bsr.w	printz2
-	String	$FB,1,$FA,$FE		;$FBE8. IDA shows ori.b #1,d6 and drops the $FAFE word
+	String	TXS_ADDX,1,TXS_ADDY,$FE		;$FBE8. IDA shows ori.b #1,d6 and drops the $FAFE word
 	movea.l	#linelist,a1
 	bsr.w	PrintStringFromList
 	addq.w	#4,(printx).w
@@ -3353,7 +3353,7 @@ updatefaceoff
 .erase
 	bclr	#4,(disflags).w
 	bsr.w	printz
-	String	$BF,0,0,0		;$FDE6. IDA hid this and the next five instructions in ori.b / cmp.b
+	String	-(TXPRI+TXMAP1),0,0,0		;$FDE6. IDA hid this and the next five instructions in ori.b / cmp.b
 	move.w	(fodropx).w,d0
 	subi.w	#$2E,d0
 	asr.w	#3,d0

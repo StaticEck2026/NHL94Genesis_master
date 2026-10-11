@@ -20,7 +20,7 @@ DrawMenuScreen	;93 name. Call the draw routine, frame the menu box, print the it
 	movea.l	(menudraw).w,a0
 	jsr	(a0)
 	jsr	(printz2).l
-	String	$FE,4,$FC,$C	;IDA: ori.b
+	String	TXS_ATTR,4,TXS_Y,$C	;IDA: ori.b
 	bsr.w	SetMenuPrintX
 	moveq	#$16,d0	;22 wide
 	moveq	#6,d1	;6 high
@@ -125,11 +125,11 @@ UpdateMenuSelection	;93 name. Clamp the selection, scroll the 4 rows shown and p
 	move.w	(menuitem+2).w,d0
 	beq.w	.7
 	jsr	(printz2).l	;more items above
-	String	$FE,5,$FB,1,$FA,1,'{',$FA,$FF	;IDA: ori.b (and hid the rest)
+	String	TXS_ATTR,5,TXS_ADDX,1,TXS_ADDY,1,'{',TXS_ADDY,$FF	;IDA: ori.b (and hid the rest)
 .7
 	bsr.w	SetMenuPrintX
 	jsr	(printz2).l	;start of an item row
-	String	$FB,2,$FA,1	;IDA: ori.b
+	String	TXS_ADDX,2,TXS_ADDY,1	;IDA: ori.b
 	move.l	a1,-(sp)
 	movea.l	(menulist).w,a1
 	jsr	(printsmall).l
@@ -146,7 +146,7 @@ UpdateMenuSelection	;93 name. Clamp the selection, scroll the 4 rows shown and p
 	bmi.w	.x
 	bsr.w	SetMenuPrintX
 	jsr	(printz2).l	;more items below
-	String	$FE,5,$FB,1,'}'	;IDA: ori.b (and hid the rest)
+	String	TXS_ATTR,5,TXS_ADDX,1,'}'	;IDA: ori.b (and hid the rest)
 .x
 	rts
 PrintMenuItem	;94 only. Print menu item a1 and step a1 past it. An item whose text starts with 'x' is the goalie option: it prints Manual Goalie

@@ -473,7 +473,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	bne.w	.x
 	move.l	a1,-(sp)
 	jsr	(printz).l
-	String	$BE,$D,5		;IDA: ori.b / btst d2,d0
+	String	-(TXPRI+TXMAP2),$D,5		;IDA: ori.b / btst d2,d0
 	move.w	(gameclock).w,d0
 	ext.l	d0
 	divu.w	#$258,d0	;tens of minutes (600 seconds)
@@ -504,7 +504,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	jsr	(.digit).l
 	movea.l	(sp)+,a1
 	jsr	(printz).l
-	String	$BD,$D,5		;IDA: ori.b / btst d2,d0
+	String	-(TXPRI+TXMAP3),$D,5		;IDA: ori.b / btst d2,d0
 .x
 	rts
 .digit	;Print digit d0 from .digits

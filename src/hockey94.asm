@@ -483,7 +483,7 @@ SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
 	jsr	(setvideo).l
 	jsr	(KillCrowd).l
 	jsr	(printz2).l		;erase playfield 3
-	String	$FF,3,$FD,0,$FC,0	;IDA hid this in ori.b #3,a0
+	String	TXS_MAP,3,TXS_X,0,TXS_Y,0	;IDA hid this in ori.b #3,a0
 	moveq	#$20,d0			;32
 	moveq	#$1C,d1			;28
 	move.w	#$7FF,d2

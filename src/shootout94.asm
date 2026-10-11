@@ -86,12 +86,12 @@ InitShooters	;94 only. Shootout: the 6 starters of the home (shootoutteam 0) or 
 ShootoutWonBy	;94 only. Shootout: "SHOOTOUT WON BY" (printbig). Called from SetPA (penalty94_1)
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
-	String	$BF,1,$D
+	String	-(TXPRI+TXMAP1),1,$D
 	move.w	#6,d1
 	move.w	#$1E,d0
 	jsr	(Framer).l
 	jsr	(printbigz).l
-	String	$BF,2,$E,'SHOOTOUT WON BY'
+	String	-(TXPRI+TXMAP1),2,$E,'SHOOTOUT WON BY'
 	addq.w	#2,(printy).w
 	move.w	(HomeTeam).w,d1
 	move.w	(homeshootgoals).w,d0
@@ -116,7 +116,7 @@ ShootoutShooters	;Shootout shooters menu item (hockey94_11 menu lists): pick the
 	clr.w	(DispAttribCtr).w
 	clr.w	(PlayerScrollCtr).w
 	jsr	(printz2).l
-	String	$FF,2,$FD,0,$FC
+	String	TXS_MAP,2,TXS_X,0,TXS_Y
 	moveq	#$28,d0
 	moveq	#$1C,d1
 	move.w	#$7FF,d2
@@ -188,17 +188,17 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	dbf	d0,.loop
 	bsr.w	ClearShooterScreen
 	jsr	(printz2).l
-	String	$F8,0,3,1,0
+	String	TXS_ALL,0,3,1,0
 	move.w	#$12,d0
 	move.w	#3,d1
 	jsr	(Framer).l
 	jsr	(printz2).l
-	String	$FD,$15,$FC
+	String	TXS_X,$15,TXS_Y
 	move.w	#$12,d0	;IDA hid this
 	move.w	#3,d1	;IDA hid this
 	jsr	(Framer).l	;IDA hid this
 	jsr	(printz2).l	;IDA hid this
-	String	$F8,4,2,2,1,'{Select Player}'
+	String	TXS_ALL,4,2,2,1,'{Select Player}'
 	clr.w	d0
 	bra.w	.6
 .loop2
@@ -262,7 +262,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	bra.w	ShootersRedraw
 PrintShooterList	;94 only. Shootout shooters: the player list rows (getNameandAttrib)
 	jsr	(printz).l
-	String	$BE,$16,1
+	String	-(TXPRI+TXMAP2),$16,1
 .loop
 	movea.l	#PAttribOverall,a1
 	cmpi.w	#5,(TestList).w
@@ -302,7 +302,7 @@ PrintShooterList	;94 only. Shootout shooters: the player list rows (getNameandAt
 	move.w	#2,(printy).w
 .loop3
 	jsr	(printz2).l
-	String	$FE,4,$FD,5,$FA,1,'                      ',$FD,5
+	String	TXS_ATTR,4,TXS_X,5,TXS_ADDY,1,'                      ',TXS_X,5
 	cmp.w	(VertLineScrolling).w,d2
 	bne.w	.6
 	move.w	d7,(printa).w
@@ -363,7 +363,7 @@ ShootersBackground	;94 only. Shootout shooters background and "Shootout" title
 	bsr.w	ClearShooterScreen
 	movem.l	d0-d5/a0-a2,-(sp)
 	jsr	(printz).l
-	String	$FD,0,0
+	String	-TXMAP3,0,0
 	movea.l	#ScoutMap,a1	;IDA hid this
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2
@@ -376,12 +376,12 @@ ShootersBackground	;94 only. Shootout shooters background and "Shootout" title
 	jsr	(dobitmap).l
 	movem.l	(sp)+,d0-d5/a0-a2
 	jsr	(printz).l
-	String	$BE,7,1
+	String	-(TXPRI+TXMAP2),7,1
 	moveq	#$1A,d0
 	moveq	#6,d1
 	jsr	(Framer).l
 	jsr	(printbigz).l
-	String	$BE,$A,4,'  Shootout  ',$BE,$F,1
+	String	-(TXPRI+TXMAP2),$A,4,'  Shootout  ',-(TXPRI+TXMAP2),$F,1
 	clr.w	d0
 	cmpa.w	#$C6CE,a2
 	beq.w	.0
@@ -390,7 +390,7 @@ ShootersBackground	;94 only. Shootout shooters background and "Shootout" title
 	jmp	PrintTeamData
 ClearShooterScreen	;94 only. Shootout shooters: erase the screen
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	moveq	#$28,d0	;IDA hid this
 	moveq	#$A,d1
 	move.w	#$7FF,d2
@@ -401,33 +401,33 @@ ResetShooterScroll	;94 only. Shootout shooters: clear the list scroll words palf
 	rts
 PrintShooterSlots	;94 only. Shootout shooters: "Shooters" 1. 2. 3.
 	jsr	(printz2).l
-	String	$FF,2,$FD,0,$FC,$A
+	String	TXS_MAP,2,TXS_X,0,TXS_Y,$A
 	jsr	(printz2).l
-	String	$FE,4
+	String	TXS_ATTR,4
 	jsr	(printz2).l
-	String	$FD,7,$FC,$C,'Shooters'
+	String	TXS_X,7,TXS_Y,$C,'Shooters'
 .0
 	jsr	(printz2).l
-	String	$FD,3,$FC,$E,'1. '
+	String	TXS_X,3,TXS_Y,$E,'1. '
 	jsr	(printz2).l	;IDA hid this
-	String	$FD,3,$FC,$10,'2. '
+	String	TXS_X,3,TXS_Y,$10,'2. '
 	jsr	(printz2).l	;IDA hid this
-	String	$FD,3,$FC,$12,'3. '
+	String	TXS_X,3,TXS_Y,$12,'3. '
 	jsr	(printz2).l	;IDA hid this
-	String	$FD,3,$FC,$14,'4. '
+	String	TXS_X,3,TXS_Y,$14,'4. '
 	jsr	(printz2).l	;IDA hid this
-	String	$FD,3,$FC,$16,'5. '
+	String	TXS_X,3,TXS_Y,$16,'5. '
 	jsr	(printz2).l	;IDA hid this
-	String	$FD,$1A,$FC,$C,'Goalie'
+	String	TXS_X,$1A,TXS_Y,$C,'Goalie'
 	rts
 PrintShooterBox	;94 only. Shootout shooters: the selected player box (getname)
 	jsr	(printz2).l
-	String	$F8,4,2,8,7,$F9,1
+	String	TXS_ALL,4,2,8,7,TXS_FONT,1
 	moveq	#$18,d0
 	moveq	#3,d1
 	jsr	(Framer).l
 	jsr	(printz2).l
-	String	$FD,$15,$FC,8,$FE,6
+	String	TXS_X,$15,TXS_Y,8,TXS_ATTR,6
 	movea.l	#homeshooters,a1
 	cmpa.l	#HmShots,a2
 	beq.w	.0
@@ -447,7 +447,7 @@ PrintShooterNames	;94 only. Shootout shooters: the shooters' names (FormatPlayer
 	movem.l	d0-d7/a0-a6,-(sp)
 .0
 	jsr	(printz2).l
-	String	$FD,6,$FC,$E,$FE,6
+	String	TXS_X,6,TXS_Y,$E,TXS_ATTR,6
 	move.w	#0,d1
 	movea.l	#homeshooters,a0
 	cmpa.l	#HmShots,a2

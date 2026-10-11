@@ -94,7 +94,7 @@ chkprogress	;control progress of ref and game control thru penalty events. 94: w
 	bclr	#2,(sflags2).w	;sf2drec
 	bclr	#7,(gmode2).w
 	bsr.w	printz
-	String	$FF,3,2
+	String	-TXMAP1,3,2
 	moveq	#$1B,d0
 	moveq	#8,d1
 	btst	#0,(gmode2).w
@@ -550,7 +550,7 @@ UpdatePA	;animate ref in ref window. As 93: DisplayPeriodOver for game over, and
 	move.w	#$7FFF,(penmsgtimer).w
 	bsr.w	PrintPenaltyMessagesString
 	bsr.w	printz
-	String	$BF,$11,$B	;IDA: ori.b / btst d5,d0
+	String	-(TXPRI+TXMAP1),$11,$B	;IDA: ori.b / btst d5,d0
 	bsr.w	GetTempPlayerName	;93 GetPlayerName
 	move.w	(a1),d0
 	lsr.w	#1,d0
@@ -664,7 +664,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 	tst.w	d0
 	bpl.w	.noblank
 	bsr.w	printz
-	String	$BF,0,$A
+	String	-(TXPRI+TXMAP1),0,$A
 	moveq	#$D,d0
 	moveq	#3,d1
 	move.w	#$7FF,d2	;blank tile
@@ -672,7 +672,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 	bra.w	.ex
 .noblank
 	bsr.w	printz
-	String	$BF,5,$A
+	String	-(TXPRI+TXMAP1),5,$A
 	movea.l	#PenaltyList,a1
 	adda.w	0(a1,d0.w),a1
 	addq.w	#2,a1
@@ -700,7 +700,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 	tst.w	d0
 	bmi.w	.ex
 	bsr.w	printz
-	String	$BF,$11,$B
+	String	-(TXPRI+TXMAP1),$11,$B
 	movea.l	#PenaltyList,a1
 	adda.w	0(a1,d0.w),a1
 	addq.w	#2,a1
@@ -713,7 +713,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 	rts
 PrintPenaltyMessagesString	;93 name. Blank the horizontal mode penalty message line (22 spaces at x 5, y $B). Called from UpdatePA and prefmes
 	bsr.w	printz
-	String	$BF,5,$B,'                      ',0	;22 spaces
+	String	-(TXPRI+TXMAP1),5,$B,'                      ',0	;22 spaces
 	rts
 PenGoalStuff	;93 name. do this stuff after a goal. a1 = scored on team, a2 = scoring team. 94 clears PenBuf only when the scored
 	;on team has 6 on the ice. If the scoring team had more players on ice, the first scored on player in the box without a coincidental penalty
@@ -933,7 +933,7 @@ updatepwrplay	;show graphic and time remaining for power plays. 94: nothing when
 	bra.s	.home
 .uppt
 	bsr.w	printz
-	String	$BF,1,$19,'   ',$16,$17,$18,$19,$BF,1,$1A,'  ',0
+	String	-(TXPRI+TXMAP1),1,$19,'   ',$16,$17,$18,$19,-(TXPRI+TXMAP1),1,$1A,'  ',0
 	bsr.w	GetLowestPen
 	bsr.w	PushTime
 	bsr.w	print
@@ -964,7 +964,7 @@ ClrHor	;revert the graphics back to vertical ice rink mode. 94 reloads Rinktiles
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	.ex
 	bsr.w	printz
-	String	$FF,0,0
+	String	-TXMAP1,0,0
 	moveq	#$20,d0	;32
 	moveq	#$1C,d1	;28
 	move.w	#$7FF,d2	;blank tile
@@ -983,7 +983,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 	clr.w	(Vscroll).w
 	bsr.w	SprSort
 	bsr.w	printz
-	String	$FE,0,0
+	String	-TXMAP2,0,0
 	movea.l	#HorRinkMap,a1	;IDA hid this in the string (ori.b x3). 93 IceRinkMap; IDA icerinkmap is HorRinkMap+8
 	adda.l	4(a1),a1
 	movea.l	#icerinkmap,a2	;93 #$310
@@ -1037,13 +1037,13 @@ PrintScores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period
 	move.w	#$78,(crowdnoisedelay).w
 .0
 	bsr.w	printz
-	String	$BF,0,$17
+	String	-(TXPRI+TXMAP1),0,$17
 	moveq	#9,d0
 	moveq	#5,d1
 	bsr.w	Framer
 	bset	#dfclock,(disflags).w	;dfclock
 	bsr.w	printz
-	String	$BF,1,$18
+	String	-(TXPRI+TXMAP1),1,$18
 	move.w	(gsp).w,d0	;period name
 	movea.l	#PerLabels,a1	;93 PerLabels
 	btst	#1,(gmode2).w	;94 only
@@ -1056,16 +1056,16 @@ PrintScores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period
 	btst	#sf3llcs,(sflags3).w	;sf3llcs: lower line change box is up
 	bne.w	.ex
 	bsr.w	printz
-	String	$BF,$17,$17		;IDA: ori.b / move.b d0,-(a3)
+	String	-(TXPRI+TXMAP1),$17,$17		;IDA: ori.b / move.b d0,-(a3)
 	moveq	#8,d0
 	moveq	#5,d1
 	bsr.w	Framer
 	bsr.w	printz
-	String	$BF,$18,$1A	;home team on the lower row. IDA: ori.b / move.b d0,d5
+	String	-(TXPRI+TXMAP1),$18,$1A	;home team on the lower row. IDA: ori.b / move.b d0,d5
 	movea.w	#(HmShots-M68K_RAM),a2
 	bsr.w	PrintTeamNameAndScore
 	bsr.w	printz
-	String	$BF,$18,$18		;IDA: ori.b / move.b d0,d4
+	String	-(TXPRI+TXMAP1),$18,$18		;IDA: ori.b / move.b d0,d4
 	adda.w	#tmsize,a2	;tmsize
 	bsr.w	PrintTeamNameAndScore
 .ex
@@ -1073,7 +1073,7 @@ PrintScores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period
 	rts
 .sbscreen
 	bsr.w	printz
-	String	$BE,$11,2
+	String	-(TXPRI+TXMAP2),$11,2
 	move.w	(gsp).w,d0	;IDA hid this in the string (ori.b / andi.b / and.w)
 	btst	#0,(gmode2).w
 	beq.w	.2
@@ -1086,12 +1086,12 @@ PrintScores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period
 	sub.w	d0,(printx).w
 	bsr.w	print
 	bsr.w	printz
-	String	$BE,$17,2
+	String	-(TXPRI+TXMAP2),$17,2
 	movea.w	#(HmShots-M68K_RAM),a2	;IDA hid this in the string (ori.b / andi.b / mulu.w)
 	clr.w	d0	;home logo data offset
 	bsr.w	PrintTeamLogoAndScore
 	bsr.w	printz
-	String	$BE,8,2
+	String	-(TXPRI+TXMAP2),8,2
 	adda.w	#tmsize,a2	;tmsize. IDA hid this in the string (ori.b / andi.b / bchg)
 	move.w	#$2C,d0	;visitor logo data offset (93 $30)
 	bsr.w	PrintTeamLogoAndScore
@@ -1131,7 +1131,7 @@ EASNLogo	;93 name. Draw the EASN logo map at x 1, y $19 on the vertical ice rink
 	btst	#sf2pwrplay,(sflags2).w	;sf2pwrplay
 	bne.w	rtss2
 	bsr.w	printz
-	String	$BF,1,$19		;IDA: ori.b / move.b d0,-(a4)
+	String	-(TXPRI+TXMAP1),1,$19		;IDA: ori.b / move.b d0,-(a4)
 	movea.l	#EASNmap,a1	;93 EASNmap
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2	;93 #$310
@@ -1147,11 +1147,11 @@ USBoard	;93 name. Update score board, including the players in the penalty box a
 	bset	#dfclock,(disflags).w	;dfclock
 	bsr.w	PrintScores1
 	bsr.w	printz
-	String	$BE,$14,8
+	String	-(TXPRI+TXMAP2),$14,8
 	movea.w	#(HmShots-M68K_RAM),a2	;home team. IDA hid this in the string (ori.b / #$7C / mulu.w)
 	bsr.w	.dispen
 	bsr.w	printz
-	String	$BE,5,8
+	String	-(TXPRI+TXMAP2),5,8
 	movea.w	#(AwShots-M68K_RAM),a2	;visitors. IDA hid this, the bsr.w and the movem.l in the string (ori.b / #$7C / and.b / ori.b / d7)
 	bsr.w	.dispen
 	movem.l	(sp)+,d0-d7/a0-a3
@@ -1675,11 +1675,11 @@ ClearTickerArea	;93 name. Erase the ticker box. Called from Intermission and Sta
 SetTickerAreaPosition	;93 name. Set printx/printy/printm for the ticker box (x 3, y $17; the $BD map in pause mode). Return d0 =
 	;$1A wide, d1 = 5 high. Called from NewTicker3pt2 and ClearTickerArea
 	bsr.w	printz
-	String	$BD,3,$17		;IDA: ori.b / move.b d0,-(a3)
+	String	-(TXPRI+TXMAP3),3,$17		;IDA: ori.b / move.b d0,-(a3)
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	.1
 	bsr.w	printz
-	String	$BF,3,$17		;IDA: ori.b / move.b d0,-(a3)
+	String	-(TXPRI+TXMAP1),3,$17		;IDA: ori.b / move.b d0,-(a3)
 .1
 	moveq	#$1A,d0
 	moveq	#5,d1

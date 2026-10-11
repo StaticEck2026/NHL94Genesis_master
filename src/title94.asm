@@ -580,7 +580,7 @@ HiScoreScreen	;IDA name. 94 only: vb2, the $F4378 bitmap and HiScoreImg, then wa
 	dbf	d1,.loop
 	jsr	(setVram_0).l
 	jsr	(printz).l
-	String	$BE,$E,3
+	String	-(TXPRI+TXMAP2),$E,3
 	movea.l	#PlayoffSprite+$12E0,a2
 	movea.l	a2,a0
 	movea.l	a2,a1
@@ -594,7 +594,7 @@ HiScoreScreen	;IDA name. 94 only: vb2, the $F4378 bitmap and HiScoreImg, then wa
 	moveq	#$F,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BE,$10,$10
+	String	-(TXPRI+TXMAP2),$10,$10
 	movea.l	#HiScoreImg,a2
 	movea.l	a2,a0
 	movea.l	a2,a1
@@ -790,13 +790,13 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	move.w	#VDPR_MODE3+$03,vdpctrl(a0)
 	clr.w	(Vscroll).w
 	jsr	(printz).l
-	String	$FF,0,0
+	String	-TXMAP1,0,0
 	move.l	#$80,d0	;IDA hid this (and the Strings)
 	moveq	#$20,d1
 	move.l	#$7FF,d2
 	jsr	(eraser).l
 	jsr	(printz).l
-	String	$FE,0,0
+	String	-TXMAP2,0,0
 	move.l	#$80,d0
 	moveq	#$20,d1
 	move.l	#$7FF,d2
@@ -804,7 +804,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	clr.w	d4
 	move.w	d4,-(sp)
 	jsr	(printz).l
-	String	$FD,0,0
+	String	-TXMAP3,0,0
 	movea.l	#TitleScreenImg,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -819,7 +819,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	move.w	d4,(TempWord1).w
 	move.w	(sp)+,d4
 	jsr	(printz).l
-	String	$FE,0,$17
+	String	-TXMAP2,0,$17
 	movea.l	#TitleScreenImg,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -835,7 +835,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	bclr	#0,(sflags6).w
 	move.w	(TempWord1).w,d4
 	jsr	(printz).l
-	String	$BE,1,1
+	String	-(TXPRI+TXMAP2),1,1
 	movea.l	#NHLShieldImg,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -848,7 +848,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	moveq	#8,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BE,$19,1
+	String	-(TXPRI+TXMAP2),$19,1
 	movea.l	#PAlogoImg,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -861,7 +861,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	moveq	#0,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BE,1,$E
+	String	-(TXPRI+TXMAP2),1,$E
 	movea.l	#TitleImg,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -881,7 +881,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$0D104567,$89ABCDEF	;remap table. FF210 + FF211 = Palette assignment for scrolling credits
 	jsr	(printz).l
-	String	$EF,0,0
+	String	-(TXPAL1+TXMAP1),0,0
 	movea.l	#Credits,a1	;start of credits for scrolling
 	jsr	(CreditsPrintRow).l
 	addi.w	#$20,(Vscroll).w
@@ -904,7 +904,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	jsr	(CreditsWait).l
 	dbf	d3,.loop2
 	jsr	(printz).l
-	String	$EF,0,0
+	String	-(TXPAL1+TXMAP1),0,0
 	movea.l	#CreditsList,a1
 .loop3
 	jsr	(CreditsPrintRow).l

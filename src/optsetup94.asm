@@ -349,7 +349,7 @@ MoveMenuFrame	;93 setoptions .nms: move the menu frame by d0 (+2 / -2 lines). 94
 	jmp	Framer
 SetMenuArea	;94 only. Set the menu area for MoveMenuFrame: printx $10, printy $E, d0 = 23 x d1 = 13
 	jsr	(printz).l
-	String	$FF,$10,$E	;IDA: ori.b (and dropped a word)
+	String	-TXMAP1,$10,$E	;IDA: ori.b (and dropped a word)
 	move.w	#$17,d0
 	move.w	#$D,d1
 	rts
@@ -375,7 +375,7 @@ SetFrameRectUnused	;IDA dc.b, no xref. An unused copy of SetFrameRect without it
 SetFrameRect	;93 setoptions .setrect: frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs (93 22 x 3 / 5). Called from
 	;MoveMenuFrame
 	jsr	(printz).l
-	String	$FF,$10,$E	;IDA: ori.b (and dropped a word)
+	String	-TXMAP1,$10,$E	;IDA: ori.b (and dropped a word)
 	add.w	d3,(printy).w	;2 rows per line
 	move.w	(setupfirstline).w,d0
 	add.w	d0,d0
@@ -607,7 +607,7 @@ PrintOptions	;93 setoptions .ps: limit each option (GameSetUp_3 with d2 = 0) and
 GameSetUp_4	;IDA name. 93 setoptions .psd: print the value of option d7 at x $11 on its line (past row $1B: nothing). Team 1 / 2 go to PrintOptTeamName;
 	;Per. Length in Shootout prints 'N/A'; Players with FourWayPlay uses the second list (+$B0). Called from PrintOptions
 	jsr	(printz).l
-	String	$BF,$11,$10	;IDA: ori.b / move.b d0,d0
+	String	-(TXPRI+TXMAP1),$11,$10	;IDA: ori.b / move.b d0,d0
 	move.w	(setupfirstline).w,d0
 	add.w	d0,d0
 	sub.w	d0,(printy).w
@@ -813,13 +813,13 @@ setoptions	;options screen display and input (IDA comment). 94: build the game s
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$01234567,$89ABCDEF	;remap table (IDA: btst / or.l)
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x2
+	String	-TXMAP1,0,0	;IDA: ori.b x2
 	moveq	#$28,d0	;IDA hid this in the string
 	moveq	#$1C,d1	;40 x 28
 	move.w	#$7FF,d2	;blank char
 	jsr	(eraser).l
 	jsr	(printz).l
-	String	$FE,0,0	;IDA: ori.b x3
+	String	-TXMAP2,0,0	;IDA: ori.b x3
 	movea.l	#GameSetUpMap,a0	;IDA hid this in the string
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -834,7 +834,7 @@ setoptions	;options screen display and input (IDA comment). 94: build the game s
 	move.w	d4,(vispicchars).w
 	addi.w	#$24,d4
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3
+	String	-TXMAP1,0,0	;IDA: ori.b x3
 	movea.l	#GameSetUpMap2,a0	;IDA hid this in the string
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -847,7 +847,7 @@ setoptions	;options screen display and input (IDA comment). 94: build the game s
 	moveq	#0,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$FF,1,$E	;IDA: ori.b (and dropped a word)
+	String	-TXMAP1,1,$E	;IDA: ori.b (and dropped a word)
 	move.w	d4,(setupmenuchars).w
 	movea.l	#SetupMenuMap,a0	;menu background, 38 x 13 at x 1, y $E
 	movea.l	a0,a1
@@ -1016,7 +1016,7 @@ EraseCard	;94 only. If a player card is up (setupcardflags bit 0, cleared here),
 	bclr	#6,(setupcardflags).w
 	bclr	#7,(setupcardflags).w
 	jsr	(printz).l
-	String	$EF,0,0	;IDA: ori.b x3
+	String	-(TXPAL1+TXMAP1),0,0	;IDA: ori.b x3
 	move.w	#5,(printy).w	;IDA hid this in the string
 	moveq	#8,d0
 	moveq	#8,d1
@@ -1026,7 +1026,7 @@ EraseCard	;94 only. If a player card is up (setupcardflags bit 0, cleared here),
 	move.w	#3,(printx).w
 	jsr	(eraser).l
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3
+	String	-TXMAP1,0,0	;IDA: ori.b x3
 	move.w	#$B,(printx).w	;IDA hid this in the string
 	move.w	#5,(printy).w
 	move.w	#$19,d0
@@ -1039,7 +1039,7 @@ EraseCard	;94 only. If a player card is up (setupcardflags bit 0, cleared here),
 	move.w	#$1C,(printx).w
 	jsr	(eraser).l
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3
+	String	-TXMAP1,0,0	;IDA: ori.b x3
 	move.w	#3,(printx).w	;IDA hid this in the string
 	move.w	#5,(printy).w
 	move.w	#$19,d0
@@ -1059,7 +1059,7 @@ DrawHomeBlock	;94 only. Draw the home team block: the logo box (LogoBoxHome) and
 	bclr	#3,(setupcardflags).w
 	beq.w	.0
 	jsr	(printz).l
-	String	$EF,0,0	;IDA: ori.b x3
+	String	-(TXPAL1+TXMAP1),0,0	;IDA: ori.b x3
 	move.w	#8,(printx).w	;IDA hid this in the string
 	move.w	#5,(printy).w
 	moveq	#8,d0
@@ -1067,7 +1067,7 @@ DrawHomeBlock	;94 only. Draw the home team block: the logo box (LogoBoxHome) and
 	move.w	#$7FF,d2
 .0
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3
+	String	-TXMAP1,0,0	;IDA: ori.b x3
 	move.w	#$19,(printx).w	;IDA hid this in the string
 	bra.w	DrawTeamLogo
 DrawVisBlock	;94 only. The same for the visitors: logo box (LogoBoxVis), logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
@@ -1079,7 +1079,7 @@ DrawVisBlock	;94 only. The same for the visitors: logo box (LogoBoxVis), logo at
 	bclr	#2,(setupcardflags).w
 	beq.w	.0
 	jsr	(printz).l
-	String	$EF,0,0	;IDA: ori.b x3
+	String	-(TXPAL1+TXMAP1),0,0	;IDA: ori.b x3
 	move.w	#$18,(printx).w	;IDA hid this in the string
 	move.w	#5,(printy).w
 	moveq	#8,d0
@@ -1087,7 +1087,7 @@ DrawVisBlock	;94 only. The same for the visitors: logo box (LogoBoxVis), logo at
 	move.w	#$7FF,d2
 .0
 	jsr	(printz).l
-	String	$CF,0,0	;IDA dc.b
+	String	-(TXPAL3+TXMAP1),0,0	;IDA dc.b
 	move.w	#9,(printx).w
 DrawTeamLogo	;Draw the logo of team logoteam (TeamLogoBitmaps) at printx, y 6, 6 x 6, palette TeamLogoPalettes + team * 8 - $20 (home, color fam
 	;2) or - $40 (visitors, color fam 3), then wait $B4 frames before a player card (carddelay). Branched to from DrawHomeBlock
@@ -1214,7 +1214,7 @@ PlayerCardScreen	;94 only. Draw a player card on one side (setupcardflags bit 1:
 	;routine at the last printz; the rest is IDA code with no label. Called from PlayerCardTimer
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3
+	String	-TXMAP1,0,0	;IDA: ori.b x3
 	move.w	#$1C,(printx).w	;IDA hid this in the string
 	btst	#1,(setupcardflags).w
 	bne.w	.0
@@ -1226,7 +1226,7 @@ PlayerCardScreen	;94 only. Draw a player card on one side (setupcardflags bit 1:
 	move.w	#$7FF,d2
 	jsr	(eraser).l
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3
+	String	-TXMAP1,0,0	;IDA: ori.b x3
 	move.w	#3,(printx).w	;IDA hid this in the string
 	btst	#1,(setupcardflags).w
 	bne.w	.1
@@ -1246,7 +1246,7 @@ PlayerCardScreen	;94 only. Draw a player card on one side (setupcardflags bit 1:
 	addq.w	#1,(featuredplayer).w
 .3
 	jsr	(printz).l
-	String	$FF,0,0	;IDA: ori.b x3 / add.b
+	String	-TXMAP1,0,0	;IDA: ori.b x3 / add.b
 	cmpi.w	#6,(featuredplayer).l	;IDA hid this in the string
 	blt.w	.4
 	clr.w	(featuredplayer).w
@@ -1298,7 +1298,7 @@ PlayerCardScreen	;94 only. Draw a player card on one side (setupcardflags bit 1:
 	move.l	(sp)+,(palfadenew+$26).w
 	move.l	(sp)+,(palfadenew+$22).w
 	jsr	(printz).l
-	String	$BF,0,0	;IDA dc.b (IDA ends the routine here)
+	String	-(TXPRI+TXMAP1),0,0	;IDA dc.b (IDA ends the routine here)
 	move.w	#$6000,(printa).w
 	move.w	#3,(printx).w
 	move.w	#$19,d0

@@ -28,7 +28,7 @@ EASportsScreen	;94 only. Called from Begin. Show the EA Sports screen until a bu
 	bsr.w	CopyPaletteToCRAM
 	bsr.w	setVram_0
 	bsr.w	printz
-	String	$FE,0,0,0
+	String	-TXMAP2,0,0,0
 	movea.l	#EASportsMap,a2		;screen map. IDA hid this in the string (ori.b #$7C,d0 / ori.b #$5A,a3)
 	movea.l	a2,a0
 	movea.l	a2,a1
@@ -86,7 +86,7 @@ DrawMatchupBitmaps	;94 only. Called from PrintOptions. Draw the VisTeam and Home
 	move.w	(teambitmapchars).w,d4
 	bsr.w	DrawTeamBitmap
 	bsr.w	printz
-	String	$BF,$16,1,0
+	String	-(TXPRI+TXMAP1),$16,1,0
 	move.w	(HomeTeam).w,d1
 	move.w	d1,d0
 	asl.w	#6,d0			;64 bytes per team
@@ -136,7 +136,7 @@ ClearTextBox	;94 only, no xref (IDA dc.b). Set the print position, then erase 12
 
 SetTeamPrintPos	;94 only (IDA dc.b). printz position string, then printx = $1A when a2 is the home team
 	bsr.w	printz
-	String	$BF,2,$A,0
+	String	-(TXPRI+TXMAP1),2,$A,0
 	cmpa.w	#(HmShots-M68K_RAM),a2	;home team struct?
 	bne.w	rtss2
 	move.w	#$1A,(printx).w

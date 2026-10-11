@@ -46,7 +46,7 @@ RecordHoldersScreen	;"Record Holders" menu item (hockey94_11 menu lists): the sa
 	move.w	#$1A,d1
 	jsr	(SetupScreen).l
 	jsr	(printz).l
-	String	$BE,1,1
+	String	-(TXPRI+TXMAP2),1,1
 	movea.l	#CornerLogoMap,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -59,7 +59,7 @@ RecordHoldersScreen	;"Record Holders" menu item (hockey94_11 menu lists): the sa
 	moveq	#8,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BE,'!',1
+	String	-(TXPRI+TXMAP2),'!',1
 	movea.l	#ArenaGfxBank,a0
 	movea.l	a0,a1
 .0
@@ -73,14 +73,14 @@ RecordHoldersScreen	;"Record Holders" menu item (hockey94_11 menu lists): the sa
 	moveq	#0,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BD,$B,1
+	String	-(TXPRI+TXMAP3),$B,1
 	move.w	#$12,d0
 	move.w	#7,d1
 	jsr	(Framer).l
 	jsr	(printbigz).l
-	String	$BD,$E,2,'Record',$BD,$D,5,'Holders',$BD,1,9
+	String	-(TXPRI+TXMAP3),$E,2,'Record',-(TXPRI+TXMAP3),$D,5,'Holders',-(TXPRI+TXMAP3),1,9
 	jsr	(printz2).l	;IDA hid this
-	String	$F8,6,3,5,8,$F9,1,'Name',$F9,0
+	String	TXS_ALL,6,3,5,8,TXS_FONT,1,'Name',TXS_FONT,0
 	bsr.w	ReadNameLog	;IDA hid this
 	clr.w	(TempWord1).w
 	bclr	#6,(sflags6).w
@@ -309,7 +309,7 @@ SaveRecTitles	dc.b	0	;PrintRecordTitles Strings
 PrintWinRecords	;94 only. Record Holders: the rows (PrintRecordName)
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz2).l
-	String	$F8,4,2,2,$A,$F9,0
+	String	TXS_ALL,4,2,2,$A,TXS_FONT,0
 	move.w	#6,d7	;IDA hid this
 	movea.l	#winsort,a0	;IDA hid this
 	movea.l	#winpcts,a2
@@ -376,7 +376,7 @@ ClearRecordArea	;94 only. Record Holders: erase the record rows ($28 x $12), kee
 	move.w	(printy).w,-(sp)
 	move.w	(printm).w,-(sp)
 	jsr	(printz2).l
-	String	$F8,4,2,0,$A
+	String	TXS_ALL,4,2,0,$A
 	move.w	#$28,d0
 	move.w	#$12,d1
 	jsr	(eraser).l
@@ -388,7 +388,7 @@ ClearRecordArea	;94 only. Record Holders: erase the record rows ($28 x $12), kee
 PrintPlayerRecords	;Record Holders: the rows of the other page (PrintRecordName)
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz2).l
-	String	$F8,4,2,2,$A,$F9,0
+	String	TXS_ALL,4,2,2,$A,TXS_FONT,0
 	move.w	#6,d7	;IDA hid this
 	movea.l	#recsort1,a0	;IDA hid this
 	cmpi.w	#1,(TempWord1).w
@@ -637,7 +637,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l
 	jsr	(printz).l
-	String	$BF,3,2
+	String	-(TXPRI+TXMAP1),3,2
 	moveq	#$1B,d0	;IDA hid this
 	moveq	#$C,d1
 	jsr	(Framer).l
@@ -656,7 +656,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	addq.w	#1,(printy).w
 	addq.w	#6,(printx).w
 	jsr	(printz).l
-	String	' vs.',$BF,4,7
+	String	' vs.',-(TXPRI+TXMAP1),4,7
 	move.w	(BA_Goalie_SCnum).w,d0
 	asl.w	#7,d0
 	movea.l	#SortCords,a2
@@ -671,7 +671,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	jsr	(FormatPlayerNameWithAttrib).l
 	jsr	(print).l
 	jsr	(printz).l
-	String	$BF,4,9
+	String	-(TXPRI+TXMAP1),4,9
 	movea.l	#HmShots,a1
 	movea.l	$1E(a1),a1
 	adda.w	4(a1),a1
@@ -682,7 +682,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	jsr	(PushNumberWidth).l
 	jsr	(print).l
 	jsr	(printz).l
-	String	$BF,4,$A
+	String	-(TXPRI+TXMAP1),4,$A
 	movea.l	#AwShots,a1	;IDA hid this
 	movea.l	$1E(a1),a1	;IDA hid this
 	adda.w	4(a1),a1	;IDA hid this
@@ -693,7 +693,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	jsr	(PushNumberWidth).l	;IDA hid this
 	jsr	(print).l	;IDA hid this
 	jsr	(printz).l	;IDA hid this
-	String	$BF,4,$C,'Round '
+	String	-(TXPRI+TXMAP1),4,$C,'Round '
 	move.w	(playoffround).w,d0
 	move.w	#2,d1
 	jsr	(PushNumberWidth).l

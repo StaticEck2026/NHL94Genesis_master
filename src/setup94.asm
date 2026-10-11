@@ -815,13 +815,13 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.w	#0,d0
 	bsr.w	setvram
 	bsr.w	printz
-	String	$FF,0,0
+	String	-TXMAP1,0,0
 	move.l	#$80,d0		;IDA hid this in the string (ori.b x3)
 	moveq	#$1C,d1
 	move.w	#$7FF,d2
 	bsr.w	eraser
 	bsr.w	printz
-	String	$FD,0,0
+	String	-TXMAP3,0,0
 	moveq	#$28,d0		;IDA hid this in the string (ori.b x2)
 	moveq	#2,d1
 	move.w	#$7FF,d2
@@ -832,7 +832,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.w	d4,(ExtraChars).w
 	bsr.w	DoDMA_clearCallbackPointer
 	bsr.w	printz
-	String	$CE,0,0
+	String	-(TXPAL3+TXMAP2),0,0
 	movea.l	#ScoutMap,a0	;IDA hid this in the string (ori.b x3)
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -869,7 +869,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.b	(a0)+,d4
 .top
 	bsr.w	printz
-	String	$FF,0,0
+	String	-TXMAP1,0,0
 	move.b	(a0)+,(printx+1).w	;IDA hid these three in the string (ori.b x2, cmp.b x2)
 	move.b	(a0)+,(printy+1).w
 	clr.w	d1
@@ -881,14 +881,14 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.b	(a0)+,d4
 .top2
 	bsr.w	printz
-	String	$FF,0,2
+	String	-TXMAP1,0,2
 	move.b	(a0)+,(printx+1).w	;IDA hid these two in the string (ori.b / andi.b / cmp.b)
 	clr.w	d0
 	move.b	(a0)+,d0
 	bsr.w	DrawPlayoffBracket
 	dbf	d4,.top2
 	bsr.w	printz
-	String	$EF,0,0
+	String	-(TXPAL1+TXMAP1),0,0
 	cmpi.w	#7,(bosgames).w	;IDA hid this in the string (ori.b x3). Best of 7
 	beq.w	.noscr
 	clr.w	d4
@@ -903,7 +903,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	dbf	d4,.top3
 .noscr
 	bsr.w	printz2
-	String	$F8,1,1,$41,$1A	;IDA: ori.b / bchg / move.b
+	String	TXS_ALL,1,1,$41,$1A	;IDA: ori.b / bchg / move.b
 	lea	PlayoffScreenText(pc),a1
 	move.w	(gamelevel).w,d0
 	bsr.w	AdvanceStringPtr
@@ -914,7 +914,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	tst.w	(gamelevel).w
 	beq.w	.nopage
 	bsr.w	printz
-	String	$CD,$A,1,'Press [ or ] to page',0	;IDA decoded the text as code
+	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;IDA decoded the text as code
 .nopage
 	move.w	#$18,(palcount).w	;IDA hid this after the string (bcs.w / ori.b)
 	move.w	#$79,-(sp)
@@ -1190,7 +1190,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	bsr.w	ScoutTextNextLine
 .8
 	bsr.w	printz
-	String	$FF,9,4
+	String	-TXMAP1,9,4
 	move.w	(DispAttribCtr).w,d0
 	add.w	d0,(printx).w
 	move.w	(VertLineScrolling).w,d0

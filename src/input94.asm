@@ -674,7 +674,7 @@ setlccords
 	eori.w	#$16,d0
 .noflip
 	bsr.w	printz
-	String	$BF,$16,0,0		;IDA hid this, add.w and moveq in ori.b / ori.b / cmp.b
+	String	-(TXPRI+TXMAP1),$16,0,0		;IDA hid this, add.w and moveq in ori.b / ori.b / cmp.b
 	add.w	d0,(printy).w
 	moveq	#2,d0
 	bsr.w	getlchoice

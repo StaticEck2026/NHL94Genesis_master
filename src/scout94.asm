@@ -123,7 +123,7 @@ ScoutingReport	;93 name. 94 pregame MATCHUPS screen, called from Opening2. Draws
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$05422561,$89ABCDEF	;remap table (IDA: bchg / move.l / muls.w / ori.b)
 	jsr	(printz).l
-	String	$FE,0,0
+	String	-TXMAP2,0,0
 	movea.l	#ScoutMap,a0	;IDA hid the jsr, the string and this (ori.b x4)
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -136,27 +136,27 @@ ScoutingReport	;93 name. 94 pregame MATCHUPS screen, called from Opening2. Draws
 	moveq	#3,d5	;color fam 1-2
 	jsr	(dobitmap).l
 	jsr	(printbigz).l
-	String	$DF,$C,$D,'MATCHUPS'	;IDA: ori.b / movep.l / subq x2 (and dropped a word)
+	String	-(TXPAL2+TXMAP1),$C,$D,'MATCHUPS'	;IDA: ori.b / movep.l / subq x2 (and dropped a word)
 	move.w	#0,(printfontset).w	;char set 0
 	jsr	(printz).l
-	String	$FF,$10,$11,'ADVANTAGE:'	;IDA: ori.b / move.b / addq / move.w (and dropped a word)
+	String	-TXMAP1,$10,$11,'ADVANTAGE:'	;IDA: ori.b / move.b / addq / move.w (and dropped a word)
 	jsr	(printz).l
-	String	$DE,6,3		;IDA: ori.b / btst d1,d0
+	String	-(TXPAL2+TXMAP2),6,3		;IDA: ori.b / btst d1,d0
 	moveq	#$21,d0	;33 x 9 text box frame
 	moveq	#9,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$DE,1,$E	;IDA: ori.b (and dropped a word)
+	String	-(TXPAL2+TXMAP2),1,$E	;IDA: ori.b (and dropped a word)
 	move.w	#8,d0	;8 x 8 frame: visitors picture
 	move.w	#8,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$DE,$1F,$E	;IDA: ori.b (and dropped a word)
+	String	-(TXPAL2+TXMAP2),$1F,$E	;IDA: ori.b (and dropped a word)
 	move.w	#8,d0	;8 x 8 frame: home picture
 	move.w	#8,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$FF,1,1		;IDA: ori.b / btst d0,d0
+	String	-TXMAP1,1,1		;IDA: ori.b / btst d0,d0
 	movea.l	#RonBarrMap,a0	;Ron Barr picture (93 Ronbarrmap): palette offset, then map header offset
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -422,7 +422,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	tst.w	(matchup).w
 	bne.w	.2
 	jsr	(printz2).l
-	String	$F8,0,1,$16,$16,$F9,1	;IDA: ori.b / btst / move.b
+	String	TXS_ALL,0,1,$16,$16,TXS_FONT,1	;IDA: ori.b / btst / move.b
 	lea	StatsText(pc),a1	;IDA hid this in the string (and dropped its displacement)
 	move.w	#0,d7
 .loop
@@ -447,16 +447,16 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	bpl.s	.loop
 	move.w	#2,(printfontset).w
 	jsr	(printz).l
-	String	$FF,0,$17,'                                        '	;40 spaces. IDA: ori.b / move.l x20
+	String	-TXMAP1,0,$17,'                                        '	;40 spaces. IDA: ori.b / move.l x20
 	jsr	(printz).l
-	String	$FF,$22,$16	;IDA: ori.b / move.b d0,d3
+	String	-TXMAP1,$22,$16	;IDA: ori.b / move.b d0,d3
 	movea.l	#HmShots,a0
 	movea.l	#AwShots,a2
 	bsr.w	PrintMatchupRating	;home
 	move.w	d0,(homerating).w
 	move.w	#2,(printfontset).w
 	jsr	(printz).l
-	String	$FF,4,$16	;IDA: ori.b / move.b d0,d3
+	String	-TXMAP1,4,$16	;IDA: ori.b / move.b d0,d3
 	exg	a0,a2
 	bsr.w	PrintMatchupRating	;visitors
 	move.w	d0,(visrating).w
@@ -471,7 +471,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 .3
 	dbf	d0,.loop2
 	jsr	(printz2).l
-	String	$F8,0,1,$D,$13,$F9,1	;IDA: ori.b / movep.w / btst
+	String	TXS_ALL,0,1,$D,$13,TXS_FONT,1	;IDA: ori.b / movep.w / btst
 	jsr	(printsmall).l
 	move.w	#$16,(printy).w
 	move.w	#2,(printfontset).w
@@ -483,9 +483,9 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 .4
 	move.w	(matchuphome).w,d0	;home player
 	jsr	(printz).l
-	String	$FF,0,$17,'                                        '	;40 spaces. IDA: ori.b / move.l x20
+	String	-TXMAP1,0,$17,'                                        '	;40 spaces. IDA: ori.b / move.l x20
 	jsr	(printz).l
-	String	$FF,$23,$17	;IDA: ori.b / move.b d0,-(a3)
+	String	-TXMAP1,$23,$17	;IDA: ori.b / move.b d0,-(a3)
 	bsr.w	PrintPlayerNameRight	;print the name, moved left to fit the line
 	bsr.w	CalcAttrib
 	mulu.w	#$64,d0	;* 100
@@ -495,7 +495,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	move.w	d0,(homerating).w
 	jsr	(PushNumberWidth).l
 	jsr	(printz).l
-	String	$FF,$22,$16	;IDA: ori.b / move.b d0,d3
+	String	-TXMAP1,$22,$16	;IDA: ori.b / move.b d0,d3
 	bsr.w	PrintTwoSpaces
 	jsr	(printsmall).l
 	movea.l	#AwShots,a2
@@ -506,7 +506,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 .5
 	move.w	(matchupvis).w,d0	;visitors player
 	jsr	(printz).l
-	String	$FF,0,$17	;IDA: ori.b / move.b d0,-(a3)
+	String	-TXMAP1,0,$17	;IDA: ori.b / move.b d0,-(a3)
 	bsr.w	PrintPlayerNameRight
 	bsr.w	CalcAttrib
 	mulu.w	#$64,d0	;* 100
@@ -516,7 +516,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	move.w	#2,d1
 	jsr	(PushNumberWidth).l
 	jsr	(printz).l
-	String	$FF,4,$16	;IDA: ori.b / move.b d0,d3
+	String	-TXMAP1,4,$16	;IDA: ori.b / move.b d0,d3
 	bsr.w	PrintTwoSpaces
 	jsr	(printsmall).l
 .x
@@ -586,7 +586,7 @@ PrintAdvantageMarks	;94 only. Called every frame by ScoutingReport. Print the ad
 .3
 	move.w	#2,(printfontset).w
 	jsr	(printz).l
-	String	$FF,$13,$16	;IDA: ori.b / move.b d0,d3
+	String	-TXMAP1,$13,$16	;IDA: ori.b / move.b d0,d3
 	jsr	(printsmall).l
 	move.w	#0,(printfontset).w
 	movem.l	(sp)+,d0-d7/a0-a6

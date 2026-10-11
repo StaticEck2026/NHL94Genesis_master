@@ -1280,7 +1280,7 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$05234167,$89ABCDEF	;remap table (IDA: code)
 	jsr	(printz).l
-	String	$FD,0,0
+	String	-TXMAP3,0,0
 	movea.l	#PlayerCardsScreenPic,a0	;the Player Cards screen picture (graphics94)
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -1299,14 +1299,14 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	addi.w	#$24,d4
 	move.w	d4,-(sp)
 	jsr	(printz).l
-	String	$FE,0,0
+	String	-TXMAP2,0,0
 	moveq	#$40,d0
 	moveq	#$20,d1
 	move.w	#$7FF,d2
 	jsr	(eraser).l
 	move.w	(sp)+,d4
 	jsr	(printz).l
-	String	$BE,1,1
+	String	-(TXPRI+TXMAP2),1,1
 	movea.l	#CornerLogoMap,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -1319,7 +1319,7 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	moveq	#8,d5
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BE,'!',1
+	String	-(TXPRI+TXMAP2),'!',1
 	movea.l	#ArenaGfxBank,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -1427,13 +1427,13 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	move.l	$26(a6,d0.w),(palfadenew+$22).w
 	move.w	#$64,(palcount).w
 	jsr	(printz).l
-	String	$BE,0,7
+	String	-(TXPRI+TXMAP2),0,7
 	move.w	#$28,d0
 	move.w	#$15,d1
 	move.w	#$7FF,d2
 	jsr	(eraser).l
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	movea.l	(sp),a0	;IDA hid this
 	tst.w	(a0)
 	bne.w	.1
@@ -1454,7 +1454,7 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	jsr	(ClearCardText).l
 	move.w	#$64,(palcount).w
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	move.w	(HomeTeam).w,d0	;IDA hid this
 	tst.w	(cardvis).w	;IDA hid this
 	beq.w	.4	;IDA hid this
@@ -1587,7 +1587,7 @@ PrintCardRecords	;94 only. Player card "Records" column
 	bclr	#0,(sflags6).w
 	move.w	#$64,(palcount).w
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	move.w	#8,d1	;IDA hid this
 	jsr	(PrintCardTeam).l	;IDA hid this
 	move.w	#3,d0
@@ -1643,7 +1643,7 @@ PrintCardRecords	;94 only. Player card "Records" column
 ClearCardText	;94 only. Player card: erase the text area and redraw the team bitmap behind it (dobitmap)
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
-	String	$BE,0,0
+	String	-(TXPRI+TXMAP2),0,0
 	move.w	d0,(printx).w	;IDA hid this
 	move.w	d1,(printy).w
 	move.w	(cardlogochars1).w,d4
@@ -2320,7 +2320,7 @@ DrawPictureBox	;94 only. Player card picture box (DrawPlayerPicture, UnpackPictu
 .0
 	bsr.w	DrawPlayerPicture
 	jsr	(printz).l
-	String	$8E,1,8
+	String	-(TXPRI+TXPAL3+TXMAP2),1,8
 	move.w	(cardlogochars2).w,d4	;IDA hid this
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -2456,14 +2456,14 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	move.w	d4,(smallfontchars).w
 	jsr	(AddSmallFont).l
 	jsr	(printz).l
-	String	$FF,0,0
+	String	-TXMAP1,0,0
 	moveq	#$28,d0	;IDA hid this
 	moveq	#$1C,d1	;IDA hid this
 	move.w	#$7FF,d2	;IDA hid this
 	jsr	(eraser).l	;IDA hid this
 	jsr	(setupIceRinkMap).l
 	jsr	(printz).l	;IDA hid this
-	String	$FE,0,0
+	String	-TXMAP2,0,0
 	movea.l	#ScoutMap,a0	;IDA hid this (and printz Strings)
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -2485,7 +2485,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$71234567,$89ABCDEF	;remap table
 	jsr	(printz).l
-	String	$BF,$1F,6
+	String	-(TXPRI+TXMAP1),$1F,6
 	move.w	(HomeTeam).w,d0
 	tst.w	(nameentryvis).w
 	beq.w	.0
@@ -2501,12 +2501,12 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	sub.w	d0,(printx).w
 	jsr	(print).l
 	jsr	(printz).l
-	String	$BF,$1B,7
+	String	-(TXPRI+TXMAP1),$1B,7
 	move.w	#8,d0
 	move.w	#8,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$8F,$1C,8
+	String	-(TXPRI+TXPAL3+TXMAP1),$1C,8
 	move.w	(HomeTeam).w,d3
 	tst.w	(nameentryvis).w
 	beq.w	.1
@@ -2531,12 +2531,12 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	move.w	(homepicchars).w,d4
 	jsr	(dobitmap).l
 	jsr	(printz).l
-	String	$BF,2,0
+	String	-(TXPRI+TXMAP1),2,0
 	move.w	#$24,d0
 	move.w	#6,d1
 	jsr	(Framer).l
 	jsr	(printbigz).l
-	String	$BF,$A,2,'NAME  ENTRY'
+	String	-(TXPRI+TXMAP1),$A,2,'NAME  ENTRY'
 	bsr.w	ReadNameLog
 	clr.w	(namelogarrows).w
 	move.w	#1,(namelogsel).w
@@ -2546,7 +2546,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	bsr.w	GetLogName
 	bsr.w	PrintNameLog
 	jsr	(printz).l
-	String	$BF,7,6,'Name Log'
+	String	-(TXPRI+TXMAP1),7,6,'Name Log'
 	move.w	#$18,(palcount).w
 	bclr	#2,(disflags).w
 	clr.w	d4
@@ -2569,7 +2569,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 .loop
 	bsr.w	GetNameLength
 	jsr	(printz).l
-	String	$BF,5,$12
+	String	-(TXPRI+TXMAP1),5,$12
 	tst.w	(cursoron).w
 	beq.w	.3
 	movea.l	#nameentrybuf,a1
@@ -2655,7 +2655,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	bra.w	.loop
 .10
 	jsr	(printz).l
-	String	$BF,4,$13
+	String	-(TXPRI+TXMAP1),4,$13
 	add.w	d4,(printx).w
 	jsr	(printz).l
 	String	'   '
@@ -2727,7 +2727,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C to select letter.", "A to go back.")
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
-	String	$BF,1,$14
+	String	-(TXPRI+TXMAP1),1,$14
 	move.w	#$16,d0
 	move.w	#7,d1
 	move.w	#$7FF,d2
@@ -2735,7 +2735,7 @@ NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C t
 	bchg	#0,(cursoron+1).w
 	bne.w	.1
 	jsr	(printz).l
-	String	$BF,$19,$11
+	String	-(TXPRI+TXMAP1),$19,$11
 	movea.l	#LetterGrid,a0
 	moveq	#4,d0
 .loop
@@ -2752,12 +2752,12 @@ NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C t
 	subi.w	#$C,(printx).w
 	dbf	d0,.loop
 	jsr	(printz).l
-	String	$FE,1,$14
+	String	-TXMAP2,1,$14
 	moveq	#$16,d0
 	moveq	#7,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	$BF,2,$15,'D-Pad to a letter.'
+	String	-(TXPRI+TXMAP1),2,$15,'D-Pad to a letter.'
 	move.w	#2,(printx).w
 	addq.w	#1,(printy).w
 	move.w	(printx).w,-(sp)
@@ -2795,7 +2795,7 @@ NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C t
 	jsr	(eraser).l
 .6
 	jsr	(printz).l
-	String	$FE,1,$14
+	String	-TXMAP2,1,$14
 	moveq	#$16,d0
 	moveq	#7,d1
 .7
@@ -2805,9 +2805,9 @@ NameLetterGrid	;94 only. Name entry: the letter grid ("D-Pad to a letter.", "C t
 NameEntryHelp	;94 only. Name entry help text ("D-Pad up/down to move arrows.", "Press START to select name.", "Press B to edit.")
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
-	String	$BF,2,$15,'D-Pad up/down to    '
+	String	-(TXPRI+TXMAP1),2,$15,'D-Pad up/down to    '
 	jsr	(printz).l
-	String	$BF,2,$16,'move arrows.        '
+	String	-(TXPRI+TXMAP1),2,$16,'move arrows.        '
 	move.w	#2,(printx).w
 	move.w	(printx).w,-(sp)
 	addq.w	#1,(printy).w
@@ -2868,7 +2868,7 @@ FindLetter	;94 only. d0 = index of letter d0 in LetterGrid, $1E when not found
 	rts
 PrintNameCursor	;94 only. Name entry: the " < " cursor
 	jsr	(printz).l
-	String	$BF,4,$13
+	String	-(TXPRI+TXMAP1),4,$13
 	add.w	d4,(printx).w
 	tst.w	(cursoron).w
 	beq.w	rtsNameCursor
@@ -2888,7 +2888,7 @@ PrintCurLetter	;94 only. Name entry: print grid letter d5 (with the cursor on, c
 	jmp	print
 LetterGridPos	;94 only. Name entry: printx / printy of grid letter d5 (6 letters a row, 2 cells apart); d0 / d1 = 3 x 3 box
 	jsr	(printz).l
-	String	$BF,$18,$10
+	String	-(TXPRI+TXMAP1),$18,$10
 	move.w	d5,d0
 	ext.l	d0
 	divu.w	#6,d0
@@ -2944,7 +2944,7 @@ PrintNameLog	;94 only. Name entry: the "Name Log" list (PrintNameField, GetLogNa
 	move.w	(namelength).w,-(sp)
 	move.w	(namelogsel).w,-(sp)
 	jsr	(printz).l
-	String	$BF,5,8
+	String	-(TXPRI+TXMAP1),5,8
 	move.w	#6,d7	;IDA hid this
 	move.w	#1,(namelogsel).w	;IDA hid this
 	movea.l	#TempBuffer,a1
@@ -2976,7 +2976,7 @@ PrintLogArrows	;94 only. Name entry: print the two arrow Strings at a1 on name l
 	tst.w	(namelogarrows).w
 	beq.w	.0
 	jsr	(printz).l
-	String	$BF,3,8
+	String	-(TXPRI+TXMAP1),3,8
 	move.w	(namelogarrows).w,d0	;IDA hid this
 	subq.w	#1,d0
 	add.w	d0,(printy).w

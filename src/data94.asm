@@ -782,12 +782,12 @@ DisplayPeriodOver	;93 name. End of game Stars of the Game box. Called from Updat
 	movem.l	(sp)+,d0/a1
 	movem.l	d0-d5/a0-a4,-(sp)
 	bsr.w	printz
-	String	$BF,2,$E	;IDA: ori.b (and dropped a word)
+	String	-(TXPRI+TXMAP1),2,$E	;IDA: ori.b (and dropped a word)
 	moveq	#$1C,d0	;framer size
 	moveq	#9,d1
 	bsr.w	Framer
 	bsr.w	printz
-	String	$BF,9,$10,'Stars of the Game',$BF,3,$F	;IDA: code
+	String	-(TXPRI+TXMAP1),9,$10,'Stars of the Game',-(TXPRI+TXMAP1),3,$F	;IDA: code
 	movea.l	#Rinktilelist,a1	;IDA hid this in the string. map at offset 4
 	movea.w	#$30A,a2	;a zero long (93 #$310)
 	adda.l	4(a1),a1
@@ -940,25 +940,25 @@ ShowInjuryBox	;93 name. Injury box: 'Injury to:' player TempPlOffset (GetPlayerN
 	;(hockey94_01), so global
 	movem.l	d0-d2/a0-a4,-(sp)
 	bsr.w	printz
-	String	$BF,$B,3	;IDA: ori.b / btst
+	String	-(TXPRI+TXMAP1),$B,3	;IDA: ori.b / btst
 	moveq	#$12,d0	;framer size
 	moveq	#5,d1
 	bsr.w	Framer
 	btst	#5,(sflags7).w
 	bne.w	.0
 	bsr.w	printz
-	String	$BF,$C,4,'Injury to:',$BF,$C,6,'Out for period',$BF,$C,5	;IDA: code
+	String	-(TXPRI+TXMAP1),$C,4,'Injury to:',-(TXPRI+TXMAP1),$C,6,'Out for period',-(TXPRI+TXMAP1),$C,5	;IDA: code
 	bra.w	.1
 .0
 	bsr.w	printz
-	String	$BF,$C,4,'Injury to:',$BF,$C,6,'Out for game',$BF,$C,5	;IDA: code
+	String	-(TXPRI+TXMAP1),$C,4,'Injury to:',-(TXPRI+TXMAP1),$C,6,'Out for game',-(TXPRI+TXMAP1),$C,5	;IDA: code
 .1
 	bsr.w	GetPlayerNameWithAttrib
 	bsr.w	print
 	btst	#pf2fight,(puck_pflags2).w
 	beq.w	.ex
 	bsr.w	printz
-	String	$BF,$14,6,'the game'	;IDA: ori.b / addi.w / bsr.s
+	String	-(TXPRI+TXMAP1),$14,6,'the game'	;IDA: ori.b / addi.w / bsr.s
 .ex
 	movem.l	(sp)+,d0-d2/a0-a4	;IDA: bcs.w / move.b (IDA hid this in the string)
 	rts
@@ -975,7 +975,7 @@ PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1)
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l	;d0 = -1
 	bsr.w	printz
-	String	$BF,3,2	;IDA: ori.b / andi.b
+	String	-(TXPRI+TXMAP1),3,2	;IDA: ori.b / andi.b
 	moveq	#$1B,d0	;IDA hid this in the string
 .2
 	moveq	#8,d1
@@ -999,7 +999,7 @@ PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1)
 	bsr.w	FormatPlayerNameWithAttrib
 	bsr.w	print
 	bsr.w	printz
-	String	$BF,4,7	;IDA: ori.b / btst
+	String	-(TXPRI+TXMAP1),4,7	;IDA: ori.b / btst
 	movem.l	a1/a3,-(sp)
 	move.w	(pspenalty).w,d0
 	movea.l	#PenaltyList,a1
@@ -1008,7 +1008,7 @@ PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1)
 	bsr.w	print
 	movem.l	(sp)+,a1/a3
 	bsr.w	printz
-	String	' by',$BF,4,8	;IDA: ori.b / subi.b / add.b
+	String	' by',-(TXPRI+TXMAP1),4,8	;IDA: ori.b / subi.b / add.b
 	move.w	(BA_Checker_Offset).w,d0	;IDA hid this in the string
 	movea.l	#AwShots,a2
 	tst.w	(BA_Team).w
@@ -1036,7 +1036,7 @@ DisplayPlayerAttributeMenu	;93 name. Goal box. Closes both line change boxes, th
 	movea.w	#(ChkCnt-M68K_RAM),a4	;+ ScoreSumbytes = last goal entry
 	adda.w	(ScoreSumbytes).w,a4
 	bsr.w	printz
-	String	$BF,$B,2	;IDA: ori.b / andi.b
+	String	-(TXPRI+TXMAP1),$B,2	;IDA: ori.b / andi.b
 	moveq	#$13,d0	;IDA hid this in the string
 	move.w	#5,d1	;5 rows: no assist
 	tst.b	4(a4)
@@ -1103,7 +1103,7 @@ DisplayPlayerAttributeMenu	;93 name. Goal box. Closes both line change boxes, th
 	bclr	#5,(sflags4).w
 	bne.w	.6	;sflags4 bit 5 set: no assists
 	bsr.w	printz
-	String	$BF,$E,6,'Assist by:',$BF,$C,7	;IDA: code
+	String	-(TXPRI+TXMAP1),$E,6,'Assist by:',-(TXPRI+TXMAP1),$C,7	;IDA: code
 	move.w	d0,-(sp)	;IDA hid this in the string
 	bsr.w	FormatPlayerName
 	bsr.w	print
@@ -1113,7 +1113,7 @@ DisplayPlayerAttributeMenu	;93 name. Goal box. Closes both line change boxes, th
 	move.b	5(a4),d0	;second assist
 	bmi.w	.6
 	bsr.w	printz
-	String	$BF,$C,8	;IDA: ori.b / #0
+	String	-(TXPRI+TXMAP1),$C,8	;IDA: ori.b / #0
 	move.w	d0,-(sp)	;IDA hid this in the string
 	bsr.w	FormatPlayerName
 	bsr.w	print
@@ -1129,7 +1129,7 @@ PPGoalBigTxt	String	$BF,$D,3,'PP GOAL!',$BF,$C,5	;The same after DelayedPen bit 
 	String	$BF,$C,3,'HAT TRICK!',$BF,$C,5
 box	;IDA name (93 box). Fill a $13 x 8 rectangle at printz position $FF,$B,2 with char $7FF (eraser). Called from SetLCmode2 (logic94_1)
 	bsr.w	printz
-	String	$FF,$B,2	;IDA dc.b
+	String	-TXMAP1,$B,2	;IDA dc.b
 	moveq	#$13,d0	;IDA hid this in the string
 	moveq	#8,d1
 	move.l	#$7FF,d2
@@ -1289,21 +1289,21 @@ d0toascii	;IDA name (93 ConverByteToDigits). converts decimal number in d0 to as
 AddError	;IDA: AdrErr (92 / 93 name, main94 vectors). Address error vector; 94 has no BusError, the bus error vector also points here
 	move	#$2700,sr
 	bsr.w	printbigz
-	String	$BD,0,0,'Address Error'	;IDA dc.b
+	String	-(TXPRI+TXMAP3),0,0,'Address Error'	;IDA dc.b
 	move.l	$A(sp),d0	;pc. IDA dc.b
 	move.l	2(sp),d1	;access address
 	bra.w	crash
 Illinst	;IDA: InvOpCode (92 / 93 name, main94 vectors). Illegal instruction vector
 	move	#$2700,sr
 	bsr.w	printbigz
-	String	$BD,0,0,'Illegal Instruction'	;IDA dc.b
+	String	-(TXPRI+TXMAP3),0,0,'Illegal Instruction'	;IDA dc.b
 	move.l	2(sp),d0	;IDA dc.b
 	move.l	d0,d1
 	bra.w	crash
 ZeroDiv	;IDA: DivBy0 (92 / 93 name, main94 vectors). Divide by zero vector, falls into crash
 	move	#$2700,sr
 	bsr.w	printbigz
-	String	$BD,0,0,'Division by zero'	;IDA dc.b
+	String	-(TXPRI+TXMAP3),0,0,'Division by zero'	;IDA dc.b
 	move.l	2(sp),d0	;IDA dc.b
 	move.l	d0,d1
 crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktilelist palette + $20 (93 IceRinkMap)

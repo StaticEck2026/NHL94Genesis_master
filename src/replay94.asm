@@ -306,7 +306,7 @@ getpzjoy	;read the joystick of the pad that paused. 94: pads 3 and 4 when FourWa
 ShowReplayIcon	;94 only. Show the replay icon (93 ReplayMode does this inline) and start the $F0 frame replayicontimer timer
 	move.w	#$F0,(replayicontimer).w
 	bsr.w	printz
-	String	$BD,2,2			;IDA hid this and moveq #$20,d0 in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2			;IDA hid this and moveq #$20,d0 in ori.b / andi.b
 	moveq	#$20,d0
 	moveq	#$55,d1
 	moveq	#8,d2
@@ -323,7 +323,7 @@ ShowReplayIcon	;94 only. Show the replay icon (93 ReplayMode does this inline) a
 	bra.w	dobitmap
 EraseReplayIcon	;94 only. Erase the 8 x 4 replay icon (replayicontimer timer ran out)
 	jsr	(printz).l
-	String	$BD,2,2			;IDA hid this and the three moves in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2			;IDA hid this and the three moves in ori.b / andi.b
 	move.w	#8,d0			;8 wide
 	move.w	#4,d1			;4 high
 	move.w	#$7FF,d2
@@ -331,7 +331,7 @@ EraseReplayIcon	;94 only. Erase the 8 x 4 replay icon (replayicontimer timer ran
 ShowReplayBanner	;94 only. Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
 	st	(replayicontimer).w
 	bsr.w	printz
-	String	$BD,2,0			;IDA hid this and moveq #0,d0 in ori.b
+	String	-(TXPRI+TXMAP3),2,0			;IDA hid this and moveq #0,d0 in ori.b
 	moveq	#0,d0
 	moveq	#0,d1
 	moveq	#$10,d2
@@ -344,7 +344,7 @@ ShowReplayBanner	;94 only. Show ReplayMap at 0,0 (16 x 11) and stop the replayic
 	bra.w	dobitmap
 EraseReplayBanner	;94 only. Erase the 16 x 11 area ShowReplayBanner drew
 	jsr	(printz).l
-	String	$BD,2,2			;IDA hid this and the three moves in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2			;IDA hid this and the three moves in ori.b / andi.b
 	move.w	#$10,d0			;16 wide
 	move.w	#$B,d1			;11 high
 	move.w	#$7FF,d2
