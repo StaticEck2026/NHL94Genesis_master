@@ -27,16 +27,16 @@ const assets = [
     { name: 'HFDv94.pal', folder: 'NHL94/Graphics/Pals', start: 0x00001B70, end: 0x00001B90 }, // HFD visitor
     { name: 'LAh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00001E5E, end: 0x00001E7E }, // LA home
     { name: 'LAv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00001E7E, end: 0x00001E9E }, // LA visitor
-    { name: 'MINh.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000215A, end: 0x0000217A }, // DAL home
-    { name: 'MINv.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000217A, end: 0x0000219A }, // DAL visitor
+    { name: 'DALh.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000215A, end: 0x0000217A }, // DAL home
+    { name: 'DALv.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000217A, end: 0x0000219A }, // DAL visitor
     { name: 'MTLh.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000244A, end: 0x0000246A }, // MTL home
     { name: 'MTLv.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000246A, end: 0x0000248A }, // MTL visitor
     { name: 'NJh.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000274C, end: 0x0000276C }, // NJ home
     { name: 'NJv.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000276C, end: 0x0000278C }, // NJ visitor
-    { name: 'LIh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002A64, end: 0x00002A84 }, // NYI home
-    { name: 'LIv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002A84, end: 0x00002AA4 }, // NYI visitor
-    { name: 'NYh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002D68, end: 0x00002D88 }, // NYR home
-    { name: 'NYv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002D88, end: 0x00002DA8 }, // NYR visitor
+    { name: 'NYIh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002A64, end: 0x00002A84 }, // NYI home
+    { name: 'NYIv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002A84, end: 0x00002AA4 }, // NYI visitor
+    { name: 'NYRh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002D68, end: 0x00002D88 }, // NYR home
+    { name: 'NYRv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00002D88, end: 0x00002DA8 }, // NYR visitor
     { name: 'OTWh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00003060, end: 0x00003080 }, // OTW home
     { name: 'OTWv94.pal', folder: 'NHL94/Graphics/Pals', start: 0x00003080, end: 0x000030A0 }, // OTW visitor
     { name: 'PHIh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00003354, end: 0x00003374 }, // PHI home
@@ -49,8 +49,8 @@ const assets = [
     { name: 'SJv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00003C6E, end: 0x00003C8E }, // SJ visitor
     { name: 'STLh94.pal', folder: 'NHL94/Graphics/Pals', start: 0x00003F3C, end: 0x00003F5C }, // STL home
     { name: 'STLv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00003F5C, end: 0x00003F7C }, // STL visitor
-    { name: 'TBYh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004222, end: 0x00004242 }, // TB home
-    { name: 'TBYv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004242, end: 0x00004262 }, // TB visitor
+    { name: 'TBh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004222, end: 0x00004242 }, // TB home
+    { name: 'TBv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004242, end: 0x00004262 }, // TB visitor
     { name: 'TORh.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004524, end: 0x00004544 }, // TOR home
     { name: 'TORv.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004544, end: 0x00004564 }, // TOR visitor
     { name: 'VANh94.pal', folder: 'NHL94/Graphics/Pals', start: 0x00004828, end: 0x00004848 }, // VAN home

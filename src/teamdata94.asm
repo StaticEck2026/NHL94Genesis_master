@@ -678,8 +678,8 @@ Dallas	;DAL, $214E. 93 Minnesota North Stars
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
 .pad	;93 Minnesota palettes, unchanged in 94
-	incbin	..\Extracted\NHL94\Graphics\Pals\MINh.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\MINv.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\DALh.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\DALv.pal
 .sr	;4 bytes in 94 (93: 8, hex2)
 	dc.w	$1410,$00E9
 .sodds
@@ -858,8 +858,8 @@ NYIslanders	;NYI, $2A58
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
 .pad
-	incbin	..\Extracted\NHL94\Graphics\Pals\LIh.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\LIv.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\NYIh.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\NYIv.pal
 .sr	;4 bytes in 94 (93: 8, hex2)
 	dc.w	$5321,$00F8
 .sodds
@@ -918,8 +918,8 @@ NYRangers	;NYR, $2D5C
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
 .pad
-	incbin	..\Extracted\NHL94\Graphics\Pals\NYh.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\NYv.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\NYRh.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\NYRv.pal
 .sr	;4 bytes in 94 (93: 8, hex2)
 	dc.w	$3411,$11F8
 .sodds
@@ -1338,8 +1338,8 @@ TampaBay	;TB, $4216
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
 .pad
-	incbin	..\Extracted\NHL94\Graphics\Pals\TBYh.pal
-	incbin	..\Extracted\NHL94\Graphics\Pals\TBYv.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\TBh.pal
+	incbin	..\Extracted\NHL94\Graphics\Pals\TBv.pal
 .sr	;4 bytes in 94 (93: 8, hex2)
 	dc.w	$0502,$00F7
 .sodds
