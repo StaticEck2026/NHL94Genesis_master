@@ -1,12 +1,11 @@
-;	NHL 94 (retail) segment
-;	The ScoutingReport, rewritten as the pregame MATCHUPS screen, with its helpers: ScoutCrowdRecord
-;	GetTeamNickname / GetTeamArena (team data for the text player's '@', '=' '*' and '^' ';'), the unused ScoutCrowdRecordBy / GetTeamCity, the matchup
-;	pager PageMatchup, the rating, picture and position helpers, StatsText, and the advantage marks (PrintAdvantageMarks). 94 moved this screen
-;	to the end of the ROM with the menu code (setoptions). The text player itself (/
-;	UpdateScoutingDisplay / ScrollDisplayUp) is StartScoutText / ScoutTextPlayer / ScoutTextNextLine. The rest (Stanley Cup
-;	screen, TitleScreen, the sprite list helpers, CheckSound) is not here. EndShootout follows (called from CountShootoutGoals).
-;Each DecompressGraphicsWithCallback is followed by its 8 byte remap table (it as code). The printz / printz2 / printbigz
-;strings (and others, four with a word dropped), the instructions in them, and the String tables were read at each address.
+;	ScoutingReport, the pregame MATCHUPS screen, with its helpers:
+;	ScoutCrowdRecord, GetTeamNickname / GetTeamArena (team data for the text
+;	player's '@', '=', '*', '^' and ';' codes), the unused ScoutCrowdRecordBy
+;	/ GetTeamCity, the matchup pager PageMatchup, the rating, picture and
+;	position helpers, StatsText, and the advantage marks
+;	(PrintAdvantageMarks). The text player itself (StartScoutText,
+;	ScoutTextPlayer, ScoutTextNextLine) is with the setup code.
+;	Each DecompressGraphicsWithCallback is followed by its 8 byte remap table.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $DF / $DE the same with printa

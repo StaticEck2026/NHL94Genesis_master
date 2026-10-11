@@ -1,16 +1,16 @@
-;	NHL 94 (retail) segment
-;	The 94 game setup screen. 94 splits 93's setoptions: GameSetUp (called from PeriodOver) runs the menu
-;	and the start / demo exits, setoptions only builds the screen, and GameSetUp_2 waits for a pad (/ .wait). The
-;	locals are 94 routines: MoveMenuFrame (.nms), GameSetUp_3 (.IncItem), WrapOption (.iilimit), PrintOptions (.ps), GameSetUp_4 (.psd),
-;	PrintOptTeamName (.psdtp), SetFrameRect (.setrect), SetupDemo (.demo), SetupStart (.ex), OptionLimits (.pslim), OptionValueOffsets (.pl), OptionNames (.text).
-;	94 adds the Goalies and User Records options (9 lines, 6 shown, scrolled by setupfirstline), Shootout, four way play, the team logo
-;	blocks (DrawHomeBlock / DrawVisBlock) and player cards with user records (PlayerCardTimer, PlayerCardScreen). The 93 team block roster players
-;	(UpdateBothTeamDisplays ... AddTeamSpriteFrame) are not here (UpdateBothTeamDisplays is called in their place). VBlank_SetOptions; DefaultMenus, NewPO, MakeTree and
-;	FigureJoy are. This range is in the 94 code at the end of the ROM, after the hot / cold player code (GetHotColdTotal)
-;	before wallcollduringcheck.
-;SetFrameRectUnused) or unlabeled (CheckNOPUnused); LoadSetupTiles (and code); the five DecompressGraphicsWithCallback remap
-;tables; the printz Strings ( some with a word dropped) and the instructions in them; the menu text as String
-;tables; TeamLogoBitmaps as dc.l. PlayerCardScreen continues past 's end of function.
+;	The game setup screen. GameSetUp (called from PeriodOver) runs the menu
+;	and the start / demo exits, setoptions only builds the screen, and
+;	GameSetUp_2 waits for a pad. Helpers: MoveMenuFrame, GameSetUp_3,
+;	WrapOption, PrintOptions, GameSetUp_4, PrintOptTeamName, SetFrameRect,
+;	SetupDemo, SetupStart, OptionLimits, OptionValueOffsets, OptionNames.
+;	New in 94: the Goalies and User Records options (9 lines, 6 shown,
+;	scrolled by setupfirstline), Shootout, four way play, the team logo
+;	blocks (DrawHomeBlock / DrawVisBlock) and player cards with user records
+;	(PlayerCardTimer, PlayerCardScreen). UpdateBothTeamDisplays is an empty
+;	routine kept where the animated roster players used to be updated.
+;	SetFrameRectUnused and CheckNOPUnused are unreferenced. Each
+;	DecompressGraphicsWithCallback is followed by its 8 byte remap table.
+;	TeamLogoBitmaps is a dc.l table.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season, Continue Playoffs, New Playoffs, New

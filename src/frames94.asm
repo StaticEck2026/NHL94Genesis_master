@@ -1,11 +1,12 @@
-;	NHL 94 sprite animation tables (92 / )., from lst/nhl94.bin.lst.
-;	SPAlist is a word, then one table per animation. A table is 8 direction offsets (from .t), a flag word, then
-;	frame,time word pairs per direction; a negative time ends the direction. SPA<name> is the table offset from
-;	SPAlist, which the code uses (movea.l #SPAlist,a0 is $5B1C). Same order as 93 except: the 93 fight tables
-;	(fight ... finjury) are gone, 14 tables new in 94 come after flip, and injury1 is last.
+;	Sprite animation tables. SPAlist is a word, then one table per
+;	animation. A table is 8 direction offsets (from .t), a flag word, then
+;	frame,time word pairs per direction; a negative time ends the direction.
+;	SPA<name> is the table offset from SPAlist, which the code uses. The
+;	fight tables are gone; 14 new tables come after flip, and injury1 is
+;	last.
 
-; Sprite Frame (SPF) base indices. 94 gready has 3 frames per direction (93: 2)
-; so every base from SPFSiren up is 8 higher than 93. Frames 658 and up are new in 94 and have no name.
+; Sprite Frame (SPF) base indices. gready has 3 frames per direction (93 had 2),
+; so every base from SPFSiren up is 8 higher than in 93. Frames 658 and up have no name.
 SPFskatewp	=	1
 SPFskate	=	SPFskatewp+40	; 41
 SPFturnl	=	SPFskate+40	; 81
@@ -27,34 +28,34 @@ SPFfallfwd	=	SPFfallback+32	; 305
 SPFduck	=	SPFfallfwd+32	; 337
 SPFhold	=	SPFduck+8	; 345
 
-SPFgloves	=	SPFhold+8	; 353 not used by a 94 table
-SPFfight	=	SPFgloves+1	; 354 not used by a 94 table
-SPFfinjury	=	SPFfight+17	; 371 not used by a 94 table
+SPFgloves	=	SPFhold+8	; 353 not used by any table
+SPFfight	=	SPFgloves+1	; 354 not used by any table
+SPFfinjury	=	SPFfight+17	; 371 not used by any table
 SPFPen	=	SPFfinjury+6	; 377
 
-SPFarrow	=	SPFPen+7	; 384 not used by a 94 table
-SPFpad	=	SPFarrow+6	; 390 not used by a 94 table
-SPFreplay	=	SPFpad+3	; 393 not used by a 94 table
+SPFarrow	=	SPFPen+7	; 384 not used by any table
+SPFpad	=	SPFarrow+6	; 390 not used by any table
+SPFreplay	=	SPFpad+3	; 393 not used by any table
 SPFpuck	=	SPFreplay+1	; 394
-SPFgoal	=	SPFpuck+11	; 405 not used by a 94 table
+SPFgoal	=	SPFpuck+11	; 405 not used by any table
 SPFGoalie	=	SPFgoal+2	; 407
 SPFgdive	=	SPFGoalie+112	; 519
 SPFglovel2	=	SPFgdive+16	; 535
 SPFgready	=	SPFglovel2+4	; 539
-SPFSiren	=	SPFgready+24	; 563 (93: 555)
+SPFSiren	=	SPFgready+24	; 563
 
-SPFcatch	=	SPFSiren+14	; 577 (93: 569)
-SPFhook	=	SPFcatch+16	; 593 (93: 585)
-SPFstumble	=	SPFhook+16	; 609 (93: 601)
-SPFflip	=	SPFstumble+24	; 633 (93: 625)
-SPFinjury1	=	SPFflip+8	; 641 (93: 633)
-SPFbglass	=	SPFinjury1+12	; 653 (93: 645)
+SPFcatch	=	SPFSiren+14	; 577
+SPFhook	=	SPFcatch+16	; 593
+SPFstumble	=	SPFhook+16	; 609
+SPFflip	=	SPFstumble+24	; 633
+SPFinjury1	=	SPFflip+8	; 641
+SPFbglass	=	SPFinjury1+12	; 653
 
-SPAlist	;$5B1C.
+SPAlist	;animation table list
 	dc.w	0
 
 SPAgready	=	*-SPAlist	; $0002
-SPAgready_table:	;$5B1E. 94 uses 3 gready frames per direction (93: 2) and new times
+SPAgready_table:	;3 gready frames per direction (93 used 2) and new times
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -76,7 +77,7 @@ SPAgready_table:	;$5B1E. 94 uses 3 gready frames per direction (93: 2) and new t
 .7	dc.w	SPFGoalie+21,180,SPFgready+21,10,SPFGoalie+21,10,SPFgready+22,10,SPFGoalie+21,240,SPFgready+23,10,SPFGoalie+21,10,SPFgready+21,-10
 
 SPAgready2	=	*-SPAlist	; $0114
-SPAgready2_table:	;$5C30
+SPAgready2_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -98,7 +99,7 @@ SPAgready2_table:	;$5C30
 .7	dc.w	SPFGoalie+21,-30
 
 SPAgglover	=	*-SPAlist	; $0146
-SPAgglover_table:	;$5C62
+SPAgglover_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -120,7 +121,7 @@ SPAgglover_table:	;$5C62
 .7	dc.w	SPFGoalie+22,-32
 
 SPAgglovel	=	*-SPAlist	; $0178
-SPAgglovel_table:	;$5C94
+SPAgglovel_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -142,7 +143,7 @@ SPAgglovel_table:	;$5C94
 .7	dc.w	SPFGoalie+23,-32
 
 SPAgglovel2	=	*-SPAlist	; $01AA
-SPAgglovel2_table:	;$5CC6
+SPAgglovel2_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -164,7 +165,7 @@ SPAgglovel2_table:	;$5CC6
 .7	dc.w	SPFGoalie+23,-32
 
 SPAgstickr	=	*-SPAlist	; $01EC
-SPAgstickr_table:	;$5D08
+SPAgstickr_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -186,7 +187,7 @@ SPAgstickr_table:	;$5D08
 .7	dc.w	SPFGoalie+78,-32
 
 SPAgstickl	=	*-SPAlist	; $021E
-SPAgstickl_table:	;$5D3A
+SPAgstickl_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -208,7 +209,7 @@ SPAgstickl_table:	;$5D3A
 .7	dc.w	SPFGoalie+79,-32
 
 SPAgstackr	=	*-SPAlist	; $0250
-SPAgstackr_table:	;$5D6C
+SPAgstackr_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -230,7 +231,7 @@ SPAgstackr_table:	;$5D6C
 .7	dc.w	SPFGoalie+50,8,SPFGoalie+51,-32
 
 SPAgstackl	=	*-SPAlist	; $02A2
-SPAgstackl_table:	;$5DBE
+SPAgstackl_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -252,7 +253,7 @@ SPAgstackl_table:	;$5DBE
 .7	dc.w	SPFGoalie+62,8,SPFGoalie+63,-32
 
 SPAgdive	=	*-SPAlist	; $02F4
-SPAgdive_table:	;$5E10
+SPAgdive_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -274,7 +275,7 @@ SPAgdive_table:	;$5E10
 .7	dc.w	SPFgdive+14,8,SPFgdive+15,48,SPFgdive+14,-8
 
 SPAgswing	=	*-SPAlist	; $0366
-SPAgswing_table:	;$5E82
+SPAgswing_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -296,7 +297,7 @@ SPAgswing_table:	;$5E82
 .7	dc.w	SPFGoalie+38,5,SPFGoalie+39,8,SPFGoalie+38,-16
 
 SPAgskate	=	*-SPAlist	; $03D8
-SPAgskate_table:	;$5EF4
+SPAgskate_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -318,7 +319,7 @@ SPAgskate_table:	;$5EF4
 .7	dc.w	SPFGoalie+108,10,SPFGoalie+109,10,SPFGoalie+110,10,SPFGoalie+111,-15
 
 SPApflip	=	*-SPAlist	; $046A
-SPApflip_table:	;$5F86
+SPApflip_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -340,7 +341,7 @@ SPApflip_table:	;$5F86
 .7	dc.w	SPFpuck+5,-4096
 
 SPAglide	=	*-SPAlist	; $050C
-SPAglide_table:	;$6028
+SPAglide_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -362,7 +363,7 @@ SPAglide_table:	;$6028
 .7	dc.w	SPFskatewp+35,-8
 
 SPAskatewp	=	*-SPAlist	; $053E
-SPAskatewp_table:	;$605A
+SPAskatewp_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -384,7 +385,7 @@ SPAskatewp_table:	;$605A
 .7	dc.w	SPFskatewp+36,10,SPFskatewp+37,10,SPFskatewp+38,10,SPFskatewp+39,-10
 
 SPAskate	=	*-SPAlist	; $05D0
-SPAskate_table:	;$60EC
+SPAskate_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -406,7 +407,7 @@ SPAskate_table:	;$60EC
 .7	dc.w	SPFskate+36,10,SPFskate+37,10,SPFskate+38,10,SPFskate+39,-10
 
 SPAturnl	=	*-SPAlist	; $0662
-SPAturnl_table:	;$617E
+SPAturnl_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -428,7 +429,7 @@ SPAturnl_table:	;$617E
 .7	dc.w	SPFturnl+7,-8
 
 SPAturnr	=	*-SPAlist	; $0694
-SPAturnr_table:	;$61B0
+SPAturnr_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -450,7 +451,7 @@ SPAturnr_table:	;$61B0
 .7	dc.w	SPFturnr+7,-8
 
 SPAstop	=	*-SPAlist	; $06C6
-SPAstop_table:	;$61E2
+SPAstop_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -472,7 +473,7 @@ SPAstop_table:	;$61E2
 .7	dc.w	SPFstop+14,4,SPFstop+15,-4
 
 SPApassf	=	*-SPAlist	; $0718
-SPApassf_table:	;$6234
+SPApassf_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -494,7 +495,7 @@ SPApassf_table:	;$6234
 .7	dc.w	SPFswing+45,4,SPFswing+46,4,SPFswing+47,-20
 
 SPApassb	=	*-SPAlist	; $078A
-SPApassb_table:	;$62A6
+SPApassb_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -516,7 +517,7 @@ SPApassb_table:	;$62A6
 .7	dc.w	SPFswing+45,4,SPFswing+44,4,SPFswing+43,-20
 
 SPAshotf	=	*-SPAlist	; $07FC
-SPAshotf_table:	;$6318
+SPAshotf_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -546,7 +547,7 @@ SPAshotf_table:	;$6318
 	dc.w	SPFswing+47,-20
 
 SPAshotb	=	*-SPAlist	; $092E
-SPAshotb_table:	;$644A
+SPAshotb_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -576,7 +577,7 @@ SPAshotb_table:	;$644A
 	dc.w	SPFswing+43,-20
 
 SPAglideback	=	*-SPAlist	; $0A60
-SPAglideback_table:	;$657C
+SPAglideback_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -598,7 +599,7 @@ SPAglideback_table:	;$657C
 .7	dc.w	SPFskateb+21,-8
 
 SPAskateback	=	*-SPAlist	; $0A92
-SPAskateback_table:	;$65AE
+SPAskateback_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -620,7 +621,7 @@ SPAskateback_table:	;$65AE
 .7	dc.w	SPFskateb+21,10,SPFskateb+22,10,SPFskateb+21,10,SPFskateb+23,-10
 
 SPAsweepchk	=	*-SPAlist	; $0B24
-SPAsweepchk_table:	;$6640
+SPAsweepchk_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -642,7 +643,7 @@ SPAsweepchk_table:	;$6640
 .7	dc.w	SPFsweep+14,4,SPFsweep+15,8,SPFsweep+14,-4
 
 SPAshoulderchkl	=	*-SPAlist	; $0B96
-SPAshoulderchkl_table:	;$66B2
+SPAshoulderchkl_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -664,7 +665,7 @@ SPAshoulderchkl_table:	;$66B2
 .7	dc.w	SPFshoulderl+7,-24
 
 SPAshoulderchkr	=	*-SPAlist	; $0BC8
-SPAshoulderchkr_table:	;$66E4
+SPAshoulderchkr_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -686,7 +687,7 @@ SPAshoulderchkr_table:	;$66E4
 .7	dc.w	SPFshoulderr+7,-24
 
 SPAhipchkl	=	*-SPAlist	; $0BFA
-SPAhipchkl_table:	;$6716
+SPAhipchkl_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -708,7 +709,7 @@ SPAhipchkl_table:	;$6716
 .7	dc.w	SPFhipl+7,-24
 
 SPAhipchkr	=	*-SPAlist	; $0C2C
-SPAhipchkr_table:	;$6748
+SPAhipchkr_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -730,7 +731,7 @@ SPAhipchkr_table:	;$6748
 .7	dc.w	SPFhipr+7,-24
 
 SPAburst	=	*-SPAlist	; $0C5E
-SPAburst_table:	;$677A
+SPAburst_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -752,7 +753,7 @@ SPAburst_table:	;$677A
 .7	dc.w	SPFskate+35,-24
 
 SPAHold	=	*-SPAlist	; $0C90
-SPAHold_table:	;$67AC
+SPAHold_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -774,7 +775,7 @@ SPAHold_table:	;$67AC
 .7	dc.w	SPFhold+7,-30
 
 SPAHold2	=	*-SPAlist	; $0CC2
-SPAHold2_table:	;$67DE. Last time -40 in every direction (93: -30)
+SPAHold2_table:	;last time -40 in every direction (93 used -30)
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -796,7 +797,7 @@ SPAHold2_table:	;$67DE. Last time -40 in every direction (93: -30)
 .7	dc.w	SPFhold+7,-40
 
 SPAflail	=	*-SPAlist	; $0CF4
-SPAflail_table:	;$6810. Last time -40 in every direction (93: -30)
+SPAflail_table:	;last time -40 in every direction (93 used -30)
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -818,7 +819,7 @@ SPAflail_table:	;$6810. Last time -40 in every direction (93: -30)
 .7	dc.w	SPFskate+35,-40
 
 SPAfallfwd	=	*-SPAlist	; $0D26
-SPAfallfwd_table:	;$6842
+SPAfallfwd_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -840,7 +841,7 @@ SPAfallfwd_table:	;$6842
 .7	dc.w	SPFfallfwd+28,6,SPFfallfwd+29,6,SPFfallfwd+30,100,SPFfallfwd+31,8,SPFduck+7,-8
 
 SPAfallback	=	*-SPAlist	; $0DD8
-SPAfallback_table:	;$68F4
+SPAfallback_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -862,7 +863,7 @@ SPAfallback_table:	;$68F4
 .7	dc.w	SPFfallback+28,6,SPFfallback+29,6,SPFfallback+30,100,SPFfallback+31,8,SPFduck+7,-8
 
 SPAcelebrate	=	*-SPAlist	; $0E8A
-SPAcelebrate_table:	;$69A6
+SPAcelebrate_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -884,7 +885,7 @@ SPAcelebrate_table:	;$69A6
 .7	dc.w	SPFcelebrate+14,12,SPFcelebrate+15,40,SPFcelebrate+14,-5
 
 SPApump	=	*-SPAlist	; $0EFC
-SPApump_table:	;$6A18
+SPApump_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -906,7 +907,7 @@ SPApump_table:	;$6A18
 .7	dc.w	SPFpump+14,8,SPFpump+15,8,SPFpump+14,-8
 
 SPAwallright	=	*-SPAlist	; $0F6E
-SPAwallright_table:	;$6A8A. First table after pump: the 93 fight tables are not in 94
+SPAwallright_table:	;first table after pump: there are no fight tables
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -925,10 +926,10 @@ SPAwallright_table:	;$6A8A. First table after pump: the 93 fight tables are not 
 .4
 .5
 .6	dc.w	SPFPen+3,8,SPFPen+2,8,SPFPen+1,8,SPFPen,-8
-.7	;invalid direction: points at the next table (93 has the same)
+.7	;invalid direction: points at the next table
 
 SPAwallleft	=	*-SPAlist	; $0FAC
-SPAwallleft_table:	;$6AC8
+SPAwallleft_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -947,10 +948,10 @@ SPAwallleft_table:	;$6AC8
 .4
 .5
 .6	dc.w	SPFPen,8,SPFPen+1,8,SPFPen+2,8,SPFPen+3,-8
-.7	;invalid direction: points at the next table (93 has the same)
+.7	;invalid direction: points at the next table
 
 SPAfaceoff	=	*-SPAlist	; $0FEA
-SPAfaceoff_table:	;$6B06
+SPAfaceoff_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -972,7 +973,7 @@ SPAfaceoff_table:	;$6B06
 .7	dc.w	SPFskatewp+20,2,SPFsweep+9,10,SPFsweep+8,-6
 
 SPAfaceoffr	=	*-SPAlist	; $1014
-SPAfaceoffr_table:	;$6B30
+SPAfaceoffr_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -994,7 +995,7 @@ SPAfaceoffr_table:	;$6B30
 .7	dc.w	SPFskatewp+20,-5
 
 SPAsiren	=	*-SPAlist	; $102E
-SPAsiren_table:	;$6B4A
+SPAsiren_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1017,7 +1018,7 @@ SPAsiren_table:	;$6B4A
 	dc.w	SPFSiren+8,3,SPFSiren+9,3,SPFSiren+10,3,SPFSiren+11,3,SPFSiren+12,3,SPFSiren+13,-3
 
 SPAbglass	=	*-SPAlist	; $1078
-SPAbglass_table:	;$6B94
+SPAbglass_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1039,7 +1040,7 @@ SPAbglass_table:	;$6B94
 .7	dc.w	SPFbglass,8,SPFbglass+1,8,SPFbglass+2,8,SPFbglass+3,8,SPFbglass+4,-1000
 
 SPAstanley	=	*-SPAlist	; $109E
-SPAstanley_table:	;$6BBA
+SPAstanley_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1061,7 +1062,7 @@ SPAstanley_table:	;$6BBA
 .7	dc.w	SPFcup+7,-30
 
 SPAcatch	=	*-SPAlist	; $10D0
-SPAcatch_table:	;$6BEC
+SPAcatch_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1083,7 +1084,7 @@ SPAcatch_table:	;$6BEC
 .7	dc.w	SPFcatch+14,6,SPFcatch+15,-6
 
 SPAhook	=	*-SPAlist	; $1122
-SPAhook_table:	;$6C3E
+SPAhook_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1105,7 +1106,7 @@ SPAhook_table:	;$6C3E
 .7	dc.w	SPFhook+14,-30
 
 SPAhook2	=	*-SPAlist	; $1154
-SPAhook2_table:	;$6C70
+SPAhook2_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1127,7 +1128,7 @@ SPAhook2_table:	;$6C70
 .7	dc.w	SPFhook+14,9,SPFhook+15,9,SPFhook+14,9,SPFhook+15,-9
 
 SPAstumble	=	*-SPAlist	; $11E6
-SPAstumble_table:	;$6D02
+SPAstumble_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1149,7 +1150,7 @@ SPAstumble_table:	;$6D02
 .7	dc.w	SPFstumble+21,6,SPFstumble+22,6,SPFstumble+23,8,SPFstumble+22,6,SPFstumble+21,-6
 
 SPAfake	=	*-SPAlist	; $1298
-SPAfake_table:	;$6DB4
+SPAfake_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1171,7 +1172,7 @@ SPAfake_table:	;$6DB4
 .7	dc.w	SPFturnl+7,4,SPFturnl+6,4,SPFsweep+10,20,SPFturnr+6,4,SPFturnr+7,4,SPFturnr,-4
 
 SPAflip	=	*-SPAlist	; $136A
-SPAflip_table:	;$6E86
+SPAflip_table:
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1192,8 +1193,8 @@ SPAflip_table:	;$6E86
 .6	dc.w	SPFflip+4,6,SPFflip+5,6,SPFflip+6,6,SPFflip+7,6,SPFfallback+26,100,SPFfallback+27,8,SPFduck+6,-8
 .7	dc.w	SPFflip,6,SPFflip+1,6,SPFflip+2,6,SPFflip+3,6,SPFfallback+30,100,SPFfallback+31,8,SPFduck+7,-8
 
-SPAinjuryfall	=	*-SPAlist	; $145C. Fall back and stay down: the injured player (FallDown, before setInjuryType). Was SPA_145C
-SPAinjuryfall_table:	;$6F78. Frames 273-291
+SPAinjuryfall	=	*-SPAlist	; $145C. Fall back and stay down: the injured player (FallDown, before setInjuryType)
+SPAinjuryfall_table:	;Frames 273-291
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1214,8 +1215,8 @@ SPAinjuryfall_table:	;$6F78. Frames 273-291
 .5
 .6	dc.w	SPFfallback+16,6,SPFfallback+17,6,SPFfallback+18,30,SPFfallback+18,-1024
 
-SPAghighr	=	*-SPAlist	; $148E. Goalie high shoulder save right (goaliesave.saveanim 6). Was SPA_148E
-SPAghighr_table:	;$6FAA. Frames 658-672
+SPAghighr	=	*-SPAlist	; $148E. Goalie high shoulder save right (goaliesave.saveanim 6)
+SPAghighr_table:	;Frames 658-672
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1236,8 +1237,8 @@ SPAghighr_table:	;$6FAA. Frames 658-672
 .6	dc.w	670,-32
 .7	dc.w	672,-32
 
-SPAghighl	=	*-SPAlist	; $14C0. Goalie high shoulder save left (goaliesave.saveanim 7). Was SPA_14C0
-SPAghighl_table:	;$6FDC. Frames 659-673
+SPAghighl	=	*-SPAlist	; $14C0. Goalie high shoulder save left (goaliesave.saveanim 7)
+SPAghighl_table:	;Frames 659-673
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1258,8 +1259,8 @@ SPAghighl_table:	;$6FDC. Frames 659-673
 .6	dc.w	671,-32
 .7	dc.w	673,-32
 
-SPAgstick2r	=	*-SPAlist	; $14F2. Goalie stick save right, 2 frames (goaliesave.saveanim 8). Was SPA_14F2
-SPAgstick2r_table:	;$700E. Frames 674-703
+SPAgstick2r	=	*-SPAlist	; $14F2. Goalie stick save right, 2 frames (goaliesave.saveanim 8)
+SPAgstick2r_table:	;Frames 674-703
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1280,8 +1281,8 @@ SPAgstick2r_table:	;$700E. Frames 674-703
 .6	dc.w	698,4,699,-32
 .7	dc.w	702,4,703,-32
 
-SPAgstick2l	=	*-SPAlist	; $1544. Goalie stick save left, 2 frames (goaliesave.saveanim 9). Was SPA_1544
-SPAgstick2l_table:	;$7060. Frames 676-705
+SPAgstick2l	=	*-SPAlist	; $1544. Goalie stick save left, 2 frames (goaliesave.saveanim 9)
+SPAgstick2l_table:	;Frames 676-705
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1302,8 +1303,8 @@ SPAgstick2l_table:	;$7060. Frames 676-705
 .6	dc.w	700,4,701,-32
 .7	dc.w	704,4,705,-32
 
-SPAgslamtop	=	*-SPAlist	; $1596. Goalie in the top net (pfgoal 0) turns and slams his stick after a goal: sfx $1C on frame 708 (assgoaliecpu). Was SPA_1596
-SPAgslamtop_table:	;$70B2. Frames 407-709
+SPAgslamtop	=	*-SPAlist	; $1596. Goalie in the top net (pfgoal 0) turns and slams his stick after a goal: sfx $1C on frame 708 (assgoaliecpu)
+SPAgslamtop_table:	;Frames 407-709
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1325,8 +1326,8 @@ SPAgslamtop_table:	;$70B2. Frames 407-709
 .6	dc.w	SPFGoalie+18,8,SPFGoalie+21,8,SPFGoalie+21,8,706,5,707,5,708,10,709,-5
 .7	dc.w	SPFGoalie+21,8,SPFGoalie+24,8,706,5,707,5,708,10,709,-5
 
-SPAgslambot	=	*-SPAlist	; $1684. Goalie in the bottom net (pfgoal 1) turns and slams his stick after a goal: sfx $1C on frame 712 (assgoaliecpu). Was SPA_1684
-SPAgslambot_table:	;$71A0. Frames 407-713
+SPAgslambot	=	*-SPAlist	; $1684. Goalie in the bottom net (pfgoal 1) turns and slams his stick after a goal: sfx $1C on frame 712 (assgoaliecpu)
+SPAgslambot_table:	;Frames 407-713
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1348,8 +1349,8 @@ SPAgslambot_table:	;$71A0. Frames 407-713
 .6	dc.w	SPFGoalie+18,8,SPFGoalie+15,8,SPFGoalie+15,8,710,5,711,5,712,10,713,-5
 .7	dc.w	SPFGoalie+21,8,SPFGoalie+18,8,SPFGoalie+18,8,SPFGoalie+18,8,710,5,711,5,712,10,713,-5
 
-SPAboardtop	=	*-SPAlist	; $1776. Checked into the end boards behind the top goal line (FallDown.FallList 0). Was SPA_1776
-SPAboardtop_table:	;$7292. Frames 276-753
+SPAboardtop	=	*-SPAlist	; $1776. Checked into the end boards behind the top goal line (FallDown.FallList 0)
+SPAboardtop_table:	;Frames 276-753
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1370,8 +1371,8 @@ SPAboardtop_table:	;$7292. Frames 276-753
 .6
 .7	dc.w	750,6,751,6,752,6,753,60,SPFfallfwd+27,8,SPFduck+6,-8
 
-SPAboardright	=	*-SPAlist	; $17E8. Checked into the right side boards (FallDown.FallList 1; flipped sprites swap it with SPAboardleft). Was SPA_17E8
-SPAboardright_table:	;$7304. Frames 284-769
+SPAboardright	=	*-SPAlist	; $17E8. Checked into the right side boards (FallDown.FallList 1; flipped sprites swap it with SPAboardleft)
+SPAboardright_table:	;Frames 284-769
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1392,8 +1393,8 @@ SPAboardright_table:	;$7304. Frames 284-769
 .6
 .7	dc.w	766,6,767,6,768,6,769,60,SPFfallback+27,8,SPFduck+6,-8
 
-SPAboardbot	=	*-SPAlist	; $185A. Checked into the end boards behind the bottom goal line (FallDown.FallList 2). Was SPA_185A
-SPAboardbot_table:	;$7376. Frames 292-785
+SPAboardbot	=	*-SPAlist	; $185A. Checked into the end boards behind the bottom goal line (FallDown.FallList 2)
+SPAboardbot_table:	;Frames 292-785
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1415,8 +1416,8 @@ SPAboardbot_table:	;$7376. Frames 292-785
 .6
 .7	dc.w	782,6,783,6,784,6,785,60,SPFfallfwd+27,8,SPFduck+6,-8
 
-SPAboardleft	=	*-SPAlist	; $18CC. Checked into the left side boards (FallDown.FallList 3; flipped sprites swap it with SPAboardright). Was SPA_18CC
-SPAboardleft_table:	;$73E8. Frames 284-801
+SPAboardleft	=	*-SPAlist	; $18CC. Checked into the left side boards (FallDown.FallList 3; flipped sprites swap it with SPAboardright)
+SPAboardleft_table:	;Frames 284-801
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1437,8 +1438,8 @@ SPAboardleft_table:	;$73E8. Frames 284-801
 .6
 .7	dc.w	798,6,799,6,800,6,801,60,SPFfallback+27,8,SPFduck+6,-8
 
-SPAboardmidl	=	*-SPAlist	; $193E. Checked into the left boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip). Was SPA_193E
-SPAboardmidl_table:	;$745A. Frames 284-815
+SPAboardmidl	=	*-SPAlist	; $193E. Checked into the left boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip)
+SPAboardmidl_table:	;Frames 284-815
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1463,8 +1464,8 @@ SPAboardmidl_table:	;$745A. Frames 284-815
 .7	dc.w	798,6,815,6,804,6,805,6,806,6,807,6,808,6,800,6
 	dc.w	769,6,SPFfallback+27,80,SPFduck+6,-8
 
-SPAboardmidr	=	*-SPAlist	; $1A00. Checked into the right boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip). Was SPA_1A00
-SPAboardmidr_table:	;$751C. Frames 284-829
+SPAboardmidr	=	*-SPAlist	; $1A00. Checked into the right boards near center ice (FallDown, from SPAboardleft / SPAboardright by Ypos and flip)
+SPAboardmidr_table:	;Frames 284-829
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1489,8 +1490,8 @@ SPAboardmidr_table:	;$751C. Frames 284-829
 .7	dc.w	766,6,825,6,826,6,827,6,828,6,829,6,825,6,800,6
 	dc.w	769,6,SPFfallback+27,80,SPFduck+6,-8
 
-SPAboardchk	=	*-SPAlist	; $1AC2. The checker stops after a hit into the boards away from the crease (FallDown sets it on a3). Was SPA_1AC2
-SPAboardchk_table:	;$75DE. Frames 830-837
+SPAboardchk	=	*-SPAlist	; $1AC2. The checker stops after a hit into the boards away from the crease (FallDown sets it on a3)
+SPAboardchk_table:	;Frames 830-837
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t
@@ -1512,7 +1513,7 @@ SPAboardchk_table:	;$75DE. Frames 830-837
 .7	dc.w	837,-24
 
 SPAinjury1	=	*-SPAlist	; $1AF4
-SPAinjury1_table:	;$7610. Last in 94 (93: right after flip)
+SPAinjury1_table:	;last table (93 had it right after flip)
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
 	dc.w	.1-.t

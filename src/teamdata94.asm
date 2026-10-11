@@ -1,11 +1,12 @@
-;NHL 94 team data., from the lst/nhl94.bin.lst.
-;	Layout of 93: the team address table, one block per team, playoffseats, Credits.
-;	94 has 26 teams plus the two all star teams (93: 24 plus two). Minnesota is now Dallas; Anaheim and
-;	Florida are new. 94 team blocks are not in TeamList order (ASE and ASW first, FLA and ANH last).
+;	Team data: the team address table, one block per team, playoffseats and
+;	the credits.
+;	26 teams plus the two all star teams (93 had 24 plus two). Minnesota is
+;	now Dallas; Anaheim and Florida are new. Team blocks are not in TeamList
+;	order (ASE and ASW first, FLA and ANH last).
 
-	dc.l	0	;$30A. Not part of TeamList (93 has the same long before its list)
+	dc.l	0	;not part of TeamList
 
-TeamList	;$30E. List Pointer Table Start. Team number = index (ANH 0 ... WPG 25, ASE 26, ASW 27)
+TeamList	;List Pointer Table Start. Team number = index (ANH 0 ... WPG 25, ASE 26, ASW 27)
 	dc.l	Anaheim	;0 ANH
 	dc.l	Boston	;1 BOS
 	dc.l	Buffalo	;2 BUF
@@ -44,10 +45,10 @@ ScoutReport	=	8
 ScoreOdds	=	10
 
 ;------------------------
-; Team block: 6 offset words (the equates above), .pad home and visitor palettes (16 colours each, incbin <team>h.pal / <team>v.pal
-; as 93; files, 94 in the name where the colours differ from 93)
+; Team block: 6 offset words (the equates above), .pad home and visitor palettes (16 colours each, incbin <team>h.pal / <team>v.pal;
+; files with 94 in the name have new colours)
 ; .sr, .sodds, .ls 8 lines of 8 player numbers (1 = first .pld entry), .pld players ended by an
-; empty String, then 4 Strings: city, abbreviation, nickname, arena (93 has only city and abbreviation).
+; empty String, then 4 Strings: city, abbreviation, nickname, arena.
 ;------------------------
 ; Player ratings (Player macro: name, then 16 nibbles unwl,sodp,chga,eytm)
 ;u - uniform # x10
@@ -68,7 +69,7 @@ ScoreOdds	=	10
 ;m - aggressiveness (PIM) / NA
 ;------------------------
 
-AllStarsEast	;ASE, $37E
+AllStarsEast	;ASE
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -79,11 +80,11 @@ AllStarsEast	;ASE, $37E
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\ASEh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\ASEv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$7720,$00E8
 .sodds
 	dc.b	203,192
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,07,04,16,09,00	;line 1 Sc1
 	dc.b	01,19,18,07,04,16,10,00	;line 2 Sc2
 	dc.b	01,22,20,11,10,17,07,00	;line 3 Chk
@@ -91,7 +92,7 @@ AllStarsEast	;ASE, $37E
 	dc.b	01,19,22,07,04,16,09,00	;line 5 PP2
 	dc.b	01,18,21,08,09,17,07,00	;line 6 PK1
 	dc.b	01,19,23,13,05,06,15,00	;line 7 PK2
-	dc.b	01,24,25,15,06,05,13,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,24,25,15,06,05,13,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Patrick Roy',				3366,4446,0100,5566	;1
 	Player	'Grant Fuhr',				3175,4555,0000,4455	;2
@@ -118,7 +119,7 @@ AllStarsEast	;ASE, $37E
 	Player	'Scott Stevens',			04B4,4344,5642,5043	;23
 	Player	'Zarley Zalapski',			03A5,4454,4442,5133	;24
 	Player	'Glen Wesley',				2685,4344,3641,4442	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'All Stars East'
 .ta	;abbreviation
@@ -128,7 +129,7 @@ AllStarsEast	;ASE, $37E
 .ar	;arena.
 	String	'Madison Square Garden'
 
-AllStarsWest	;ASW, $674
+AllStarsWest	;ASW
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -139,11 +140,11 @@ AllStarsWest	;ASW, $674
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\ASWh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\ASWv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$7720,$00E8
 .sodds
 	dc.b	237,144
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,20,22,11,04,15,14,00	;line 1 Sc1
 	dc.b	01,24,22,11,04,15,13,00	;line 2 Sc2
 	dc.b	01,20,23,14,06,13,04,00	;line 3 Chk
@@ -151,7 +152,7 @@ AllStarsWest	;ASW, $674
 	dc.b	01,20,19,11,09,13,04,00	;line 5 PP2
 	dc.b	01,18,22,06,04,15,09,00	;line 6 PK1
 	dc.b	01,25,21,08,12,09,17,00	;line 7 PK2
-	dc.b	01,23,24,09,17,08,12,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,23,24,09,17,08,12,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Ed Belfour',				3066,4665,0000,6655	;1
 	Player	'Tim Cheveldae',			3264,4444,0000,4344	;2
@@ -178,7 +179,7 @@ AllStarsWest	;ASW, $674
 	Player	'Dave Manson',				2494,4355,4A41,5434	;23
 	Player	'Steve Smith',				05B4,4344,4641,5244	;24
 	Player	'Steve Chiasson',			0394,3444,3641,4234	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'All Stars West'
 .ta	;abbreviation
@@ -188,7 +189,7 @@ AllStarsWest	;ASW, $674
 .ar	;arena.
 	String	'Madison Square Garden'
 
-Boston	;BOS, $966
+Boston	;BOS
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -199,11 +200,11 @@ Boston	;BOS, $966
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\BOSh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\BOSv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$4121,$21F8
 .sodds
 	dc.b	180,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,07,03,12,08,00	;line 1 Sc1
 	dc.b	01,19,18,08,03,12,05,00	;line 2 Sc2
 	dc.b	01,20,21,07,05,13,03,00	;line 3 Chk
@@ -211,7 +212,7 @@ Boston	;BOS, $966
 	dc.b	01,20,18,08,03,12,05,00	;line 5 PP2
 	dc.b	01,22,21,07,05,13,03,00	;line 6 PK1
 	dc.b	01,19,18,09,04,03,06,00	;line 7 PK2
-	dc.b	01,20,21,03,06,09,04,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,20,21,03,06,09,04,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Andy Moog',				3544,4224,0000,4343	;1
 	Player	'John Blue',				3963,4553,0000,4343	;2
@@ -238,7 +239,7 @@ Boston	;BOS, $966
 	Player	'Gordie Roberts',			1473,2231,3423,3023	;23
 	Player	'Glen Feathrston',			06B3,3222,4823,2324	;24
 	Player	'Jim Wiemer',				36A2,1221,2820,2324	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Boston'
 .ta	;abbreviation
@@ -248,7 +249,7 @@ Boston	;BOS, $966
 .ar	;arena.
 	String	'Boston Garden'
 
-Buffalo	;BUF, $C4C
+Buffalo	;BUF
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -259,11 +260,11 @@ Buffalo	;BUF, $C4C
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\BUFh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\BUFv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$6410,$21E8
 .sodds
 	dc.b	178,80
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,18,19,05,04,13,06,00	;line 1 Sc1
 	dc.b	01,18,20,09,04,13,05,00	;line 2 Sc2
 	dc.b	01,19,22,11,05,15,04,00	;line 3 Chk
@@ -271,7 +272,7 @@ Buffalo	;BUF, $C4C
 	dc.b	01,18,19,05,04,13,06,00	;line 5 PP2
 	dc.b	01,21,22,08,06,15,04,00	;line 6 PK1
 	dc.b	01,20,22,09,06,08,04,00	;line 7 PK2
-	dc.b	01,18,19,08,04,09,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,18,19,08,04,09,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Grant Fuhr',				3175,4555,0100,4455	;1
 	Player	'Tom Draper',				3562,3332,0000,2222	;2
@@ -298,7 +299,7 @@ Buffalo	;BUF, $C4C
 	Player	'Gord Donnelly',			3491,2231,3B11,2225	;23
 	Player	'Randy Moller',				24A3,2212,3921,1124	;24
 	Player	'Keith Carney',				0692,3212,3622,1424	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Buffalo'
 .ta	;abbreviation
@@ -308,7 +309,7 @@ Buffalo	;BUF, $C4C
 .ar	;arena.
 	String	'Memorial Auditorium'
 
-Calgary	;CGY, $F3A
+Calgary	;CGY
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -319,11 +320,11 @@ Calgary	;CGY, $F3A
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\CGYh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\CGYv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$4200,$00DA
 .sodds
 	dc.b	197,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,16,17,07,03,12,04,00	;line 1 Sc1
 	dc.b	01,20,17,07,03,13,04,00	;line 2 Sc2
 	dc.b	01,16,22,08,04,12,03,00	;line 3 Chk
@@ -331,7 +332,7 @@ Calgary	;CGY, $F3A
 	dc.b	01,16,17,07,03,13,04,00	;line 5 PP2
 	dc.b	01,23,22,04,05,12,03,00	;line 6 PK1
 	dc.b	01,16,22,08,12,07,05,00	;line 7 PK2
-	dc.b	01,23,19,07,05,08,12,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,23,19,07,05,08,12,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Mike Vernon',				3043,4444,0000,4433	;1
 	Player	'Jeff Reese',				3542,3442,0000,2233	;2
@@ -358,7 +359,7 @@ Calgary	;CGY, $F3A
 	Player	'Chris Dahlquist',			0583,3143,3431,3523	;23
 	Player	'Alexnder Godynyuk',		21A2,3222,3822,3512	;24
 	Player	'Greg Smyth',				06A0,0100,1901,1404	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Calgary'
 .ta	;abbreviation
@@ -368,7 +369,7 @@ Calgary	;CGY, $F3A
 .ar	;arena.
 	String	'Olympic Saddledome'
 
-Chicago	;CHI, $1234
+Chicago	;CHI
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -379,11 +380,11 @@ Chicago	;CHI, $1234
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\CHIh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\CHIv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$2010,$21F8
 .sodds
 	dc.b	228,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,07,03,12,05,00	;line 1 Sc1
 	dc.b	01,19,18,07,03,12,04,00	;line 2 Sc2
 	dc.b	01,20,21,09,04,14,03,00	;line 3 Chk
@@ -391,7 +392,7 @@ Chicago	;CHI, $1234
 	dc.b	01,19,18,07,03,12,04,00	;line 5 PP2
 	dc.b	01,20,21,04,05,14,03,00	;line 6 PK1
 	dc.b	01,19,18,05,12,03,13,00	;line 7 PK2
-	dc.b	01,21,23,03,13,05,12,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,21,23,03,13,05,12,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Ed Belfour',				3066,4665,0000,6655	;1
 	Player	'Jim Waite',				2963,3332,0000,2233	;2
@@ -418,7 +419,7 @@ Chicago	;CHI, $1234
 	Player	'Keith Brown',				0472,2232,3931,3433	;23
 	Player	'Cam Russell',				0853,3132,3431,3524	;24
 	Player	'Adam Bennett',				4792,2111,2520,1412	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Chicago'
 .ta	;abbreviation
@@ -428,7 +429,7 @@ Chicago	;CHI, $1234
 .ar	;arena.
 	String	'Chicago Stadium'
 
-Detroit	;DET, $152E
+Detroit	;DET
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -439,11 +440,11 @@ Detroit	;DET, $152E
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\DETh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\DETv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$7321,$00F8
 .sodds
 	dc.b	212,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,04,03,13,08,00	;line 1 Sc1
 	dc.b	01,21,25,11,03,13,04,00	;line 2 Sc2
 	dc.b	01,18,23,08,04,14,03,00	;line 3 Chk
@@ -451,7 +452,7 @@ Detroit	;DET, $152E
 	dc.b	01,18,20,08,03,13,15,00	;line 5 PP2
 	dc.b	01,19,21,15,04,14,03,00	;line 6 PK1
 	dc.b	01,19,23,08,04,03,05,00	;line 7 PK2
-	dc.b	01,21,25,05,03,08,04,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,21,25,05,03,08,04,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Tim Cheveldae',			3264,4444,0000,4344	;1
 	Player	'Vincent Riendeau',			3763,3222,0000,3223	;2
@@ -478,7 +479,7 @@ Detroit	;DET, $152E
 	Player	'Vladimir Konstantov',		1663,3243,4731,4233	;23
 	Player	'Steve Konroyd',			0883,3232,4421,3233	;24
 	Player	'Brad McCrimmon',			0283,2242,4610,3133	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Detroit'
 .ta	;abbreviation
@@ -488,7 +489,7 @@ Detroit	;DET, $152E
 .ar	;arena.
 	String	'Joe Louis Sports Arena'
 
-Edmonton	;EDM, $1848
+Edmonton	;EDM
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -499,11 +500,11 @@ Edmonton	;EDM, $1848
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\EDMh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\EDMv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$1602,$12F8
 .sodds
 	dc.b	213,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,18,19,09,03,15,10,00	;line 1 Sc1
 	dc.b	01,18,19,10,03,15,04,00	;line 2 Sc2
 	dc.b	01,21,20,09,04,16,03,00	;line 3 Chk
@@ -511,7 +512,7 @@ Edmonton	;EDM, $1848
 	dc.b	01,18,19,10,09,15,07,00	;line 5 PP2
 	dc.b	01,22,20,11,07,16,10,00	;line 6 PK1
 	dc.b	01,18,20,09,05,12,03,00	;line 7 PK2
-	dc.b	01,21,23,12,03,09,05,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,21,23,12,03,09,05,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Bill Ranford',				3044,3334,0000,4454	;1
 	Player	'Ron Tugnutt',				0122,3331,0000,1112	;2
@@ -538,7 +539,7 @@ Edmonton	;EDM, $1848
 	Player	'Luke Richardson',			22B3,3132,4630,2434	;23
 	Player	'Chris Joseph',				02A3,3313,3531,1233	;24
 	Player	'Brad Werenka',				3693,3223,2633,2523	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Edmonton'
 .ta	;abbreviation
@@ -548,7 +549,7 @@ Edmonton	;EDM, $1848
 .ar	;arena.
 	String	'Northlands Coliseum'
 
-Hartford	;HFD, $1B44
+Hartford	;HFD
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -556,14 +557,14 @@ Hartford	;HFD, $1B44
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;both 94 colours (differ from 93 HFDh.pal / HFDv.pal)
+.pad	;both palettes new
 	incbin	..\Extracted\NHL94\Graphics\Pals\HFDh94.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\HFDv94.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$1702,$00F7
 .sodds
 	dc.b	163,96
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,20,09,04,14,05,00	;line 1 Sc1
 	dc.b	01,19,25,09,04,14,05,00	;line 2 Sc2
 	dc.b	01,24,20,11,05,15,04,00	;line 3 Chk
@@ -571,7 +572,7 @@ Hartford	;HFD, $1B44
 	dc.b	01,19,20,09,04,14,06,00	;line 5 PP2
 	dc.b	01,21,22,10,05,06,04,00	;line 6 PK1
 	dc.b	01,24,20,16,15,09,04,00	;line 7 PK2
-	dc.b	01,19,25,09,04,16,15,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,19,25,09,04,16,15,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Sean Burke',				01A4,3224,0000,4444	;1
 	Player	'Mario Gosselin',			3132,3442,0000,1122	;2
@@ -598,7 +599,7 @@ Hartford	;HFD, $1B44
 	Player	'Doug Houda',				2772,2122,2921,2414	;23
 	Player	'Randy Ladouceur',			29B3,3131,2421,3514	;24
 	Player	'Allen Pedersen',			41A2,3132,3621,2123	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Hartford'
 .ta	;abbreviation
@@ -608,7 +609,7 @@ Hartford	;HFD, $1B44
 .ar	;arena.
 	String	'Hartford Civic Center'
 
-LosAngeles	;LA, $1E52
+LosAngeles	;LA
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -619,11 +620,11 @@ LosAngeles	;LA, $1E52
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\LAh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\LAv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$6612,$11D9
 .sodds
 	dc.b	150,32
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,17,18,08,04,13,05,00	;line 1 Sc1
 	dc.b	01,17,19,08,04,13,05,00	;line 2 Sc2
 	dc.b	01,18,21,09,05,14,04,00	;line 3 Chk
@@ -631,7 +632,7 @@ LosAngeles	;LA, $1E52
 	dc.b	01,19,17,08,04,14,05,00	;line 5 PP2
 	dc.b	01,20,18,09,05,13,04,00	;line 6 PK1
 	dc.b	01,21,18,09,15,04,14,00	;line 7 PK2
-	dc.b	01,19,22,04,14,09,15,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,19,22,04,14,09,15,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Kelly Hrudey',				3263,3444,0000,2223	;1
 	Player	'Robb Stauber',				3562,3553,0000,2222	;2
@@ -658,7 +659,7 @@ LosAngeles	;LA, $1E52
 	Player	'Brent Thompson',			0352,2121,2820,2114	;23
 	Player	'Tim Watters',				0562,2121,2620,2122	;24
 	Player	'Rene Chapdlaine',			0881,1010,1510,1313	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Los Angeles'
 .ta	;abbreviation
@@ -668,7 +669,7 @@ LosAngeles	;LA, $1E52
 .ar	;arena.
 	String	'Great Western Forum'
 
-Dallas	;DAL, $214E. the 93 North Stars
+Dallas	;DAL (formerly the Minnesota North Stars)
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -676,14 +677,14 @@ Dallas	;DAL, $214E. the 93 North Stars
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;palettes unchanged from 93
+.pad	;palettes unchanged
 	incbin	..\Extracted\NHL94\Graphics\Pals\DALh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\DALv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$1410,$00E9
 .sodds
 	dc.b	181,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,17,18,04,03,11,12,00	;line 1 Sc1
 	dc.b	01,17,20,03,12,16,04,00	;line 2 Sc2
 	dc.b	01,19,21,08,04,14,12,00	;line 3 Chk
@@ -691,7 +692,7 @@ Dallas	;DAL, $214E. the 93 North Stars
 	dc.b	01,17,18,11,03,12,04,00	;line 5 PP2
 	dc.b	01,22,19,08,04,13,11,00	;line 6 PK1
 	dc.b	01,24,20,05,11,08,09,00	;line 7 PK2
-	dc.b	01,17,21,08,09,05,11,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,17,21,08,09,05,11,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Jon Casey',				3024,3443,0000,2234	;1
 	Player	'Darcy Wakaluk',			3562,3333,0000,2232	;2
@@ -718,7 +719,7 @@ Dallas	;DAL, $214E. the 93 North Stars
 	Player	'Mark Osiecki',				2392,2122,2520,1312	;23
 	Player	'Brad Berry',				0572,2032,3420,3514	;24
 	Player	'Enrico Ciccone',			3991,1022,2820,3525	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Dallas'
 .ta	;abbreviation
@@ -728,7 +729,7 @@ Dallas	;DAL, $214E. the 93 North Stars
 .ar	;arena.
 	String	'Reunion Arena'
 
-Montreal	;MTL, $243E
+Montreal	;MTL
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -739,11 +740,11 @@ Montreal	;MTL, $243E
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\MTLh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\MTLv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$5211,$21E9
 .sodds
 	dc.b	197,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,18,17,07,03,12,04,00	;line 1 Sc1
 	dc.b	01,23,18,07,03,12,04,00	;line 2 Sc2
 	dc.b	01,22,17,08,04,14,03,00	;line 3 Chk
@@ -751,7 +752,7 @@ Montreal	;MTL, $243E
 	dc.b	01,18,17,07,03,12,05,00	;line 5 PP2
 	dc.b	01,19,20,08,04,05,03,00	;line 6 PK1
 	dc.b	01,17,23,07,06,03,13,00	;line 7 PK2
-	dc.b	01,22,19,03,13,07,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,22,19,03,13,07,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Patrick Roy',				3366,4446,0000,5566	;1
 	Player	'Andre Racicot',			3742,3333,0000,2222	;2
@@ -778,7 +779,7 @@ Montreal	;MTL, $243E
 	Player	'Lyle Odelein',				2493,2242,3620,3324	;23
 	Player	'Sean Hill',				3882,2222,3521,2314	;24
 	Player	'Donald Dufresne',			3492,2122,3921,2313	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Montreal'
 .ta	;abbreviation
@@ -788,7 +789,7 @@ Montreal	;MTL, $243E
 .ar	;arena.
 	String	'Montreal Forum'
 
-NewJersey	;NJ, $2740
+NewJersey	;NJ
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -799,11 +800,11 @@ NewJersey	;NJ, $2740
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\NJh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\NJv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$3411,$12F8
 .sodds
 	dc.b	152,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,12,03,13,08,00	;line 1 Sc1
 	dc.b	01,18,21,08,04,12,03,00	;line 2 Sc2
 	dc.b	01,19,22,07,03,15,04,00	;line 3 Chk
@@ -811,7 +812,7 @@ NewJersey	;NJ, $2740
 	dc.b	01,18,20,12,05,13,07,00	;line 5 PP2
 	dc.b	01,23,21,08,09,07,13,00	;line 6 PK1
 	dc.b	01,18,23,07,17,08,03,00	;line 7 PK2
-	dc.b	01,20,19,08,03,07,17,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,20,19,08,03,07,17,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Chris Terreri',			3124,4443,0000,3333	;1
 	Player	'Craig Billington',			0143,4221,0000,2222	;2
@@ -838,7 +839,7 @@ NewJersey	;NJ, $2740
 	Player	'Ken Daneyko',				03A2,2141,4620,4414	;23
 	Player	'Tommy Albelin',			0673,2232,2230,3322	;24
 	Player	'Myles O''Connor',			0571,1011,1210,1303	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'New Jersey'
 .ta	;abbreviation
@@ -848,7 +849,7 @@ NewJersey	;NJ, $2740
 .ar	;arena.
 	String	'Byrne Meadowlands Arena'
 
-NYIslanders	;NYI, $2A58
+NYIslanders	;NYI
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -859,11 +860,11 @@ NYIslanders	;NYI, $2A58
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\NYIh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\NYIv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$5321,$00F8
 .sodds
 	dc.b	151,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,09,03,04,10,00	;line 1 Sc1
 	dc.b	01,23,20,09,03,12,04,00	;line 2 Sc2
 	dc.b	01,18,19,10,04,13,03,00	;line 3 Chk
@@ -871,7 +872,7 @@ NYIslanders	;NYI, $2A58
 	dc.b	01,18,22,09,03,10,04,00	;line 5 PP2
 	dc.b	01,21,20,07,04,12,09,00	;line 6 PK1
 	dc.b	01,23,21,13,12,04,15,00	;line 7 PK2
-	dc.b	01,18,25,04,15,12,13,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,18,25,04,15,12,13,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Glenn Healy',				3552,4442,0000,2222	;1
 	Player	'Mark Fitzpatrik',			3072,4223,0000,2222	;2
@@ -898,7 +899,7 @@ NYIslanders	;NYI, $2A58
 	Player	'Scott Lachance',			0782,2243,3432,4133	;23
 	Player	'Dennis Vaske',				37A1,1212,2611,1113	;24
 	Player	'Richard Pilon',			4793,3123,3821,2515	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'New York'
 .ta	;abbreviation
@@ -908,7 +909,7 @@ NYIslanders	;NYI, $2A58
 .ar	;arena.
 	String	'Nassau Coliseum'
 
-NYRangers	;NYR, $2D5C
+NYRangers	;NYR
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -919,11 +920,11 @@ NYRangers	;NYR, $2D5C
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\NYRh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\NYRv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$3411,$11F8
 .sodds
 	dc.b	150,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,07,03,12,08,00	;line 1 Sc1
 	dc.b	01,18,21,08,03,13,06,00	;line 2 Sc2
 	dc.b	01,19,22,07,06,14,03,00	;line 3 Chk
@@ -931,7 +932,7 @@ NYRangers	;NYR, $2D5C
 	dc.b	01,18,19,13,03,12,05,00	;line 5 PP2
 	dc.b	01,20,23,08,05,14,12,00	;line 6 PK1
 	dc.b	01,18,21,08,03,05,04,00	;line 7 PK2
-	dc.b	01,19,25,05,04,08,03,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,19,25,05,04,08,03,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'John Vanbiesbrk',			3453,4553,0000,3434	;1
 	Player	'Mike Richter',				3573,4443,0000,4444	;2
@@ -958,7 +959,7 @@ NYRangers	;NYR, $2D5C
 	Player	'Peter Andersson',			0592,3322,2231,2432	;23
 	Player	'Jay Wells',				24A2,2222,3620,2124	;24
 	Player	'Joe Cirella',				06A3,3223,2922,3323	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'New York'
 .ta	;abbreviation
@@ -968,7 +969,7 @@ NYRangers	;NYR, $2D5C
 .ar	;arena.
 	String	'Madison Square Garden'
 
-Ottawa	;OTW, $3054
+Ottawa	;OTW
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -976,14 +977,14 @@ Ottawa	;OTW, $3054
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;visitor 94 colours (93 OTWv.pal differs)
+.pad	;new visitor palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\OTWh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\OTWv94.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$0702,$13F8
 .sodds
 	dc.b	197,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,20,19,10,03,15,11,00	;line 1 Sc1
 	dc.b	01,20,19,10,03,15,07,00	;line 2 Sc2
 	dc.b	01,22,25,12,07,17,03,00	;line 3 Chk
@@ -991,7 +992,7 @@ Ottawa	;OTW, $3054
 	dc.b	01,20,19,15,03,16,05,00	;line 5 PP2
 	dc.b	01,23,22,10,05,08,16,00	;line 6 PK1
 	dc.b	01,19,23,06,07,12,04,00	;line 7 PK2
-	dc.b	01,20,25,12,04,07,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,20,25,12,04,07,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Peter Sidorkwicz',			3162,3112,0000,2222	;1
 	Player	'Daniel Berthiaume',		3213,3112,0000,2222	;2
@@ -1018,7 +1019,7 @@ Ottawa	;OTW, $3054
 	Player	'Ken Hammond',				0573,2132,3621,3513	;23
 	Player	'Gord Dineen',				0681,1221,2311,2513	;24
 	Player	'Brad Marsh',				14B2,2031,3610,2522	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Ottawa'
 .ta	;abbreviation
@@ -1028,7 +1029,7 @@ Ottawa	;OTW, $3054
 .ar	;arena.
 	String	'Ottawa Civic Center'
 
-Philadelphia	;PHI, $3348
+Philadelphia	;PHI
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1039,11 +1040,11 @@ Philadelphia	;PHI, $3348
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\PHIh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\PHIv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$3602,$22E8
 .sodds
 	dc.b	134,48
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,05,04,15,16,00	;line 1 Sc1
 	dc.b	01,19,18,10,04,15,05,00	;line 2 Sc2
 	dc.b	01,21,23,12,05,16,04,00	;line 3 Chk
@@ -1051,7 +1052,7 @@ Philadelphia	;PHI, $3348
 	dc.b	01,18,20,05,04,15,06,00	;line 5 PP2
 	dc.b	01,21,19,10,06,16,04,00	;line 6 PK1
 	dc.b	01,18,23,08,15,10,05,00	;line 7 PK2
-	dc.b	01,21,19,10,05,08,15,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,21,19,10,05,08,15,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Tommy Soderstrom',			3034,4554,0000,3434	;1
 	Player	'Dominic Roussel',			3363,3333,0000,3322	;2
@@ -1078,7 +1079,7 @@ Philadelphia	;PHI, $3348
 	Player	'Ryan McGill',				2782,2232,2721,3414	;23
 	Player	'Gord Hynes',				2642,2221,3222,2522	;24
 	Player	'Shawn Cronin',				44A1,1111,2C13,1513	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Philadelphia'
 .ta	;abbreviation
@@ -1088,7 +1089,7 @@ Philadelphia	;PHI, $3348
 .ar	;arena.
 	String	'Spectrum'
 
-Pittsburgh	;PIT, $3646
+Pittsburgh	;PIT
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1099,11 +1100,11 @@ Pittsburgh	;PIT, $3646
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\PITh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\PITv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$7120,$21E9
 .sodds
 	dc.b	197,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,17,18,07,03,11,12,00	;line 1 Sc1
 	dc.b	01,17,18,07,03,11,04,00	;line 2 Sc2
 	dc.b	01,21,19,09,04,12,03,00	;line 3 Chk
@@ -1111,7 +1112,7 @@ Pittsburgh	;PIT, $3646
 	dc.b	01,17,20,07,03,11,13,00	;line 5 PP2
 	dc.b	01,23,18,04,13,12,03,00	;line 6 PK1
 	dc.b	01,17,18,12,03,04,13,00	;line 7 PK2
-	dc.b	01,23,22,04,13,03,12,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,23,22,04,13,03,12,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Tom Barrasso',				35A4,4554,0100,4444	;1
 	Player	'Ken Wregget',				3182,3442,0000,3232	;2
@@ -1138,7 +1139,7 @@ Pittsburgh	;PIT, $3646
 	Player	'Kjell Samuelsson',			28E2,2134,4731,4523	;23
 	Player	'Grant Jennings',			0392,2132,3820,2313	;24
 	Player	'Bryan Fogarty',			3381,1211,2220,1011	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Pittsburgh'
 .ta	;abbreviation
@@ -1148,7 +1149,7 @@ Pittsburgh	;PIT, $3646
 .ar	;arena.
 	String	'Civic Arena'
 
-Quebec	;QUE, $393C
+Quebec	;QUE
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1159,11 +1160,11 @@ Quebec	;QUE, $393C
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\QUEh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\QUEv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$7521,$00F8
 .sodds
 	dc.b	166,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,03,14,15,17,00	;line 1 Sc1
 	dc.b	01,19,18,07,03,14,04,00	;line 2 Sc2
 	dc.b	01,20,21,08,04,15,03,00	;line 3 Chk
@@ -1171,7 +1172,7 @@ Quebec	;QUE, $393C
 	dc.b	01,19,18,04,03,15,16,00	;line 5 PP2
 	dc.b	01,20,21,07,14,16,03,00	;line 6 PK1
 	dc.b	01,20,22,03,17,05,14,00	;line 7 PK2
-	dc.b	01,19,18,05,14,03,17,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,19,18,05,14,03,17,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Ron Hextall',				2774,4444,0000,4433	;1
 	Player	'Stephane Fiset',			3553,4332,0000,2222	;2
@@ -1198,7 +1199,7 @@ Quebec	;QUE, $393C
 	Player	'Steven Finn',				2982,2233,3622,3424	;23
 	Player	'Mikhail Tatarinov',		0483,3225,4641,2443	;24
 	Player	'Craig Wolanin',			0692,2221,2811,2114	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Quebec'
 .ta	;abbreviation
@@ -1208,7 +1209,7 @@ Quebec	;QUE, $393C
 .ar	;arena.
 	String	'Colisee de Quebec'
 
-SanJose	;SJ, $3C42
+SanJose	;SJ
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1219,11 +1220,11 @@ SanJose	;SJ, $3C42
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\SJh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\SJv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$0702,$12D9
 .sodds
 	dc.b	102,48
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,18,17,10,04,14,05,00	;line 1 Sc1
 	dc.b	01,18,21,10,04,14,05,00	;line 2 Sc2
 	dc.b	01,19,23,12,05,15,04,00	;line 3 Chk
@@ -1231,7 +1232,7 @@ SanJose	;SJ, $3C42
 	dc.b	01,17,19,10,04,14,06,00	;line 5 PP2
 	dc.b	01,18,21,11,05,06,04,00	;line 6 PK1
 	dc.b	01,21,24,04,14,05,07,00	;line 7 PK2
-	dc.b	01,18,23,07,05,04,14,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,18,23,07,05,04,14,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Arturs Irbe',				3252,4443,0000,3322	;1
 	Player	'Jeff Hackett',				3052,3112,0000,2222	;2
@@ -1258,7 +1259,7 @@ SanJose	;SJ, $3C42
 	Player	'Jay More',					0473,2134,3331,3534	;23
 	Player	'Peter Ahola',				2192,2132,3621,3422	;24
 	Player	'Rob Zettler',				0272,2132,2430,3434	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'San Jose'
 .ta	;abbreviation
@@ -1268,7 +1269,7 @@ SanJose	;SJ, $3C42
 .ar	;arena.
 	String	'San Jose Arena'
 
-StLouis	;STL, $3F30
+StLouis	;STL
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1276,14 +1277,14 @@ StLouis	;STL, $3F30
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;home 94 colours (93 STLh.pal differs)
+.pad	;new home palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\STLh94.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\STLv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$2220,$21E9
 .sodds
 	dc.b	212,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,17,18,12,03,13,04,00	;line 1 Sc1
 	dc.b	01,17,18,11,06,13,03,00	;line 2 Sc2
 	dc.b	01,20,24,10,03,12,06,00	;line 3 Chk
@@ -1291,7 +1292,7 @@ StLouis	;STL, $3F30
 	dc.b	01,17,19,12,03,13,05,00	;line 5 PP2
 	dc.b	01,21,22,04,05,14,12,00	;line 6 PK1
 	dc.b	01,20,24,06,05,10,15,00	;line 7 PK2
-	dc.b	01,21,18,10,15,05,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,21,18,10,15,05,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Curtis Joseph',			3164,4664,0000,3344	;1
 	Player	'Guy Hebert',				2962,3332,0000,2222	;2
@@ -1318,7 +1319,7 @@ StLouis	;STL, $3F30
 	Player	'Bret Hedican',				4482,2112,3620,1322	;23
 	Player	'Curt Giles',				0253,2131,2220,3312	;24
 	Player	'Murray Baron',				34A3,3122,2621,2513	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'St. Louis'
 .ta	;abbreviation
@@ -1328,7 +1329,7 @@ StLouis	;STL, $3F30
 .ar	;arena.
 	String	'St. Louis Arena'
 
-TampaBay	;TB, $4216
+TampaBay	;TB
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1339,11 +1340,11 @@ TampaBay	;TB, $4216
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\TBh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\TBv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$0502,$00F7
 .sodds
 	dc.b	104,64
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,20,19,12,04,05,06,00	;line 1 Sc1
 	dc.b	01,22,23,13,04,15,06,00	;line 2 Sc2
 	dc.b	01,21,24,12,06,17,04,00	;line 3 Chk
@@ -1351,7 +1352,7 @@ TampaBay	;TB, $4216
 	dc.b	01,20,21,13,04,15,05,00	;line 5 PP2
 	dc.b	01,19,22,12,06,05,04,00	;line 6 PK1
 	dc.b	01,22,19,12,17,15,16,00	;line 7 PK2
-	dc.b	01,20,21,16,15,12,17,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,20,21,16,15,12,17,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Wendell Young',			0163,3223,0000,3233	;1
 	Player	'Pat Jablonski',			3552,3222,0100,2222	;2
@@ -1378,7 +1379,7 @@ TampaBay	;TB, $4216
 	Player	'Joe Reekie',				29B3,2223,2630,3223	;23
 	Player	'Chris Lipuma',				4061,1211,0210,1114	;24
 	Player	'Matt Hervey',				2691,1211,2910,1304	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Tampa Bay'
 .ta	;abbreviation
@@ -1388,7 +1389,7 @@ TampaBay	;TB, $4216
 .ar	;arena.
 	String	'Fairgrounds Expo Hall'
 
-Toronto	;TOR, $4518
+Toronto	;TOR
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1399,11 +1400,11 @@ Toronto	;TOR, $4518
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\TORh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\TORv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$2020,$11E8
 .sodds
 	dc.b	150,16
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,09,04,13,15,00	;line 1 Sc1
 	dc.b	01,22,18,09,04,13,06,00	;line 2 Sc2
 	dc.b	01,24,23,11,06,14,04,00	;line 3 Chk
@@ -1411,7 +1412,7 @@ Toronto	;TOR, $4518
 	dc.b	01,19,18,09,04,13,15,00	;line 5 PP2
 	dc.b	01,20,22,15,05,14,04,00	;line 6 PK1
 	dc.b	01,19,24,06,04,12,07,00	;line 7 PK2
-	dc.b	01,22,18,12,07,04,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,22,18,12,07,04,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Felix Potvin',				2964,4664,0000,4444	;1
 	Player	'Daren Puppa',				0193,4552,0100,2233	;2
@@ -1438,7 +1439,7 @@ Toronto	;TOR, $4518
 	Player	'Bob Rouse',				03A3,3242,4320,4423	;23
 	Player	'Sylvain Lefebvre',			0292,2131,3420,4433	;24
 	Player	'Bob McGill',				0882,2023,3523,2324	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Toronto'
 .ta	;abbreviation
@@ -1448,7 +1449,7 @@ Toronto	;TOR, $4518
 .ar	;arena.
 	String	'Maple Leaf Gardens'
 
-Vancouver	;VAN, $481C
+Vancouver	;VAN
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1456,14 +1457,14 @@ Vancouver	;VAN, $481C
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;home 94 colours (93 VANh.pal differs)
+.pad	;new home palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\VANh94.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\VANv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$6102,$11F8
 .sodds
 	dc.b	166,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,07,03,13,04,00	;line 1 Sc1
 	dc.b	01,19,22,10,03,14,05,00	;line 2 Sc2
 	dc.b	01,24,18,09,05,13,03,00	;line 3 Chk
@@ -1471,7 +1472,7 @@ Vancouver	;VAN, $481C
 	dc.b	01,18,20,13,04,14,09,00	;line 5 PP2
 	dc.b	01,19,23,07,03,09,13,00	;line 6 PK1
 	dc.b	01,24,18,13,05,04,16,00	;line 7 PK2
-	dc.b	01,19,23,04,16,13,05,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,19,23,04,16,13,05,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Kirk McLean',				0184,4444,0000,4433	;1
 	Player	'Kay Whitmore',				3552,3552,0000,2323	;2
@@ -1498,7 +1499,7 @@ Vancouver	;VAN, $481C
 	Player	'Dave Babych',				44B2,2343,2630,4233	;23
 	Player	'Dana Murzyn',				0592,3234,4621,4424	;24
 	Player	'Robert Dirk',				22B2,2132,3632,3324	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Vancouver'
 .ta	;abbreviation
@@ -1508,7 +1509,7 @@ Vancouver	;VAN, $481C
 .ar	;arena.
 	String	'Pacific Coliseum'
 
-Winnipeg	;WPG, $4B0A
+Winnipeg	;WPG
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1519,11 +1520,11 @@ Winnipeg	;WPG, $4B0A
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\WPGh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\WPGv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$4511,$11F8
 .sodds
 	dc.b	214,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,19,18,04,03,13,09,00	;line 1 Sc1
 	dc.b	01,22,18,08,03,13,04,00	;line 2 Sc2
 	dc.b	01,19,21,09,04,14,03,00	;line 3 Chk
@@ -1531,7 +1532,7 @@ Winnipeg	;WPG, $4B0A
 	dc.b	01,20,18,08,03,13,04,00	;line 5 PP2
 	dc.b	01,19,21,09,04,14,03,00	;line 6 PK1
 	dc.b	01,19,21,10,06,05,16,00	;line 7 PK2
-	dc.b	01,24,22,05,16,10,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,24,22,05,16,10,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Bob Essensa',				3534,4554,0000,4444	;1
 	Player	'Jim Hrivnak',				3062,3222,0000,2222	;2
@@ -1558,7 +1559,7 @@ Winnipeg	;WPG, $4B0A
 	Player	'Mike Lalor',				2293,2132,2420,4523	;23
 	Player	'Dean Kennedy',				2692,2132,3320,4423	;24
 	Player	'Randy Carlyle',			0892,2122,3621,2522	;25
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Winnipeg'
 .ta	;abbreviation
@@ -1568,7 +1569,7 @@ Winnipeg	;WPG, $4B0A
 .ar	;arena.
 	String	'Winnipeg Arena'
 
-Washington	;WSH, $4DFC
+Washington	;WSH
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1579,11 +1580,11 @@ Washington	;WSH, $4DFC
 .pad
 	incbin	..\Extracted\NHL94\Graphics\Pals\WSHh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\WSHv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$5220,$11E8
 .sodds
 	dc.b	181,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,18,17,04,03,12,13,00	;line 1 Sc1
 	dc.b	01,18,17,10,04,14,03,00	;line 2 Sc2
 	dc.b	01,19,20,09,03,12,04,00	;line 3 Chk
@@ -1591,7 +1592,7 @@ Washington	;WSH, $4DFC
 	dc.b	01,20,17,04,03,12,06,00	;line 5 PP2
 	dc.b	01,18,19,06,05,13,04,00	;line 6 PK1
 	dc.b	01,21,17,03,14,10,06,00	;line 7 PK2
-	dc.b	01,19,20,10,06,03,14,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,19,20,10,06,03,14,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Don Beaupre',				3343,4333,0000,3333	;1
 	Player	'Rick Tabaracci',			3162,3112,0000,3322	;2
@@ -1617,7 +1618,7 @@ Washington	;WSH, $4DFC
 	Player	'Shawn Anderson',			3692,2122,3621,2331	;22
 	Player	'Jason Woolley',			2562,2111,2220,1212	;23
 	Player	'Rod Langway',				05B3,2022,3230,2323	;24
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Washington'
 .ta	;abbreviation
@@ -1627,7 +1628,7 @@ Washington	;WSH, $4DFC
 .ar	;arena.
 	String	'Capital Centre'
 
-Florida	;FLA, $50E6. new in 94
+Florida	;FLA
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1635,14 +1636,14 @@ Florida	;FLA, $50E6. new in 94
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;new in 94
+.pad	;new team palettes
 	incbin	..\Extracted\NHL94\Graphics\Pals\FLAh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\FLAv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$0702,$1396
 .sodds
 	dc.b	214,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,14,12,08,05,04,07,00	;line 1 Sc1
 	dc.b	01,14,17,08,05,03,04,00	;line 2 Sc2
 	dc.b	01,16,12,06,10,11,05,00	;line 3 Chk
@@ -1650,7 +1651,7 @@ Florida	;FLA, $50E6. new in 94
 	dc.b	01,14,12,08,05,04,10,00	;line 5 PP2
 	dc.b	01,13,17,06,10,03,05,00	;line 6 PK1
 	dc.b	01,14,12,09,05,07,08,00	;line 7 PK2
-	dc.b	01,13,17,07,08,09,05,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,13,17,07,08,09,05,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'John Vanbiesbrk',			3453,4553,0000,3434	;1
 	Player	'Mark Fitzpatrik',			3072,4223,0000,2222	;2
@@ -1669,7 +1670,7 @@ Florida	;FLA, $50E6. new in 94
 	Player	'Gord Hynes',				2642,2221,3222,2522	;15
 	Player	'Milan Tichy',				4383,2112,3821,2224	;16
 	Player	'Stephane Richer',			2593,3333,3332,3322	;17
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Florida'
 .ta	;abbreviation
@@ -1679,7 +1680,7 @@ Florida	;FLA, $50E6. new in 94
 .ar	;arena.
 	String	'Miami Arena'
 
-Anaheim	;ANH, $5330. new in 94
+Anaheim	;ANH
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -1687,14 +1688,14 @@ Anaheim	;ANH, $5330. new in 94
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;new in 94
+.pad	;new team palettes
 	incbin	..\Extracted\NHL94\Graphics\Pals\ANHh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\ANHv.pal
-.sr	;4 bytes in 94 (93: 8, hex2)
+.sr	;4 bytes
 	dc.w	$0702,$1397
 .sodds
 	dc.b	214,0
-.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines in 94 (93: 7)
+.ls	;		-G,LD,RD,LW,-C,RW,XA,00. 8 lines
 	dc.b	01,12,14,04,06,08,03,00	;line 1 Sc1
 	dc.b	01,12,16,03,06,11,04,00	;line 2 Sc2
 	dc.b	01,14,15,09,08,07,03,00	;line 3 Chk
@@ -1702,7 +1703,7 @@ Anaheim	;ANH, $5330. new in 94
 	dc.b	01,12,16,04,06,08,04,00	;line 5 PP2
 	dc.b	01,13,15,03,09,11,03,00	;line 6 PK1
 	dc.b	01,12,14,06,07,04,08,00	;line 7 PK2
-	dc.b	01,17,16,04,08,07,06,00	;line 8 8th line (94 addition, no linelist name)
+	dc.b	01,17,16,04,08,07,06,00	;line 8 (no linelist name)
 .pld	;							unwl,sodp,chga,eytm
 	Player	'Guy Hebert',				2962,3332,0000,2222	;1
 	Player	'Ron Tugnutt',				0122,3331,0000,1112	;2
@@ -1722,7 +1723,7 @@ Anaheim	;ANH, $5330. new in 94
 	Player	'Bill Houlder',				33B3,2332,3422,2421	;16
 	Player	'Bobby Dollas',				32B2,1121,2110,2111	;17
 	Player	'Dennis Vial',				17B1,1121,3810,2113	;18
-	dc.w	2	;end of the player list: an empty String (93: dc.b 0,2)
+	dc.w	2	;end of the player list: an empty String
 .tn	;city
 	String	'Anaheim'
 .ta	;abbreviation
@@ -1732,7 +1733,7 @@ Anaheim	;ANH, $5330. new in 94
 .ar	;arena.
 	String	'Pond'
 
-playoffseats	;$5576. movea.l #$5576 in the playoff tree setup. 32 rows of 16 team numbers (93: 34)
+playoffseats	;playoff tree seedings: 32 rows of 16 team numbers
 	dc.b	BUF,BOS,MTL,QUE, NYI,WSH,NJ,PIT, TOR,DET,STL,CHI, LA,CGY,WPG,VAN
 	dc.b	NYI,BUF,TB,MTL, QUE,PIT,NYR,BOS, CGY,TOR,LA,VAN, STL,DET,DAL,CHI
 	dc.b	NJ,PIT,PHI,BUF, HFD,MTL,WSH,BOS, DAL,TOR,EDM,CHI, SJ,VAN,LA,DET
@@ -1770,13 +1771,13 @@ playoffseats	;$5576. movea.l #$5576 in the playoff tree setup. 32 rows of 16 tea
 	dc.b	WSH,FLA,NJ,PIT, BOS,MTL,TB,BUF, SJ,STL,DET,CHI, ANH,LA,WPG,VAN
 
 
-Credits	;$5776. Title screen scroller: movea.l #Credits (copyright lines), then #CreditsList
+Credits	;title screen scroller: movea.l #Credits (copyright lines), then #CreditsList
 	String	'$ 1993 Electronic Arts'
 	String	'Licensed by'
 	String	'Sega Enterprises Ltd.'
 	String	-1
 
-CreditsList	;$57B8. The credits after the copyright lines
+CreditsList	;the credits after the copyright lines
 	String	'Design adapted by'
 	String	'Michael Brook'
 	String	-1
@@ -1865,7 +1866,7 @@ CreditsList	;$57B8. The credits after the copyright lines
 	String	'Kevin Hogan'
 	String	-1
 
-	dc.w	2	;empty String (93: String '')
+	dc.w	2	;empty String
 	String	-1
 
 	String	-1

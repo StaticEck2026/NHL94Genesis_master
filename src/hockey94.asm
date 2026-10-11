@@ -1,9 +1,8 @@
-;	NHL 94 (retail) segment
-;	VBjsr / Begin through seta2: up to the end of Pausemode, plus the pause
-;	screen draw routine and seta2, the same split as 93. The menu engine Pausemode
-;	calls follows at $7E36.
-;	The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after
-;assembly.
+;	VBjsr / Begin through seta2: startup, the game loop (StartGame, StartPer,
+;	Gameloop, DoGameFrame), the periodic events, the clock, Pausemode and
+;	the pause screen draw routine. The menu engine Pausemode calls follows.
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
+;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz2 use the String macro (length word includes itself).
 
 VBjsr	;Vertical blank interrupt (vector $78), jumps through the vbint RAM vector

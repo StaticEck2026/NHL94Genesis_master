@@ -1,9 +1,10 @@
 ;
-;	Top level of the full NHL 94 ROM build. The listing is output\nhl94 .lst.
-;	The includes are in ROM order: each file assembles at the address after the one before it. The org for a segment
-;	build is in its _stub.asm.
-;	The address on each include line is the retail lst/nhl94.bin start address. See SEGMENT_AGENT.md "ROM map".
-;	has no active lines; the ports, VDP status bits and RAM names are in stubinc, as in each *_stub.asm.
+;	Top level of the full NHL 94 ROM build.
+;	The includes are in ROM order: each file assembles at the address after
+;	the one before it. The org for a segment build is in its _stub.asm.
+;	The address on each include line is the retail lst/nhl94.bin start
+;	address. See SEGMENT_AGENT.md "ROM map". The ports, VDP status bits and
+;	RAM names come from stubinc, as in each *_stub.asm.
 ;
 	include	stubinc\ports.inc	;IO_* / VDP_* ports. Equates only
 	include	stubinc\equals.inc	;VDP status bits. Equates only
@@ -40,6 +41,6 @@
 	include	scout94.asm		; $0FCB9A  NEW in 94: matchups and scouting report
 	include	period94.asm		; $0FD618  NEW in 94: period stats and game statistics
 	include	goalie94.asm		; $0FE1D8  NEW in 94: manual goalie
-	include	title94.asm		; $0FE556 NEW in song select, title, credits
+	include	title94.asm		; $0FE556  NEW in 94: song select, title, credits
 	include	checksum94.asm		; $0FFAC0 checksum
 	dcb.b	$100000-*,$FF

@@ -3500,7 +3500,7 @@ pucknorm
 ;	assinsert / assreplace, vtoa, GetHot, SetSPA, doplayeracc, goalieacc, noturn0 / noturn, playeracc, MaxSpeed,
 ;	dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap follows.
 ;The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34
+;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34
 ;	SCnum $52, facedir $54, SPA $58, SPAnum $5A, SPAcnt $5C, pflags $62, pflags2 $63.
 
 ChkOffsides

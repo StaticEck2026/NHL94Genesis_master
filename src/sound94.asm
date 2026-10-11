@@ -1,13 +1,18 @@
-;	NHL 94 (retail) segment 68k side of the sound driver, as 93 (same driver, revised): p_turnoff, play_sfx_or_music_track ( p_initfx),
-;play_new_song, the 94 pad readers (ReadJoyData ... ResetZ80Bus, run from p_music_vblank), p_music_vblank ( MusicVB),
-;UploadCommandBufferToZ80, ProcessOneMusicTrack and the event handlers, UpdateChannelFrequencyAndVolume, the 94 volume routine
-;SetChannelVolume, p_initialZ80 and ClearAllTrackAndSFXSlots. 94 changes from 93: sounds 0-$7A (93 0-$37) through a long pointer table
-;(93 word offsets), 8 byte channel structs (93 6), a voice volume word (+4) and the controller event handle_command_30, the vblank pad
-;reading, and the Rev A 93 50 Hz tempo block.
-;RAM (ram_addrs.inc): fm_track_slots (8 x 6 bytes), fm_channel_structs (94: 6 x 8 bytes +0 key, +1 note, +2 volume, +3 patch, +4
-;	output channel, +5 age, +6 bit 0 on), fm_voice_usage_table (8 bytes per key: word +0 pitch bend, +3 patch, word +4 volume),
-;	Z80_command_buffer (33 bytes, copied to Z80 RAM $02), per_channel_attenuation_table per_channel_attenuation_table,
-;	music_needs_z80_update.
+;	68k side of the sound driver: p_turnoff, play_sfx_or_music_track,
+;	play_new_song, the pad readers (ReadJoyData ... ResetZ80Bus, run from
+;	p_music_vblank), p_music_vblank, UploadCommandBufferToZ80,
+;	ProcessOneMusicTrack and the event handlers,
+;	UpdateChannelFrequencyAndVolume, SetChannelVolume, p_initialZ80 and
+;	ClearAllTrackAndSFXSlots.
+;	Sounds 0-$7A (93 had 0-$37) go through a long pointer table; channel
+;	structs are 8 bytes (93 used 6) with a voice volume word (+4); there is a
+;	controller event (handle_command_30), vblank pad reading, and the 50 Hz
+;	tempo block.
+;	RAM: fm_track_slots (8 x 6 bytes), fm_channel_structs (6 x 8 bytes: +0
+;	key, +1 note, +2 volume, +3 patch, +4 output channel, +5 age, +6 bit 0
+;	on), fm_voice_usage_table (8 bytes per key: word +0 pitch bend, +3 patch,
+;	word +4 volume), Z80_command_buffer (33 bytes, copied to Z80 RAM $02),
+;	per_channel_attenuation_table, music_needs_z80_update.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 

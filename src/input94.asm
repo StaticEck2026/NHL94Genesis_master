@@ -1,11 +1,10 @@
-;	NHL 94 (retail) segment
-;	, as 93: controller input for skaters (doinput ... setpads)
-;	check4bench. assbench follows at $C710.
-;X, loop ->.loop, even ->.even) or the (doinput_cbut -> .B470, glb_B8AA -> .0).
+;	Controller input for skaters (doinput ... setpads), the faceoff and line
+;	change input (faceoffinput, SetLCmode, getlchoice, linein ...) and
+;	check4bench.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself).
-;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, impact $32, position $34
+;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, impact $32, position $34
 ;	assnum $36, asslist $38, SCnum $52, facedir $54, SPA $58, SPAnum $5A, nopuck $5E, pflags $62, pflags2 $63.
 
 

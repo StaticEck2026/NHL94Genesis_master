@@ -1,8 +1,10 @@
-;	the data after the sound data (ends with the sound incbins incbin only, no gap and no overlap. Each file is a slice of
-;	lst/nhl94.bin written by npm run extractassets into Extracted\\Graphics and Text. One slice per except the player cards: one
-;	slice per card (Graphics\PlayerCards), NoPicGoalie2 first, then Card<player> from the roster String, then PlayerCardsScreenPic.
-;	Files use the where the 94 asset is the same one (same use, mostly the same size; 94 in the name when it differs), else draft
-;	name where its slice lined up, else the label. A map's tiles start past its 8-byte header: the there is written as label+8.
+;	Graphics data after the sound data: incbin only, no gaps and no overlaps.
+;	Each file is a slice of lst/nhl94.bin written by npm run extractassets
+;	into Extracted\Graphics and Text, one slice per asset except the player
+;	cards: one slice per card (Graphics\PlayerCards), NoPicGoalie2 first,
+;	then Card<player> in roster order, then PlayerCardsScreenPic. File names
+;	carry 94 where the asset differs from the earlier game's. A map's tiles
+;	start past its 8-byte header, so code refers to them as label+8.
 ScoutTextScript		;the script ScoutTextPlayer types out word by word on the ScoutingReport (MATCHUPS) screen
 	incbin	..\Extracted\NHL94\Text\ScoutTextScript.bin
 	even

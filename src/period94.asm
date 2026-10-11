@@ -1,12 +1,11 @@
-;	NHL 94 (retail) segment
-;	94 code in the high ROM, between and the checksum: the shootout end, the game stats clear, the arena animations
-;	(RunArenaAnim, AddArenaAnimSprite, ArenaAnims), the Period Stats and Game Statistics screens (PeriodStatsScreen, GameStatisticsScreen,
-;	TeamStatTextTbl), the Manual Goalie menu item, ChooseSong, the shootout skate paths, the save RAM option and three stars
-;	blocks, the player picture unpack (UnpackPicture), HiScoreScreen, newTitleScreen and the credits, clrTmPdst and chgplayer.
-;	New in 94; 93 has no code here, except GameStatisticsScreen / DisplayTeamStatsScreen / FormatStatValue / TeamStatTextTbl.
-;The names are kept; the names (sub_, loc_, unk_ locret_) and the entries no label for are named for
-;what they do, or the
-;The data tables are formatted from the retail bytes.
+;	New in 94: code in the high ROM before the checksum: the shootout end,
+;	the game stats clear, the arena animations (RunArenaAnim,
+;	AddArenaAnimSprite, ArenaAnims), the Period Stats and Game Statistics
+;	screens (PeriodStatsScreen, GameStatisticsScreen, TeamStatTextTbl), the
+;	Manual Goalie menu item, ChooseSong, the shootout skate paths, the save
+;	RAM option and three stars blocks, the player picture unpack
+;	(UnpackPicture), HiScoreScreen, newTitleScreen and the credits,
+;	clrTmPdst and chgplayer.
 
 EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
 	;7-$B are set up (setplayer) above or below the view and get assscore (assinsert 7)

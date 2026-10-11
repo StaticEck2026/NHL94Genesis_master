@@ -1,13 +1,13 @@
-;	NHL 94 (retail) segment
-;	The stats screens, as 93: Scores (ShowScores), Line Editor, Team Roster, Scoring Summary, Penalty Summary, Player Stats /
-;	Playoff Stats, Crowd Meter, the Timeout and goalie select menu items, and their helpers (SetupScreen, ExitAttributeScreen2,
-;	ReadAttributeNibble ... WaitVSyncAndReadInput). The screens are menu item handlers (the menu lists) run from the pause menu.
-;	94 changes from 93: 94 RAM (PenSum, ScoreSum, VertLineScrolling ...), printz2 / printsmall for the small text, the OptLine line icon
-;	entries (MenuIconPosTable-6, the byte before AttributeMenuTable), the crowd meter arena / league records (save RAM), GetDefenseStart and
-;	ReloadRinkGraphics; the 93 Game Statistics screen is not here.
-;New in 94 routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). written from the retail bytes the inline Strings after printz / printz2
-;/ printbigz and the remap tables after DecompressGraphicsWithCallback, the code behind them, DecodePlayerAttributes and PenaltySummaryScreen ...
-;DisplayPenaltyEntry, and the data tables in their 93 form.
+;	The stats screens: Scores (ShowScores), Line Editor, Team Roster, Scoring
+;	Summary, Penalty Summary, Player Stats / Playoff Stats, Crowd Meter, the
+;	Timeout and goalie select menu items, and their helpers (SetupScreen,
+;	ExitAttributeScreen2, ReadAttributeNibble ... WaitVSyncAndReadInput).
+;	The screens are menu item handlers run from the pause menu.
+;	Small text uses printz2 / printsmall. With OptLine set the line icon
+;	entries come from MenuIconPosTable-6 (the bytes before
+;	AttributeMenuTable). The crowd meter shows the arena / league records from
+;	save RAM. Each DecompressGraphicsWithCallback is followed by its 8 byte
+;	remap table.
 
 ShowScores	;"Scores" screen: the other games of the night in gsstruct over the Scores bitmap
 	;(ScoresMap); up / down scroll, start exits (ExitAttributeScreen2). Menu item handler (menu lists)

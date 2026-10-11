@@ -1,9 +1,9 @@
-;	NHL 94 (retail) segment
-;	CopyPaletteToCRAM, randomd0s / randomd0, sroot, sfx, song, waitx, IntermissionLoop, waitjoy, orjoy, nodiag,
-;	ProcessInputWithRepeat, ReadJoy1-4, ReadJoy, jdtab, DoDMApro, DoDMA, DoDMA_nd2, DoFill
-;	WaitDMA, setvram, Vmaddr. dobitmap follows.
-;/ nd (inside DoDMA) are the locals.dd /.nd. ? is dmaram (? stripped). The source has the real cmp / cmpi;
-;fixopcodes.js patches the cmp encoding after assembly.
+;	remap, forceblack, forcefade, cramfade, CopyPaletteToCRAM, randomd0s /
+;	randomd0, sroot, sfx, song, waitx, waitxsr, waitjoy, orjoy, nodiag,
+;	ProcessInputWithRepeat, ReadJoy1-4, ReadJoy, jdtab, DoDMApro, DoDMA,
+;	DoDMA_nd2, DoFill, WaitDMA, setvram and Vmaddr.
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
+;	fixopcodes.js patches the cmp encoding after assembly.
 
 remap
 	move.w	(disflags).w,-(sp)
@@ -725,11 +725,16 @@ Vmaddr
 	andi.w	#3,d0
 	move.l	d0,Vctrl-Vdata(a0)
 	rts
-;	NHL 94 (retail) segment DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode, jump_table, the Opcode_*
-;	handlers, FlushOutputBuffer), xyVmMap, eraser, Framer, printz2 / printsmall and the control codes, printz / print,
-;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber, PushNumberWidth, appendz / appstring, printbigz /
-;	printbig, the PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. The decompressor handler and four
-;	control code labels are placed at the addresses in jump_table and ControlCodeJumpTable. The source has the real cmp /
+;	dobitmap, the tile decompressor (DecompressGraphicsWithCallback,
+;	DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode,
+;	jump_table, the Opcode_* handlers, FlushOutputBuffer), xyVmMap, eraser,
+;	Framer, printz2 / printsmall and the control codes, printz / print,
+;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber,
+;	PushNumberWidth, appendz / appstring, printbigz / printbig, PrintBigChar /
+;	PutBigTile, AddSmallFont, AddFramer and AddTeamBlock.
+;	The decompressor handlers and control code routines sit at the addresses
+;	in jump_table and ControlCodeJumpTable.
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
 dobitmap

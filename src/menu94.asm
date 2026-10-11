@@ -1,11 +1,10 @@
-;	NHL 94 (retail) segment
-;	The scrolling menu of the pause screen
-;	(PauseMode), also used, and the stats code after it.
-;	94 changes from 93: the menu state is menuitem-menudraw; printz2 (93
-;	printsmallz); a handler can keep its own screen (sflags5 bit 1); the 94 item printer PrintMenuItem (the Manual /
-;	Auto Goalie item); PrintTeamData copies 11 words from TeamBlockMap (93 12 words); vcountwait reads oldvcount twice.
-;The inline Strings after printz2 ( ori.b / move.l / btst), and the two PrintMenuItem Strings ( no
-;label:.manual,.auto).
+;	The scrolling menu engine of the pause screen (Pausemode): InitMenuState,
+;	DrawMenuScreen, SetMenuPrintX, HandleMenuInput, UpdateMenuSelection,
+;	PrintMenuItem (the Manual / Auto Goalie item), PrintTeamData and
+;	vcountwait.
+;	Items print with printz2; a handler can keep its own screen (sflags5
+;	bit 1). PrintTeamData copies 11 words per row from TeamBlockMap (93 used
+;	12); vcountwait reads oldvcount twice.
 
 InitMenuState	;Start a menu: a0 = item list, a1 = screen draw routine; selection and first shown item 0. Falls into
 	;DrawMenuScreen. Called from PauseMode, and the stats code
