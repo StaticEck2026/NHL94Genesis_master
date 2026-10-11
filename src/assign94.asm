@@ -341,7 +341,7 @@ assfaceoffpl	;Face off player
 .d
 	bset	#1,pflags2(a3)
 	bra.w	SetSPA
-.exit	;(a global in ; local here so it does not split assfaceoffp1)
+.exit	;shared exit of assfaceoffpl
 	move.b	#$14,nopuck(a3)
 	bra.w	assexit
 .exit2
@@ -507,7 +507,7 @@ assdefd
 	btst	#5,pflags(a3)	;check if locked in animiation
 	bne.w	rtss6	;exit if so
 	btst	#0,(gmode).w	;check if clock running
-	bne.w	donothing	;assnothing if no clock
+	bne.w	donothing	;donothing if no clock
 	bsr.w	check4bench	;check if going to bench
 	btst	#3,pflags(a3)	;check if joystick controlled
 	bne.w	rtss6	;exit if so
@@ -639,7 +639,7 @@ asswingd
 	btst	#5,pflags(a3)	;check if locked in animation
 	bne.s	rtss21	;exit if so
 	btst	#0,(gmode).w	;check if clock is running
-	bne.w	donothing	;assnothing if its stopped
+	bne.w	donothing	;donothing if its stopped
 	bsr.w	check4bench	;check if going to bench
 	btst	#3,pflags(a3)	;check if joystick controlled
 	bne.s	rtss21	;exit if so

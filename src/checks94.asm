@@ -12,7 +12,7 @@ asswingo	;player a3 is winger on offense
 	btst	#pfalock,pflags(a3)	;check if locked in animation
 	bne.w	rtss21	;exit if so
 	btst	#gmclock,(gmode).w	;check game clock
-	bne.w	donothing	;assnothing if stopped
+	bne.w	donothing	;donothing if stopped
 	bsr.w	check4bench	;check if player going to bench
 	btst	#pfjoycon,pflags(a3)	;check if joystick controlled
 	bne.w	rtss21	;exit if so

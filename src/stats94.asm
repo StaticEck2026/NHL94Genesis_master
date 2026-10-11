@@ -1268,7 +1268,7 @@ DisplayPenaltyLineDown	;Draw penalty entry (d0 high word) + 5 at the bottom of t
 	bsr.w	DisplayPenaltyEntry
 	move.l	(sp)+,d0
 	rts
-DisplayPenaltyEntry	;Print PenSum entry d3: time, team (bit 7 of byte 2 = away), minutes and name from PenaltyList, player (byte 3)
+DisplayPenaltyEntry	;Print PenSum entry d3: time, team (bit 7 of byte 2 = away), minutes and name from Penaltylist, player (byte 3)
 	move.w	(printy).w,-(sp)
 	moveq	#$28,d0
 	moveq	#3,d1

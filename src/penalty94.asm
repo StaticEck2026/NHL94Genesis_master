@@ -6,13 +6,13 @@
 ;	releasepl, GetLowestPen, updatepwrplay, ClrHor and SetHor.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
-;	Penalty numbers are PenaltyList word offsets: EOG 4, OOP 6, whistle $A, icing $C, goal $E, offsides $10,
+;	Penalty numbers are Penaltylist word offsets: EOG 4, OOP 6, whistle $A, icing $C, goal $E, offsides $10,
 ;	delay $2C. Team struct from HmShots (tmsize $364): 2 tmPwrGoals, 4 tmPwrPlays, 6 tmPenalties,
 ;	8 tmPenmin, $A attack time, $1E tmdata, $22 tmsort, $24 tmap, $26 tmgoalie, $30 tmflags, $66 tmpdst, $9A penalty
 ;	box list (bytes, -1 end), $102 per-player penalty minutes. Sort struct (SortCords, $80 each): $34 position,
 ;	$40 temp1, $52 SCnum, $62 pflags, $63 pflags2, $64 bit 1 breakaway, $66 pnum.
 
-AddPenalty	;add penalty d0 (PenaltyList offset) for player a3. Ignored while the clock is stopped, when penalties are off, for a player with
+AddPenalty	;add penalty d0 (Penaltylist offset) for player a3. Ignored while the clock is stopped, when penalties are off, for a player with
 	;pflags2 bit 2 set, or offsides when offsides are off. Falls into AddPenalty2
 	btst	#gmclock,(gmode).w	;gmclock
 	bne.w	rtss2
@@ -573,7 +573,7 @@ SetPA	;start ref animation. d0 = animation (penalty number). Animations from $2E
 	btst	#sfhor,(sflags).w	;sfhor
 	beq.w	SetPA2
 	move.w	#$3C,(penmsgtimer).w	;60
-SetPA2	;update animation for ref. Next frame/delay pair from the PenaltyList animation of RefPen. The delay is doubled
+SetPA2	;update animation for ref. Next frame/delay pair from the Penaltylist animation of RefPen. The delay is doubled
 	;when gmode2 bits 0 and 3 are set. Also called from UpdatePA
 	movem.l	d0-d2/a0-a1,-(sp)
 	moveq	#$40,d0	;clear ref window

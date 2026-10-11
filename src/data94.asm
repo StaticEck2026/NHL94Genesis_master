@@ -34,7 +34,7 @@ defmenuoptions	;default options: Regular Season, One - Home, MTL, LA, 10 Minutes
 	dc.w	1	;Line Changes
 ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue playoffs
 	;read the playoff state back from the saved bits at pwddatabuffer, rebuild the tree and set OptNOP from pojoy (
-	;= 7 - playoffroundoffset; 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, GameSetUp_3)
+	;= 7 - OptNOP; 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, GameSetUp_3)
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	ReadPassBits
@@ -952,7 +952,7 @@ ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset, 'Out for period', o
 	movem.l	(sp)+,d0-d2/a0-a4
 	rts
 PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in Shootout (bit 0) jumps to PlayoffRoundScreen
-	;instead. Otherwise: printbig 'PENALTY SHOT!', the shooter (BA_Sktr_SCnum, BA_Team), the penalty name (PenaltyList, pspenalty) and ' by' the
+	;instead. Otherwise: printbig 'PENALTY SHOT!', the shooter (BA_Sktr_SCnum, BA_Team), the penalty name (Penaltylist, pspenalty) and ' by' the
 	;player BA_Checker_Offset of the other team
 	bset	#7,(gmode2).w
 	btst	#0,(gmode2).w
@@ -1340,7 +1340,7 @@ crash	;printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktil
 	dbf	d2,.top
 	rts
 ;	Data tables: the crowd frame table (cd0, used by updatecrowdf), the
-;	player logic assignment table asstab, PenaltyList, the penalty shot
+;	player logic assignment table asstab, Penaltylist, the penalty shot
 ;	tables (PenShotPenalties), bfasciicon, linelist, PlayerPositionText,
 ;	PerLabels, sizetab, sublist, priolist, the playoff tree layout
 ;	(PlayoffTreeSetup), the attribute column lists, and the menu item lists
