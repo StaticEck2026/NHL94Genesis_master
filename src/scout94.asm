@@ -12,13 +12,13 @@
 ;	$4000). printz2 codes: $F8 attribute,map,x,y; $F9 char set. Pad bits: dbut 1, cbut 5, abut 6, sbut 7.
 
 ScoutCrowdRecord	;The text player's '@' (ScoutTextPlayer): return a1 = the home team's crowd record in dB as a String at TempBuffer (SRAM team record
-	;byte 8, 80 if 0). clrCrowdRAM reads the 16 byte SRAM record of team d1 ($B60 + d1 * 16) to a0
+	;byte 8, 80 if 0). ReadCrowdRecord reads the 16 byte SRAM record of team d1 ($B60 + d1 * 16) to a0
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(HomeTeam).w,d1
 	ext.l	d1
 	movea.l	#teamrecbuf,a0	;SRAM team record buffer
 	move.l	a0,-(sp)
-	jsr	(clrCrowdRAM).l	;read the HomeTeam record
+	jsr	(ReadCrowdRecord).l	;read the HomeTeam record
 	movea.l	(sp)+,a0
 	movea.l	#TempBuffer,a1	;String buffer
 	clr.w	d0
@@ -38,7 +38,7 @@ ScoutCrowdRecordBy	;unused: return a1 = 'by <name> ' for the home team's crowd r
 	ext.l	d1
 	movea.l	#teamrecbuf,a0
 	move.l	a0,-(sp)
-	jsr	(clrCrowdRAM).l
+	jsr	(ReadCrowdRecord).l
 	movea.l	(sp)+,a0
 	tst.b	9(a0)	;name number
 	beq.w	.0

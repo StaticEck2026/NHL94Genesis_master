@@ -474,14 +474,14 @@ PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl).
 	add.w	d0,(a3)
 .x
 	rts
-GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8 (clrCrowdRAM; 0 counts as $50). Called from DisplayGameStats
+GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8 (ReadCrowdRecord; 0 counts as $50). Called from DisplayGameStats
 	movem.l	d1-d7/a0-a6,-(sp)
 	move.w	#$1B,d1
 	ext.l	d1
 	clr.w	d7
 	movea.l	#ThreeStars,a0
 .loop
-	jsr	(clrCrowdRAM).l
+	jsr	(ReadCrowdRecord).l
 	clr.w	d2
 	move.b	8(a0),d2
 	bne.w	.0

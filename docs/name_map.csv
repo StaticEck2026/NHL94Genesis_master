@@ -36,3 +36,4 @@ Hotlist,HotList,92G/93G spelling
 setvram,setVram,92G
 framermap,FramerMap,92G
 icerinkmap,HorRinkTiles,behavior: HorRinkMap+8 (the SetHor bitmap tiles), not 92 IceRinkMap
+clrCrowdRAM,ReadCrowdRecord,behavior: reads the crowd record block (pairs with WriteCrowdRecord)

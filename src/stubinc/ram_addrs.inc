@@ -290,7 +290,7 @@ HmAwBonus equ $FFFFCF31
 callbackPtr equ $FFFFCF32
 ThreeStars equ $FFFFCF36
 ;$FFFFCF38 is ThreeStars+2, the text after a String length word at ThreeStars
-teamrecbuf equ $FFFFCFFE	;SRAM team record buffer: the 16 byte record of a team (clrCrowdRAM), byte 8 crowd record, byte 9 its name number
+teamrecbuf equ $FFFFCFFE	;SRAM team record buffer: the 16 byte record of a team (ReadCrowdRecord), byte 8 crowd record, byte 9 its name number
 nibblebuffer equ $FFFFD036
 ;$FFFFD03A is nibblebuffer+4
 homeuser equ $FFFFD042

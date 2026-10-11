@@ -888,10 +888,10 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 WritePlayerRecord	;Write the 4 byte player record
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
-clrCrowdRAM	;(clrCrowdRAM?). read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
+ReadCrowdRecord	;Read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
 	;LoadCrowdRec and DisplayGameStats
 	bclr	#6,(sflags6).w
-CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from clrCrowdRAM and WriteCrowdRecord
+CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from ReadCrowdRecord and WriteCrowdRecord
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.l	d1,d0
 	asl.w	#4,d0
@@ -1100,9 +1100,9 @@ UpdateTeamRecord	;After a game: add the game to team record block d1 (games, win
 	bsr.w	WriteTeamRecord
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-UpdateCrowdRecord	;Update the crowd records (clrCrowdRAM, WriteCrowdRecord)
+UpdateCrowdRecord	;Update the crowd records (ReadCrowdRecord, WriteCrowdRecord)
 	movem.l	d0-d7/a0-a6,-(sp)
-	bsr.w	clrCrowdRAM
+	bsr.w	ReadCrowdRecord
 	move.w	$C(a1),d3
 	cmp.b	(a0),d3
 	ble.w	.0
@@ -1610,7 +1610,7 @@ PrintCardRecords	;Player card "Records" column
 	ext.l	d1
 	movea.l	#ThreeStars,a0
 	move.l	a0,-(sp)
-	jsr	(clrCrowdRAM).l
+	jsr	(ReadCrowdRecord).l
 	move.w	#$15,d0
 	move.w	#$E,d1
 	move.b	(a0),d2

@@ -16,7 +16,7 @@
 
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
-clrCrowdRAM = $F9BE2		;jsr / jmp (x).l
+ReadCrowdRecord = $F9BE2		;jsr / jmp (x).l
 randomd0s = $1107A		;jsr / jmp (x).l
 sroot = $110BE			;jsr / jmp (x).l
 wallcollb = $14BC2		;jsr / jmp (x).l

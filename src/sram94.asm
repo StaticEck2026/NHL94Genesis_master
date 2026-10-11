@@ -137,7 +137,7 @@ ClearSRAM	;Clears first $2000 of RAM and SaveRAM: zero M68K_RAM $0-$1FFF with by
 	bsr.w	MakeSRAMChecksum
 	rts
 WriteSRAM	;Write data from a0 into SaveRAM: d1 = number of bytes, d0 = first save RAM byte (each byte is the odd byte of a word at
-	;Called from ClearSRAM, MakeSRAMChecksum and the save code (clrCrowdRAM ...)
+	;Called from ClearSRAM, MakeSRAMChecksum and the save code (ReadCrowdRecord ...)
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.l	#$200000,a1
 	add.l	d0,d0

@@ -1,9 +1,9 @@
-LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (clrCrowdRAM into the buffer at ThreeStars), $50 when none. Called from StartGame
+LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (ReadCrowdRecord into the buffer at ThreeStars), $50 when none. Called from StartGame
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(HomeTeam).w,d1
 	ext.l	d1
 	movea.l	#ThreeStars,a0
-	jsr	(clrCrowdRAM).l
+	jsr	(ReadCrowdRecord).l
 	move.b	8(a0),d0
 	beq.w	.none
 	andi.w	#$FF,d0

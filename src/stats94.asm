@@ -1767,7 +1767,7 @@ CrowdMeterScreen	;"Crowd Meter": current, average and peak level (DisplayGameSta
 	bra.s	.loop
 DisplayGameStats	;Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteLvl / NumCwdExciteLvl) and MaxCwdExciteLvl
 	;in dB (FormatPercentage). With save RAM (ValidSRAM) the arena record of HomeTeam and the league record, read into the buffer
-	;at ThreeStars by clrCrowdRAM (high ROM); 0 reads as $50
+	;at ThreeStars by ReadCrowdRecord (high ROM); 0 reads as $50
 	bsr.w	printsmallz
 	String	CC_SetMapAndPosition,4,2,4,$C,'Current Level',CC_SetX,$1C
 	move.w	(CwdExciteLvl).w,d0
@@ -1787,7 +1787,7 @@ DisplayGameStats	;Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteLvl /
 	move.w	(HomeTeam).w,d1
 	ext.l	d1
 	movea.l	#ThreeStars,a0
-	jsr	(clrCrowdRAM).l
+	jsr	(ReadCrowdRecord).l
 	move.b	8(a0),d0
 	bne.w	.gotarena
 	move.b	#$50,d0
@@ -1809,7 +1809,7 @@ DisplayGameStats	;Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteLvl /
 	move.w	d0,d1
 	ext.l	d1
 	movea.l	#ThreeStars,a0
-	jsr	(clrCrowdRAM).l
+	jsr	(ReadCrowdRecord).l
 	move.b	8(a0),d0
 	bne.w	.gotleague
 	move.w	#$50,d0
