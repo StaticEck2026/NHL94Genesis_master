@@ -475,7 +475,7 @@ DrawTeamScreen	;93 name. Line editor background: bitmap (ScoutMap), frame, "Line
 	jsr	(printbigz).l
 	String	-(TXPRI+TXMAP2),$A,4,'Line  Editor',-(TXPRI+TXMAP2),$E,1
 	clr.w	d0
-	cmpa.w	#(HmShots-M68K_RAM),a2
+	cmpa.w	#(tmstruct-M68K_RAM),a2
 	beq.w	PrintTeamData
 	move.w	#$2C,d0
 	bra.w	PrintTeamData
@@ -664,7 +664,7 @@ TeamRosterScreen	;93 name. "Team Roster" screen for team a2: pages of players (D
 	jsr	(printbigz).l
 	String	-(TXPRI+TXMAP3),9,4,'Team  Roster',-(TXPRI+TXMAP3),$E,1
 	clr.w	d0
-	cmpa.w	#(HmShots-M68K_RAM),a2
+	cmpa.w	#(tmstruct-M68K_RAM),a2
 	beq.w	.home
 	move.w	#$2C,d0
 .home
@@ -734,7 +734,7 @@ TeamRosterScreen	;93 name. "Team Roster" screen for team a2: pages of players (D
 	lea	tmsize(a2),a2
 	cmpa.w	#(AwShots-M68K_RAM),a2
 	beq.w	.redraw
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bra.w	.redraw
 CheckPlayerListScroll	;93 name. TeamRosterScreen per frame: add PlayerScrollCtr to VertLineScrolling (0 ... $380)
 	move.w	(PlayerScrollCtr).w,d0
@@ -1109,7 +1109,7 @@ DisplayGameStatEntry	;93 name. Print ScoreSum entry d3: time, team (bit 7 of byt
 	move.w	0(a0,d3.w),d0
 	move.w	#1,(printx).w
 	jsr	(FormatAndPrintTime).l
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#7,2(a0,d3.w)
 	beq.w	.0
 	adda.w	#tmsize,a2
@@ -1285,7 +1285,7 @@ DisplayPenaltyEntry	;93 name; IDA dc.b. Print PenSum entry d3: time, team (bit 7
 	move.w	0(a0,d3.w),d0
 	move.w	#1,(printx).w
 	jsr	(FormatAndPrintTime).l
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#7,2(a0,d3.w)
 	beq.w	.0
 	adda.w	#tmsize,a2
@@ -1297,7 +1297,7 @@ DisplayPenaltyEntry	;93 name; IDA dc.b. Print PenSum entry d3: time, team (bit 7
 	jsr	(print).l
 	move.b	2(a0,d3.w),d0
 	andi.w	#$7F,d0
-	movea.l	#PenaltyList,a3
+	movea.l	#Penaltylist,a3
 	adda.w	0(a3,d0.w),a3
 	clr.w	d0
 	move.b	1(a3),d0
@@ -1343,7 +1343,7 @@ DisplayTeamStats	;93 name. "Playoff Stats": the playoff totals (ReadTeamStats) o
 	movea.w	#(potree-M68K_RAM),a0
 	move.w	(potreeteam).w,d0
 	move.b	0(a0,d0.w),d0
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	cmp.w	Xvel(a2),d0
 	beq.w	.0
 	adda.w	#tmsize,a2
@@ -1380,7 +1380,7 @@ DisplayAttributeScreen	;93 name. Stats screen for team a2, d7 = 0 game / 1 playo
 	String	-(TXPRI+TXMAP3),8,4,'Player  Stats',-(TXPRI+TXMAP3),$E,1
 .team
 	clr.w	d0
-	cmpa.w	#(HmShots-M68K_RAM),a2
+	cmpa.w	#(tmstruct-M68K_RAM),a2
 	beq.w	.home
 	move.w	#$2C,d0
 .home
@@ -1430,7 +1430,7 @@ DisplayAttributeScreen	;93 name. Stats screen for team a2, d7 = 0 game / 1 playo
 	lea	tmsize(a2),a2
 	cmpa.w	#(AwShots-M68K_RAM),a2
 	beq.w	.redraw
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bra.w	.redraw
 UpdateAttributeScroll	;93 name. Stats screen per frame: scroll 0 ... SelectedPlayerIdx, stop on a 16 line boundary, draw the row coming into view
 	move.w	(PlayerScrollCtr).w,d0
@@ -1968,7 +1968,7 @@ TimeoutMenu	;93 name. Pause menu "Timeout" for team a2: switch the menu to Pause
 	lsr.w	#1,d0
 	sub.w	d0,(printx).w
 	bsr.w	print
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	jsr	(RestoreTeamEnergy).l
 	adda.w	#$364,a2
 	jsr	(RestoreTeamEnergy).l

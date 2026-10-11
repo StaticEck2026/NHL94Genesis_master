@@ -724,7 +724,7 @@ lineinput
 	movem.l	(sp)+,d0-d7/a0-a6
 .0
 	move.w	d1,-(sp)
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#pfteam,pflags(a3)
 	beq.w	.2
 	adda.w	#tmsize,a2

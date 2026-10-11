@@ -45,12 +45,12 @@ EASportsScreen	;94 only. Called from Begin. Show the EA Sports screen until a bu
 	move.w	#0,(palfadenew+$E).w
 	move.w	#$18,(palcount).w	;fade in
 	move	#$2500,sr		;vblank on
-	move.w	#$50,(RNGseed).w	;frame count down in the random seed word
+	move.w	#$50,(seed).w	;frame count down in the random seed word
 .wait	moveq	#4,d0
 	bsr.w	waitx			;4 frames; d1 = buttons
 	tst.w	d1
 	bne.w	.ex			;Button pressed
-	subq.w	#1,(RNGseed).w
+	subq.w	#1,(seed).w
 	bpl.s	.wait
 .ex	move	#$2700,sr
 	rts
@@ -127,17 +127,17 @@ DrawTeamBlockBitmap	;94 only, no xref (IDA dc.b). Like DrawTeamBitmap with Teamb
 	moveq	#2,d5
 	bra.w	dobitmap
 
-ClearTextBox	;94 only, no xref (IDA dc.b). Set the print position, then erase 12 x 2 at it
-	bsr.w	SetTeamPrintPos
+ClearOptionDisplay	;94 only, no xref (IDA dc.b). Set the print position, then erase 12 x 2 at it (was: ClearTextBox)
+	bsr.w	setoptions_printpos2
 	moveq	#$C,d0			;12
 	moveq	#2,d1			;2
 	move.w	#$7FF,d2
 	bra.w	eraser
 
-SetTeamPrintPos	;94 only (IDA dc.b). printz position string, then printx = $1A when a2 is the home team
+setoptions_printpos2	;94 only (IDA dc.b). printz position string, then printx = $1A when a2 is the home team (was: SetTeamPrintPos)
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),2,$A,0
-	cmpa.w	#(HmShots-M68K_RAM),a2	;home team struct?
+	cmpa.w	#(tmstruct-M68K_RAM),a2	;home team struct?
 	bne.w	rtss2
 	move.w	#$1A,(printx).w
 	rts
@@ -147,7 +147,7 @@ SetGoalieMode	;94 only, no xref (IDA dc.b). $26(a2) = 0 if a pad has team a2, el
 	movem.l	d0/a0,-(sp)
 	clr.w	$26(a2)
 	bsr.w	FigureJoy
-	cmpa.w	#(HmShots-M68K_RAM),a2
+	cmpa.w	#(tmstruct-M68K_RAM),a2
 	seq	d0
 	ext.w	d0
 	addq.w	#2,d0			;1 for the home team, 2 for the away team

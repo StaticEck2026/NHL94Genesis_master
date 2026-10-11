@@ -203,7 +203,7 @@ Clamp0to100	;IDA dc.b, no xref. 94 only, unused: clamp d3 to 0 ... 100
 AttributeCalc	;IDA name (and comments). 94 only: attribute d3 of player a3 * 5 plus his hot / cold value / 3, limited to 0 ... $1E. Called from setplayer (hockey94_05)
 	movem.l	d0-d2/a1,-(sp)
 	move.w	(TempWord2).w,d1	;BF14 goes to d1
-	movea.l	#HmShots,a1	;Start of Home Team struct
+	movea.l	#tmstruct,a1	;Start of Home Team struct
 	btst	#6,pflags(a3)	;Check if home or away
 	beq.w	.attribmath
 .away
@@ -249,7 +249,7 @@ NextHomeHotPlayer	;94 only. d1 = the next home hot player (homehotidx index into
 	addq.w	#1,(homehotidx).w
 .x
 	movem.l	(sp)+,d0/a0
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	rts
 NextAwayHotPlayer	;94 only. The same for the away team (awayhotplayer, awayhotidx), a1 = AwShots. Called from ScoutTextPlayer
 	movem.l	d0/a0,-(sp)
@@ -269,7 +269,7 @@ BuildHotColdLists	;94 only. Build the hot / cold player lists of both teams (Sor
 	clr.w	(awayhotidx).w
 	clr.w	(homehotidx).w
 	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	bsr.w	SortHotColdStarters
 	movea.l	#homehotplayer,a0
 	bsr.w	CopyHottestPlayer
@@ -345,7 +345,7 @@ NextHomeColdPlayer	;94 only. d1 = the next home cold player (homecoldidx, homeco
 	addq.w	#1,(homecoldidx).w
 .x
 	movem.l	(sp)+,d0/a0
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	rts
 NextAwayColdPlayer	;94 only. The same for the away team (awaycoldidx, awaycoldplayer), a1 = AwShots. Called from ScoutTextPlayer
 	movem.l	d0/a0,-(sp)
@@ -387,7 +387,7 @@ CopyColdestPlayer	;94 only. Copy the coldest player (TempBuffer+10) to the list 
 CompareHotColdTotals	;94 only. Compare the teams' hot / cold totals (GetHotColdTotal into TempWord1 / TempWord2): awayhotter = 1 when the away total is
 	;higher; d0 = -1, $22 or $23 by the difference (ScoutingReport text "Lately ... has been playing (extremely) well")
 	movem.l	d1-d7/a0-a6,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	bsr.w	GetHotColdTotal
 	move.w	d1,(TempWord1).w
 	movea.l	#AwShots,a0

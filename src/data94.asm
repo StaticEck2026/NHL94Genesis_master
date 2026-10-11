@@ -555,7 +555,7 @@ DisplayTeamStatsForPlayoffs	;93 name (IDA: AddPOStats). Add the po team's game s
 	movea.w	#(potree-M68K_RAM),a0
 	move.w	(potreeteam).w,d2
 	move.b	0(a0,d2.w),d2	;po team
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	cmp.w	Xvel(a2),d2
 	beq.w	.0
 	adda.w	#$364,a2	;tmsize: the po team is the visitor
@@ -840,7 +840,7 @@ FindMaxAttributeTEam	;93 name. Take the highest of the 52 star scores at ThreeSt
 	move.w	a1,d0
 	subi.w	#(ThreeStars-M68K_RAM),d0
 	lsr.w	#2,d0	;entry number
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	cmp.w	#$1A,d0
 	blt.w	.home
 	subi.w	#$1A,d0
@@ -855,7 +855,7 @@ CalculateTeamAttributes	;93 name. Star score for every roster slot of both teams
 	jsr	(GetPeriodTime).w	;IDA: ClockLength
 	move.w	d0,d5
 	add.w	d2,d5
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a3
 	bsr.w	CalculateTeamAttributeValues	;home
 	movea.w	a3,a2
@@ -990,7 +990,7 @@ PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1)
 	adda.w	d0,a2
 	clr.w	d0
 	move.b	$66(a2),d0	;roster slot
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	tst.w	(BA_Team).w
 	beq.w	.6
 .5
@@ -1002,7 +1002,7 @@ PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1)
 	String	-(TXPRI+TXMAP1),4,7	;IDA: ori.b / btst
 	movem.l	a1/a3,-(sp)
 	move.w	(pspenalty).w,d0
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	lea	2(a1),a1
 	bsr.w	print
@@ -1013,7 +1013,7 @@ PenaltyShotBox	;94 only. Penalty shot box, called from chkprogress (penalty94_1)
 	movea.l	#AwShots,a2
 	tst.w	(BA_Team).w
 	beq.w	.7
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 .7
 	jsr	(FormatPlayerNameWithAttrib).l
 	jsr	(print).l
@@ -1029,7 +1029,7 @@ DisplayPlayerAttributeMenu	;93 name. Goal box. Closes both line change boxes, th
 	beq.w	.0
 	bset	#2,(sflags2).w
 .0
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	jsr	(lcfound2).l	;close lc box
 	adda.w	#tmsize,a2
 	jsr	(lcfound2).l
@@ -1048,7 +1048,7 @@ DisplayPlayerAttributeMenu	;93 name. Goal box. Closes both line change boxes, th
 .frame
 	bsr.w	Framer
 	jsr	(CountGoalies).l
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(homegoalies).w,(scorergoalies).w
 	btst	#7,2(a4)
 	beq.w	.1	;home team scored
@@ -1134,10 +1134,10 @@ box	;IDA name (93 box). Fill a $13 x 8 rectangle at printz position $FF,$B,2 wit
 	moveq	#8,d1
 	move.l	#$7FF,d2
 	bra.w	eraser
-GetTempPlayerName	;93 GetPlayerName, but that is the same symbol as getplayername (SNASM symbols are case-insensitive).
+GetPlayerName	;93 GetPlayerName, but that is the same symbol as getplayername (SNASM symbols are case-insensitive). (was: GetTempPlayerName)
 	;a1 = mesarea "NN First Last" (getname) for player TempPlOffset (bit 15 set: away team). Called from UpdatePA (penalty94_1)
 	movem.l	d0/a2,-(sp)
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(TempPlOffset).w,d0
 	bpl.w	.0
 	andi.w	#$FF,d0
@@ -1165,7 +1165,7 @@ getname	;IDA name (93 getname). gets player number and name, appends to string: 
 	rts
 GetPlayerNameWithAttrib	;93 name. a1 = mesarea "NN F. Last" (FormatPlayerNameWithAttrib) for player TempPlOffset (bit 15 set: away team). Called from ShowInjuryBox
 	movem.l	d0/a2,-(sp)
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(TempPlOffset).w,d0
 	bpl.w	.get
 	andi.w	#$FF,d0
@@ -1401,7 +1401,7 @@ asstab	;jump table of all the player logic assignments. 92 / 93 asstab; 94 adds 
 	dc.l	assfight		;$14 afight
 	dc.l	assfwatch		;$15
 	dc.l	assfaceoff	;$16
-	dc.l	assfaceoffp1	;$17
+	dc.l	assfaceoffpl	;$17
 	dc.l	pucknorm		;$18 puck logic
 	dc.l	puckshadow	;$19
 	dc.l	puckunflip	;$1A (93 pucknothing)
@@ -1415,39 +1415,39 @@ asstab	;jump table of all the player logic assignments. 92 / 93 asstab; 94 adds 
 	dc.l	assbreakaway	;$22 94 only
 	dc.l	assonetimer	;$23 94 only (high ROM)
 
-PenaltyList	;92 Penaltylist, 93 numbers. Penalty number = word offset into this table; 94 adds 8 entries ($2E-$3C: the penalty shot
+Penaltylist	;92 Penaltylist, 93 numbers. Penalty number = word offset into this table; 94 adds 8 entries ($2E-$3C: the penalty shot (was: PenaltyList)
 	;versions of 7 penalties, minutes byte $FF, and a second Face Off). Used by AddPenalty, SetPA2, PenaltyShotBox (hockey94_10), ...
 	dc.w	$0000
-	dc.w	.eop-PenaltyList	;$2 period over
-	dc.w	.eog-PenaltyList	;$4 game over
-	dc.w	.ghold-PenaltyList	;$6
-	dc.w	.ghold-PenaltyList	;$8
-	dc.w	.whistle-PenaltyList	;$A whistle
-	dc.w	.ice-PenaltyList	;$C icing
-	dc.w	.goal-PenaltyList	;$E goal
-	dc.w	.offsides-PenaltyList	;$10 offsides
-	dc.w	.rough2-PenaltyList	;$12 roughing, slow down time $A
-	dc.w	.p14-PenaltyList	;$14 no text
-	dc.w	.charge-PenaltyList	;$16
-	dc.w	.slash-PenaltyList	;$18
-	dc.w	.rough-PenaltyList	;$1A
-	dc.w	.cross-PenaltyList	;$1C
-	dc.w	.hook-PenaltyList	;$1E
-	dc.w	.trip-PenaltyList	;$20
-	dc.w	.int-PenaltyList	;$22
-	dc.w	.hold-PenaltyList	;$24
-	dc.w	.fight-PenaltyList	;$26
-	dc.w	.fight2-PenaltyList	;$28
-	dc.w	.inst-PenaltyList	;$2A
-	dc.w	.delay-PenaltyList	;$2C delay
-	dc.w	.hookps-PenaltyList	;$2E 94: penalty shot
-	dc.w	.tripps-PenaltyList	;$30 94: penalty shot
-	dc.w	.ghold2-PenaltyList	;$32 94: face off, no slow down
-	dc.w	.intps-PenaltyList	;$34 94: penalty shot
-	dc.w	.roughps-PenaltyList	;$36 94: penalty shot
-	dc.w	.chargeps-PenaltyList	;$38 94: penalty shot
-	dc.w	.crossps-PenaltyList	;$3A 94: penalty shot
-	dc.w	.slashps-PenaltyList	;$3C 94: penalty shot
+	dc.w	.eop-Penaltylist	;$2 period over
+	dc.w	.eog-Penaltylist	;$4 game over
+	dc.w	.ghold-Penaltylist	;$6
+	dc.w	.ghold-Penaltylist	;$8
+	dc.w	.whistle-Penaltylist	;$A whistle
+	dc.w	.ice-Penaltylist	;$C icing
+	dc.w	.goal-Penaltylist	;$E goal
+	dc.w	.offsides-Penaltylist	;$10 offsides
+	dc.w	.rough2-Penaltylist	;$12 roughing, slow down time $A
+	dc.w	.p14-Penaltylist	;$14 no text
+	dc.w	.charge-Penaltylist	;$16
+	dc.w	.slash-Penaltylist	;$18
+	dc.w	.rough-Penaltylist	;$1A
+	dc.w	.cross-Penaltylist	;$1C
+	dc.w	.hook-Penaltylist	;$1E
+	dc.w	.trip-Penaltylist	;$20
+	dc.w	.int-Penaltylist	;$22
+	dc.w	.hold-Penaltylist	;$24
+	dc.w	.fight-Penaltylist	;$26
+	dc.w	.fight2-Penaltylist	;$28
+	dc.w	.inst-Penaltylist	;$2A
+	dc.w	.delay-Penaltylist	;$2C delay
+	dc.w	.hookps-Penaltylist	;$2E 94: penalty shot
+	dc.w	.tripps-Penaltylist	;$30 94: penalty shot
+	dc.w	.ghold2-Penaltylist	;$32 94: face off, no slow down
+	dc.w	.intps-Penaltylist	;$34 94: penalty shot
+	dc.w	.roughps-Penaltylist	;$36 94: penalty shot
+	dc.w	.chargeps-Penaltylist	;$38 94: penalty shot
+	dc.w	.crossps-Penaltylist	;$3A 94: penalty shot
+	dc.w	.slashps-Penaltylist	;$3C 94: penalty shot
 
 ;format
 ;	dc.w	$ttmm	;tt=slow dnw time in half secs,mm=penalty min.

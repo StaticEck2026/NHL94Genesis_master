@@ -253,7 +253,7 @@ ScoreSumbytes equ $FFFFC472
 ScoreSum equ $FFFFC474
 PenSumLength equ $FFFFC5DC
 PenSum equ $FFFFC5DE
-HmShots equ $FFFFC6CE
+tmstruct equ $FFFFC6CE	;(was: HmShots)
 HmGoals equ $FFFFC6DA
 ;$FFFFC6E4 is HmShots+tmline
 HomeTeamRosterPtr equ $FFFFC6EC
@@ -311,7 +311,7 @@ TmpOptUserRec equ $FFFFD05E
 TmpOptPen equ $FFFFD060
 TmpOptLine equ $FFFFD062
 demoflag equ $FFFFD064
-RNGseed equ $FFFFD066
+seed equ $FFFFD066	;(was: RNGseed)
 dmaram equ $FFFFD06A
 music_global_tick_counter equ $FFFFD06E
 music_tick_divider equ $FFFFD070

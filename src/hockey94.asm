@@ -63,7 +63,7 @@ StartGame	;reset game state for a new game, then start the first period
 	btst	#0,(gmode2).w
 	beq.w	.2
 	move.l	a0,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	jsr	(Create_HotCold_Table).l
 	movea.l	#AwShots,a0
 	jsr	(Create_HotCold_Table).l
@@ -86,7 +86,7 @@ ClearShotData	;Clear $E4 words at $FFD092 (93: 49 words at $FFCB0A)
 	rts
 
 restoreteams	;Put both teams' rosters on the bench
-	movea.w	#(HmShots-M68K_RAM),a2	;team 1
+	movea.w	#(tmstruct-M68K_RAM),a2	;team 1
 	bsr.w	.r
 	adda.w	#tmsize,a2		;team 2 (tmsize, 93: $1A2)
 .r	;reset one team struct (a2), falls in for team 2
@@ -220,7 +220,7 @@ CheckInjury	;Called once per second. Count down InjCntDown, act on it at zero
 UpdateLineChange	;Called once per second. Restore energy for players on the bench
 	tst.w	(OptLine).w
 	bne.w	.ex			;exit if line changes are off
-	movea.w	#(HmShots-M68K_RAM),a2	;team 1
+	movea.w	#(tmstruct-M68K_RAM),a2	;team 1
 	bsr.w	.notinprog
 	lea	tmsize(a2),a2		;team 2 (tmsize)
 .notinprog
@@ -491,7 +491,7 @@ SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
 
 seta2	;Set a2 to the team struct of the pause joystick
 	;also called from HandleMenuInput
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#sfpj,(sflags).w		;sfpj
 	beq.w	.seta20
 	cmpi.w	#1,(cont2team).w

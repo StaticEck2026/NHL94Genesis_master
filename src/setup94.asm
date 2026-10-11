@@ -600,7 +600,7 @@ SprSort	;sort objects in struct SortObj and set corresponding tables for keeping
 	rts
 resetplstuff	;reset team variables/and players on both teams. Called from puckfaceoff2, puckpenshot and StartHL2
 	movem.l	d0-d2/a0-a3,-(sp)
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	.top
 	movea.w	#(AwShots-M68K_RAM),a2
 	bsr.w	.top
@@ -625,12 +625,12 @@ resetplstuff	;reset team variables/and players on both teams. Called from puckfa
 	rts
 clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 bytes of each hot / cold table (HmShots+$1A2 / AwShots+$1A2, saved to
 	;homehotcoldsave / awayhotcoldsave and back) and HmShots+tmgoalie / AwShots+tmgoalie. Falls into setteams
-	move.w	(HmShots+tmgoalie).w,-(sp)
+	move.w	(tmstruct+tmgoalie).w,-(sp)
 	move.w	(AwShots+tmgoalie).w,-(sp)
 	movem.l	a1-a3,-(sp)
 	move.w	#$19F,d0
 	movea.l	#AwShots+$1A2,a1	;Hot/Cold table Away Team
-	movea.l	#HmShots+$1A2,a0	;Hot/Cold table Home Team
+	movea.l	#tmstruct+$1A2,a0	;Hot/Cold table Home Team
 	movea.l	#homehotcoldsave,a2
 	movea.l	#awayhotcoldsave,a3
 .loop
@@ -639,7 +639,7 @@ clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 byt
 	dbf	d0,.loop
 	movem.l	(sp)+,a1-a3
 	move.l	#$363,d0
-	movea.w	#(HmShots-M68K_RAM),a0
+	movea.w	#(tmstruct-M68K_RAM),a0
 .loop2
 	clr.b	(a0)+
 	dbf	d0,.loop2
@@ -651,7 +651,7 @@ clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 byt
 	movem.l	a1-a3,-(sp)
 	move.w	#$19F,d0
 	movea.l	#AwShots+$1A2,a1
-	movea.l	#HmShots+$1A2,a0
+	movea.l	#tmstruct+$1A2,a0
 	movea.l	#homehotcoldsave,a2
 	movea.l	#awayhotcoldsave,a3
 .loop4
@@ -660,12 +660,12 @@ clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 byt
 	dbf	d0,.loop4
 	movem.l	(sp)+,a1-a3
 	move.w	(sp)+,(AwShots+tmgoalie).w
-	move.w	(sp)+,(HmShots+tmgoalie).w
-	st	(HmShots+tmpdst+$34).w
+	move.w	(sp)+,(tmstruct+tmgoalie).w
+	st	(tmstruct+tmpdst+$34).w
 	st	(AwShots+tmpdst+$34).w
 setteams	;93 name. Use hometeam/visteam to set team structures (InitTeamSructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps (attract94)
 	movem.l	d0/a0-a2,-(sp)
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(HomeTeam).w,d0
 	move.w	#(SortCords-M68K_RAM),tmsort(a2)
 	bsr.w	InitTeamSructure
@@ -707,7 +707,7 @@ InitTeamSructure	;93 name. Set up team struct a2 for team d0: store the team num
 setplayercolors	;IDA: SetTeamColors. Copy in correct color data for each team: .team for the home team, then falls in for the visitors.
 	;Called from setupice, setupice_highlight, StartHL2 and ReloadRinkGraphics
 	clr.w	d1
-	movea.w	#(HmShots-M68K_RAM),a0
+	movea.w	#(tmstruct-M68K_RAM),a0
 	bsr.w	.team
 	moveq	#$20,d1
 	adda.w	#$364,a0
@@ -1070,7 +1070,7 @@ PlayoffScreenText	;93 name. Round titles by gamelevel, printed with printsmall
 	String	'Semifinals'
 	String	'Finals'
 	String	'Champions'
-StartScoutText	;94 only. Start the text player ScoutTextPlayer: VertLineScrolling = -1, PlayerScrollCtr = -1, clear SelectedPlayerIdx / typedelay; return a0 = TestList. Called from
+InitScoutingDisplay	;94 only. Start the text player ScoutTextPlayer: VertLineScrolling = -1, PlayerScrollCtr = -1, clear SelectedPlayerIdx / typedelay; return a0 = TestList. Called from (was: StartScoutText)
 	;ScoutingReport
 	move.w	#$FFFF,(VertLineScrolling).w
 	st	(PlayerScrollCtr).w
@@ -1078,7 +1078,7 @@ StartScoutText	;94 only. Start the text player ScoutTextPlayer: VertLineScrollin
 	clr.w	(typedelay).w
 	movea.w	#(TestList-M68K_RAM),a0
 	rts
-ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextScript script word by word with a typing delay (typedelay, longer
+UpdateScoutingDisplay	;94 only. Text player for ScoutingReport: prints the ScoutTextScript script word by word with a typing delay (typedelay, longer (was: ScoutTextPlayer)
 	;after , and .). $D ends a line; special characters ( _ + $ { } [ ] < > | \ @ # % = * ^ ; ) insert team data through the $FCxxx-$FExxx
 	;routines (GetTeamNickname / GetTeamArena for HmShots / AwShots). Line breaks scroll the text box (ScoutTextNextLine). Called from ScoutingReport
 	cmpi.w	#$1000,(typedelay).w
@@ -1101,7 +1101,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	move.w	#$1E0,(screentimer).w
 	rts
 .1
-	bsr.w	ScoutTextNextLine
+	bsr.w	ScrollDisplayUp
 	movea.l	a1,a2
 	bra.w	.2
 .loop
@@ -1187,7 +1187,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 .loop4
 	cmp.w	#$1D,d0
 	ble.w	.8
-	bsr.w	ScoutTextNextLine
+	bsr.w	ScrollDisplayUp
 .8
 	bsr.w	printz
 	String	-TXMAP1,9,4
@@ -1209,7 +1209,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	bra.w	.31
 .12
 	move.l	a2,-(sp)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	jsr	(GetTeamNickname).l
 	movea.l	(sp)+,a2
 	bra.w	.31
@@ -1221,7 +1221,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	bra.w	.31
 .14
 	move.l	a2,-(sp)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	jsr	(GetTeamArena).l
 	movea.l	(sp)+,a2
 	bra.w	.31
@@ -1244,7 +1244,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	jsr	(NextAwayColdPlayer).l
 	bra.w	.25
 .20
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	tst.w	(awayhotter).w
 	beq.w	.21
 	movea.l	#AwShots,a1
@@ -1256,7 +1256,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	movea.w	#(AwShots-M68K_RAM),a1
 	bra.w	.24
 .23
-	movea.w	#(HmShots-M68K_RAM),a1
+	movea.w	#(tmstruct-M68K_RAM),a1
 .24
 	move.w	$26(a1),d1
 .25
@@ -1290,7 +1290,7 @@ ScoutTextPlayer	;94 only. Text player for ScoutingReport: prints the ScoutTextSc
 	bne.w	.loop4
 	subq.w	#1,d1
 	bra.w	.loop4
-ScoutTextNextLine	;94 only. Next text line for ScoutTextPlayer: VertLineScrolling + 1; at 7 lines, scroll the 8 rows up by vram dma (DoDMA_nd2)
+ScrollDisplayUp	;94 only. Next text line for ScoutTextPlayer: VertLineScrolling + 1; at 7 lines, scroll the 8 rows up by vram dma (DoDMA_nd2) (was: ScoutTextNextLine)
 	clr.w	(DispAttribCtr).w
 	addq.w	#1,(VertLineScrolling).w
 	cmpi.w	#7,(VertLineScrolling).l

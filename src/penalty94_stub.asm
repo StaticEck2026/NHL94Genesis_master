@@ -19,7 +19,7 @@
 DoDMA_clearCallbackPointer = $11738	;bsr.w / Bcc.w at $120D6. middle94_2
 DoFill = $11544			;bsr.w / Bcc.w at $12BFA. middle94_1
 Framer = $119B8			;bsr.w / Bcc.w at $127E2. middle94_2
-PenaltyList = $18E0C		;#x at $11FB0
+Penaltylist = $18E0C		;#x at $11FB0
 PushTime = $11CA2		;bsr.w / Bcc.w at $12B02. middle94_2
 RefsMap = $5C408			;#x at $12708
 Rinktiles = $56062		;#x at $12B54
@@ -45,7 +45,7 @@ song = $11156			;middle94_1 (bsr.w at $11F96; a fixed value because the .song lo
 GetPeriodTimeRemaining = $14A94		;bsr.w / Bcc.w at $1229E. 93 GetPeriodTimeRemaining
 DisplayPeriodOver = $1850A		;bsr.w / Bcc.w at $12608. 93 DisplayPeriodOver
 PenaltyShotBox = $187B8		;jsr / jmp (x).l at $12066
-GetTempPlayerName = $18A6E		;bsr.w / Bcc.w at $12628. 93 GetPlayerName
+GetPlayerName = $18A6E		;bsr.w / Bcc.w at $12628. 93 GetPlayerName
 play_new_song = $1A304		;jsr / jmp (x).l at $12568
 ShootoutWonBy = $FC5AE		;jsr / jmp (x).l at $1266E
 LoadHomeTeamGfx = $FEA52		;jsr / jmp (x).l at $12B60
@@ -91,7 +91,7 @@ ExitGameTextPO = $19E74		;dc.l in .sslist (93 ExitGameTextPO)
 ZamFrameList = $A8922		;#x at $13114. 93 ZamSprites+8
 EnergyBarMap = $AB920		;#x at $12E8E. 93 EnergyBarMap
 EASNmap = $B3530		;#x at $12D84. 93 EASNmap
-IntermissionLoop = $111D0		;bsr.w / Bcc.w at $13178. middle94_1
+waitxsr = $111D0		;bsr.w / Bcc.w at $13178. middle94_1
 
 ; Main segment code
 	include	penalty94.asm

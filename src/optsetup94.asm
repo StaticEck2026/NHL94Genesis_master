@@ -872,7 +872,7 @@ setoptions	;options screen display and input (IDA comment). 94: build the game s
 	jsr	(defaultsprites2).l
 	move.w	#$28,(SortCords+OldXpos).w	;as 93
 	move.w	#$28,(SortCords+(6*SCstruct)+OldXpos).w
-	st	(HmShots).w	;(93 hmtmstruct / awtmstruct)
+	st	(tmstruct).w	;(93 hmtmstruct / awtmstruct)
 	st	(AwShots).w
 	rts
 GameSetUp_2	;IDA name. 93 setoptions .top / .wait: wait up to $5460 frames (6 minutes) for a press on any pad (4 with FourWayPlay); return d1 =
@@ -952,8 +952,8 @@ GameSetUp_2	;IDA name. 93 setoptions .top / .wait: wait up to $5460 frames (6 mi
 SetupDemo	;93 setoptions .demo: no press for $5460 frames. Clear demoflag, seed RNGseed, Regular Season, Demo, line changes On,
 	;penalties On. Falls into SetupStart. Branched to from GameSetUp
 	clr.w	(demoflag).w
-	move.w	(VDP_CNTR).l,(RNGseed).w
-	move.w	(VDP_CNTR).l,(RNGseed+2).w
+	move.w	(VDP_CNTR).l,(seed).w
+	move.w	(VDP_CNTR).l,(seed+2).w
 	clr.w	(OptPlayMode).w
 	clr.w	(OptNOP).w	;Demo
 	clr.w	(OptLine).w
@@ -965,8 +965,8 @@ SetupStart	;93 setoptions .ex: start. Copy Goalies to both teams, set pojoy (Set
 	move.w	(sp),(goaliemode1).w
 	move.w	(sp)+,(goaliemode2).w
 	jsr	(SetPojoyMode).l
-	move.w	(VDP_CNTR).l,(RNGseed).w
-	move.w	(VDP_CNTR).l,(RNGseed+2).w
+	move.w	(VDP_CNTR).l,(seed).w
+	move.w	(VDP_CNTR).l,(seed+2).w
 	move.w	(OptLine).w,(TmpOptLine2).w
 	cmpi.w	#2,(OptLine).w
 	bne.w	.0

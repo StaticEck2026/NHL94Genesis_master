@@ -56,7 +56,7 @@ AddPenalty2	;forced penalties like face off and game over. d0 = penalty number, 
 	bne.w	.noplayer	;buffer full
 	move.b	SCnum+1(a3),-(a1)	;SCnum+1
 	move.b	d0,-(a1)
-	movea.l	#PenaltyList,a0
+	movea.l	#Penaltylist,a0
 	adda.w	0(a0,d0.w),a0
 	tst.b	1(a0)	;penalty minutes
 	beq.w	.noplayer
@@ -124,7 +124,7 @@ chkprogress	;control progress of ref and game control thru penalty events. 94: w
 	beq.w	rtss2
 	clr.w	d0
 	move.b	-2(a0),d0
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	tst.b	1(a1)	;penalty minutes
 	beq.s	.find
@@ -261,7 +261,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 .Sa
 	clr.w	d0
 	move.b	(a0),d0
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	bclr	#5,(sflags5).w	;94 only: bit 5 = this penalty is 5 minutes
 	clr.w	d2
@@ -288,7 +288,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	movea.w	#(SortCords-M68K_RAM),a3
 	adda.w	d1,a3
 	clr.w	d0
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a1	;tmsize: visitors
 	btst	#pfteam,pflags(a3)	;pfteam
 	beq.w	.2
@@ -352,7 +352,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	bsr.w	SetPA
 	bra.w	.ex
 .4
-	movea.w	#(HmShots-M68K_RAM),a2	;93 .exit. home team struct
+	movea.w	#(tmstruct-M68K_RAM),a2	;93 .exit. home team struct
 	bsr.w	coinsearch
 	adda.w	#tmsize,a2	;tmsize
 	bsr.w	coinsearch
@@ -401,7 +401,7 @@ checkfornewpen	;look for new penalty (entered thru addpenalty(2)). Stops play at
 	bne.w	.iscalled
 	clr.w	d0
 	move.b	-2(a0),d0
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	tst.b	1(a1)	;time for penalty
 	beq.w	.callit
@@ -420,7 +420,7 @@ checkfornewpen	;look for new penalty (entered thru addpenalty(2)). Stops play at
 	bne.s	.next
 	clr.w	d0
 	move.b	-2(a0),d0	;penalty called
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	clr.w	d1
 	move.b	(a1),d1	;delay for stopping action
@@ -551,7 +551,7 @@ UpdatePA	;animate ref in ref window. As 93: DisplayPeriodOver for game over, and
 	bsr.w	PrintPenaltyMessagesString
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$11,$B	;IDA: ori.b / btst d5,d0
-	bsr.w	GetTempPlayerName	;93 GetPlayerName
+	bsr.w	GetPlayerName	;93 GetPlayerName
 	move.w	(a1),d0
 	lsr.w	#1,d0
 	sub.w	d0,(printx).w	;center it
@@ -588,7 +588,7 @@ SetPA2	;IDA: setPA2 (93 SetPA2). update animation for ref. Next frame/delay pair
 	move.w	(RefStep).w,d0
 	addq.w	#2,(RefStep).w
 	move.w	(RefPen).w,d1
-	movea.l	#PenaltyList,a0
+	movea.l	#Penaltylist,a0
 	adda.w	0(a0,d1.w),a0
 	addq.w	#2,a0
 	adda.w	(a0),a0
@@ -673,7 +673,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 .noblank
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),5,$A
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	addq.w	#2,a1
 	move.w	(a1),d0
@@ -701,7 +701,7 @@ prefmes	;print message for penalty d0 (negative clears it). Vertical mode: frame
 	bmi.w	.ex
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$11,$B
-	movea.l	#PenaltyList,a1
+	movea.l	#Penaltylist,a1
 	adda.w	0(a1,d0.w),a1
 	addq.w	#2,a1
 	move.w	(a1),d0
@@ -738,7 +738,7 @@ PenGoalStuff	;93 name. do this stuff after a goal. a1 = scored on team, a2 = sco
 	bset	#0,(DelayedPen).w	;94 only
 	addq.w	#1,tmap(a1)	;tmap
 	addq.w	#1,tmPwrGoals(a2)	;tmPwrGoals
-	bset	#0,(HmShots+tmflags).w	;home tmflags: tmflcc
+	bset	#0,(tmstruct+tmflags).w	;home tmflags: tmflcc
 	bset	#0,(AwShots+tmflags).w	;visitors tmflags: tmflcc
 .ex
 	movem.l	(sp)+,d0-d2/a0
@@ -760,7 +760,7 @@ updatepentime	;update the time remaining on all penalized players, once a second
 	bset	#6,(sflags3).w	;one second tick
 	bsr.w	chkatop
 	jsr	(updatePPTeamTime).l	;94 only
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	ProcessPenaltyList
 	adda.w	#tmsize,a2	;tmsize
 ProcessPenaltyList	;93 name. a2 = team. Walks the penalty box list ($9A): the first two players without a coincidental penalty
@@ -841,7 +841,7 @@ chkatop	;attack time of possession stat update. Called once a second from update
 	beq.w	.0
 	eori.w	#tmsize,d1
 .0
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	addq.w	#1,tmATOP(a2,d1.w)	;attack time
 	rts
 releasepl	;93 name. player's penalty time is up so let him out (if appropriate). a2 = team, d0 = player*2. Called from ProcessPenaltyList
@@ -856,7 +856,7 @@ releasepl	;93 name. player's penalty time is up so let him out (if appropriate).
 	lsr.w	#1,d3
 	move.w	tmap(a2),d1	;tmap
 	addq.w	#1,tmap(a2)
-	bset	#0,(HmShots+tmflags).w	;home tmflags: tmflcc
+	bset	#0,(tmstruct+tmflags).w	;home tmflags: tmflcc
 	bset	#0,(AwShots+tmflags).w	;visitors tmflags: tmflcc
 	movea.l	#priolist,a0
 	tst.w	tmgoalie(a2)	;tmgoalie
@@ -904,7 +904,7 @@ updatepwrplay	;show graphic and time remaining for power plays. 94: nothing when
 	;play (the 93 test is left and both ways go to .uppt). Prints the time and the team on the power play
 	btst	#1,(gmode2).w	;94 only
 	bne.w	rtss2
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a3	;tmsize
 	move.w	tmap(a2),d0	;tmap
 	sub.w	tmap(a3),d0
@@ -925,7 +925,7 @@ updatepwrplay	;show graphic and time remaining for power plays. 94: nothing when
 	bset	#sf2pwrplay,(sflags2).w	;sf2pwrplay
 	bne.w	.uppt
 	addq.w	#1,tmPwrPlays(a3)	;tmPwrPlays
-	cmpa.w	#(HmShots-M68K_RAM),a3	;home: 93 plays song $33 here
+	cmpa.w	#(tmstruct-M68K_RAM),a3	;home: 93 plays song $33 here
 	bne.w	.away
 .home
 	bra.w	.uppt
@@ -1062,7 +1062,7 @@ printscores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period
 	bsr.w	Framer
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$18,$1A	;home team on the lower row. IDA: ori.b / move.b d0,d5
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	PrintTeamNameAndScore
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$18,$18		;IDA: ori.b / move.b d0,d4
@@ -1087,7 +1087,7 @@ printscores1	;IDA name (93 printscores1). Draw scoreboard. Vertical rink: period
 	bsr.w	print
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),$17,2
-	movea.w	#(HmShots-M68K_RAM),a2	;IDA hid this in the string (ori.b / andi.b / mulu.w)
+	movea.w	#(tmstruct-M68K_RAM),a2	;IDA hid this in the string (ori.b / andi.b / mulu.w)
 	clr.w	d0	;home logo data offset
 	bsr.w	PrintTeamLogoAndScore
 	bsr.w	printz
@@ -1148,7 +1148,7 @@ USBoard	;93 name. Update score board, including the players in the penalty box a
 	bsr.w	printscores1
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),$14,8
-	movea.w	#(HmShots-M68K_RAM),a2	;home team. IDA hid this in the string (ori.b / #$7C / mulu.w)
+	movea.w	#(tmstruct-M68K_RAM),a2	;home team. IDA hid this in the string (ori.b / #$7C / mulu.w)
 	bsr.w	.dispen
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),5,8
@@ -1295,7 +1295,7 @@ ChkShotStat	;determine if shot taken, add to appropriate stats. As 93: crowd, te
 	move.l	a4,-(sp)
 	movea.l	#ScoreSum-6,a4	;IDA: #$FFFFC46E (ChkCnt). +ScoreSumbytes, then 2(a4) = the last ScoreSum entry
 	adda.w	(ScoreSumbytes).w,a4
-	movea.l	#HmShots,a2	;home team
+	movea.l	#tmstruct,a2	;home team
 	btst	#7,2(a4)	;entry flag: visitors
 	beq.w	.pllookup
 	adda.w	#$364,a2	;tmsize
@@ -1356,7 +1356,7 @@ ChkShotStat	;determine if shot taken, add to appropriate stats. As 93: crowd, te
 	movem.l	(sp)+,d0-d1/a1-a3
 	rts
 loadTeamStruct	;return a2 = team struct of player a3, a1 = the other team's struct. Called from ChkShotStat and updateplayers
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a1	;tmsize
 	btst	#pfteam,pflags(a3)	;pfteam
 	beq.w	rtss2
@@ -1365,7 +1365,7 @@ loadTeamStruct	;return a2 = team struct of player a3, a1 = the other team's stru
 SetupTeamForIntermission	;93 name. Reset the bench, then for each team refill energy and pick the starting line: 92 Pw1 (3)
 	;for the team with more players on ice, PK1 (5) for the team with fewer, else 0. Called from Intermission
 	bsr.w	ResetBench
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a3
 	bsr.w	.r
 	exg	a2,a3	;falls in for the other team
@@ -1453,12 +1453,12 @@ Intermission	;end of period junk (zamboni/stats). As 93: opens the pause menu sc
 	bsr.w	NewTicker2
 	bsr.w	NewTicker3	;93 NewTicker3
 	move.w	#$96,d0	;150 frames
-	bsr.w	IntermissionLoop
+	bsr.w	waitxsr
 	btst	#7,d1	;sbut
 	bne.w	.clrh
 	bsr.w	ClearTickerArea
 	move.w	#$3C,d0	;60 frames
-	bsr.w	IntermissionLoop
+	bsr.w	waitxsr
 	btst	#7,d1
 	beq.s	.top
 .clrh
@@ -1469,7 +1469,7 @@ Intermission	;end of period junk (zamboni/stats). As 93: opens the pause menu sc
 	bne.w	.clrz
 .wait
 	move.w	#$1E0,d0	;480 frames
-	bsr.w	IntermissionLoop
+	bsr.w	waitxsr
 	btst	#7,d1
 	bne.w	.clrz
 	tst.w	(cont1team).w
@@ -1732,7 +1732,7 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	bsr.w	printz
 	String	'Highlight from game:'	;IDA decoded the text as code
 	move.w	#$B4,d0	;180 frames
-	bsr.w	IntermissionLoop
+	bsr.w	waitxsr
 	btst	#7,d1	;sbut
 	bne.w	.nhl1
 	st	(zamx).w
@@ -1740,7 +1740,7 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	move.w	(a0),(HomeTeam).w	;set up teams for game in a0
 	move.w	2(a0),(VisTeam).w
 	move.l	a0,-(sp)
-	clr.w	(HmShots+tmgoalie).w
+	clr.w	(tmstruct+tmgoalie).w
 	clr.w	(AwShots+tmgoalie).w
 	jsr	(clearTeamStats).l
 	jsr	(restoreteams).w
@@ -1784,7 +1784,7 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	clr.w	(Vpos).w
 	clr.w	(Hpos).w
 	bsr.w	ResetBench
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	.setteam
 	adda.w	#tmsize,a2	;tmsize
 	bsr.w	.setteam
@@ -1865,12 +1865,12 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	bsr.w	CheckGameTickerStatus
 	bsr.w	NewTicker3
 	move.w	#$B4,d0
-	bsr.w	IntermissionLoop
+	bsr.w	waitxsr
 	btst	#7,d1
 	bne.w	.exit2
 	bsr.w	ClearTickerArea
 	move.w	#$3C,d0
-	bsr.w	IntermissionLoop
+	bsr.w	waitxsr
 	btst	#7,d1
 	beq.w	.exit
 .exit2

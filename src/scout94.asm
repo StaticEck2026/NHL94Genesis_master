@@ -93,7 +93,7 @@ ScoutingReport	;93 name. 94 pregame MATCHUPS screen, called from Opening2. Draws
 	move.l	#vb2,(vbint).w
 	jsr	(clearTeamStats).l
 	move.l	a0,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	jsr	(Create_HotCold_Table).l	;new random hot / cold tables ($1A2(a0))
 	movea.l	#AwShots,a0
 	jsr	(Create_HotCold_Table).l
@@ -183,7 +183,7 @@ ScoutingReport	;93 name. 94 pregame MATCHUPS screen, called from Opening2. Draws
 	move.w	#$18,(palcount).w	;24
 	move.l	#vb2,(vbint).w
 	move	#$2500,sr
-	jsr	(StartScoutText).l	;93 InitScoutingDisplay: a0 = the paragraph list
+	jsr	(InitScoutingDisplay).l	;93 InitScoutingDisplay: a0 = the paragraph list
 	move.w	#$1B,(a0)+	;paragraph numbers in ScoutTextScript: 'Hi, I'm Ron Barr ...'
 	move.w	#$1D,(a0)+	;empty paragraph: a blank line
 	move.w	#$1A,(a0)+	;'Welcome to a sold out ^ ...'
@@ -249,7 +249,7 @@ ScoutingReport	;93 name. 94 pregame MATCHUPS screen, called from Opening2. Draws
 	beq.w	.upd
 	st	(asv).w
 .upd
-	jsr	(ScoutTextPlayer).l	;93 UpdateScoutingDisplay
+	jsr	(UpdateScoutingDisplay).l	;93 UpdateScoutingDisplay
 	subq.w	#1,(screentimer).w
 	bpl.w	.top
 	tst.w	(OptNOP).w
@@ -450,7 +450,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	String	-TXMAP1,0,$17,'                                        '	;40 spaces. IDA: ori.b / move.l x20
 	jsr	(printz).l
 	String	-TXMAP1,$22,$16	;IDA: ori.b / move.b d0,d3
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	movea.l	#AwShots,a2
 	bsr.w	PrintMatchupRating	;home
 	move.w	d0,(homerating).w
@@ -475,7 +475,7 @@ PrintMatchupRatings	;94 only. Print the matchup ratings. Matchup 0: 'Overall' at
 	jsr	(printsmall).l
 	move.w	#$16,(printy).w
 	move.w	#2,(printfontset).w
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	move.l	(PAttribOverallMask).l,d4	;skater rating weights
 	tst.w	(matchupslot).w	;line slot 0: goalie
 	bne.w	.4
@@ -530,7 +530,7 @@ MatchupPosNames	;Position names of matchups 1-6
 	String	'     goalie     '
 GetMatchupPlayers	;94 only. matchuphome / matchupvis = the home / visitors player of the matchup (GetMatchupPlayer). Called from ScoutingReport and PageMatchup
 	movem.l	d0/a0-a1,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	bsr.w	GetMatchupPlayer
 	move.w	d0,(matchuphome).w
 	movea.l	#AwShots,a0
@@ -614,7 +614,7 @@ GetTeamNickname	;94 only. The text player's '=' (a2 = HmShots) and '*' (AwShots)
 	cmpi.w	#2,(a1)	;empty String?
 	bne.w	.x
 	movea.l	#HomeTxt,a1
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.w	.x
 	movea.l	#VisitorsTxt,a1
 .x

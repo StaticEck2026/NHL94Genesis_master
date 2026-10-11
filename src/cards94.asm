@@ -985,7 +985,7 @@ UpdateRecords	;94 only. With save RAM (ValidSRAM) and user records on (OptUserRe
 	move.w	(HomeTeam).w,d1
 	ext.l	d1
 	movea.l	#ThreeStars,a0
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	move.w	(homegoalies).w,d5
 	move.w	(VisTeam).w,d6
 	bsr.w	UpdatePlayerRecords
@@ -996,7 +996,7 @@ UpdateRecords	;94 only. With save RAM (ValidSRAM) and user records on (OptUserRe
 	move.w	(HomeTeam).w,d6
 	bsr.w	UpdatePlayerRecords
 	clr.w	d7
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	move.w	(homeuser).w,d4
 	move.w	(awayuser).w,d5
 	move.w	(HomeTeam).w,d1
@@ -1020,7 +1020,7 @@ UpdateRecords	;94 only. With save RAM (ValidSRAM) and user records on (OptUserRe
 	move.w	(awayuser).w,d2
 	move.w	(HomeTeam).w,d3
 	move.w	(VisTeam).w,d4
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	movea.l	#AwShots,a2
 	bsr.w	UpdateTeamRecord
 	movea.l	#ThreeStars,a0
@@ -1030,7 +1030,7 @@ UpdateRecords	;94 only. With save RAM (ValidSRAM) and user records on (OptUserRe
 	move.w	(VisTeam).w,d3
 	move.w	(HomeTeam).w,d4
 	movea.l	#AwShots,a1
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	bsr.w	UpdateTeamRecord
 	jsr	(MakeSRAMChecksum).l
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -1183,7 +1183,7 @@ UpdatePlayerRecords	;94 only. After a game: for the 26 players of team a2, keep 
 	move.b	d4,(a0)
 	move.b	(homeuser+1).w,1(a0)
 	move.b	(awayuser+1).w,3(a0)
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.w	.2
 	move.b	(awayuser+1).w,1(a0)
 	move.b	(homeuser+1).w,3(a0)
@@ -1196,7 +1196,7 @@ UpdatePlayerRecords	;94 only. After a game: for the 26 players of team a2, keep 
 	rts
 CountGoalies	;94 only. homegoalies / awaygoalies = goalies of the home / away team (ReadAttributeNibble). Called from hockey94_10 and PlayerCards
 	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	jsr	(ReadAttributeNibble).l
 	move.w	d0,(homegoalies).w
 	movea.l	#AwShots,a2
@@ -1206,7 +1206,7 @@ CountGoalies	;94 only. homegoalies / awaygoalies = goalies of the home / away te
 	rts
 CountPlayers	;94 only. homeplayers / awayplayers = players of the home / away team (GetPlayerCount)
 	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	jsr	(GetPlayerCount).l
 	move.w	d0,(homeplayers).w
 	movea.l	#AwShots,a2
@@ -1493,7 +1493,7 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	move.w	#$B,(printy).l
 	jsr	(printsmall).l
 	bsr.w	GetCardPlayer
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	tst.w	(cardvis).w
 	beq.w	.6
 	movea.l	#AwShots,a2
@@ -1866,7 +1866,7 @@ PrintOverallRating	;94 only. Player card "Overall Rating" (CalcAttrib, AttribAdj
 	addq.w	#1,(printy).w	;IDA hid this
 	jsr	(printsmallz).l	;IDA hid this
 	String	'Rating   '
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	tst.w	(cardvis).w
 	beq.w	.0
 	movea.l	#AwShots,a2
@@ -2062,7 +2062,7 @@ PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the
 	move.w	d1,(printx).w
 	move.w	d2,(printy).w
 	jsr	(printsmall).l
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	tst.w	(cardvis).w
 	beq.w	.0
 	movea.l	#AwShots,a2
@@ -2101,7 +2101,7 @@ PrintTeamRating	;94 only. Player card "Team Rating" (GetTeamRating, high ROM)
 	jsr	(printsmallz).l
 	String	'Rating  '
 .0
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	tst.w	(cardvis).w
 	beq.w	.1
 	movea.l	#AwShots,a0
@@ -2119,7 +2119,7 @@ PrintTeamRating	;94 only. Player card "Team Rating" (GetTeamRating, high ROM)
 PrintCardTeam	;94 only. Player card: the city and nickname of the card's team (GetCardTeam cardvis), each centred (PrintCentered) on rows d1 and d1 + 1
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d1,(printy).w
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	tst.w	(cardvis).w
 	beq.w	.0
 	movea.l	#AwShots,a0
@@ -2145,7 +2145,7 @@ PrintCentered	;94 only. printsmall String a0 centred on column $14
 	jmp	printsmall
 GetJerseyString	;94 only. Player d0 of the card's team: his jersey number as a 2 digit String at a1 (space for a leading 0)
 	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	tst.w	(cardvis).w
 	beq.w	.0
 	movea.l	#AwShots,a0
@@ -2355,7 +2355,7 @@ DrawPictureBox	;94 only. Player card picture box (DrawPlayerPicture, UnpackPictu
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 GetCardTeam	;94 only. a0 = HmShots, or AwShots when cardvis is set (the card's team)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	tst.w	(cardvis).w
 	beq.w	.x
 	movea.l	#AwShots,a0
@@ -2394,7 +2394,7 @@ GetCardPlayer	;94 only. cardplayer = the roster index of card cardindex from the
 BuildCardPlayerLists	;94 only. Build the player card order of both teams: home at homecardlist, away at awaycardlist (BuildCardPlayerList)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#homecardlist,a1
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	bsr.w	BuildCardPlayerList
 	movea.l	#awaycardlist,a1
 	movea.l	#AwShots,a0

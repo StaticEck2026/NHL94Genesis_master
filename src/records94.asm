@@ -644,7 +644,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	lea	RoundBigTxt(pc),a1
 	jsr	(printbig).l
 	move.w	(BA_Skater_Offset).w,d0
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	tst.w	(BA_Team).w
 	beq.w	.0
 	movea.l	#AwShots,a2
@@ -666,13 +666,13 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	movea.l	#AwShots,a2
 	tst.w	(BA_Team).w
 	beq.w	.1
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 .1
 	jsr	(FormatPlayerNameWithAttrib).l
 	jsr	(print).l
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),4,9
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	movea.l	$1E(a1),a1
 	adda.w	4(a1),a1
 	jsr	(print).l

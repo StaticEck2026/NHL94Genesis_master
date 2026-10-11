@@ -671,7 +671,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 .cont2
 	tst.w	position(a3)	;check for goalie
 	beq.w	.chkpos	;jump if goalie
-	movea.w	#(HmShots-M68K_RAM),a0	;Start of Home Team Stats Struct
+	movea.w	#(tmstruct-M68K_RAM),a0	;Start of Home Team Stats Struct
 	btst	#pfteam,pflags(a3)
 	beq.w	.AddChktoPlayerStats
 	adda.w	#tmsize,a0	;Change to Away Team Stats
@@ -940,7 +940,7 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 	move.w	Ypos(a2),(yc1).w	;move Ypos to scroll center
 	bset	#sfslock,(sflags).w	;set sfslock (scroll lock)
 	clr.w	d1	;clear d1
-	movea.w	#(HmShots-M68K_RAM),a0	;move Home team Struct to a0
+	movea.w	#(tmstruct-M68K_RAM),a0	;move Home team Struct to a0
 	btst	#pfteam,pflags(a2)	;check if player home or away
 	beq.w	.0	;branch if home
 	move.w	#$8000,d1	;move $8000 into d1
@@ -1238,7 +1238,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	bsr.w	sfx
 	jsr	(freezewindow).l
 	addi.w	#$1F4,(crowdlevel).w	;add 500 (92 800)
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	$364(a2),a1	;tmsize
 	tst.w	Ypos(a3)
 	bpl.w	.9
@@ -1269,7 +1269,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	addq.w	#1,$356(a2)	;power play goals
 	bra.w	.14
 .13
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.s	.loop2
 .14
 	movem.l	d0/a2,-(sp)
@@ -1282,7 +1282,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	beq.w	.15
 	addq.w	#1,$35E(a2)	;sflags8 bit 7 goals
 .15
-	cmpa.w	#(HmShots-M68K_RAM),a2	;home goal: ChooseSong (93 song $30)
+	cmpa.w	#(tmstruct-M68K_RAM),a2	;home goal: ChooseSong (93 song $30)
 	bne.w	.16
 	move.w	(HomeTeam).w,(HmTeam).w
 	move.w	#3,(SongIndex).w
@@ -1305,7 +1305,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	sub.w	$24(a1),d0
 	move.b	d0,(a0)+	;byte 2 = 2 + tmap(a2) - tmap(a1)
 	addi.w	#$1E,(CwdExciteLvl).w
-	cmpa.w	#(HmShots-M68K_RAM),a2
+	cmpa.w	#(tmstruct-M68K_RAM),a2
 	beq.w	.18
 	subi.w	#$14,(CwdExciteLvl).w	;less for an away goal
 	bset	#7,-1(a0)	;byte 2 bit 7 = away team scored
@@ -2053,7 +2053,7 @@ puckglue	;IDA: _glue, a local of puckstick that puckgoalie also branches to (93 
 	move.w	#7,-(sp)	;SFXpuckget (song)
 	move.w	SCnum(a2),d0	;move SCnum into d0
 	move.w	d0,(puckc).w	;move d0 into puckc
-	movea.w	#(HmShots-M68K_RAM),a0	;Move Home Stats struct into a0
+	movea.w	#(tmstruct-M68K_RAM),a0	;Move Home Stats struct into a0
 	lea	tmsize(a0),a1	;tmsize
 	btst	#pfteam,pflags(a2)	;check if player is home or away
 	bne.w	.tm	;branch if away
@@ -2067,7 +2067,7 @@ puckglue	;IDA: _glue, a local of puckstick that puckgoalie also branches to (93 
 	addq.w	#1,$E(a1)	;add 1 to faceoff won
 	addi.w	#$C8,(crowdlevel).w	;add to crowdlevel
 	move.w	#$C,(sp)	;move C to stack
-	cmpa.w	#(HmShots-M68K_RAM),a1	;compare if a1 is home
+	cmpa.w	#(tmstruct-M68K_RAM),a1	;compare if a1 is home
 	bne.w	.snd	;branch if not
 	addi.w	#$A,(CwdExciteLvl).w	;add to CwdExciteLvl
 	move.w	#$B,(sp)	;Move B into stack
@@ -2514,7 +2514,7 @@ makepde	;pass d0 as value to be scaled by player a0's energy level (94: full ene
 	ext.l	d0
 	rts
 getpde	;get player a3's energy level into d0. Return a2 = his team struct, d1 = pnum*2
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#pfteam,pflags(a3)	;#pfteam - home or away
 	beq.w	.0
 	adda.w	#tmsize,a2	;team is away
@@ -2759,7 +2759,7 @@ ResetBench	;remove all players from penalty box / put all players on their own b
 	;H = home players in PB
 	;V = away players in PB
 	moveq	#$10,d1
-	movea.w	#(HmShots-M68K_RAM),a0
+	movea.w	#(tmstruct-M68K_RAM),a0
 	bsr.w	.rb
 	moveq	#1,d1
 	adda.w	#tmsize,a0	;change to Away Team
@@ -2809,7 +2809,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	;through AttributeCalc (attribute number in TempWord2). 94 adds the PP / PK, home / away and third period bonuses (team ScoreOdds bytes) to
 	;some attributes and clamps them with ClampNibble
 	bclr	#6,pflags2(a3)	;clear line change mode? (I believe pflags2 are 1 off because of fighting missing)
-	movea.w	#(HmShots-M68K_RAM),a0	;Start of Team Struct
+	movea.w	#(tmstruct-M68K_RAM),a0	;Start of Team Struct
 	btst	#pfteam,pflags(a3)	;checks if home or away (if 0, home)
 	beq.w	.0
 .AwayTeam	;IDA: AwayTeam (no xref; a label inside setplayer)

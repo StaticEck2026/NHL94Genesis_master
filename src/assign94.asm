@@ -81,7 +81,7 @@ assbench
 	clr.w	d0
 	move.b	pnum(a3),d0
 	add.w	d0,d0
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	btst	#6,pflags(a3)
 	beq.w	.t0
 	adda.w	#tmsize,a0
@@ -309,7 +309,7 @@ assfaceoff
 	rts
 ; assignment for players actually participating in faceoff
 ; a3 = player
-assfaceoffp1	;IDA: assfaceoffpl (93 assfaceoffp1). Face off player
+assfaceoffpl	;IDA: assfaceoffpl (93 assfaceoffp1). Face off player (was: assfaceoffp1)
 	btst	#5,pflags(a3)
 	bne.w	.exit2
 	btst	#0,(sflags2).w
@@ -356,7 +356,7 @@ assfight	;94: rts only (93 has the fight code here)
 assfwatch	;94: rts only (93 watches the fight)
 	rts	;assfwatch - possible location where players watching fight
 ; player should do nothing
-assnothing
+donothing	;(was: assnothing)
 	btst	#5,pflags(a3)	;#pfalock
 	bne.s	assfwatch
 	btst	#3,pflags(a3)	;#pfjoycon
@@ -446,7 +446,7 @@ assdefo
 	btst	#5,pflags(a3)
 	bne.s	rtss6
 	btst	#gmclock,(gmode).w	;#gmclock
-	bne.w	assnothing	;Whistle blown, do nothing
+	bne.w	donothing	;Whistle blown, do nothing
 	bsr.w	check4bench	;check if player should go to bench
 	btst	#3,pflags(a3)	;#pfjoycon - is player joystick controlled
 	bne.s	rtss6	;yes, then exit
@@ -512,7 +512,7 @@ assdefd
 	btst	#5,pflags(a3)	;check if locked in animiation
 	bne.w	rtss6	;exit if so
 	btst	#0,(gmode).w	;check if clock running
-	bne.w	assnothing	;assnothing if no clock
+	bne.w	donothing	;assnothing if no clock
 	bsr.w	check4bench	;check if going to bench
 	btst	#3,pflags(a3)	;check if joystick controlled
 	bne.w	rtss6	;exit if so
@@ -644,7 +644,7 @@ asswingd
 	btst	#5,pflags(a3)	;check if locked in animation
 	bne.s	rtss21	;exit if so
 	btst	#0,(gmode).w	;check if clock is running
-	bne.w	assnothing	;assnothing if its stopped
+	bne.w	donothing	;assnothing if its stopped
 	bsr.w	check4bench	;check if going to bench
 	btst	#3,pflags(a3)	;check if joystick controlled
 	bne.s	rtss21	;exit if so

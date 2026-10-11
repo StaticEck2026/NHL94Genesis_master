@@ -97,7 +97,7 @@ ClearGameStats	;94 only. Clear the game stats: shootoutstate (19 words), both te
 .loop
 	clr.w	(a0)+
 	dbf	d0,.loop
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	move.w	#$363,d0
 .loop2
 	clr.w	(a0)+
@@ -378,7 +378,7 @@ PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" me
 	movea.l	#AwShots,a2
 	move.w	#$E,(printy).w
 	bsr.w	.8
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	move.w	#$16,(printy).w
 	bsr.w	.8
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -581,7 +581,7 @@ DisplayTeamStatsScreen	;93 name. Team logos (PrintTeamData), then each TeamStatT
 	jsr	(print).l
 	movea.l	a1,a0
 	move.w	#$22,(printx).w
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	FormatStatValue
 	move.w	#9,(printx).w
 	lea	$364(a2),a2
@@ -746,7 +746,7 @@ updatePPTeamTime	;IDA name (and comments). 94 only: one more second of power pla
 	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime (penalty94_1)
 	btst	#5,(sflags2).w	;check if PP
 	beq.w	.x	;branch if not
-	movea.l	#HmShots,a2	;move home team struct into a2
+	movea.l	#tmstruct,a2	;move home team struct into a2
 	btst	#6,(sflags2).w	;check who's on PP
 	beq.w	.0	;branch if home (team 1)
 	movea.l	#AwShots,a2	;move away team struct into a2

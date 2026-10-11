@@ -154,7 +154,7 @@ ShootersExit	;Leave (ExitAttributeScreen2)
 ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	move.w	#$C000,d7
 	movea.l	#homeshooters,a0
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.w	.0
 	movea.l	#awayshooters,a0
 .0
@@ -253,7 +253,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	move.b	(a3),d0
 	move.w	(TestList).w,d2
 	movea.l	#homeshooters,a0
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.w	.11
 	movea.l	#awayshooters,a0
 .11
@@ -429,7 +429,7 @@ PrintShooterBox	;94 only. Shootout shooters: the selected player box (getname)
 	jsr	(printsmallz).l
 	String	TXS_X,$15,TXS_Y,8,TXS_ATTR,6
 	movea.l	#homeshooters,a1
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.w	.0
 	movea.l	#awayshooters,a1
 .0
@@ -450,7 +450,7 @@ PrintShooterNames	;94 only. Shootout shooters: the shooters' names (FormatPlayer
 	String	TXS_X,6,TXS_Y,$E,TXS_ATTR,6
 	move.w	#0,d1
 	movea.l	#homeshooters,a0
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	beq.w	.loop
 	movea.l	#awayshooters,a0
 .loop

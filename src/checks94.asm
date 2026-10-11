@@ -17,7 +17,7 @@ asswingo
 	btst	#pfalock,pflags(a3)	;check if locked in animation
 	bne.w	rtss21	;exit if so
 	btst	#gmclock,(gmode).w	;check game clock
-	bne.w	assnothing	;assnothing if stopped
+	bne.w	donothing	;assnothing if stopped
 	bsr.w	check4bench	;check if player going to bench
 	btst	#pfjoycon,pflags(a3)	;check if joystick controlled
 	bne.w	rtss21	;exit if so
@@ -125,7 +125,7 @@ asscenterd
 	btst	#5,pflags(a3)	;pfalock - locked animation
 	bne.s	rtss11	;exit if locked
 	btst	#0,(gmode).w	;gmclock - check if clock is running
-	bne.w	assnothing	;exit if stoppage
+	bne.w	donothing	;exit if stoppage
 	bsr.w	check4bench
 	btst	#3,pflags(a3)	;pfjoycon - check if joystick controlled
 	bne.s	rtss11	;exit if joystick controlled
@@ -176,7 +176,7 @@ asscentero
 	btst	#5,pflags(a3)	;pfalock
 	bne.w	rtss11	;exit if anim locked
 	btst	#0,(gmode).w	;#gmclock
-	bne.w	assnothing	;do nothing
+	bne.w	donothing	;do nothing
 	bsr.w	check4bench
 	btst	#3,pflags(a3)	;pfjoycon - check if joystick controlled
 	bne.w	rtss11	;exit if controlled
@@ -768,7 +768,7 @@ checkanim	;IDA: _checkanim, a local of assgoaliecpu. Global here: assgoaliectrl 
 	bpl.s	.de5
 	btst	#2,(iflags).w
 	bne.s	.de5
-	movea.w	#(HmShots-M68K_RAM),a1
+	movea.w	#(tmstruct-M68K_RAM),a1
 	lea	$364(a1),a2
 	btst	#6,pflags(a3)
 	beq.w	.23
@@ -996,7 +996,7 @@ assgoalietopuck
 	eori	#8,ccr
 .dir
 	bmi.w	assexit
-	movea.w	#(HmShots-M68K_RAM),a1	;load home team struct into a1
+	movea.w	#(tmstruct-M68K_RAM),a1	;load home team struct into a1
 	lea	tmsize(a1),a2	;load away team struct into a2
 	btst	#6,pflags(a3)	;check if player is home or away
 	beq.w	.t0	;branch if home
@@ -1015,7 +1015,7 @@ breakaway
 	move.w	#SFXbeep1,-(sp)	;ding SFX
 	jsr	(sfx).l
 	movem.l	a2,-(sp)	;push a2 on stack
-	movea.l	#HmShots,a2	;move Home Team Struct into a2
+	movea.l	#tmstruct,a2	;move Home Team Struct into a2
 	btst	#6,pflags(a3)	;pfteam - check if home or away
 	beq.w	.c0	;jump if home
 	movea.l	#AwShots,a2	;move Away Team Struct into a2
@@ -1138,7 +1138,7 @@ asspuckc
 	btst	#2,(BA_PS_flags).w
 	bne.w	.3
 	btst	#0,(gmode).w
-	bne.w	assnothing
+	bne.w	donothing
 .3
 	btst	#3,pflags(a3)
 	bne.w	assexit
@@ -1152,7 +1152,7 @@ asspuckc
 	btst	#pf3break,pflags3(a3)
 	beq.w	.6
 	movem.l	a2,-(sp)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	btst	#6,pflags(a3)
 	beq.w	.5
 	movea.l	#AwShots,a2
@@ -1185,7 +1185,7 @@ asspuckc
 	btst	#0,(gmode2).w
 	bne.w	.12
 	bsr.w	checkob
-	bsr.w	AutoLineChange
+	bsr.w	chk4lc
 	btst	#0,(gmode2).w
 	bne.w	.12
 	btst	#2,(BA_PS_flags).w
@@ -1316,7 +1316,7 @@ asspuckc
 	dc.w	$E6
 	dc.w	$1E
 	dc.w	$E6
-AutoLineChange
+chk4lc	;(was: AutoLineChange)
 	btst	#4,(sflags7).w
 	bne.w	rtss2
 	move.w	(pucky).w,d0
@@ -1333,7 +1333,7 @@ AutoLineChange
 	bne.w	rtss2
 	btst	#3,pflags2(a3)
 	bne.w	rtss2
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	$364(a2),a1
 	btst	#6,pflags(a3)
 	beq.w	.1
@@ -1751,7 +1751,7 @@ assnearest
 	btst	#pf3break,pflags3(a3)	;check if breakaway
 	beq.w	.nobreak	;jump if not
 	movem.l	a2,-(sp)	;push a2 to stack
-	movea.l	#HmShots,a2	;put Home Team Struct into a2
+	movea.l	#tmstruct,a2	;put Home Team Struct into a2
 	btst	#6,pflags(a3)	;pfteam - check home or away
 	beq.w	.addcrowd	;jump if home
 	movea.l	#AwShots,a2	;put Away Team Struct into a2
@@ -1904,7 +1904,7 @@ assnearest
 	beq.w	.nodec2	;jump if not set
 .gmclock	;IDA: gmclock (a 92 equate name; local so it does not split assnearest or clash with the equate)
 	btst	#0,(gmode).w	;check if clock running
-	bne.w	assnothing	;branch if not
+	bne.w	donothing	;branch if not
 .nodec2
 	btst	#pfjoycon,pflags(a3)	;pfjoycon - check if controlled
 	bne.w	rtss2	;jump if controlled
@@ -2062,7 +2062,7 @@ asspassrec
 	btst	#pfalock,pflags(a3)	;pfalock - animation lock
 	bne.w	rtss2	;exit if locked
 	btst	#gmclock,(gmode).w	;gmclock - check if clock running
-	bne.w	assnothing	;exit if clock stopped
+	bne.w	donothing	;exit if clock stopped
 	btst	#pfjoycon,pflags(a3)	;pfjoycon - joystick controlled?
 	bne.w	assexit	;exit if controlled
 	bclr	#pfna,pflags(a3)	;#pfna - clear new assignment
@@ -2159,7 +2159,7 @@ puckshootout
 .startattempt
 	jsr	(StartShootoutPath).l
 	move.l	a2,-(sp)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	tst.w	(BA_Team).w
 	beq.w	.countattempt
 	movea.l	#AwShots,a2
@@ -2251,12 +2251,12 @@ puckshootout
 	move.w	d0,(BA_Goalie_SCnum).w
 .startpenshot
 	movem.w	(sp)+,d1-d2
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	#$1F,d0	;puckpenshot
 	bra.w	assreplace
 SelectPenaltyShotSkater
 	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	tst.w	(BA_Team).w
 	beq.w	.hometeam
 	movea.l	#AwShots,a0
@@ -2412,7 +2412,7 @@ puckpenshot
 	dbf	d4,.scrollloop
 	move.w	#$3C,(yleader).w
 	bsr.w	ResetBench
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	setpersonel
 	bsr.w	SetupPenaltyShot
 	adda.w	#$364,a2
@@ -2706,7 +2706,7 @@ puckfaceoff
 	st	temp2(a3)
 	tst.w	(OptLine).w
 	bne.w	WaitForFaceoffLineChanges
-	bclr	#1,(HmShots+tmflags).w
+	bclr	#1,(tmstruct+tmflags).w
 	bclr	#1,(AwShots+tmflags).w
 	movea.w	#(SortCords-M68K_RAM),a0
 	moveq	#$B,d0
@@ -2737,7 +2737,7 @@ puckfaceoff
 	bmi.w	.checkcomputerline
 	bsr.w	StartFaceoffLineChange
 .checkcomputerline
-	movea.w	#(HmShots-M68K_RAM),a1
+	movea.w	#(tmstruct-M68K_RAM),a1
 	lea	tmsize(a1),a2
 	moveq	#2,d0
 	bsr.w	SetFaceoffComputerLine
@@ -2788,7 +2788,7 @@ WaitForFaceoffLineChanges
 	bpl.w	rtss2
 	tst.w	temp2(a3)
 	bpl.w	rtss2
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	$364(a2),a1
 	moveq	#1,d0
 	bsr.w	SetFaceoffComputerLine
@@ -2801,7 +2801,7 @@ UpdateFaceoffLineChangeTimer
 	move.w	4(a3,d0.w),d1
 	asl.w	#7,d1
 	movea.w	#(SortCords-M68K_RAM),a0
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#6,$62(a0,d1.w)
 	beq.w	.checkactive
 	adda.w	#$364,a2
@@ -2827,7 +2827,7 @@ UpdateFaceoffLineChangeTimer
 ChkGoalies
 	btst	#gmclock,(gmode).w	;check if clock running
 	bne.w	rtss2
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a1
 	moveq	#1,d0
 	bsr.w	.chkgoalie
@@ -2858,7 +2858,7 @@ ChkGoalies
 	bra.w	CPgoalie
 ; if computer pulled goalie, look to see if computer should return him
 ReturnGoalies
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	tmsize(a2),a1
 	moveq	#1,d0
 	bsr.w	.r
@@ -3070,7 +3070,7 @@ puckfaceoff2
 	dbf	d4,.cw
 	move.w	#$3C,(yleader).w
 	bsr.w	ResetBench
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	setpersonel
 	bsr.w	forcepldata
 	adda.w	#tmsize,a2
@@ -3090,7 +3090,7 @@ puckfaceoff2
 	move.l	#$16,d0	;#afaceoff - assignment faceoff
 	cmp.w	#4,d1	;find the center (position 4)
 	bne.w	.11
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	btst	#pfteam,pflags(a3)	;#pfgoal - what goal to score on
 	beq.w	.clr
 	adda.w	#tmsize,a2
@@ -3105,7 +3105,7 @@ puckfaceoff2
 .11
 	bsr.w	assinsert
 .goalie1
-	move.w	(HmShots+tmap).w,d4	;tmap = active players on ice (4-6). IDA (tmap).w
+	move.w	(tmstruct+tmap).w,d4	;tmap = active players on ice (4-6). IDA (tmap).w
 	btst	#pfteam,pflags(a3)	;#pfteam - 0=home 1=away
 	beq.w	.t0
 	move.w	(AwShots+tmap).w,d4	;IDA (tmsize).w
@@ -3213,7 +3213,7 @@ puckfaceoff2
 	moveq	#$C,d0
 	moveq	#3,d1
 	bsr.w	Framer
-	move.w	(HmShots+tmline).w,d0
+	move.w	(tmstruct+tmline).w,d0
 	move.w	(AwShots+tmline).w,d1
 	btst	#gmdir,(gmode).w
 	bne.w	.printline2
@@ -3522,7 +3522,7 @@ ChkOffsides
 	beq.w	rtss2
 	btst	#2,(BA_PS_flags).w
 	bne.w	rtss2
-	movea.w	#(HmShots-M68K_RAM),a1
+	movea.w	#(tmstruct-M68K_RAM),a1
 	lea	tmsize(a1),a2
 	bsr.w	ClearOffsidesIfAllPlayers
 	exg	a1,a2
@@ -3603,7 +3603,7 @@ a2offsides
 .0
 	cmp.w	#$68,d0
 	blt.w	rtss2
-	movea.w	#(HmShots-M68K_RAM),a0
+	movea.w	#(tmstruct-M68K_RAM),a0
 	btst	#pfteam,pflags(a2)
 	beq.w	.1
 	adda.w	#tmsize,a0
@@ -3623,7 +3623,7 @@ a2touchpuck
 	move.w	(a2),(ltx).w	;move Xpos to last touch X
 	move.w	Ypos(a2),(lty).w	;move Ypos to last touch Y
 	move.w	SCnum(a2),(ltplayer).w	;move SCnum to last touch player
-	movea.w	#(HmShots-M68K_RAM),a0	;move Home Shots into a0
+	movea.w	#(tmstruct-M68K_RAM),a0	;move Home Shots into a0
 	btst	#pfteam,pflags(a2)	;check if home or away
 	beq.w	.t	;branch if home
 	lea	tmsize(a0),a0	;add to a0 if away
@@ -3682,7 +3682,7 @@ a2touchpuck
 	neg.w	d0	;negate d0
 .0
 	bmi.w	rtss2	;exit if minus
-	move.w	(HmShots+tmap).w,d0	;IDA (tmap).w
+	move.w	(tmstruct+tmap).w,d0	;IDA (tmap).w
 	sub.w	(AwShots+tmap).w,d0	;IDA (tmsize).w
 	btst	#pfteam,pflags(a2)	;check home or away
 	beq.w	.1	;branch if home

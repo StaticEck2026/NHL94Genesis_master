@@ -1,0 +1,15 @@
+old,new,source
+RNGseed,seed,92G/93G
+HmShots,tmstruct,92G/93G
+assfaceoffp1,assfaceoffpl,92G/93G
+assnothing,donothing,92G/93G
+IntermissionLoop,waitxsr,92G/93G
+PenaltyList,Penaltylist,92G/93G
+GetTempPlayerName,GetPlayerName,93G
+AutoLineChange,chk4lc,92G/93G
+TitleVBlank,VBlank_TitleScreen,93G
+StartScoutText,InitScoutingDisplay,93G
+ScoutTextPlayer,UpdateScoutingDisplay,93G
+ScoutTextNextLine,ScrollDisplayUp,93G
+ClearTextBox,ClearOptionDisplay,93G
+SetTeamPrintPos,setoptions_printpos2,93G

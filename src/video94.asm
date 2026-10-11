@@ -170,9 +170,9 @@ randomd0s
 ; return random number in d0 (0 <= d0 < range)
 randomd0
 	movem.l	d0-d2,-(sp)
-	move.w	(RNGseed+2).w,d0
+	move.w	(seed+2).w,d0
 	move.w	d0,d1
-	move.w	(RNGseed).w,d2
+	move.w	(seed).w,d2
 	mulu.w	#$E62D,d0
 	mulu.w	#$BB40,d1
 	mulu.w	#$E62D,d2
@@ -181,7 +181,7 @@ randomd0
 	add.w	d1,d0
 	swap	d0
 	addq.l	#1,d0
-	move.l	d0,(RNGseed).w
+	move.l	d0,(seed).w
 	asr.l	#8,d0
 	mulu.w	2(sp),d0
 	swap	d0
@@ -306,7 +306,7 @@ waitx
 ; special version of waitx for zamboni crossing
 ; wait d0 vblanks or until input from either joystick
 ; retrun joystick variables (d0-d3) if any
-IntermissionLoop	;IDA: waitxsr (92 name). Wait d0 vblanks while the zamboni crosses
+waitxsr	;IDA: waitxsr (92 name). Wait d0 vblanks while the zamboni crosses (was: IntermissionLoop)
 	movem.l	d4-d7/a0-a3,-(sp)
 	neg.w	d0
 	move.w	d0,(vcount).w

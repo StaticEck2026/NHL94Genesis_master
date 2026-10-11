@@ -526,7 +526,7 @@ FaceoffAnims	;RandomFaceoffAnim animations
 	dc.w	3,5,3,1,5,2,3,3,$FFFF
 CheckScoreLeader	;94 only. Compare the scores ($24 of HmShots / AwShots) and test $28 of the leader for $13; the result is not used (bne.w *+4). Called from puckfaceoff (logic94_4)
 	movem.l	d0-d2/a0-a2,-(sp)
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	movea.l	#AwShots,a1
 	move.w	$24(a0),d0
 	sub.w	$24(a1),d0
@@ -608,19 +608,19 @@ HiScoreScreen	;IDA name. 94 only: vb2, the $F4378 bitmap and HiScoreImg, then wa
 	jsr	(dobitmap).l
 	move.w	#$18,(palcount).w
 	move	#$2500,sr
-	move.w	#$50,(RNGseed).w
+	move.w	#$50,(seed).w
 .loop2
 	moveq	#4,d0
 	jsr	(waitx).l
 	tst.w	d1
 	bne.w	.0
-	subq.w	#1,(RNGseed).w
+	subq.w	#1,(seed).w
 	bpl.s	.loop2
 .0
 	move	#$2700,sr
 	rts
 GetTeamStruct	;94 only. a2 = HmShots, or AwShots when team d2 is not $28 of HmShots. Called from PrintStartingLine (high94_2)
-	movea.l	#HmShots,a2
+	movea.l	#tmstruct,a2
 	cmp.w	Xvel(a2),d2
 	beq.w	.x
 	movea.l	#AwShots,a2
@@ -736,7 +736,7 @@ PuckComingToward	;nothing calls it. Z clear when the puck is within $1E of playe
 ReadGoaliePulled	;IDA name (and comments). 94 only: Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
 	;(logic94_1), assdefo (logic94_2), asspuckc (logic94_3) and assnearest (logic94_4)
 	movem.l	a1,-(sp)
-	movea.l	#HmShots,a1
+	movea.l	#tmstruct,a1
 	btst	#6,pflags(a3)	;check if home or away 0=home 1=away
 	beq.w	.chkgoalie
 	movea.l	#AwShots,a1
@@ -770,9 +770,9 @@ EndOneTimer	;94 only. End a one-timer for a3: bits cleared, onetimerplayer = -1,
 newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, TitleImg) with the vblank TitleVBlank, song $78, then the
 	;scrolling credits (Credits, CreditsList text; CreditsPrintRow, CreditsWait) until start. Called from Opening (hockey94_06)
 	move	#$2700,sr
-	move.w	(VDP_CNTR).l,(RNGseed).w
-	move.w	(VDP_CNTR).l,(RNGseed+2).w
-	move.l	#TitleVBlank,(vbint).l
+	move.w	(VDP_CNTR).l,(seed).w
+	move.w	(VDP_CNTR).l,(seed+2).w
+	move.l	#VBlank_TitleScreen,(vbint).l
 	bset	#1,(disflags).w
 	move.w	#5,(Map3col1).w
 	move.w	#$A000,(VmMap2).w
@@ -964,7 +964,7 @@ CreditsWait	;94 only. Credits: wait for vcount, run the clampcounter count down;
 	addq.w	#4,sp
 .x
 	rts
-TitleVBlank	;newTitleScreen vblank: line scroll table (SortCords) and Vscroll, sprites, cramfade, CreditsScrollStep, p_music_vblank
+VBlank_TitleScreen	;newTitleScreen vblank: line scroll table (SortCords) and Vscroll, sprites, cramfade, CreditsScrollStep, p_music_vblank (was: TitleVBlank)
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#2,(disflags).w
 	bne.w	.1
@@ -1080,7 +1080,7 @@ LeadSong	;94 only. Not in a shootout (gmode2 bit 1), scores not level: once (sfl
 	move.w	(sflags2).w,-(sp)
 	btst	#1,(gmode2).w
 	bne.w	LeadSongExit
-	movea.w	#(HmShots-M68K_RAM),a2
+	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	$364(a2),a3
 	move.w	$24(a2),d0
 	sub.w	OldZpos(a3),d0
@@ -1130,7 +1130,7 @@ ClearPenalties	;94 only. Clear the penalties: PBnum, Penaltytimer, Pencntdwn, Pe
 .loop
 	clr.l	(a0)+
 	dbf	d0,.loop
-	movea.l	#HmShots,a0
+	movea.l	#tmstruct,a0
 	bsr.w	clrTmPdst
 	movea.l	#AwShots,a0
 	bsr.w	clrTmPdst
@@ -1149,7 +1149,7 @@ HotColdIcon	;94 only. The icon by the name of player iconplayer of team a2 at x 
 	movem.l	d0/a0-a1,-(sp)
 	movea.l	#awayhotplayer,a0
 	move.w	#2,(iconx).w
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	bne.w	.0
 	movea.l	#homehotplayer,a0
 	move.w	#$20,(iconx).w
@@ -1161,7 +1161,7 @@ HotColdIcon	;94 only. The icon by the name of player iconplayer of team a2 at x 
 	beq.w	.2
 	dbf	d0,.loop
 	movea.l	#awaycoldplayer,a0
-	cmpa.l	#HmShots,a2
+	cmpa.l	#tmstruct,a2
 	bne.w	.1
 	movea.l	#homecoldplayer,a0
 .1
