@@ -86,6 +86,17 @@ spodds equ $70
 stickhand equ $71
 endurance equ $72
 handed equ $76		;bit0 set is left handed
+;player struct fields after handed's neighbours, not named in 93 ram93.asm (names from the 92/93/94 comments)
+pflags3 equ $64		;player flags 3 (92: not used)
+pf3offs equ 0		;offsides
+pf3break equ 1		;on a breakaway
+pf3gctrl equ 2		;goalie control
+pf3onetimer equ 3	;doing a one-timer
+pf3wall equ 4		;wall collision
+pf3fall equ 5		;falling down
+aggress equ $73		;aggression (Agr; goalie: glove left)
+fighting equ $74		;fighting (Fgt; from the Chk/Hnd byte, always even)
+checking equ $75		;checking (Chk)
 
 ;bit numbers in disflags
 dfok equ 0		;graphics are ready for transfer

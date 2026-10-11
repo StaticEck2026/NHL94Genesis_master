@@ -77,31 +77,31 @@ Crowd_Noise	;IDA name (Crowd_Noise?). 94 only: the crowd meter each frame: crowd
 .ex1
 	rts
 stopna2	;IDA name (92 / 93 name). Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from logic94_5 (goalieacc)
-	tst.w	$28(a3)
+	tst.w	Xvel(a3)
 	bpl.w	.xp
-	addi.w	#$7D0,$28(a3)
+	addi.w	#$7D0,Xvel(a3)
 	bmi.w	.y
-	clr.w	$28(a3)
+	clr.w	Xvel(a3)
 .xp
-	subi.w	#$7D0,$28(a3)
+	subi.w	#$7D0,Xvel(a3)
 	bpl.w	.y
-	clr.w	$28(a3)
+	clr.w	Xvel(a3)
 .y
-	tst.w	$2A(a3)
+	tst.w	Yvel(a3)
 	bpl.w	.yp
-	addi.w	#$7D0,$2A(a3)
+	addi.w	#$7D0,Yvel(a3)
 	bmi.w	.ex
-	clr.w	$2A(a3)
+	clr.w	Yvel(a3)
 .yp
-	subi.w	#$7D0,$2A(a3)
+	subi.w	#$7D0,Yvel(a3)
 	bpl.w	.ex
-	clr.w	$2A(a3)
+	clr.w	Yvel(a3)
 .ex
 	rts
 checkcornercoll94	;IDA: checkwallcoll. 94 only (and IDA comments). IDA: ywall 210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
 	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to
 	;cornercollb94. Called from wallcollduringcheck (high94_2). 93 checkwallcoll is in hockey94_04
-	bclr	#4,$64(a3)	;clears bit 4 in pflags3 (not used in 92)
+	bclr	#pf3wall,pflags3(a3)	;clears bit 4 in pflags3 (not used in 92)
 	move.w	#$88,d4	;sideline
 	sub.w	(wcradiusx).w,d4	;BD22 = wcradiusx
 	move.w	#$12A,d5	;ywall
@@ -204,14 +204,14 @@ AttributeCalc	;IDA name (and comments). 94 only: attribute d3 of player a3 * 5 p
 	movem.l	d0-d2/a1,-(sp)
 	move.w	(TempWord2).w,d1	;BF14 goes to d1
 	movea.l	#HmShots,a1	;Start of Home Team struct
-	btst	#6,$62(a3)	;Check if home or away
+	btst	#6,pflags(a3)	;Check if home or away
 	beq.w	.attribmath
 .away
 	;shift to start of Away Team struct
 	adda.l	#$364,a1
 .attribmath
 	clr.w	d1
-	move.b	$66(a3),d1	;move roster offset into d1
+	move.b	pnum(a3),d1	;move roster offset into d1
 	asl.w	#4,d1	;shifts d1 4 bits left, moving the values over 1 nibble
 	adda.l	#$1A2,a1	;a1 points to Hot/Cold Table Start
 	move.b	0(a1,d1.w),d1	;move data at add. (a1 + d1) into d1

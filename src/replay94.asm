@@ -432,7 +432,7 @@ UpdateCameraPos	;Camera struct a5 = object a3 x/y (negated for the reverse angle
 	neg.w	d0
 .0
 	move.w	d0,(a5)
-	move.w	$14(a3),d1
+	move.w	Ypos(a3),d1
 	btst	#7,(sflags4).w
 	beq.w	.2
 	neg.w	d1
@@ -505,11 +505,11 @@ RestoreReplayFrame	;IDA: SetRCords (92 name). a4 = current replay frame address 
 	beq.w	.2	;branch if not
 	asl.w	#1,d2
 	move.w	0(a6,d2.w),d2	;look up table to adjust d2
-	cmpi.w	#$F,$52(a3)	;check if puck shadow
+	cmpi.w	#$F,SCnum(a3)	;check if puck shadow
 	bne.w	.0	;branch if not
 	cmp.w	#$18A,d2
 	beq.w	.0
-	move.w	#$FC00,$14(a3)	;update Ypos of puck shadow
+	move.w	#$FC00,Ypos(a3)	;update Ypos of puck shadow
 .0
 	cmp.w	#1,d2	;check if frame is before frame 1 (out of range)
 	blt.w	.1	;branch if so
@@ -528,7 +528,7 @@ RestoreReplayFrame	;IDA: SetRCords (92 name). a4 = current replay frame address 
 	bge.w	.3	;branch if so
 	btst	#4,(sflags4).w
 	beq.w	.3
-	move.w	#$190,$14(a3)
+	move.w	#$190,Ypos(a3)
 .3
 	move.w	(a0),d2
 	asr.w	#3,d2
@@ -770,7 +770,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	asl.w	#7,d0
 	movea.l	#SortCords,a3	;start of player SCstructs
 	adda.w	d0,a3	;add offset to a3
-	btst	#1,$64(a3)	;checks if there is a breakaway
+	btst	#pf3break,pflags3(a3)	;checks if there is a breakaway
 	beq.w	.scload	;branch if no breakaway
 	bclr	#4,(gmode2).w	;clear if breakaway
 .scload
@@ -779,26 +779,26 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	move.l	(a3),OldXpos(a3)	;Xpos, oldXpos
 	move.l	Ypos(a3),OldYpos(a3)	;Ypos, oldYpos
 	move.l	Zpos(a3),OldZpos(a3)	;Zpos, oldZpos
-	btst	#5,$64(a3)	;falling down?
+	btst	#pf3fall,pflags3(a3)	;falling down?
 	beq.w	.top2	;branch if not
-	clr.w	$28(a3)	;clear Xvel
-	clr.w	$2A(a3)	;clear Yvel
-	tst.w	$5A(a3)	;check animation index
+	clr.w	Xvel(a3)	;clear Xvel
+	clr.w	Yvel(a3)	;clear Yvel
+	tst.w	SPAnum(a3)	;check animation index
 	bne.w	.0	;branch if index not 0
 	jsr	(PlaceBoardFall).l
 	bra.w	.top2
 .0
-	cmpi.w	#$193E,$58(a3)	;SPAboardmidl (frames94). check animation
+	cmpi.w	#$193E,SPA(a3)	;SPAboardmidl (frames94). check animation
 	beq.w	.10
-	cmpi.w	#$1A00,$58(a3)	;SPAboardmidr (frames94)
+	cmpi.w	#$1A00,SPA(a3)	;SPAboardmidr (frames94)
 	beq.w	.8
-	cmpi.w	#$18CC,$58(a3)	;SPAboardleft (frames94)
+	cmpi.w	#$18CC,SPA(a3)	;SPAboardleft (frames94)
 	beq.w	.9
-	cmpi.w	#$17E8,$58(a3)	;SPAboardright (frames94)
+	cmpi.w	#$17E8,SPA(a3)	;SPAboardright (frames94)
 	beq.w	.7
-	cmpi.w	#$1776,$58(a3)	;SPAboardtop (frames94)
+	cmpi.w	#$1776,SPA(a3)	;SPAboardtop (frames94)
 	beq.w	.1
-	cmpi.w	#$185A,$58(a3)	;SPAboardbot (frames94)
+	cmpi.w	#$185A,SPA(a3)	;SPAboardbot (frames94)
 	beq.w	.4
 	bra.w	.top2
 .1
@@ -810,7 +810,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 .2
 	move.w	#$116,d0
 .3
-	move.w	d0,$14(a3)
+	move.w	d0,Ypos(a3)
 	bra.w	.top2
 .4
 	move.w	#$FEDC,d0
@@ -821,7 +821,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 .5
 	move.w	#$FEEA,d0
 .6
-	move.w	d0,$14(a3)
+	move.w	d0,Ypos(a3)
 	bra.w	.top2
 .7
 	move.w	#$82,(a3)
@@ -847,22 +847,22 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	beq.w	.top2
 	move.w	#$88,(a3)
 .top2
-	tst.w	$34(a3)	;check if on ice
+	tst.w	position(a3)	;check if on ice
 	bmi.w	.nf1	;branch if not on ice
-	move.w	$52(a3),d0
+	move.w	SCnum(a3),d0
 	cmp.w	(puckc).w,d0	;check if player has puck
 	beq.w	.top3	;branch if puck carrier
-	bclr	#1,$64(a3)	;clear breakaway bit
-	bclr	#0,$64(a3)	;clear offsides bit
+	bclr	#pf3break,pflags3(a3)	;clear breakaway bit
+	bclr	#pf3offs,pflags3(a3)	;clear offsides bit
 .top3
 	bsr.w	updateanim
 	sub.b	d7,nopuck(a3)	;no puck control
 	bpl.w	.np
 	clr.b	nopuck(a3)	;clear upper byte of nopuck
 .np
-	sub.b	d7,$5F(a3)	;subtract # of frames from nopuck+1
+	sub.b	d7,nopuck+1(a3)	;subtract # of frames from nopuck+1
 	bpl.w	.np2
-	clr.b	$5F(a3)	;clear lower byte of nopuck
+	clr.b	nopuck+1(a3)	;clear lower byte of nopuck
 .np2
 	btst	#6,(sflags3).w	;check if penalty timer is up
 	beq.w	.11
@@ -874,9 +874,9 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	jsr	(loadTeamStruct).l
 	addq.w	#1,0(a2,d0.w)	;add 1 to TOI for player
 .11
-	cmpi.w	#$145C,$58(a3)	;SPAinjuryfall (frames94). check animation
+	cmpi.w	#$145C,SPA(a3)	;SPAinjuryfall (frames94). check animation
 	beq.w	.done
-	cmpi.w	#$1AF4,$58(a3)	;SPAinjury1 (frames94). check animation
+	cmpi.w	#$1AF4,SPA(a3)	;SPAinjury1 (frames94). check animation
 	beq.w	.done
 	moveq	#$11,d4
 	tst.w	(music_global_tick_counter).w
@@ -1108,7 +1108,7 @@ updateanim	;frame switch control on struct a3
 .nox
 	asl.w	#1,d0	;mult by 2
 	adda.w	0(a0,d0.w),a0	;add a0 + d0 offset to a0 - This moves the SPF value into a0
-	move.w	$5A(a3),d0	;SPANum into d0 (index into animation)
+	move.w	SPAnum(a3),d0	;SPANum into d0 (index into animation)
 	move.w	0(a0,d0.w),d2	;a0 + d0 offset into d2 - this is the new SPF frame of this animation
 	tst.w	SPAcnt(a3)	;check if SPAcnt is 0 (time for a new frame)
 	bmi.w	.1	;branch if so (SPAcnt is negative)
@@ -1122,7 +1122,7 @@ updateanim	;frame switch control on struct a3
 	clr.w	SPAnum(a3)	;clear SPANum
 	bclr	#5,pflags(a3)	;clear animation lock
 	bclr	#1,pflags2(a3)	;clear animation in progress
-	bclr	#5,$64(a3)	;clear fall down flag
+	bclr	#pf3fall,pflags3(a3)	;clear fall down flag
 	btst	#0,d1	;check if anim attribute loops
 	bne.w	.1	;loop
 	clr.w	SPA(a3)	;clear SPA

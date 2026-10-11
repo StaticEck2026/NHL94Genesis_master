@@ -521,7 +521,7 @@ ExitAttributeScreen	;93 name. Line editor: start pressed. Run the exit menu (Att
 	movea.l	#rtss2,a1
 	movea.l	#AttributeScreenText,a0
 	movea.w	#(databuffer-M68K_RAM),a3
-	move.w	$28(a2),d0
+	move.w	Xvel(a2),d0
 	addq.w	#1,d0
 	cmp.b	(a3),d0
 	beq.w	.0
@@ -605,7 +605,7 @@ DecodePlayerAttributes	;93 name; IDA dc.b. Load team a2's lines from databuffer 
 EncodePlayerAttributes	;93 name. Reverse of DecodePlayerAttributes: pack team a2's lines into databuffer and convert it (WriteLineData, high ROM; 93 BitsToPW). Menu item handler
 	movem.l	d0-d4/a0-a3,-(sp)
 	movea.w	#(databuffer-M68K_RAM),a0
-	move.w	$28(a2),d0
+	move.w	Xvel(a2),d0
 	addq.w	#1,d0
 	move.b	d0,(a0)+
 	lea	$16A(a2),a1
@@ -1344,7 +1344,7 @@ DisplayTeamStats	;93 name. "Playoff Stats": the playoff totals (ReadTeamStats) o
 	move.w	(potreeteam).w,d0
 	move.b	0(a0,d0.w),d0
 	movea.w	#(HmShots-M68K_RAM),a2
-	cmp.w	$28(a2),d0
+	cmp.w	Xvel(a2),d0
 	beq.w	.0
 	adda.w	#tmsize,a2
 .0

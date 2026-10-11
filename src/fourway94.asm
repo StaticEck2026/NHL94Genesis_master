@@ -54,7 +54,7 @@ Set4WayPlayer	;IDA dc.b, no xref. 94 only, unused: put player a3's number ($52) 
 	beq.w	.x
 	movem.l	d0-d2,-(sp)
 	move.w	#1,d0
-	btst	#6,$62(a3)
+	btst	#6,pflags(a3)
 	beq.w	.chkpad3
 	move.w	#2,d0
 .chkpad3
@@ -68,7 +68,7 @@ Set4WayPlayer	;IDA dc.b, no xref. 94 only, unused: put player a3's number ($52) 
 	move.w	#0,d0
 .set
 	and.w	d1,(PadControlBits34).w
-	move.w	$52(a3),d1
+	move.w	SCnum(a3),d1
 	asl.w	d0,d1
 	or.w	d1,(PadControlBits34).w
 	movem.l	(sp)+,d0-d2

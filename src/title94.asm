@@ -103,7 +103,7 @@ PSandSOpassdir	;IDA name (and comments). 94 only: penalty shot / shootout: passd
 	;passdirlist for the bottom net. Called from shotdiradj (logic94_1)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(sopathdir).w,d0
-	btst	#7,$62(a3)	;check what net shooting at
+	btst	#7,pflags(a3)	;check what net shooting at
 	bne.w	.0	;branch if top net
 	movea.l	#passdirlist,a0
 	add.w	d0,d0
@@ -171,7 +171,7 @@ NextPathPoint	;94 only. Next point of shootout path sopath (sopathpoint): sopath
 	asl.w	#2,d1
 	movea.l	0(a0,d1.w),a0
 	move.w	0(a0,d0.w),(sopathx).w
-	btst	#0,$76(a3)
+	btst	#0,handed(a3)
 	beq.w	.0
 	neg.w	(sopathx).w
 .0
@@ -192,7 +192,7 @@ SkatePath	;94 only. Shootout skate path: d0 / d1 = the point (mirrored for the b
 	beq.w	.x
 	move.w	(sopathx).w,d0
 	move.w	(sopathy).w,d1
-	btst	#7,$62(a3)
+	btst	#7,pflags(a3)
 	bne.w	.0
 	neg.w	d0
 	neg.w	d1
@@ -201,9 +201,9 @@ SkatePath	;94 only. Shootout skate path: d0 / d1 = the point (mirrored for the b
 	bpl.w	.1
 	neg.w	d0
 .1
-	tst.w	$28(a3)
+	tst.w	Xvel(a3)
 	bne.w	.2
-	tst.w	$2A(a3)
+	tst.w	Yvel(a3)
 	bne.w	.2
 	cmp.w	#$12,d0
 	ble.w	.3
@@ -211,13 +211,13 @@ SkatePath	;94 only. Shootout skate path: d0 / d1 = the point (mirrored for the b
 	cmp.w	#$A,d0
 	bgt.w	.7
 .3
-	sub.w	$14(a3),d1
+	sub.w	Ypos(a3),d1
 	bpl.w	.4
 	neg.w	d1
 .4
-	tst.w	$28(a3)
+	tst.w	Xvel(a3)
 	bne.w	.5
-	tst.w	$2A(a3)
+	tst.w	Yvel(a3)
 	bne.w	.5
 	cmp.w	#$12,d1
 	ble.w	.6
@@ -237,7 +237,7 @@ ShootoutShootCheck	;94 only. Shootout, skater a3 has the puck (gmode2 bit 1): Z 
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#1,(gmode2).w
 	beq.w	.5
-	move.w	$52(a3),d0
+	move.w	SCnum(a3),d0
 	cmp.w	(puckc).w,d0
 	bne.w	.5
 	cmpi.w	#3,(shootoutclock).w
@@ -256,7 +256,7 @@ ShootoutShootCheck	;94 only. Shootout, skater a3 has the puck (gmode2 bit 1): Z 
 .0
 	move.w	(sopathx).w,d0
 	move.w	(sopathy).w,d1
-	btst	#7,$62(a3)
+	btst	#7,pflags(a3)
 	bne.w	.1
 	neg.w	d0
 	neg.w	d1
@@ -265,7 +265,7 @@ ShootoutShootCheck	;94 only. Shootout, skater a3 has the puck (gmode2 bit 1): Z 
 	bpl.w	.2
 	neg.w	d0
 .2
-	sub.w	$14(a3),d1
+	sub.w	Ypos(a3),d1
 	bpl.w	.3
 	neg.w	d1
 .3
@@ -395,17 +395,17 @@ PrintParenNumber	;PrintPlayerAssists / PrintPlayerGoals: the number (1 to 3 digi
 PlaceBoardFall	;94 only. A player falling into the boards (frames94 SPAboardtop ... SPAboardmidl). For frames $1776 / $185A (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and $17E8
 	;/ $1A00 / $18CC / $193E (x to +-$82 /
 	;$88 by bit 3 of 4(a3)) of $58(a3): move player a3 half way there. Called from updateplayers (hockey94_02)
-	cmpi.w	#$193E,$58(a3)
+	cmpi.w	#$193E,SPA(a3)
 	beq.w	.12
-	cmpi.w	#$1A00,$58(a3)
+	cmpi.w	#$1A00,SPA(a3)
 	beq.w	.8
-	cmpi.w	#$18CC,$58(a3)
+	cmpi.w	#$18CC,SPA(a3)
 	beq.w	.10
-	cmpi.w	#$17E8,$58(a3)
+	cmpi.w	#$17E8,SPA(a3)
 	beq.w	.6
-	cmpi.w	#$1776,$58(a3)
+	cmpi.w	#$1776,SPA(a3)
 	beq.w	.0
-	cmpi.w	#$185A,$58(a3)
+	cmpi.w	#$185A,SPA(a3)
 	beq.w	.3
 	bra.w	.x
 .0
@@ -417,10 +417,10 @@ PlaceBoardFall	;94 only. A player falling into the boards (frames94 SPAboardtop 
 .1
 	move.w	#$116,d0
 .2
-	sub.w	$14(a3),d0
+	sub.w	Ypos(a3),d0
 	bmi.w	.x
 	asr.w	#1,d0
-	add.w	d0,$14(a3)
+	add.w	d0,Ypos(a3)
 	bra.w	.x
 .3
 	move.w	#$FEDC,d0
@@ -431,10 +431,10 @@ PlaceBoardFall	;94 only. A player falling into the boards (frames94 SPAboardtop 
 .4
 	move.w	#$FEEA,d0
 .5
-	sub.w	$14(a3),d0
+	sub.w	Ypos(a3),d0
 	bpl.w	.x
 	asr.w	#1,d0
-	add.w	d0,$14(a3)
+	add.w	d0,Ypos(a3)
 	bra.w	.x
 .6
 	move.w	#$82,d0
@@ -500,11 +500,11 @@ GetLeagueCrowdRecord	;94 only. d0 = the team (of 28) with the highest crowd reco
 	rts
 getFgtbyte	;IDA name (and comments). 94 only. Called from setInjuryType (hockey94_03)
 	clr.w	d0	;clear d0
-	move.b	$74(a2),d0	;move H/F bit into d0 (this is always even)
+	move.b	fighting(a2),d0	;move H/F bit into d0 (this is always even)
 	lsr.w	#2,d0	;shift 2 right (divide by 4)
 	rts
 chkFgtBit1	;IDA name. 94 only: test bit 1 of $74(a2). Called from setInjuryType (hockey94_03)
-	btst	#1,$74(a2)
+	btst	#1,fighting(a2)
 	rts
 RandomFaceoffAnim	;94 only. d0 = a random faceoff animation from FaceoffAnims (StartArenaAnim), 6 when fox <= -$40 and foy <= $C0. Called from puckfaceoff (logic94_4)
 	movem.l	a0,-(sp)
@@ -621,7 +621,7 @@ HiScoreScreen	;IDA name. 94 only: vb2, the $F4378 bitmap and HiScoreImg, then wa
 	rts
 GetTeamStruct	;94 only. a2 = HmShots, or AwShots when team d2 is not $28 of HmShots. Called from PrintStartingLine (high94_2)
 	movea.l	#HmShots,a2
-	cmp.w	$28(a2),d2
+	cmp.w	Xvel(a2),d2
 	beq.w	.x
 	movea.l	#AwShots,a2
 .x
@@ -640,7 +640,7 @@ CountButtonPress	;94 only. Not in gmode bit 0: add 1 to homepresses (awaypresses
 	addq.l	#1,(a0)
 	cmp.w	#8,d1
 	beq.w	.x
-	cmp.w	$54(a3),d1
+	cmp.w	facedir(a3),d1
 	beq.w	.x
 	addq.l	#1,4(a0)
 .x
@@ -724,7 +724,7 @@ PuckComingToward	;nothing calls it. Z clear when the puck is within $1E of playe
 	andi.w	#$8000,d0
 	beq.w	.x
 	move.w	(pucky).w,d0
-	sub.w	$14(a3),d0
+	sub.w	Ypos(a3),d0
 	cmp.w	#$1E,d0
 	bgt.w	.x
 	move.w	(puckvy).w,d1
@@ -737,7 +737,7 @@ ReadGoaliePulled	;IDA name (and comments). 94 only: Z clear when the team of a3 
 	;(logic94_1), assdefo (logic94_2), asspuckc (logic94_3) and assnearest (logic94_4)
 	movem.l	a1,-(sp)
 	movea.l	#HmShots,a1
-	btst	#6,$62(a3)	;check if home or away 0=home 1=away
+	btst	#6,pflags(a3)	;check if home or away 0=home 1=away
 	beq.w	.chkgoalie
 	movea.l	#AwShots,a1
 .chkgoalie
@@ -747,23 +747,23 @@ ReadGoaliePulled	;IDA name (and comments). 94 only: Z clear when the team of a3 
 EndOneTimer	;94 only. End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA $50C, then assexit (goalie) or Setplass. Called from assonetimer (high94_1) and checkgoal (.setass, hockey94_04)
 	;(hockey94_04)
 	movem.l	d0/a0,-(sp)
-	bclr	#3,$64(a3)
-	bclr	#5,$62(a3)
-	bclr	#1,$63(a3)
+	bclr	#pf3onetimer,pflags3(a3)
+	bclr	#5,pflags(a3)
+	bclr	#1,pflags2(a3)
 	clr.w	(onetimerflags).w
 	st	(onetimerplayer).w
 	move.w	d1,-(sp)
 	move.w	#$50C,d1
 	jsr	(SetSPA).l
-	tst.w	$34(a3)
+	tst.w	position(a3)
 	bpl.w	.0
 	jsr	(assexit).l
 	bra.w	.1
 .0
 	jsr	(Setplass).l
 .1
-	clr.w	$5A(a3)
-	st	$5C(a3)
+	clr.w	SPAnum(a3)
+	st	SPAcnt(a3)
 	move.w	(sp)+,d1
 	movem.l	(sp)+,d0/a0
 	rts
@@ -1083,7 +1083,7 @@ LeadSong	;94 only. Not in a shootout (gmode2 bit 1), scores not level: once (sfl
 	movea.w	#(HmShots-M68K_RAM),a2
 	lea	$364(a2),a3
 	move.w	$24(a2),d0
-	sub.w	$24(a3),d0
+	sub.w	OldZpos(a3),d0
 	beq.w	LeadSongExit
 	bpl.w	.0
 	btst	#6,(sflags2).w

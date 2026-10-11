@@ -32,20 +32,20 @@ EndShootout	;94 only. Shootout over (CountShootoutGoals, high94_2): freezewindow
 .loop
 	movem.w	d2-d3,-(sp)
 	jsr	(setplayer).l
-	move.w	#2,$34(a3)
+	move.w	#2,position(a3)
 	move.w	#$F0,d0
 	tst.w	(Vpos).w
 	bmi.w	.1
 	move.w	#$FF10,d0
 .1
 	add.w	(Vpos).w,d0
-	move.w	d0,$14(a3)
+	move.w	d0,Ypos(a3)
 	move.w	#0,(a3)
 	move.w	#7,d0	;assscore
 	jsr	(assinsert).l
-	bclr	#5,$62(a3)
-	bclr	#1,$63(a3)
-	bclr	#2,$62(a3)
+	bclr	#5,pflags(a3)
+	bclr	#1,pflags2(a3)
+	bclr	#2,pflags(a3)
 	movem.w	(sp)+,d2-d3
 .2
 	adda.l	#$80,a3
@@ -55,33 +55,33 @@ EndShootout	;94 only. Shootout over (CountShootoutGoals, high94_2): freezewindow
 ClampPositionBox	;nothing calls it (IDA left it as data). Clamp $44 / $46(a3) to the box for position $34(a3) in PositionBoxes (PositionBoxesTop when bit 7 of
 	;$62(a3), the top net)
 	movem.l	d0-d7/a0,-(sp)
-	move.w	$34(a3),d7
+	move.w	position(a3),d7
 	subq.w	#1,d7
 	movea.l	#PositionBoxes,a0
-	btst	#7,$62(a3)
+	btst	#7,pflags(a3)
 	beq.w	.0
 	movea.l	#PositionBoxesTop,a0
 .0
 	add.w	d7,d7
 	move.w	(a0,d7.w),d0
-	cmp.w	$44(a3),d0
+	cmp.w	temp3(a3),d0
 	blt.w	.1
-	move.w	d0,$44(a3)
+	move.w	d0,temp3(a3)
 .1
 	move.w	2(a0,d7.w),d0
-	cmp.w	$44(a3),d0
+	cmp.w	temp3(a3),d0
 	bgt.w	.2
-	move.w	d0,$44(a3)
+	move.w	d0,temp3(a3)
 .2
 	move.w	4(a0,d7.w),d0
-	cmp.w	$46(a3),d0
+	cmp.w	temp4(a3),d0
 	blt.w	.3
-	move.w	d0,$46(a3)
+	move.w	d0,temp4(a3)
 .3
 	move.w	6(a0,d7.w),d0
-	cmp.w	$46(a3),d0
+	cmp.w	temp4(a3),d0
 	bgt.w	.x
-	move.w	d0,$46(a3)
+	move.w	d0,temp4(a3)
 .x
 	movem.l	(sp)+,d0-d7/a0
 	rts
@@ -756,7 +756,7 @@ updatePPTeamTime	;IDA name (and comments). 94 only: one more second of power pla
 	rts
 GetTeamRating	;94 only. d0 = the TeamRatings byte of team $28(a2). Called from PrintTeamRating (high94_2, the player card "Team Rating") and PrintMatchupRating (hockey94_07)
 	movem.l	d1-d7/a0-a6,-(sp)
-	move.w	$28(a2),d0
+	move.w	Xvel(a2),d0
 	movea.l	#TeamRatings,a0
 	clr.w	d1
 	move.b	0(a0,d0.w),d1
@@ -770,7 +770,7 @@ ShortenMsgTimer	;94 only. Cap msgtimer at 2, unless a second pad is on (cont2tea
 	movem.l	d0,-(sp)
 	tst.w	(cont2team).w
 	beq.w	.0
-	move.w	$52(a3),d0
+	move.w	SCnum(a3),d0
 	cmp.w	(puckc).w,d0
 	bne.w	.x
 .0

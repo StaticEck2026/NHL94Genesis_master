@@ -17,7 +17,7 @@ wallcollduringcheck	;IDA name (and comments). 94 only: during a check, a skater 
 	beq.w	.end
 	movem.l	d0-d7,-(sp)
 	move.w	(a2),d2	;Xpos of checking player
-	move.w	$14(a2),d3	;Ypos of checking player
+	move.w	Ypos(a2),d3	;Ypos of checking player
 	move.w	$4A(a2),(wcradiusx).w	;moves radiusX into FFBD22 (width of graphic)
 	addi.w	#$17,(wcradiusx).l	;add $17 to BD22
 	move.w	$4C(a2),(wcradiusy).w	;moves radiusY into FFBD24 (height of graphic)

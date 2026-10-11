@@ -677,7 +677,7 @@ setteams	;93 name. Use hometeam/visteam to set team structures (InitTeamSructure
 	rts
 InitTeamSructure	;93 name. Set up team struct a2 for team d0: store the team number at $28, the team data address (TeamList)
 	;at $1E (tmdata), and copy the line sets to $16A (94: two layouts by OptLine)
-	move.w	d0,$28(a2)
+	move.w	d0,Xvel(a2)
 	movea.w	#$30E,a0	;TeamList
 	asl.w	#2,d0
 	move.l	0(a0,d0.w),$1E(a2)

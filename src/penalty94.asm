@@ -26,7 +26,7 @@ AddPenalty	;add penalty d0 (PenaltyList offset) for player a3. Ignored while the
 	beq.w	AddPenalty2
 	tst.w	(OptPen).w
 	beq.w	rtss2	;penalties off
-	btst	#2,$63(a3)	;94 only. pflags2 bit 2, which releasepl sets (93 comment: 92 pf2unav)
+	btst	#2,pflags2(a3)	;94 only. pflags2 bit 2, which releasepl sets (93 comment: 92 pf2unav)
 	bne.w	rtss2
 	btst	#gmoffs,(gmode).w	;gmoffs: offsides on
 	bne.w	AddPenalty2
@@ -61,7 +61,7 @@ AddPenalty2	;forced penalties like face off and game over. d0 = penalty number, 
 	tst.b	1(a0)	;penalty minutes
 	beq.w	.noplayer
 	bmi.w	.noplayer	;94: negative minutes too
-	btst	#6,$62(a3)	;pfteam. 94 only: DelayedPen bit 1 home, bit 2 away
+	btst	#6,pflags(a3)	;pfteam. 94 only: DelayedPen bit 1 home, bit 2 away
 	bne.w	.away
 	bset	#1,(DelayedPen).w
 	bra.w	.setpenflag
@@ -156,7 +156,7 @@ PenShotChk	;94 only. a3 = checker, a2 = player hit, d0 = penalty. If a2 is on a 
 	;bit 3) and PenShotPenalties has an entry for d0, getBAplayerInfo sets one up and d0 = that penalty (also pspenalty). Called from CCStart before
 	;AddPenalty
 	movem.l	d1-d3/a0,-(sp)
-	btst	#1,$64(a2)	;breakaway
+	btst	#pf3break,pflags3(a2)	;breakaway
 	beq.w	.loop
 	btst	#3,(BA_PS_flags).w	;penalty shot pending
 	beq.w	.0
@@ -167,7 +167,7 @@ PenShotChk	;94 only. a3 = checker, a2 = player hit, d0 = penalty. If a2 is on a 
 	movea.l	#PenShotPenalties,a0
 	move.w	0(a0,d0.w),d1	;penalty shot penalty for d0, -1 = none
 	bmi.w	.end
-	move.w	$52(a2),d2	;SCnum
+	move.w	SCnum(a2),d2	;SCnum
 	movem.w	d0-d1,-(sp)
 	move.w	d2,d0
 	jsr	(getBAplayerInfo).l
@@ -222,7 +222,7 @@ getBAplayerInfo	;94 only. d0 = SCnum (0-5 home team, 6-11 away team) of the play
 	move.w	#0,(BA_Goalie_Offset).w
 	move.b	$66(a1,d1.w),(BA_Goalie_Offset+1).w	;store goalie's team position offset
 	move.w	#0,(BA_Checker_Offset).w
-	move.b	$66(a3),(BA_Checker_Offset+1).w	;store checker's team position offset
+	move.b	pnum(a3),(BA_Checker_Offset+1).w	;store checker's team position offset
 .end
 	movem.l	(sp)+,d1-d3/a1
 	rts
@@ -864,7 +864,7 @@ releasepl	;93 name. player's penalty time is up so let him out (if appropriate).
 	addq.w	#1,a0
 .1
 	clr.w	position(a3)	;position
-	move.b	0(a0,d1.w),$35(a3)
+	move.b	0(a0,d1.w),position+1(a3)
 	bsr.w	Setplass
 	bsr.w	setplayer
 	bset	#2,pflags2(a3)	;pflags2 bit 2 (93: 92 pf2unav, bit 4 in 92)
@@ -886,7 +886,7 @@ GetLowestPen	;IDA: CalcPenTime. a2 = shorthanded team, a3 = team on the power pl
 	move.w	d2,d3
 	bra.s	.getstatus
 .endoflist
-	cmpi.w	#6,$24(a3)	;tmap: 6 on ice, done
+	cmpi.w	#6,OldZpos(a3)	;tmap: 6 on ice, done
 	beq.w	rtss2
 	sub.w	d3,d0
 	lea	$9A(a3),a0
@@ -1312,7 +1312,7 @@ ChkShotStat	;determine if shot taken, add to appropriate stats. As 93: crowd, te
 	dbf	d1,.findplayer
 	bra.w	.ex
 .foundplayer
-	move.w	$52(a2),d0	;SCnum
+	move.w	SCnum(a2),d0	;SCnum
 	bra.w	.addShot
 .Cwdupdate
 	movem.l	d0-d1/a1-a3,-(sp)
@@ -1329,13 +1329,13 @@ ChkShotStat	;determine if shot taken, add to appropriate stats. As 93: crowd, te
 	beq.w	.2
 	btst	#6,(sflags2).w	;sf2pwrtm: 0 home, 1 visitors
 	bne.w	.1
-	btst	#6,$62(a3)	;pfteam
+	btst	#6,pflags(a3)	;pfteam
 	bne.w	.2	;not the team on the power play
 .PPshot
 	addq.w	#1,$354(a2)	;power play shots
 	bra.w	.2
 .1
-	btst	#6,$62(a3)	;pfteam
+	btst	#6,pflags(a3)	;pfteam
 	bne.s	.PPshot
 .2
 	move.l	a2,-(sp)

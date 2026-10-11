@@ -104,13 +104,13 @@ assbench
 	ext.w	d0
 	move.w	d0,position(a3)
 	jsr	(Setplass).l
-	st	$61(a3)
+	st	newpnum(a3)
 	st	$60(a3)
 rtss4
 	rts
 ; player a3 should exit bench area
 asseben	;IDA: assben (93 asseben). Player a3 should exit the bench area
-	btst	#5,$62(a3)
+	btst	#5,pflags(a3)
 	bne.s	rtss4
 	bclr	#1,pflags(a3)
 	beq.w	.1
@@ -139,7 +139,7 @@ asseben	;IDA: assben (93 asseben). Player a3 should exit the bench area
 	bra.w	assexit
 ; player a3 should go to penalty box
 asspenalty
-	btst	#5,$62(a3)
+	btst	#5,pflags(a3)
 	bne.s	rtss4
 	bclr	#1,pflags(a3)
 	beq.w	.nna
@@ -216,10 +216,10 @@ asspenalty
 	movea.l	#rtss2,a0
 	bra.w	skateto
 .clrplayer	;take the joystick off player a3 (92 asspenalty .clrplayer, 93 global clrplayer)
-	btst	#3,$62(a3)
+	btst	#3,pflags(a3)
 	beq.w	rtss4
 	clr.w	d4
-	move.w	$52(a3),d0
+	move.w	SCnum(a3),d0
 	cmp.w	(c1playernum).w,d0
 	beq.w	changeplayer
 	moveq	#2,d4
@@ -275,7 +275,7 @@ assepen
 ; moves the goalie not being used during shootout/pen shot off the screen
 ; a3 = goalie who is to be taken off ice
 assgoaliebreakwait	;94 only (asstab entry $18DFC)
-	btst	#5,$62(a3)	;check if animation locked
+	btst	#5,pflags(a3)	;check if animation locked
 	bne.w	.exit	;exit if so
 	btst	#2,(BA_PS_flags).w	;check if pen shot
 	bne.w	.1	;branch if so
@@ -284,17 +284,17 @@ assgoaliebreakwait	;94 only (asstab entry $18DFC)
 	nop
 	bra.w	assexit
 .1
-	clr.w	$28(a3)	;clear Xvel
-	clr.w	$2A(a3)	;clear Yvel
+	clr.w	Xvel(a3)	;clear Xvel
+	clr.w	Yvel(a3)	;clear Yvel
 	movem.l	d0/a0,-(sp)	;push d0 and a0 on stack
 	movea.l	#SortCords,a0	;Home SC Sctruct start
 	move.w	(BA_Goalie_SCnum).w,d0	;move Goalie SCNum into d0
 	asl.w	#7,d0	;shift d0 7 bits left
 	adda.w	d0,a0	;add d0 to address a0
-	move.w	#$191,$14(a3)	;move 401 decimal into Ypos
+	move.w	#$191,Ypos(a3)	;move 401 decimal into Ypos
 	btst	#7,$62(a0)	;check if shooting up or down (a0 is goalie being shot on)
 	bne.w	.popstack	;branch if shooting up
-	move.w	#$FE6F,$14(a3)	;move -191 decimal into Ypos (goalie not being shot on)
+	move.w	#$FE6F,Ypos(a3)	;move -191 decimal into Ypos (goalie not being shot on)
 .popstack
 	movem.l	(sp)+,d0/a0
 .exit
@@ -357,15 +357,15 @@ assfwatch	;94: rts only (93 watches the fight)
 	rts	;assfwatch - possible location where players watching fight
 ; player should do nothing
 assnothing
-	btst	#5,$62(a3)	;#pfalock
+	btst	#5,pflags(a3)	;#pfalock
 	bne.s	assfwatch
-	btst	#3,$62(a3)	;#pfjoycon
+	btst	#3,pflags(a3)	;#pfjoycon
 	bne.s	assfwatch
 	moveq	#8,d0
 	bra.w	doplayeracc
 ; player skates with stanley cup overhead
 assstanley
-	btst	#5,$62(a3)
+	btst	#5,pflags(a3)
 	bne.s	assfwatch
 	bclr	#1,pflags(a3)
 	beq.w	.nna
@@ -390,7 +390,7 @@ assstanley
 	bra.w	playeracc
 ; player a3 celebrates, if scoreing player then do arm pump
 assscore
-	btst	#5,$62(a3)
+	btst	#5,pflags(a3)
 	bne.s	assfwatch
 	bclr	#1,pflags(a3)
 	beq.w	.nna
@@ -443,7 +443,7 @@ rtss6
 	rts
 ; player a3 is defensive player on offense
 assdefo
-	btst	#5,$62(a3)
+	btst	#5,pflags(a3)
 	bne.s	rtss6
 	btst	#gmclock,(gmode).w	;#gmclock
 	bne.w	assnothing	;Whistle blown, do nothing
@@ -462,10 +462,10 @@ assdefo
 	bmi.w	.boost	;branch if goalie is pulled
 	btst	#6,(sflags7).w	;check if crowd meter broken
 	beq.w	.noboost	;branch if not
-	tst.b	$40(a3)	;check if temp1 is 0
+	tst.b	temp1(a3)	;check if temp1 is 0
 	beq.w	.noboost	;branch if so
 .boost
-	subq.b	#1,$40(a3)	;sub 1 from temp1
+	subq.b	#1,temp1(a3)	;sub 1 from temp1
 .noboost
 	move.l	#2,d0	;assdefd
 	btst	#4,tmflags(a2)	;check if team is offsides
@@ -526,9 +526,9 @@ assdefd
 	move.b	aidef(a3),temp1(a3)	;move DfA into temp1
 	btst	#6,(sflags7).w	;check if crowd meter currently broken
 	beq.w	.noboost	;branch if not
-	tst.b	$40(a3)	;check if temp1 is 0
+	tst.b	temp1(a3)	;check if temp1 is 0
 	beq.w	.noboost	;branch if so
-	subq.b	#1,$40(a3)	;sub 1 from temp1
+	subq.b	#1,temp1(a3)	;sub 1 from temp1
 .noboost
 	move.w	(pucky).w,d1	;move pucky into d1
 	move.w	(puckvy).w,d3	;move puckvy into d3
@@ -641,7 +641,7 @@ rtss21
 	rts
 ; player a3 is winger on defense
 asswingd
-	btst	#5,$62(a3)	;check if locked in animation
+	btst	#5,pflags(a3)	;check if locked in animation
 	bne.s	rtss21	;exit if so
 	btst	#0,(gmode).w	;check if clock is running
 	bne.w	assnothing	;assnothing if its stopped
@@ -658,9 +658,9 @@ asswingd
 	move.b	aidef(a3),temp1(a3)	;move DfA into temp1
 	btst	#6,(sflags7).w	;check if crowd meter currently broken
 	beq.w	.noboost	;branch if not
-	tst.b	$40(a3)	;check if temp1 is 0
+	tst.b	temp1(a3)	;check if temp1 is 0
 	beq.w	.noboost	;branch if 0
-	subq.b	#1,$40(a3)	;sub 1 from temp1
+	subq.b	#1,temp1(a3)	;sub 1 from temp1
 .noboost
 	move.w	(puckc).w,d1	;move puckc into d1
 	bmi.w	.nodec	;branch if no puck carrier

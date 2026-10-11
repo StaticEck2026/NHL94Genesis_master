@@ -556,7 +556,7 @@ AddPOStats	;IDA name (93 DisplayTeamStatsForPlayoffs). Add the po team's game st
 	move.w	(potreeteam).w,d2
 	move.b	0(a0,d2.w),d2	;po team
 	movea.w	#(HmShots-M68K_RAM),a2
-	cmp.w	$28(a2),d2
+	cmp.w	Xvel(a2),d2
 	beq.w	.0
 	adda.w	#$364,a2	;tmsize: the po team is the visitor
 .0
@@ -1073,7 +1073,7 @@ DisplayPlayerAttributeMenu	;93 name. Goal box. Closes both line change boxes, th
 	blt.w	.4
 	adda.w	(a1),a1	;HAT TRICK!
 	move.w	d0,-(sp)
-	move.w	$28(a2),d0
+	move.w	Xvel(a2),d0
 	cmp.w	(HomeTeam).w,d0
 	bne.w	.3
 	move.w	#0,d0
