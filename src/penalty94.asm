@@ -1083,7 +1083,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	move.w	#$2C,d0	;visitor logo data offset
 	bsr.w	PrintTeamLogoAndScore
 	bra.s	.ex
-PrintTeamNameAndScore	;Print the team name of team a2 at printx/printy, then its score as 2 digits at x $1C. Called twice from PrintScores1
+PrintTeamNameAndScore	;Print the team name of team a2 at printx/printy, then its score as 2 digits at x $1C. Called twice from printscores1
 	movea.l	tmdata(a2),a1	;tmdata
 	adda.w	4(a1),a1
 	adda.w	(a1),a1	;skip the first string to the team name
@@ -1094,7 +1094,7 @@ PrintTeamNameAndScore	;Print the team name of team a2 at printx/printy, then its
 	bsr.w	PushNumberWidth
 	bra.w	print
 PrintTeamLogoAndScore	;Draw the team logo map (PrintTeamData, d0 = offset) 5 columns left of printx
-	;then the score of team a2 in big font, centered 2 rows lower; a 2 digit score is moved one more left. Called twice from PrintScores1
+	;then the score of team a2 in big font, centered 2 rows lower; a 2 digit score is moved one more left. Called twice from printscores1
 	move.w	(printx).w,-(sp)
 	subq.w	#5,(printx).w
 	jsr	(PrintTeamData).l
@@ -1114,7 +1114,7 @@ PrintTeamLogoAndScore	;Draw the team logo map (PrintTeamData, d0 = offset) 5 col
 	sub.w	d0,(printx).w
 	addq.w	#1,(printx).w
 	bra.w	printbig
-EASNLogo	;Draw the EASN logo map at x 1, y $19 on the vertical ice rink if no power play. Called from PrintScores1 and updatepwrplay
+EASNLogo	;Draw the EASN logo map at x 1, y $19 on the vertical ice rink if no power play. Called from printscores1 and updatepwrplay
 	btst	#sf2pwrplay,(sflags2).w	;sf2pwrplay
 	bne.w	rtss2
 	bsr.w	printz

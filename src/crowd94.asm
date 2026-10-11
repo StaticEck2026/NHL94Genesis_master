@@ -97,7 +97,7 @@ stopna2	;Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goal
 	clr.w	Yvel(a3)
 .ex
 	rts
-checkcornercoll94	;210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
+checkcornercoll	;210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
 	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to Called from
 	;wallcollduringcheck.
 	bclr	#pf3wall,pflags3(a3)	;clear the wall collision bit
@@ -148,7 +148,7 @@ checkcornercoll94	;210 = blue line to the end of the rink, corner radius 64. Cor
 	ext.l	d1
 	asl.l	#8,d1
 	divs.w	d3,d1
-	bsr.w	cornercollb94
+	bsr.w	cornercollb
 .exit
 	movem.w	(sp)+,d2-d5
 	move.w	$4E(a3),d0	;wallcos(a3)
@@ -157,21 +157,21 @@ checkcornercoll94	;210 = blue line to the end of the rink, corner radius 64. Cor
 	move.w	#$100,d0	;now check side walls
 	clr.w	d1
 	cmp.w	d5,d3
-	bge.w	cornercollb94
+	bge.w	cornercollb
 	neg.w	d5
 	neg.w	d0
 	cmp.w	d5,d3
-	ble.w	cornercollb94
+	ble.w	cornercollb
 	exg	d0,d1
 	cmp.w	d4,d2
-	bge.w	cornercollb94
+	bge.w	cornercollb
 	neg.w	d4
 	neg.w	d1
 	cmp.w	d4,d2
-	ble.w	cornercollb94
+	ble.w	cornercollb
 .rtss3	;branches to the shared rtss here
 	rts
-cornercollb94	;Thunk: jmp wallcollb
+cornercollb	;Thunk: jmp wallcollb
 	jmp	wallcollb
 Create_HotCold_Table	;Fill the hot / cold table at $1A2 of team struct a0 with 416 random values (-9 ... 8
 	;randomd0s). Called from StartGame and ScoutingReport

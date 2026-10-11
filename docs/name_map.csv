@@ -37,3 +37,8 @@ setvram,setVram,92G
 framermap,FramerMap,92G
 icerinkmap,HorRinkTiles,behavior: HorRinkMap+8 (the SetHor bitmap tiles), not 92 IceRinkMap
 clrCrowdRAM,ReadCrowdRecord,behavior: reads the crowd record block (pairs with WriteCrowdRecord)
+GameSetUp_2,ReadSetupPads,behavior: waits for a pad press on the setup screen
+GameSetUp_3,ChangeOption,behavior: adds d2 to option d7 and wraps it
+GameSetUp_4,PrintOptionValue,behavior: prints the value of option d7
+checkcornercoll94,checkcornercoll,game number dropped (no clash)
+cornercollb94,cornercollb,game number dropped (no clash)

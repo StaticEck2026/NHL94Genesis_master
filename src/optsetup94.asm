@@ -1,7 +1,7 @@
 ;	The game setup screen. GameSetUp (called from PeriodOver) runs the menu
 ;	and the start / demo exits, setoptions only builds the screen, and
-;	GameSetUp_2 waits for a pad. Helpers: MoveMenuFrame, GameSetUp_3,
-;	WrapOption, PrintOptions, GameSetUp_4, PrintOptTeamName, SetFrameRect,
+;	ReadSetupPads waits for a pad. Helpers: MoveMenuFrame, ChangeOption,
+;	WrapOption, PrintOptions, PrintOptionValue, PrintOptTeamName, SetFrameRect,
 ;	SetupDemo, SetupStart, OptionLimits, OptionValueOffsets, OptionNames.
 ;	New in 94: the Goalies and User Records options (9 lines, 6 shown,
 ;	scrolled by setupfirstline), Shootout, four way play, the team logo
@@ -20,7 +20,7 @@
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $BF map 1 + priority).
 
 GameSetUp	;game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
-	;right change the option (GameSetUp_3) and redraw (FixModeOptions), start begins the game (SetupStart), and $5460 frames without a
+	;right change the option (ChangeOption) and redraw (FixModeOptions), start begins the game (SetupStart), and $5460 frames without a
 	;press start a demo (SetupDemo).
 	jsr	(ReadLineData).l
 	movea.l	#pwddatabuffer,a3	;saved playoff state
@@ -75,7 +75,7 @@ GameSetUp	;game setup screen, called from PeriodOver. Builds the screen (setopti
 	move.w	#0,(OptPen).w
 	move.w	#1,(OptUserRec).w
 .0
-	bsr.w	GameSetUp_2	;d1 = new presses, 0 after $5460 frames
+	bsr.w	ReadSetupPads	;d1 = new presses, 0 after $5460 frames
 	tst.w	d1
 	bne.w	.1
 	bra.w	SetupDemo	;none: demo
@@ -177,7 +177,7 @@ GameSetUp	;game setup screen, called from PeriodOver. Builds the screen (setopti
 .17
 	move.w	(Opt2Team).w,-(sp)
 	move.w	(Opt1Team).w,-(sp)
-	bsr.w	GameSetUp_3	;change the option by d2
+	bsr.w	ChangeOption	;change the option by d2
 	move.w	(sp)+,d0
 	cmpi.w	#4,(OptPlayMode).w
 	beq.w	.18
@@ -239,7 +239,7 @@ GameSetUp	;game setup screen, called from PeriodOver. Builds the screen (setopti
 	bsr.w	FixModeOptions
 	bra.w	.loop
 	rts	;unreferenced
-j_NewPO	;New playoffs: jmp NewPO. Called from GameSetUp and GameSetUp_3
+j_NewPO	;New playoffs: jmp NewPO. Called from GameSetUp and ChangeOption
 	jmp	NewPO
 GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs. Called from GameSetUp
 	jmp	ContinuePlayoffs
@@ -382,7 +382,7 @@ SetFrameRect	;setrect: frame position for line d3 (row $E + d3 - setupfirstline 
 	cmp.w	#4,d3
 	bne.w	rtsSetup
 	moveq	#5,d1
-rtsSetup	;The shared rts; GameSetUp_3, GameSetUp_4, SetFrameRectUnused and WrapOption branch to it
+rtsSetup	;The shared rts; ChangeOption, PrintOptionValue, SetFrameRectUnused and WrapOption branch to it
 	rts
 FixModeOptions	;Fix the options a mode does not allow, then print them: Shootout and Demo set User Records Off, Demo sets both goalies to
 	;Auto Control. Reprint the option names (PrintOptionNames) after a scroll, then the values (PrintOptions) in the setup font (sflags6 bit 3: printsmall
@@ -421,7 +421,7 @@ OptionLimits	;Number of values of each option
 	dc.w	5,8,$1C,$1C,3,2,2,3,3
 OptionLimits4Way	;The same with FourWayPlay (12 player choices)
 	dc.w	5,$C,$1C,$1C,3,2,2,3,3
-GameSetUp_3	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). Entering Shootout saves User Records, Penalties and
+ChangeOption	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). Entering Shootout saves User Records, Penalties and
 	;Line Changes (TmpOptUserRec ...), leaving restores them; Team 1 in new playoffs has $1A teams; the Players range depends on the mode and
 	;FourWayPlay. A new play mode starts the playoffs (ContinuePlayoffs / j_NewPO). Called from GameSetUp and PrintOptions
 	tst.w	d7
@@ -560,7 +560,7 @@ GameSetUp_3	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its rang
 	cmp.w	#4,d7
 	beq.w	j_NewPO
 	rts
-WrapOption	;iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from GameSetUp_3
+WrapOption	;iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from ChangeOption
 	add.w	d2,d3
 	cmp.w	d5,d3
 	bge.w	.0
@@ -571,20 +571,20 @@ WrapOption	;iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from GameSetUp_3
 	blt.w	rtsSetup
 	move.w	d5,d3
 	rts
-PrintOptions	;ps: limit each option (GameSetUp_3 with d2 = 0) and print the lines shown (GameSetUp_4), the scroll marks (PrintScrollMarks)
+PrintOptions	;ps: limit each option (ChangeOption with d2 = 0) and print the lines shown (PrintOptionValue), the scroll marks (PrintScrollMarks)
 	;the team bitmaps (DrawMatchupBitmaps) and, unless a player card is up, reset the card timer (ResetCardTimer). Called from FixModeOptions
 	move.w	d7,d6
 	moveq	#-2,d7
 .loop
 	addq.w	#2,d7
 	clr.w	d2
-	bsr.w	GameSetUp_3
+	bsr.w	ChangeOption
 	movem.l	d7,-(sp)
 	asr.w	#1,d7
 	cmp.w	(setupfirstline).w,d7
 	movem.l	(sp)+,d7
 	blt.w	.0
-	bsr.w	GameSetUp_4
+	bsr.w	PrintOptionValue
 .0
 	cmp.w	#$10,d7
 	bne.s	.loop
@@ -596,7 +596,7 @@ PrintOptions	;ps: limit each option (GameSetUp_3 with d2 = 0) and print the line
 	jsr	(ResetCardTimer).l
 .x
 	rts
-GameSetUp_4	;print the value of option d7 at x $11 on its line (past row $1B: nothing). Team 1 / 2 go to PrintOptTeamName Per. Length in
+PrintOptionValue	;print the value of option d7 at x $11 on its line (past row $1B: nothing). Team 1 / 2 go to PrintOptTeamName Per. Length in
 	;Shootout prints 'N/A'; Players with FourWayPlay uses the second list (+$B0). Called from PrintOptions
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),$11,$10
@@ -656,7 +656,7 @@ ScrollUpTxt	String	'{'	;Scroll marks for PrintScrollMarks
 ScrollDownTxt	String	'}'
 ScrollClearTxt	String	' '
 PrintOptTeamName	;psdtp: print team name d3 of option d7 (TeamList city; 'New York Islanders' / 'New York Rangers' for teams $D / $E).
-	;GameSetUp_4
+	;PrintOptionValue
 	move.w	(printx).w,-(sp)
 	movea.l	#BlankValueTxt,a1
 	jsr	(print).l
@@ -867,7 +867,7 @@ setoptions	;options screen display: build the game setup screen only: vblank
 	st	(tmstruct).w
 	st	(AwShots).w
 	rts
-GameSetUp_2	;wait up to $5460 frames (6 minutes) for a press on any pad (4 with FourWayPlay); return d1 = the presses, 0 on timeout. C does not return: it sets
+ReadSetupPads	;wait up to $5460 frames (6 minutes) for a press on any pad (4 with FourWayPlay); return d1 = the presses, 0 on timeout. C does not return: it sets
 	;setupcardflags bit 5 (next player card sooner). When only one logo is shown (after a player card) redraws the team blocks. For the first $E10
 	;frames of the wait, and while a card is up, runs the player cards (PlayerCardTimer), else resets their timer (ResetCardTimer). Called from
 	;GameSetUp
@@ -997,7 +997,7 @@ LoadSetupTiles	;and code. load the TeamBitmaps+8 tiles from char 2, then again r
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$03412567,$89ABCDEF	;remap table (/ move.l / dc.b)
 	rts
-UpdateBothTeamDisplays	;An empty routine, called from GameSetUp_2. An unused rts follows
+UpdateBothTeamDisplays	;An empty routine, called from ReadSetupPads. An unused rts follows
 	rts
 	rts
 EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear both logo flags (bits 6 / 7) and erase the card: its logo
@@ -1042,7 +1042,7 @@ EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear bo
 	movem.l	(sp)+,d0-d7
 	rts
 DrawHomeBlock	;Draw the home team block: the logo box and the HomeTeam logo (logoteam) at x $19, y 6. setupcardflags bit 2
-	;home drawn, bit 6: home logo shown. Called from GameSetUp and GameSetUp_2
+	;home drawn, bit 6: home logo shown. Called from GameSetUp and ReadSetupPads
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	EraseCard
 	bset	#2,(setupcardflags).w
@@ -1062,7 +1062,7 @@ DrawHomeBlock	;Draw the home team block: the logo box and the HomeTeam logo (log
 	String	-TXMAP1,0,0	;x3
 	move.w	#$19,(printx).w
 	bra.w	DrawTeamLogo
-DrawVisBlock	;The same for the visitors: logo box, logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
+DrawVisBlock	;The same for the visitors: logo box, logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and ReadSetupPads
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	EraseCard
 	bset	#3,(setupcardflags).w
@@ -1162,14 +1162,14 @@ DrawLogoBox	;Draw the LogoBoxMap box at printx, y 5 (sflags6 bit 0 set). Branche
 	jsr	(dobitmap).l
 	bclr	#0,(sflags6).w
 	rts
-ResetCardTimer	;Reset the player card timer cardtimer to $AA ($53 if C was pressed). Called from GameSetUp_2, PrintOptions and PlayerCardTimer
+ResetCardTimer	;Reset the player card timer cardtimer to $AA ($53 if C was pressed). Called from ReadSetupPads, PrintOptions and PlayerCardTimer
 	move.w	#$AA,(cardtimer).w
 	btst	#5,(setupcardflags).w
 	beq.w	.x
 	move.w	#$53,(cardtimer).w
 .x
 	rts
-PlayerCardTimer	;Player cards, called each frame from GameSetUp_2 in the first minute of its wait. When carddelay runs out set setupcardflags
+PlayerCardTimer	;Player cards, called each frame from ReadSetupPads in the first minute of its wait. When carddelay runs out set setupcardflags
 	;bit 0; then count cardtimer down (C skips $50); at $52 switch sides (bit 1), forget the logos and draw the next card (PlayerCardScreen); below 0
 	;restart the timer (ResetCardTimer)
 	subq.w	#1,(carddelay).w

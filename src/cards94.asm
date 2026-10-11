@@ -21,7 +21,7 @@ wallcollduringcheck	;during a check, a skater a2 (not a goalie) near the wall: t
 	addi.w	#$17,(wcradiusy).l	;add $17 to BD24
 	movem.l	a0-a6,-(sp)
 	exg	a2,a3	;swap a2 and a3
-	jsr	(checkcornercoll94).l
+	jsr	(checkcornercoll).l
 	exg	a2,a3	;swap a2 and a3
 	movem.l	(sp)+,a0-a6
 	movem.l	(sp)+,d0-d7

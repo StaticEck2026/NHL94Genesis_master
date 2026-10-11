@@ -34,7 +34,7 @@ defmenuoptions	;default options: Regular Season, One - Home, MTL, LA, 10 Minutes
 	dc.w	1	;Line Changes
 ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue playoffs
 	;read the playoff state back from the saved bits at pwddatabuffer, rebuild the tree and set OptNOP from pojoy (
-	;= 7 - OptNOP; 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, GameSetUp_3)
+	;= 7 - OptNOP; 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, ChangeOption)
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	ReadPassBits
@@ -1561,13 +1561,13 @@ PlayerPositionText	String	'LD'	;position names for the line slots. Used by Displ
 	String	'C'
 	String	'RW'
 
-PerLabels	String	'1',$12	;text list for periods; ' F' is the final. Used by PrintScores1, NewTicker3
+PerLabels	String	'1',$12	;text list for periods; ' F' is the final. Used by printscores1, NewTicker3
 	String	'2',$13
 	String	'3',$14
 	String	'OT'
 	String	' F'
 
-PenShotPenalties2	String	'1',$12	;the same with a blank last entry. Used by PrintScores1
+PenShotPenalties2	String	'1',$12	;the same with a blank last entry. Used by printscores1
 	String	'2',$13
 	String	'3',$14
 	String	'OT'
