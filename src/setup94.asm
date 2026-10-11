@@ -6,12 +6,12 @@
 ;	ExitToOpening, Opening, Opening2, PlayoffScreen and its helpers, PlayoffScreenText, then the 94-only text player
 ;	(StartScoutText, ScoutTextPlayer, ScoutTextNextLine) that ScoutingReport (hockey94_07) uses. EASportsScreen (attract94) follows at $17A18.
 ;	There is no 93 ScoutingReport (hockey93_07) here: the listing has no ScoutingReport label.
-;	Transcribed from lst/nhl94.bin.lst lines 53022-54525. Global names are the IDA names, or the 93 name where IDA has an auto
-;	name or where the routine is the 93 one (setplayercolors, IDA SetTeamColors). Local labels are the IDA local names (_x -> .x) or the 93
-;	local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
-;	IDA gaps written from the retail bytes: each DecompressGraphicsWithCallback is followed by its 8 byte remap table (IDA shows
-;	only the second long, as or.l d4,-$3211(a3)); the PlayoffScreen printz / printz2 strings (IDA ori.b / andi.b / cmp.b, and
-;	the 'Press [ or ] to page' text as code) and the instructions IDA hid in them are written out.
+;Transcribed from lst/nhl94.bin.lst lines 53022-54525. Global names are the or the 93 name where an auto
+;name or where the routine is the 93 one (setplayercolors). Local labels are the names (_x ->.x) or the 93
+;local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
+;written from the retail bytes: each DecompressGraphicsWithCallback is followed by its 8 byte remap table (
+;only the second long, as or.l d4,-$3211(a3)); the PlayoffScreen printz / printz2 strings (/ andi.b / cmp.b, and
+;the 'Press [ or ] to page' text as code) and the instructions in them are written out.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Bits: disflags 0 dfok, 1 df32c, 2 dfng; sflags 0 sfpz, 1 sfpj, 7 sfhor; gmode 1 gmdir.
@@ -68,11 +68,11 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	move.w	d4,(smallfontchars).w	;93 smallfontchars
 	movea.l	#SmallFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
-	dc.l	$43434567,$89ABCDEF	;remap table (IDA: or.l d4,-$3211(a3); IDA dropped the first long)
+	dc.l	$43434567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
 	move.w	d4,(BigFontChars).w	;93 BigFontChars
 	movea.l	#BigFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
-	dc.l	$71234567,$89ABCDEF	;remap table (IDA: or.l d4,-$3211(a3); IDA dropped the first long)
+	dc.l	$71234567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
 	bsr.w	setupTeamBlocksMap
 	move.w	d4,(ExtraChars).w
 	btst	#gmdir,(gmode).w	;gmdir: flip pfgoal for the 12 players
@@ -118,7 +118,7 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	move	#$2300,sr
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-setupice_highlight	;93 name. Rebuild the rink sprites after a highlight replay without reloading tiles, then fade in. Uses the
+setupice_highlight	;Rebuild the rink sprites after a highlight replay without reloading tiles, then fade in. Uses the
 	;sprite char start saved by setupice in spritechars. Called from StartHL2 (penalty94_2)
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	forceblack
@@ -177,7 +177,7 @@ setupice_highlight	;93 name. Rebuild the rink sprites after a highlight replay w
 	move	#$2300,sr
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-setupIceRinkMap	;93 name. Copy the ice rink palettes (pal 0&1, 16 longs) to palfadenew. Called from setupice, setupice_highlight and the stats screens
+setupIceRinkMap	;Copy the ice rink palettes (pal 0&1, 16 longs) to palfadenew. Called from setupice, setupice_highlight and the stats screens
 	movea.l	#Rinktilelist,a0
 	adda.l	(a0),a0
 	moveq	#$F,d0
@@ -186,11 +186,11 @@ setupIceRinkMap	;93 name. Copy the ice rink palettes (pal 0&1, 16 longs) to palf
 	move.l	(a0)+,(a1)+
 	dbf	d0,.ipal
 	rts
-setupEASNmap	;93 name. Decompress the easn logo tiles (EASNmap+8, 93 name) to vram at EASNcset (93 name). Called from setupice, setupice_highlight and hockey94_02
+setupEASNmap	;Decompress the easn logo tiles (EASNmap+8, 93 name) to vram at EASNcset. Called from setupice, setupice_highlight and hockey94_02
 	move.w	(EASNcset).w,d4
 	movea.l	#EASNmap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
-	dc.l	$71234567,$89ABCDEF	;remap table (IDA: or.l d4,-$3211(a3); IDA dropped the first long)
+	dc.l	$71234567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
 	rts
 ReloadEnergyBarTiles	;94 only. Reload the energy bar tiles (EnergyBarMap+8) at energybarchars. Called from the replay code (hockey94_02) and ReloadRinkGraphics
 	move.w	(energybarchars).w,d4
@@ -216,7 +216,7 @@ ReloadFaceOffMap	;94 only. Reload the FaceOffMap+8 tiles at ExtraChars. Called f
 	move.w	(ExtraChars).w,d4
 	movea.l	#FaceOffMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-setupTeamBlocksMap	;93 name. Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C (93 $30) and copy the home and visitor team
+setupTeamBlocksMap	;Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C (93 $30) and copy the home and visitor team
 	;blocks to vram at basetileoffset and basetileoffset+$16. d4 = 1st vram char; return d4 = basetileoffset+$2C. Called from setupice
 	move.w	d4,(basetileoffset).w
 	addi.w	#$2C,d4
@@ -239,7 +239,7 @@ setupTeamBlocksMap	;93 name. Load the TeamBlocks map tiles (Teamblocksmap) at d4
 	move.w	(basetileoffset).w,d4
 	addi.w	#$2C,d4
 	rts
-CopyTeamBlockMapData	;93 name. Copy one team's 22 block chars (94; 93 24) from the loaded tile set to vram at d1 by vram dma
+CopyTeamBlockMapData	;Copy one team's 22 block chars (94; 93 24) from the loaded tile set to vram at d1 by vram dma
 	;(DoDMA_nd2), and store their map words at (a1)+. a0 = map data, d0 = team, d1 = vram address
 	mulu.w	#$2C,d0
 	lea	4(a0,d0.w),a0
@@ -663,7 +663,7 @@ clearTeamStats	;clear both team structs (2 x tmsize) but keep the first $1A0 byt
 	move.w	(sp)+,(tmstruct+tmgoalie).w
 	st	(tmstruct+tmpdst+$34).w
 	st	(AwShots+tmpdst+$34).w
-setteams	;93 name. Use hometeam/visteam to set team structures (InitTeamSructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps (attract94)
+setteams	;Use hometeam/visteam to set team structures (InitTeamSructure for each). Falls in from clearTeamStats, also called from DrawMatchupBitmaps (attract94)
 	movem.l	d0/a0-a2,-(sp)
 	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(HomeTeam).w,d0
@@ -675,7 +675,7 @@ setteams	;93 name. Use hometeam/visteam to set team structures (InitTeamSructure
 	bsr.w	InitTeamSructure
 	movem.l	(sp)+,d0/a0-a2
 	rts
-InitTeamSructure	;93 name. Set up team struct a2 for team d0: store the team number at $28, the team data address (TeamList)
+InitTeamSructure	;Set up team struct a2 for team d0: store the team number at $28, the team data address (TeamList)
 	;at $1E (tmdata), and copy the line sets to $16A (94: two layouts by OptLine)
 	move.w	d0,Xvel(a2)
 	movea.w	#$30E,a0	;TeamList
@@ -704,7 +704,7 @@ InitTeamSructure	;93 name. Set up team struct a2 for team d0: store the team num
 	move.l	(a0)+,(a1)+
 	dbf	d0,.copy
 	rts
-setplayercolors	;IDA: SetTeamColors. Copy in correct color data for each team: .team for the home team, then falls in for the visitors.
+setplayercolors	;Copy in correct color data for each team:.team for the home team, then falls in for the visitors.
 	;Called from setupice, setupice_highlight, StartHL2 and ReloadRinkGraphics
 	clr.w	d1
 	movea.w	#(tmstruct-M68K_RAM),a0
@@ -740,7 +740,7 @@ PeriodOver	;what to do if period over. Branched to from puckfaceoff (logic94_4) 
 	move.w	#4,(gsp).w
 .0
 	bsr.w	forceblack
-IntermissionStart	;93 name; 93 IDA _sp. PeriodOver tail: reset the clock, song $79, ticker scores, playoff stats at the end
+IntermissionStart	;93 name; 93 PeriodOver tail: reset the clock, song $79, ticker scores, playoff stats at the end
 	;(AddPOStats), Intermission, then StartPer or GameOver. Also jumped to from StartGame (hockey94_01)
 	jsr	(ResetClock).w	;hockey94_01
 	move.w	d0,-(sp)
@@ -766,7 +766,7 @@ IntermissionStart	;93 name; 93 IDA _sp. PeriodOver tail: reset the clock, song $
 	cmpi.w	#4,(gsp).w
 	beq.w	GameOver
 	jmp	(StartPer).w	;hockey94_01
-GameOver	;IDA name (92 name). EncodePW (save the password), then in playoff mode DisplayTeamStats (the playoff stats) and the playoff screen. Falls into ExitToOpening
+GameOver	;EncodePW (save the password), then in playoff mode DisplayTeamStats (the playoff stats) and the playoff screen. Falls into ExitToOpening
 	bsr.w	EncodePW
 	tst.w	(OptPlayMode).w
 	beq.w	.po
@@ -774,7 +774,7 @@ GameOver	;IDA name (92 name). EncodePW (save the password), then in playoff mode
 	jsr	(DisplayTeamStats).l
 .po
 	bsr.w	PlayoffScreen
-ExitToOpening	;93 name. Song $78, then restart at Opening2. Also jumped to from demoread (hockey94_01) and NextShooter
+ExitToOpening	;Song $78, then restart at Opening2. Also jumped to from demoread (hockey94_01) and NextShooter
 	move.w	#SngTitle,-(sp)
 	bsr.w	song
 	bra.w	Opening2
@@ -792,7 +792,7 @@ Opening2	;reset the stack and clear the variables, then options (GameSetUp, User
 	blt.s	.0
 	jsr	(GameSetUp).l
 	jsr	(UserNameEntry).l
-Opening3	bsr.w	PlayoffScreen	;92 name
+Opening3	bsr.w	PlayoffScreen
 	btst	#0,(gmode2).w
 	bne.w	.1
 	jsr	(ScoutingReport).l	;92 Opening4 (not a label here: 94 skips it in shootouts, .1 below is local to Opening3)
@@ -816,13 +816,13 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	setvram
 	bsr.w	printz
 	String	-TXMAP1,0,0
-	move.l	#$80,d0		;IDA hid this in the string (ori.b x3)
+	move.l	#$80,d0		;in the string (ori.b x3)
 	moveq	#$1C,d1
 	move.w	#$7FF,d2
 	bsr.w	eraser
 	bsr.w	printz
 	String	-TXMAP3,0,0
-	moveq	#$28,d0		;IDA hid this in the string (ori.b x2)
+	moveq	#$28,d0		;in the string (ori.b x2)
 	moveq	#2,d1
 	move.w	#$7FF,d2
 	bsr.w	eraser
@@ -833,7 +833,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	DoDMA_clearCallbackPointer
 	bsr.w	printz
 	String	-(TXPAL3+TXMAP2),0,0
-	movea.l	#ScoutMap,a0	;IDA hid this in the string (ori.b x3)
+	movea.l	#ScoutMap,a0	;in the string (ori.b x3)
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -870,7 +870,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 .top
 	bsr.w	printz
 	String	-TXMAP1,0,0
-	move.b	(a0)+,(printx+1).w	;IDA hid these three in the string (ori.b x2, cmp.b x2)
+	move.b	(a0)+,(printx+1).w	;these three in the string (ori.b x2, cmp.b x2)
 	move.b	(a0)+,(printy+1).w
 	clr.w	d1
 	move.b	(a1)+,d1
@@ -882,14 +882,14 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 .top2
 	bsr.w	printz
 	String	-TXMAP1,0,2
-	move.b	(a0)+,(printx+1).w	;IDA hid these two in the string (ori.b / andi.b / cmp.b)
+	move.b	(a0)+,(printx+1).w	;these two in the string (ori.b / andi.b / cmp.b)
 	clr.w	d0
 	move.b	(a0)+,d0
 	bsr.w	DrawPlayoffBracket
 	dbf	d4,.top2
 	bsr.w	printz
 	String	-(TXPAL1+TXMAP1),0,0
-	cmpi.w	#7,(bosgames).w	;IDA hid this in the string (ori.b x3). Best of 7
+	cmpi.w	#7,(bosgames).w	;in the string (ori.b x3). Best of 7
 	beq.w	.noscr
 	clr.w	d4
 	move.b	(a0)+,d4
@@ -903,7 +903,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	dbf	d4,.top3
 .noscr
 	bsr.w	printsmallz
-	String	TXS_ALL,1,1,$41,$1A	;IDA: ori.b / bchg / move.b
+	String	CC_SetMapAndPosition,1,1,$41,$1A	;/ bchg / move.b
 	lea	PlayoffScreenText(pc),a1
 	move.w	(gamelevel).w,d0
 	bsr.w	AdvanceStringPtr
@@ -914,9 +914,9 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	tst.w	(gamelevel).w
 	beq.w	.nopage
 	bsr.w	printz
-	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;IDA decoded the text as code
+	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;the text as code
 .nopage
-	move.w	#$18,(palcount).w	;IDA hid this after the string (bcs.w / ori.b)
+	move.w	#$18,(palcount).w	;after the string (bcs.w / ori.b)
 	move.w	#SngEOG,-(sp)
 	bsr.w	song
 	clr.w	d0
@@ -930,7 +930,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	jsr	(DrawPlayoffSprite).l	;94 only
 	bsr.w	HandlePlayoffInput
 	bra.s	.input
-HandlePlayoffInput	;93 name. Read both pads: start leaves PlayoffScreen (PlayoffScreenExit), right/left set the scroll step, then falls into UpdatePlayoffScroll
+HandlePlayoffInput	;Read both pads: start leaves PlayoffScreen (PlayoffScreenExit), right/left set the scroll step, then falls into UpdatePlayoffScroll
 	bsr.w	ReadJoy1
 	move.w	d3,-(sp)
 	bsr.w	ReadJoy2
@@ -944,7 +944,7 @@ HandlePlayoffInput	;93 name. Read both pads: start leaves PlayoffScreen (Playoff
 	btst	#2,d3
 	beq.w	UpdatePlayoffScroll
 	move.w	#2,(PlayerScrollCtr).w
-UpdatePlayoffScroll	;93 name. Move the tree one step (PlayerScrollCtr) and stop on a page boundary ($70). The position is
+UpdatePlayoffScroll	;Move the tree one step (PlayerScrollCtr) and stop on a page boundary ($70). The position is
 	;DispAttribCtr; playoffspritex is the sprite x offset while it is on screen
 	move.w	(PlayerScrollCtr).w,d0
 	beq.w	rtss2
@@ -977,10 +977,10 @@ UpdatePlayoffScroll	;93 name. Move the tree one step (PlayerScrollCtr) and stop 
 	bne.w	rtss2
 	clr.w	(PlayerScrollCtr).w
 	rts
-PlayoffScreenExit	;93 name. Drop HandlePlayoffInput's return address and return from PlayoffScreen
+PlayoffScreenExit	;Drop HandlePlayoffInput's return address and return from PlayoffScreen
 	addq.w	#4,sp
 	rts
-PlayoffScreen_waitvsync	;93 name. Each time palcount runs out, eor the color word at palfadenew+$42 with $EE and restart palcount at $18; then wait for the next vblank
+PlayoffScreen_waitvsync	;Each time palcount runs out, eor the color word at palfadenew+$42 with $EE and restart palcount at $18; then wait for the next vblank
 	tst.w	(palcount).w
 	bpl.w	.wait
 	eori.w	#$EE,(palfadenew+$42).w
@@ -991,7 +991,7 @@ PlayoffScreen_waitvsync	;93 name. Each time palcount runs out, eor the color wor
 	beq.s	.wait
 	move.w	d0,(oldvcount).w
 	rts
-FormatScore	;93 name. Print best of 7 wins "t-b" for game struct a2 at printx/printy
+FormatScore	;Print best of 7 wins "t-b" for game struct a2 at printx/printy
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	#6,(a1)+
 	move.w	4(a2),d0
@@ -1004,7 +1004,7 @@ FormatScore	;93 name. Print best of 7 wins "t-b" for game struct a2 at printx/pr
 	clr.b	(a1)+
 	movea.w	#(mesarea-M68K_RAM),a1
 	bra.w	print
-DrawPlayoffBracket	;93 name. Draw tree arrow d0 from the arrows map (Arrowsmap) at printx/printy
+DrawPlayoffBracket	;Draw tree arrow d0 from the arrows map (Arrowsmap) at printx/printy
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.l	#Arrowsmap,a0
 	movea.l	a0,a1
@@ -1019,7 +1019,7 @@ DrawPlayoffBracket	;93 name. Draw tree arrow d0 from the arrows map (Arrowsmap) 
 	bsr.w	dobitmap
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-DrawTeamBlocks	;93 name. Draw team block d1 (team*2) from the TeamBlocks map (Teamblocksmap) at printx/printy; the user's team
+DrawTeamBlocks	;Draw team block d1 (team*2) from the TeamBlocks map (Teamblocksmap) at printx/printy; the user's team
 	;(potreeteam entry of potree) is highlighted (printa $6000)
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.w	#(potree-M68K_RAM),a0
@@ -1041,7 +1041,7 @@ DrawTeamBlocks	;93 name. Draw team block d1 (team*2) from the TeamBlocks map (Te
 	bsr.w	dobitmap
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-PlayoffScreenDataTable	;93 name; 93 IDA left it undecoded. The PlayoffScreen vblank handler (vbint): dma the sprite table, write
+PlayoffScreenDataTable	;93 name; 93 it undecoded. The PlayoffScreen vblank handler (vbint): dma the sprite table, write
 	;$FEA0+DispAttribCtr to the hscroll, cramfade. Always vcount+1, p_music_vblank, rte
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w
@@ -1064,13 +1064,13 @@ PlayoffScreenDataTable	;93 name; 93 IDA left it undecoded. The PlayoffScreen vbl
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
-PlayoffScreenText	;93 name. Round titles by gamelevel, printed with printsmall
+PlayoffScreenText	;Round titles by gamelevel, printed with printsmall
 	String	'Playoffs'
 	String	'Quarterfinals'
 	String	'Semifinals'
 	String	'Finals'
 	String	'Champions'
-InitScoutingDisplay	;94 only. Start the text player ScoutTextPlayer: VertLineScrolling = -1, PlayerScrollCtr = -1, clear SelectedPlayerIdx / typedelay; return a0 = TestList. Called from (was: StartScoutText)
+InitScoutingDisplay	;94 only. Start the text player ScoutTextPlayer: VertLineScrolling = -1, PlayerScrollCtr = -1, clear SelectedPlayerIdx / typedelay; return a0 = TestList. Called from
 	;ScoutingReport
 	move.w	#$FFFF,(VertLineScrolling).w
 	st	(PlayerScrollCtr).w
@@ -1078,7 +1078,7 @@ InitScoutingDisplay	;94 only. Start the text player ScoutTextPlayer: VertLineScr
 	clr.w	(typedelay).w
 	movea.w	#(TestList-M68K_RAM),a0
 	rts
-UpdateScoutingDisplay	;94 only. Text player for ScoutingReport: prints the ScoutTextScript script word by word with a typing delay (typedelay, longer (was: ScoutTextPlayer)
+UpdateScoutingDisplay	;94 only. Text player for ScoutingReport: prints the ScoutTextScript script word by word with a typing delay (typedelay, longer
 	;after , and .). $D ends a line; special characters ( _ + $ { } [ ] < > | \ @ # % = * ^ ; ) insert team data through the $FCxxx-$FExxx
 	;routines (GetTeamNickname / GetTeamArena for HmShots / AwShots). Line breaks scroll the text box (ScoutTextNextLine). Called from ScoutingReport
 	cmpi.w	#$1000,(typedelay).w
@@ -1290,7 +1290,7 @@ UpdateScoutingDisplay	;94 only. Text player for ScoutingReport: prints the Scout
 	bne.w	.loop4
 	subq.w	#1,d1
 	bra.w	.loop4
-ScrollDisplayUp	;94 only. Next text line for ScoutTextPlayer: VertLineScrolling + 1; at 7 lines, scroll the 8 rows up by vram dma (DoDMA_nd2) (was: ScoutTextNextLine)
+ScrollDisplayUp	;94 only. Next text line for ScoutTextPlayer: VertLineScrolling + 1; at 7 lines, scroll the 8 rows up by vram dma (DoDMA_nd2)
 	clr.w	(DispAttribCtr).w
 	addq.w	#1,(VertLineScrolling).w
 	cmpi.w	#7,(VertLineScrolling).l

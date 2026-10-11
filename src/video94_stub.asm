@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $010EE0-$011F2B, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 vb2 = $15E4C		;#x at $10F96. vblank handler
 play_sfx_or_music_track = $1A294		;jsr / jmp (x).l at $11144
 rtss2 = $15464			;bsr.w / Bcc.w at $10FBA

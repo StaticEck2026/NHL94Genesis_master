@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0FD618-$0FE1D7, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 ExitAttributeScreen2 = $9CD8	;jsr / jmp (x).l at $FDB08
 FormatPlayerName = $18B26	;jsr / jmp (x).l at $FD8A4
 FormatPlayerNameWithAttrib = $18AE8	;jsr / jmp (x).l at $FD8F0

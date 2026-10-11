@@ -2,14 +2,14 @@
 ;	NHL 94 (retail) segment $B0E8-$C70F
 ;	92 Logic.Asm part 1, as 93 logic93_1.asm: controller input for skaters (doinput ... setpads) and
 ;	check4bench. assbench (logic94_2) follows at $C710.
-;	Transcribed from lst/nhl94.bin.lst lines 35886-37885. Global names are the IDA names, which are the
-;	92 / 93 names here, except SetLCmode2, setpads and restorepl (IDA restorep1).
-;	Local labels are the IDA local names (_x -> .x, loop -> .loop, even -> .even) or the IDA address
+;Transcribed from lst/nhl94.bin.lst lines 35886-37885. Global names are the which are the
+;92 / 93 names here, except SetLCmode2, setpads and restorepl.
+;Local labels are the names (_x ->.x, loop ->.loop, even ->.even) or the
 ;	(doinput_cbut -> .B470, glb_B8AA -> .0).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself).
-;	SortCords offsets (93 names): Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, impact $32, position $34,
+;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, impact $32, position $34
 ;	assnum $36, asslist $38, SCnum $52, facedir $54, SPA $58, SPAnum $5A, nopuck $5E, pflags $62, pflags2 $63.
 
 
@@ -618,7 +618,7 @@ SetLCmode
 .0
 	bclr	#3,(sflags).w
 	bset	#3,pflags2(a3)
-SetLCmode2	;93 name; 93 IDA showfaceoff. a2 = team struct. Draw the line change box
+SetLCmode2	;93 name; 93 a2 = team struct. Draw the line change box
 	bsr.w	setlccords
 	cmpi.w	#$F,(printy).w
 	blt.w	.box
@@ -674,7 +674,7 @@ setlccords
 	eori.w	#$16,d0
 .noflip
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$16,0,0		;IDA hid this, add.w and moveq in ori.b / ori.b / cmp.b
+	String	-(TXPRI+TXMAP1),$16,0,0		;add.w and moveq in ori.b / ori.b / cmp.b
 	add.w	d0,(printy).w
 	moveq	#2,d0
 	bsr.w	getlchoice
@@ -919,7 +919,7 @@ dopass
 	ext.w	d0	;sign extend d0 byte to d0 word
 	asl.w	#3,d0	;mult d0 by 8 (700 decimal max)
 	muls.w	d0,d0	;square d0 = max is 490000 decimal
-	cmp.l	#$10000,d0		;compare to 65536 decimal (IDA #256^2: power, SNASM ^ is xor)
+	cmp.l	#$10000,d0		;compare to 65536 decimal (#256^2: power, SNASM ^ is xor)
 	bhi.w	.next	;if higher branch to next
 	muls.w	d1,d1	;square d1 (dX)
 	muls.w	d2,d2	;square d2 (dY)
@@ -1226,7 +1226,7 @@ setc2player
 .ex
 	rts
 ; d1 = old player
-restorepl	;IDA: restorep1 (93 restorepl)
+restorepl	;(93 restorepl)
 	movea.w	#(SortCords-M68K_RAM),a0
 	tst.w	d1
 	blt.w	.spd
@@ -1254,7 +1254,7 @@ restorepl	;IDA: restorep1 (93 restorepl)
 	bne.w	.chkgoalie
 	btst	#0,(gmode2).w
 	beq.w	.3
-.chkgoalie	;IDA: chkgoalie. Local: only restorepl uses it, and a global here would split restorepl
+.chkgoalie	;Local: only restorepl uses it, and a global here would split restorepl
 	tst.w	$34(a0,d1.w)
 	bne.w	.3
 	btst	#6,$62(a0,d1.w)	;check if home or away
@@ -1283,7 +1283,7 @@ Findhittype
 	andi.w	#7,d0
 	btst	#3,attribute(a3)	;attribute bit 3
 	beq.w	.1
-	btst	d0,#$F0			;%11110000: beq forehand, bne backhand. IDA cannot show btst Dn,#imm
+	btst	d0,#$F0			;%11110000: beq forehand, bne backhand. show btst Dn,#imm
 	rts
 .1	btst	d0,#$1E	;%00011110
 	rts
@@ -1656,7 +1656,7 @@ shotdiradj
 ; d3 = post X position
 ; d4 = goalline
 ;
-CalcAngleOffset	;(was: shotdirmath)
+CalcAngleOffset
 	sub.w	(puckx).w,d3	;sub puckx from post X
 	sub.w	(pucky).w,d4	;sub pucky from goalline
 	muls.w	d0,d4	;mult d0 with d4
@@ -1665,7 +1665,7 @@ CalcAngleOffset	;(was: shotdirmath)
 	divs.w	d2,d4	;divide d2 into d4
 	rts
 ; copy info into pad cont so graphics know which player/number
-setpads	;Put SCnum of a3 in the d4 nibble of PadControlBits (93 name); d4 = -2 puck
+setpads	;Put SCnum of a3 in the d4 nibble of PadControlBits ; d4 = -2 puck
 	;carrier, 0 / 2 pads, 4 replay target. Falls into rtss3
 	movem.l	d0-d1,-(sp)
 	moveq	#2,d0

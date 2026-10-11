@@ -3,15 +3,15 @@
 ;	92 Video.asm first half, as 93 video93_1.asm: VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAlist, SetScroll2,
 ;	setvideo and the sprite builders it calls (updatescroll, showref, checkfo, showzam, SetSframe, showcrowd). showclock
 ;	(video94_2) follows at $162FE.
-;	Transcribed from lst/nhl94.bin.lst lines 51765-52286. Global names are the IDA names, or the 93 name where IDA has an
-;	auto name. The IDA routines 93 writes as locals are
-;	locals: showzam .ftab, showcrowd .pb and .sc. Local labels are the IDA local names
-;	(_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;Transcribed from lst/nhl94.bin.lst lines 51765-52286. Global names are the or the 93 name where an
+;auto name. The 93 writes as locals are
+;locals: showzam.ftab, showcrowd.pb and.sc. Local labels are the names
+;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Bits: disflags 0 dfok, 2 dfng, 3 dfclock, 4 face off; sflags 0 sfpz, 7 sfhor; sflags2 1 sf2refref.
 
-VBlank	;93 name; 93 IDA VBlank_org. Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
+VBlank	;93 name; 93 Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
 	;dfok is set, cramfade, then the game clock. 94: gmode2 bit 2 keeps the clock running after the whistle, and with gmode2 bit 1
 	;(penalty shot / shootout) shootoutclock counts down instead (shootoutjiffy jiffies, not while gmode2 bit 7 is set)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -59,7 +59,7 @@ VBlank	;93 name; 93 IDA VBlank_org. Main vblank code for game play (vbint target
 	bne.s	.c
 	subq.w	#1,(shootoutclock).w
 	bra.s	.c
-vb2	;93 name. Vblank used for palfades only, no dmas (vbint target). No rte here: falls into IRQ7
+vb2	;Vblank used for palfades only, no dmas (vbint target). No rte here: falls into IRQ7
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w
 	bne.w	.nograph
@@ -70,14 +70,14 @@ vb2	;93 name. Vblank used for palfades only, no dmas (vbint target). No rte here
 	movem.l	(sp)+,d0-d7/a0-a6
 IRQ7	;rte only. vb2 falls in; the vector table ($60, $64, ...) points here
 	rte
-DumpSprites	;93 name. Transfer (by dma) scroll stuff, sprite table, vram data in dmalist. Called from VBlank when dfok was set. Falls into DumpSprites2
+DumpSprites	;Transfer (by dma) scroll stuff, sprite table, vram data in dmalist. Called from VBlank when dfok was set. Falls into DumpSprites2
 	bsr.w	SetScroll2
-DumpSprites2	;93 name. Transfer sprite table, then the dma list. Falls into DoDMAlist. Also called from VBlank_SetOptions (attract94)
+DumpSprites2	;Transfer sprite table, then the dma list. Falls into DoDMAlist. Also called from VBlank_SetOptions (attract94)
 	movea.w	#(Satt-M68K_RAM),a0
 	move.w	(Sattsize).w,d0	;93 Sattsize: words
 	move.w	(VSPRITES).w,d1
 	bsr.w	DoDMA
-DoDMAList	;IDA name (93 DoDMAList; symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
+DoDMAList	;(93 DoDMAList; symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
 	movea.l	(DMAlistend).w,a6
 	cmpa.l	#DMAList,a6
 	beq.w	rtss2	;list empty
@@ -89,7 +89,7 @@ DoDMAList	;IDA name (93 DoDMAList; symbols are case-insensitive). Transfer data 
 	cmpa.l	#DMAList,a6
 	bne.s	.0
 	rts
-SetScroll2	;93 name; 93 IDA DoScroller. Write Hscroll / Vscroll to the vdp. Called from DumpSprites
+SetScroll2	;93 name; 93 Write Hscroll / Vscroll to the vdp. Called from DumpSprites
 	move.w	(VSCRLPM).w,d0
 	addq.w	#2,d0
 	bsr.w	Vmaddr
@@ -115,7 +115,7 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 	jsr	(AddArenaAnimSprite).l	;94 only
 	bsr.w	showcrowd
 	bsr.w	showref
-	jsr	(Crowd_Noise).l	;94 only (IDA Crowd_Noise?)
+	jsr	(Crowd_Noise).l	;94 only (?)
 	cmpa.w	#(Satt-M68K_RAM),a6	;no sprites: one blank sprite
 	bne.w	.n
 	clr.l	(a6)+
@@ -130,12 +130,12 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 	bset	#dfok,(disflags).w	;dfok
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-updatescroll	;IDA name (92 name; 93 show_rink). Using hpos and vpos set scroll cords; queue rink map rows on the dma list (a5) when vertical
+updatescroll	;(92 name; 93 show_rink). Using hpos and vpos set scroll cords; queue rink map rows on the dma list (a5) when vertical
 	;scrolling needs new rows. Called from setvideo. 94 takes the rows from Rinktilelist, or RevRinkTilelist in a reverse angle replay
 	;(sflags4 bit 4)
 	btst	#7,(sflags).w	;sfhor
 	bne.w	rtss2
-	moveq	#-$40,d0	;-192+128 (IDA #$FFFFFFC0)
+	moveq	#-$40,d0	;-192+128 (#$FFFFFFC0)
 	sub.w	(Hpos).w,d0
 	move.w	(Vpos).w,d1
 	move.w	d0,(Hscroll).w
@@ -224,7 +224,7 @@ showref	;draw ref graphics. a5 = dma list, a6 = sprite table, d6 = link counter.
 	add.w	d1,d0
 	dbf	d2,.0
 	rts
-checkfo	;check for face off sprites (93 checkfo and checkfo2; 94 has no checkfo2 label). 3 entries of fofdata2 (93 name): word frame, word flags. Called from setvideo
+checkfo	;check for face off sprites (93 checkfo and checkfo2; 94 has no checkfo2 label). 3 entries of fofdata2: word frame, word flags. Called from setvideo
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	rtss2
 	btst	#4,(disflags).w	;face off flag
@@ -356,7 +356,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	move.w	(Vpos).w,d5
 	btst	#sfhor,(sflags).w
 	beq.w	.v
-	moveq	#-$40,d4	;(IDA #$FFFFFFC0)
+	moveq	#-$40,d4	;(#$FFFFFFC0)
 	move.l	#$100,d5
 .v
 	clr.w	d0
@@ -371,7 +371,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	bsr.w	.sc
 	move.b	(crowdframe+1).w,d0
 	bra.w	.sc
-.pb	;93 .pb, IDA showcrowd_pb. d2 = count, d3 = first frame
+.pb	;93.pb, d2 = count, d3 = first frame
 	andi.w	#$F,d2
 	cmp.w	#3,d2
 	bls.w	.pb0
@@ -385,7 +385,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 .nextpb
 	dbf	d2,.pbt
 	rts
-.sc	;93 .sc, IDA showcrowd_sc. d0 = frame, 0 = none
+.sc	;93.sc, d0 = frame, 0 = none
 	ext.w	d0
 	beq.w	rtss2
 	btst	#sfhor,(sflags).w
@@ -452,12 +452,12 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 ;	92 Video.asm second half, as 93 video93_2.asm: showclock, checksso, setsortcords, setffo, uppads, FormatControllerDisplay,
 ;	RenderSmallFontChar, ButtonLabelCharTable, addframe, addframe2, find3d, updatesound and KillCrowd. setupice
 ;	(hockey94_06) follows at $169FA.
-;	Transcribed from lst/nhl94.bin.lst lines 52287-53021. Global names are the IDA names, or the 93 name where IDA has an
-;	auto name. The IDA routines 93 writes as locals are locals: showclock .char,
+;Transcribed from lst/nhl94.bin.lst lines 52287-53021. Global names are the or the 93 name where an
+;auto name. The 93 writes as locals are locals: showclock.char
 ;	checksso .ca and .tab; the 94 horizontal clock code's .digit and .digits
-;	sit inside showclock too, so the 93 body stays the local .3. Local labels are the IDA local names
-;	(_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
-;	IDA shows the two clock strings after printz as ori.b / btst; they are written with the String macro. The tables IDA
+;sit inside showclock too, so the 93 body stays the local.3. Local labels are the names
+;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
+;the two clock strings after printz as ori.b / btst; they are written with the String macro. The tables
 ;	left as dc.b (.digits, .tab, ButtonLabelCharTable) are String / dc.w / dc.b.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
@@ -473,7 +473,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	bne.w	.x
 	move.l	a1,-(sp)
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP2),$D,5		;IDA: ori.b / btst d2,d0
+	String	-(TXPRI+TXMAP2),$D,5		;/ btst d2,d0
 	move.w	(gameclock).w,d0
 	ext.l	d0
 	divu.w	#$258,d0	;tens of minutes (600 seconds)
@@ -504,7 +504,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	jsr	(.digit).l
 	movea.l	(sp)+,a1
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP3),$D,5		;IDA: ori.b / btst d2,d0
+	String	-(TXPRI+TXMAP3),$D,5		;/ btst d2,d0
 .x
 	rts
 .digit	;Print digit d0 from .digits
@@ -554,7 +554,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	swap	d0
 	tst.l	d0
 	bne.w	.0
-	moveq	#-$10,d0	;' '-'0': blank leading zero (IDA #$FFFFFFF0)
+	moveq	#-$10,d0	;' '-'0': blank leading zero (#$FFFFFFF0)
 	swap	d0
 .0
 	bsr.w	.char	;minutes tens
@@ -576,7 +576,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	add.w	(a1),d0
 	move.w	d0,(a5)+	;vram destination
 	rts
-.char	;93 .char, IDA showclock_char. d0 high word = digit, write its tile to -(a0)
+.char	;93.char, d0 high word = digit, write its tile to -(a0)
 	swap	d0
 	asl.w	#1,d0
 	move.w	$64(a1,d0.w),d0	;4+('0'*2)
@@ -610,7 +610,7 @@ checksso	;do graphics for sso structure: arrows for the players when they are of
 	movea.w	#(Joy4Struct-M68K_RAM),a0
 	adda.w	#$14,a3
 	move.w	#$349,d3
-.ca	;93 .ca, IDA checksso_ca. a0 = object, a3 = sso, d3 = first arrow frame. 94: in a shootout, with sflags2 bit 3 or in a penalty shot, no arrow for a player beyond x $A6
+.ca	;93.ca, a0 = object, a3 = sso, d3 = first arrow frame. 94: in a shootout, with sflags2 bit 3 or in a penalty shot, no arrow for a player beyond x $A6
 	tst.w	Zpos(a0)
 	bmi.w	rtss2	;not on the ice
 	st	frame(a3)
@@ -775,7 +775,7 @@ uppads	;update the gloves object and the 6 pad objects, and queue new pad labels
 	addq.w	#2,a1
 	dbf	d4,.top
 	rts
-FormatControllerDisplay	;93 name. Queue the 3 character label of a pad object. d1 = label code: bits 7-4 and 3-0 are digits ($F =
+FormatControllerDisplay	;Queue the 3 character label of a pad object. d1 = label code: bits 7-4 and 3-0 are digits ($F =
 	;blank), bits 10-8 index ButtonLabelCharTable (94: none while sflags7 bit 7 is set). a0 = pad object, a5 = dma list. Falls into
 	;RenderSmallFontChar for the last char
 	lea	ButtonLabelCharTable(pc),a4
@@ -811,7 +811,7 @@ FormatControllerDisplay	;93 name. Queue the 3 character label of a pad object. d
 .1
 	move.b	0(a4,d2.w),d2
 	moveq	#2,d0
-RenderSmallFontChar	;93 name. Dma one small font tile (SmallFontMap, 93 smallfontmap) to the object's chars. d2 = ascii char, d0 = char slot, a0 = object (VRchar), a5 = dma list
+RenderSmallFontChar	;Dma one small font tile (SmallFontMap, 93 smallfontmap) to the object's chars. d2 = ascii char, d0 = char slot, a0 = object (VRchar), a5 = dma list
 	movea.l	#SmallFontMap,a3
 	adda.l	4(a3),a3
 	add.w	d2,d2
@@ -826,7 +826,7 @@ RenderSmallFontChar	;93 name. Dma one small font tile (SmallFontMap, 93 smallfon
 	asl.w	#5,d0
 	move.w	d0,(a5)+
 	rts
-ButtonLabelCharTable	;93 name. Third label character by bits 10-8 of the label code
+ButtonLabelCharTable	;Third label character by bits 10-8 of the label code
 	dc.b	' DDLCRX',$FF	;94 pad byte $FF (93 retail $10)
 addframe	;a3 = sort cord object. Project it with find3d, then addframe2. a5 = dma trans, a6 = sprite attribute table. Called from setsortcords and setffo
 	movem.l	d0-d2,-(sp)
@@ -904,7 +904,7 @@ addframe2	;d0/d1 = x/y coord on screen, a3 = object, a5 = dma trans, a6 = sprite
 	add.w	VRchar(a3),d3	;add VRChar of player struct to d3
 	ext.l	d2	;extend d2 (clears out upper word)
 	asl.l	#5,d2	;mult d2 by 32
-	addi.l	#Spritetiles,d2	;IDA: Spritetiles ($5DE84)
+	addi.l	#Spritetiles,d2	;($5DE84)
 	asl.w	#4,d4	;mult by 16 (# of sprite tiles by 16)
 	asl.w	#5,d3	;mult by 32 (# of prev sprite tiles+VrChar by 32)
 	move.l	d2,(a5)+

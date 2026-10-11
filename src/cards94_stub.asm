@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0F8B5A-$0FBB87, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddSmallFont = $11F04		;jsr / jmp (x).l at $FB0B6
 AttribAdjust = $FEF7C		;bsr.w / Bcc.w at $FA916
 DecompressGraphicsWithCallback = $1172C	;jsr / jmp (x).l at $FA0EE

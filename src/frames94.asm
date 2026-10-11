@@ -51,7 +51,7 @@ SPFflip	=	SPFstumble+24	; 633 (93: 625)
 SPFinjury1	=	SPFflip+8	; 641 (93: 633)
 SPFbglass	=	SPFinjury1+12	; 653 (93: 645)
 
-SPAlist	;$5B1C. IDA: SPAList
+SPAlist	;$5B1C.
 	dc.w	0
 
 SPAgready	=	*-SPAlist	; $0002

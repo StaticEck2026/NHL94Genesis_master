@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0F6E8A-$0F739D, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 clrCrowdRAM = $F9BE2		;jsr / jmp (x).l at $F6E9A
 randomd0s = $1107A		;jsr / jmp (x).l at $F70AE
 sroot = $110BE			;jsr / jmp (x).l at $F678E

@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $00D09C-$010EDF, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddPenalty2 = $11F62		;jsr / jmp (x).l at $D408
 printscores1 = $12C04		;bsr.w / Bcc.w at $E25C
 ReadGoaliePulled = $FEFCC	;jsr / jmp (x).l at $E016
@@ -37,7 +37,7 @@ Acheck = $BBD4			;bsr.w / Bcc.w at $EB64
 ChooseSong = $FE556		;jsr / jmp (x).l at $ED62
 ClrHor = $12B40			;bsr.w / Bcc.w at $EFFA
 FaceOffMap = $55BF6		;#x at $FB8E
-linelist = $191A6		;#x at $FBEE (IDA: FaceOffsprites)
+linelist = $191A6		;#x at $FBEE
 Framer = $119B8			;bsr.w / Bcc.w at $FBCC
 PeriodOver = $17236		;bsr.w / Bcc.w at $F476
 PushRef = $126F8			;bsr.w / Bcc.w at $E6AA

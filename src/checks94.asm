@@ -3,14 +3,14 @@
 ;	92 Logic.Asm part 3, as 93 logic93_3.asm: asswingo, asscenterd, asscentero, the goalie (assgoaliectrl,
 ;	assgoaliecpu, ClampYPosition, AdjustFacingDirection, goaliesave), assgoalietopuck, the 94 breakaway code,
 ;	asspuckc, chkpk / chkpk2, chk4pass and EvadePC. checkob (logic94_4) follows at $E62E.
-;	Transcribed from lst/nhl94.bin.lst lines 38682-40488. Global names are the IDA names except ClampYPosition
-; and AdjustFacingDirection, the 93 names. Local labels are the IDA local names
-;	(_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment. IDA _checkanim is the global checkanim
+;Transcribed from lst/nhl94.bin.lst lines 38682-40488. Global names are the except ClampYPosition
+; and AdjustFacingDirection, the 93 names. Local labels are the names
+;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ;is the global checkanim
 ;	(used across a
 ;	global label).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	SortCords offsets (93 names): Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36,
+;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36
 ;	temp1 $40, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
 
 asswingo
@@ -368,7 +368,7 @@ assgoaliectrl
 assgoaliecpu
 	btst	#3,pflags(a3)	;is goalie joystick controlled?
 	bne.w	assgoaliectrl	;branch if so
-checkanim	;IDA: _checkanim, a local of assgoaliecpu. Global here: assgoaliectrl branches to it
+checkanim	;a local of assgoaliecpu. Global here: assgoaliectrl branches to it
 	move.w	(puckx).w,(TmpPuckX).w
 	btst	#0,(sflags4).w	;test bit 0
 	beq.w	.assstart
@@ -801,7 +801,7 @@ checkanim	;IDA: _checkanim, a local of assgoaliecpu. Global here: assgoaliectrl 
 	blt.w	.de5
 	move.l	#$F,d0	;assignment DD2E?
 	bra.w	assinsert
-ClampYPosition	;93 name. d1 = y clamped to +-$103, minus goal line d3. d0 = 0 if a3 has the puck
+ClampYPosition	;d1 = y clamped to +-$103, minus goal line d3. d0 = 0 if a3 has the puck
 	move.w	(puckc).w,d2
 	cmp.w	SCnum(a3),d2
 	bne.w	.0
@@ -817,7 +817,7 @@ ClampYPosition	;93 name. d1 = y clamped to +-$103, minus goal line d3. d0 = 0 if
 .2
 	sub.w	d3,d1
 	rts
-AdjustFacingDirection	;93 name. Turn facedir one step toward direction d0. IDA cannot show
+AdjustFacingDirection	;Turn facedir one step toward direction d0. show
 	;btst Dn,#imm, so it lost the three btst lines and the .t / .set targets; written from the retail bytes as 93
 	move.w	facedir(a3),d1		;facedir
 	sub.w	d1,d0
@@ -954,7 +954,7 @@ goaliesave
 	asr.w	Yvel(a3)
 	asr.w	Yvel(a3)
 	rts
-.saveanim	;IDA: _saveanim (93 GoalieSaveList): SPA per save type. Same 10 words as the unreferenced table at $B602
+.saveanim	;(93 GoalieSaveList): SPA per save type. Same 10 words as the unreferenced table at $B602
 	;(logic94_1)
 	dc.w	$146
 	;blocker save
@@ -1316,7 +1316,7 @@ asspuckc
 	dc.w	$E6
 	dc.w	$1E
 	dc.w	$E6
-chk4lc	;(was: AutoLineChange)
+chk4lc
 	btst	#4,(sflags7).w
 	bne.w	rtss2
 	move.w	(pucky).w,d0
@@ -1646,13 +1646,13 @@ EvadePC
 ;	92 Logic.Asm part 4, as 93 logic93_4.asm: checkob, assnearest, check4check, asspassrec, assshoot, the 94 shootout /
 ;	penalty shot code (puckshootout, puckpenshot), puckfaceoff, ChkGoalies, ReturnGoalies, CPgoalie, CompLine,
 ;	puckfaceoff2, ResetAndSelectPlayers, updatefaceoff, Endfaceoff, pucknorm. ChkOffsides (logic94_5) follows at $FFEA.
-;	Transcribed from lst/nhl94.bin.lst lines 40493-42593. Global names are the IDA names; 94-only routines keep the
-;	IDA auto names. Local labels are the IDA local names (_x -> .x, gmclock -> .gmclock) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the
-;	IDA label, unless generic, in an ;IDA: comment. WaitForFaceoffLineChanges and PenaltyShotEndReturn stay global: they are used across a global label.
+;Transcribed from lst/nhl94.bin.lst lines 40493-42593. Global names are the 94-only routines keep the
+;names. Local labels are the names (_x ->.x, gmclock ->.gmclock) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the
+;unless generic, in an ;WaitForFaceoffLineChanges and PenaltyShotEndReturn stay global: they are used across a global label.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz / printz2 use the String macro (length word includes itself).
-;	SortCords offsets (93 names): Xpos 0, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36, temp1 $40,
+;SortCords offsets: Xpos 0, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36, temp1 $40
 ;	temp3 $44, temp4 $46, SCnum $52, facedir $54, SPA $58, pflags $62, pflags2 $63.
 
 checkob
@@ -1902,7 +1902,7 @@ assnearest
 	beq.w	.gmclock	;jump if not set
 	btst	#5,(BA_PS_flags).w	;check bit 5
 	beq.w	.nodec2	;jump if not set
-.gmclock	;IDA: gmclock (a 92 equate name; local so it does not split assnearest or clash with the equate)
+.gmclock	;(a 92 equate name; local so it does not split assnearest or clash with the equate)
 	btst	#0,(gmode).w	;check if clock running
 	bne.w	donothing	;branch if not
 .nodec2
@@ -2123,7 +2123,7 @@ asspassrec
 .exit
 	bclr	#pfdoff,pflags(a3)
 	bra.w	assexit
-SkateToTempTarget	;no xref (IDA dc.b at $EC72). Skate to temp3 / temp4, then rts (as 93 asspenalty .st)
+SkateToTempTarget	;no xref (at $EC72). Skate to temp3 / temp4, then rts (as 93 asspenalty.st)
 	move.w	temp3(a3),d0		;temp3
 	move.w	temp4(a3),d1		;temp4
 	lea	rtss2(pc),a0
@@ -3105,10 +3105,10 @@ puckfaceoff2
 .11
 	bsr.w	assinsert
 .goalie1
-	move.w	(tmstruct+tmap).w,d4	;tmap = active players on ice (4-6). IDA (tmap).w
+	move.w	(tmstruct+tmap).w,d4	;tmap = active players on ice (4-6). (tmap).w
 	btst	#pfteam,pflags(a3)	;#pfteam - 0=home 1=away
 	beq.w	.t0
-	move.w	(AwShots+tmap).w,d4	;IDA (tmsize).w
+	move.w	(AwShots+tmap).w,d4	;(tmsize).w
 .t0
 	neg.w	d4
 	addq.w	#6,d4
@@ -3209,7 +3209,7 @@ puckfaceoff2
 	tst.w	(OptLine).w
 	bne.w	.setdroptime
 	bsr.w	printsmallz
-	String	TXS_ADDY,$A,TXS_ATTR,4		;$FBC2. IDA shows ori.b #$A,d6 and drops the $FE04 word
+	String	CC_AddY,$A,CC_SetAttribute,4		;$FBC2. ori.b #$A,d6 and drops the $FE04 word
 	moveq	#$C,d0
 	moveq	#3,d1
 	bsr.w	Framer
@@ -3220,7 +3220,7 @@ puckfaceoff2
 	exg	d0,d1
 .printline2
 	bsr.w	printsmallz
-	String	TXS_ADDX,1,TXS_ADDY,$FE		;$FBE8. IDA shows ori.b #1,d6 and drops the $FAFE word
+	String	CC_AddX,1,CC_AddY,$FE		;$FBE8. ori.b #1,d6 and drops the $FAFE word
 	movea.l	#linelist,a1
 	bsr.w	PrintStringFromList
 	addq.w	#4,(printx).w
@@ -3299,7 +3299,7 @@ puckfaceoff2
 	dc.w	$FFF6
 	dc.w	0
 	dc.w	$FFC4
-ResetAndSelectPlayers	;IDA name (93 ResetAndSelectPlayers). c1playernum / c2playernum = -1, then changeplayer for each human team	;IDA: setchgplayer
+ResetAndSelectPlayers	;(93 ResetAndSelectPlayers). c1playernum / c2playernum = -1, then changeplayer for each human team	
 	move.w	#$FFFF,(c1playernum).w
 	move.w	#$FFFF,(c2playernum).w
 	tst.w	(cont1team).w
@@ -3353,7 +3353,7 @@ updatefaceoff
 .erase
 	bclr	#4,(disflags).w
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),0,0,0		;$FDE6. IDA hid this and the next five instructions in ori.b / cmp.b
+	String	-(TXPRI+TXMAP1),0,0,0		;$FDE6. and the next five instructions in ori.b / cmp.b
 	move.w	(fodropx).w,d0
 	subi.w	#$2E,d0
 	asr.w	#3,d0
@@ -3508,13 +3508,13 @@ pucknorm
 ;	puckIChk, puckunflip / puckflip / puckshadow, findpc, skateto, avdgoal, skatetopuckinit / skatetopuck, assexit /
 ;	assinsert / assreplace, vtoa, GetHot, SetSPA, doplayeracc, goalieacc, noturn0 / noturn, playeracc, MaxSpeed,
 ;	dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap (middle94_1) follows at $10EE0.
-;	Transcribed from lst/nhl94.bin.lst lines 42598-43998. Global names are the IDA names except
+;Transcribed from lst/nhl94.bin.lst lines 42598-43998. Global names are the except
 ;	ClearOffsidesIfAllPlayers, UnpackNibbles and WeightedRandomSelect, the
-;	93 names. Local labels are the IDA local names (_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop,
-;	numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop
+;numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	SortCords offsets (93 names): Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34,
+;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34
 ;	SCnum $52, facedir $54, SPA $58, SPAnum $5A, SPAcnt $5C, pflags $62, pflags2 $63.
 
 ChkOffsides
@@ -3574,7 +3574,7 @@ ChkOffsides
 	adda.w	#SCstruct,a0
 	dbf	d2,.2
 	rts
-ClearOffsidesIfAllPlayers	;93 name. a2 = team struct: clear the team offsides flag once no skater is past the line
+ClearOffsidesIfAllPlayers	;a2 = team struct: clear the team offsides flag once no skater is past the line
 	btst	#4,tmflags(a2)
 	beq.w	rtss2
 	movea.w	tmsort(a2),a0
@@ -3682,8 +3682,8 @@ a2touchpuck
 	neg.w	d0	;negate d0
 .0
 	bmi.w	rtss2	;exit if minus
-	move.w	(tmstruct+tmap).w,d0	;IDA (tmap).w
-	sub.w	(AwShots+tmap).w,d0	;IDA (tmsize).w
+	move.w	(tmstruct+tmap).w,d0	;(tmap).w
+	sub.w	(AwShots+tmap).w,d0	;(tmsize).w
 	btst	#pfteam,pflags(a2)	;check home or away
 	beq.w	.1	;branch if home
 	neg.w	d0	;negate d0
@@ -4694,7 +4694,7 @@ dirtab	dc.w	0
 	dc.w	$8D
 	dc.w	0
 	dc.w	0
-UnpackNibbles	;93 name. a0 = packed data, d0 = count: unpack 4-bit values into words at nibblebuffer
+UnpackNibbles	;a0 = packed data, d0 = count: unpack 4-bit values into words at nibblebuffer
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.w	#(nibblebuffer-M68K_RAM),a1
 	clr.w	d2
@@ -4712,7 +4712,7 @@ UnpackNibbles	;93 name. a0 = packed data, d0 = count: unpack 4-bit values into w
 	dbf	d0,.loop
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-WeightedRandomSelect	;93 name. d0 = number of word weights at nibblebuffer: return a weighted random index
+WeightedRandomSelect	;d0 = number of word weights at nibblebuffer: return a weighted random index
 	movem.l	d1/a1,-(sp)
 	movea.w	#(nibblebuffer-M68K_RAM),a1
 	clr.w	d1

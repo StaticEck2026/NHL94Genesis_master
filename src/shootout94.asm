@@ -116,7 +116,7 @@ ShootoutShooters	;Shootout shooters menu item (hockey94_11 menu lists): pick the
 	clr.w	(DispAttribCtr).w
 	clr.w	(PlayerScrollCtr).w
 	jsr	(printsmallz).l
-	String	TXS_MAP,2,TXS_X,0,TXS_Y
+	String	CC_SetMap,2,CC_SetX,0,CC_SetY
 	moveq	#$28,d0
 	moveq	#$1C,d1
 	move.w	#$7FF,d2
@@ -188,17 +188,17 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	dbf	d0,.loop
 	bsr.w	ClearShooterScreen
 	jsr	(printsmallz).l
-	String	TXS_ALL,0,3,1,0
+	String	CC_SetMapAndPosition,0,3,1,0
 	move.w	#$12,d0
 	move.w	#3,d1
 	jsr	(Framer).l
 	jsr	(printsmallz).l
-	String	TXS_X,$15,TXS_Y
-	move.w	#$12,d0	;IDA hid this
-	move.w	#3,d1	;IDA hid this
-	jsr	(Framer).l	;IDA hid this
-	jsr	(printsmallz).l	;IDA hid this
-	String	TXS_ALL,4,2,2,1,'{Select Player}'
+	String	CC_SetX,$15,CC_SetY
+	move.w	#$12,d0
+	move.w	#3,d1
+	jsr	(Framer).l
+	jsr	(printsmallz).l
+	String	CC_SetMapAndPosition,4,2,2,1,'{Select Player}'
 	clr.w	d0
 	bra.w	.6
 .loop2
@@ -302,7 +302,7 @@ PrintShooterList	;94 only. Shootout shooters: the player list rows (getNameandAt
 	move.w	#2,(printy).w
 .loop3
 	jsr	(printsmallz).l
-	String	TXS_ATTR,4,TXS_X,5,TXS_ADDY,1,'                      ',TXS_X,5
+	String	CC_SetAttribute,4,CC_SetX,5,CC_AddY,1,'                      ',CC_SetX,5
 	cmp.w	(VertLineScrolling).w,d2
 	bne.w	.6
 	move.w	d7,(printa).w
@@ -364,7 +364,7 @@ ShootersBackground	;94 only. Shootout shooters background and "Shootout" title
 	movem.l	d0-d5/a0-a2,-(sp)
 	jsr	(printz).l
 	String	-TXMAP3,0,0
-	movea.l	#ScoutMap,a1	;IDA hid this
+	movea.l	#ScoutMap,a1
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2
 	clr.w	d0
@@ -391,7 +391,7 @@ ShootersBackground	;94 only. Shootout shooters background and "Shootout" title
 ClearShooterScreen	;94 only. Shootout shooters: erase the screen
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
-	moveq	#$28,d0	;IDA hid this
+	moveq	#$28,d0
 	moveq	#$A,d1
 	move.w	#$7FF,d2
 	jmp	eraser
@@ -401,33 +401,33 @@ ResetShooterScroll	;94 only. Shootout shooters: clear the list scroll words palf
 	rts
 PrintShooterSlots	;94 only. Shootout shooters: "Shooters" 1. 2. 3.
 	jsr	(printsmallz).l
-	String	TXS_MAP,2,TXS_X,0,TXS_Y,$A
+	String	CC_SetMap,2,CC_SetX,0,CC_SetY,$A
 	jsr	(printsmallz).l
-	String	TXS_ATTR,4
+	String	CC_SetAttribute,4
 	jsr	(printsmallz).l
-	String	TXS_X,7,TXS_Y,$C,'Shooters'
+	String	CC_SetX,7,CC_SetY,$C,'Shooters'
 .0
 	jsr	(printsmallz).l
-	String	TXS_X,3,TXS_Y,$E,'1. '
-	jsr	(printsmallz).l	;IDA hid this
-	String	TXS_X,3,TXS_Y,$10,'2. '
-	jsr	(printsmallz).l	;IDA hid this
-	String	TXS_X,3,TXS_Y,$12,'3. '
-	jsr	(printsmallz).l	;IDA hid this
-	String	TXS_X,3,TXS_Y,$14,'4. '
-	jsr	(printsmallz).l	;IDA hid this
-	String	TXS_X,3,TXS_Y,$16,'5. '
-	jsr	(printsmallz).l	;IDA hid this
-	String	TXS_X,$1A,TXS_Y,$C,'Goalie'
+	String	CC_SetX,3,CC_SetY,$E,'1. '
+	jsr	(printsmallz).l
+	String	CC_SetX,3,CC_SetY,$10,'2. '
+	jsr	(printsmallz).l
+	String	CC_SetX,3,CC_SetY,$12,'3. '
+	jsr	(printsmallz).l
+	String	CC_SetX,3,CC_SetY,$14,'4. '
+	jsr	(printsmallz).l
+	String	CC_SetX,3,CC_SetY,$16,'5. '
+	jsr	(printsmallz).l
+	String	CC_SetX,$1A,CC_SetY,$C,'Goalie'
 	rts
 PrintShooterBox	;94 only. Shootout shooters: the selected player box (getname)
 	jsr	(printsmallz).l
-	String	TXS_ALL,4,2,8,7,TXS_FONT,1
+	String	CC_SetMapAndPosition,4,2,8,7,CC_SetFont,1
 	moveq	#$18,d0
 	moveq	#3,d1
 	jsr	(Framer).l
 	jsr	(printsmallz).l
-	String	TXS_X,$15,TXS_Y,8,TXS_ATTR,6
+	String	CC_SetX,$15,CC_SetY,8,CC_SetAttribute,6
 	movea.l	#homeshooters,a1
 	cmpa.l	#tmstruct,a2
 	beq.w	.0
@@ -447,7 +447,7 @@ PrintShooterNames	;94 only. Shootout shooters: the shooters' names (FormatPlayer
 	movem.l	d0-d7/a0-a6,-(sp)
 .0
 	jsr	(printsmallz).l
-	String	TXS_X,6,TXS_Y,$E,TXS_ATTR,6
+	String	CC_SetX,6,CC_SetY,$E,CC_SetAttribute,6
 	move.w	#0,d1
 	movea.l	#homeshooters,a0
 	cmpa.l	#tmstruct,a2

@@ -1,12 +1,12 @@
 ; $00030A  Adapted from teamdata93.asm: teams, palettes, credits text
-;	NHL 94 team data. Retail $00030A-$005B1B (22546 bytes), from the IDA listing lst/nhl94.bin.lst.
+;NHL 94 team data. Retail $00030A-$005B1B (22546 bytes), from the lst/nhl94.bin.lst.
 ;	Layout of 93 teamdata93.asm: the team address table, one block per team, playoffseats, Credits.
 ;	94 has 26 teams plus the two all star teams (93: 24 plus two). Minnesota is now Dallas; Anaheim and
 ;	Florida are new. 94 team blocks are not in TeamList order (ASE and ASW first, FLA and ANH last).
 
 	dc.l	0	;$30A. Not part of TeamList (93 has the same long before its list)
 
-TeamList	;$30E. IDA: Team List Pointer Table Start. Team number = index (ANH 0 ... WPG 25, ASE 26, ASW 27)
+TeamList	;$30E. List Pointer Table Start. Team number = index (ANH 0 ... WPG 25, ASE 26, ASW 27)
 	dc.l	Anaheim	;0 ANH
 	dc.l	Boston	;1 BOS
 	dc.l	Buffalo	;2 BUF

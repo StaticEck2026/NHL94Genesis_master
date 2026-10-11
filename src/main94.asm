@@ -31,11 +31,11 @@ InitialSP = $FFFFF6	;reset vector 0. 93 name, 24-bit form of $FFFFFFF6. The game
 ;;	.region code
 	org	0
 	dc.l	InitialSP	; 0 initial stack pointer
-	dc.l	Start		; 1 initial program counter (IDA: Reset, $200)
-	dc.l	AddError	; 2 bus error. 94 has no BusError: bus and address error share AddError (IDA: AdrErr)
+	dc.l	Start		; 1 initial program counter ( $200)
+	dc.l	AddError	; 2 bus error. 94 has no BusError: bus and address error share AddError
 	dc.l	AddError	; 3 address error
-	dc.l	Illinst		; 4 illegal instruction (IDA: InvOpCode)
-	dc.l	ZeroDiv		; 5 zero divide (IDA: DivBy0)
+	dc.l	Illinst		; 4 illegal instruction
+	dc.l	ZeroDiv		; 5 zero divide
 	dcb.b	72,$FF		; 6-23 ($18-$5F): CHK ... reserved, not used. $FF in 94 (93: $00)
 
 	dc.l	IRQ7		; 24 ($60) spurious interrupt. IRQ7 is an rte
@@ -59,10 +59,10 @@ InitialSP = $FFFFF6	;reset vector 0. 93 name, 24-bit form of $FFFFFFF6. The game
 	org	$100
 
 	include	sega\SegaIDTable94.asm	;$100-$1FF cartridge header
-Start	;IDA: Reset ($200). Power on: the Sega hardware init, then the checksum, then the game
+Start	;($200). Power on: the Sega hardware init, then the checksum, then the game
 	Include	sega\SegaInit.asm	;$200-$2FF SegaInit, falls into CHECK_VDP ($2FA)
 	IF CHECKSUM=1
-		jsr	ValidationRoutine	;IDA: Calc_Checksum ($FFAC0). jsr (x).l, 4EB9. Red screen and hang if the ROM sum is wrong
+		jsr	ValidationRoutine	;($FFAC0). jsr (x).l, 4EB9. Red screen and hang if the ROM sum is wrong
 	ELSE
 		nop
 		nop
@@ -70,4 +70,4 @@ Start	;IDA: Reset ($200). Power on: the Sega hardware init, then the checksum, t
 	ENDIF
 	;94 has no jsr KillCrowd here (93 Start calls it after ValidationRoutine)
 
-	bra.w	Begin	;IDA: Begin ($76B8, hockey94_01). Last instruction of main94 ($306-$309). TeamData94 starts at $30A
+	bra.w	Begin	;($76B8, hockey94_01). Last instruction of main94 ($306-$309). TeamData94 starts at $30A

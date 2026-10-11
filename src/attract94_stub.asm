@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $017A18-$017C71, read from lst/nhl94.bin: jsr (x).l, movea.l #x and move.l #x carry the
-; address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 vb2 = $15E4C		;move.l #x at $17A18. vblank handler
 CopyPaletteToCRAM = $11044		;bsr.w at $17A62
 setVram_0 = $115AA		;bsr.w at $17A66

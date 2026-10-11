@@ -1,5 +1,5 @@
 ; $0FE556  NEW in 94: song select, title, credits
-ChooseSong	;IDA name. 94 only: SongNum = byte SongIndex of the 6 song bytes of team HmTeam (TeamSongs), or one of the 8 of RandomSongs at random
+ChooseSong	;94 only: SongNum = byte SongIndex of the 6 song bytes of team HmTeam (TeamSongs), or one of the 8 of RandomSongs at random
 	;when 0; $FFFF with gmode bit 4. Called from StartPer (hockey94_01), checkgoal (hockey94_04), puckshootout (logic94_4) and LeadSong
 	movem.l	d0-d1/a0-a1,-(sp)
 	btst	#4,(gmode).w
@@ -99,7 +99,7 @@ ClearWinRecords	;94 only. Clear bytes 8-$B of the 8 ThreeStars records and write
 	jsr	(MakeSRAMChecksum).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PSandSOpassdir	;IDA name (and comments). 94 only: penalty shot / shootout: passdir = sopathdir (the end of the skate path, NextPathPoint), turned by
+PSandSOpassdir	;(and comments). 94 only: penalty shot / shootout: passdir = sopathdir (the end of the skate path, NextPathPoint), turned by
 	;passdirlist for the bottom net. Called from shotdiradj (logic94_1)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(sopathdir).w,d0
@@ -112,7 +112,7 @@ PSandSOpassdir	;IDA name (and comments). 94 only: penalty shot / shootout: passd
 	move.w	d0,(passdir).w	;move d0 into passdir
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-passdirlist	dc.w	0	;IDA name. PSandSOpassdir: passdir for the other net
+passdirlist	dc.w	0	;PSandSOpassdir: passdir for the other net
 	dc.w	7
 	dc.w	6
 	dc.w	5
@@ -498,12 +498,12 @@ GetLeagueCrowdRecord	;94 only. d0 = the team (of 28) with the highest crowd reco
 	dbf	d1,.loop
 	movem.l	(sp)+,d1-d7/a0-a6
 	rts
-getFgtbyte	;IDA name (and comments). 94 only. Called from setInjuryType (hockey94_03)
+getFgtbyte	;(and comments). 94 only. Called from setInjuryType (hockey94_03)
 	clr.w	d0	;clear d0
 	move.b	fighting(a2),d0	;move H/F bit into d0 (this is always even)
 	lsr.w	#2,d0	;shift 2 right (divide by 4)
 	rts
-chkFgtBit1	;IDA name. 94 only: test bit 1 of $74(a2). Called from setInjuryType (hockey94_03)
+chkFgtBit1	;94 only: test bit 1 of $74(a2). Called from setInjuryType (hockey94_03)
 	btst	#1,fighting(a2)
 	rts
 RandomFaceoffAnim	;94 only. d0 = a random faceoff animation from FaceoffAnims (StartArenaAnim), 6 when fox <= -$40 and foy <= $C0. Called from puckfaceoff (logic94_4)
@@ -561,7 +561,7 @@ DrawPlayoffSprite	;94 only. The PlayoffSprite sprite at playoffspritex / playoff
 	lsr.w	#1,d0
 	move.w	d0,(Sattsize).w
 	rts
-HiScoreScreen	;IDA name. 94 only: vb2, the $F4378 bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (hockey94_01, attract mode)
+HiScoreScreen	;94 only: vb2, the $F4378 bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (hockey94_01, attract mode)
 	move.l	#vb2,(vbint).w
 	bclr	#1,(disflags).w
 	move.w	#5,(Map3col1).w
@@ -646,7 +646,7 @@ CountButtonPress	;94 only. Not in gmode bit 0: add 1 to homepresses (awaypresses
 .x
 	movem.l	(sp)+,d1-d7/a0
 	rts
-TerminateLogName	;nothing calls it (IDA left it as data). The GetLogName String at lognametext, ended with 0 at namelength and its length word made even
+TerminateLogName	;nothing calls it (it as data). The GetLogName String at lognametext, ended with 0 at namelength and its length word made even
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#lognametext,a1
 	bsr.w	GetLogName
@@ -698,7 +698,7 @@ PlayedByAway	;94 only. As PlayedByHome for awayuser. Called from ScoutTextPlayer
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(awayuser).w,d0
 	bra.w	PlayedByText
-SetSflags8Bit1	;IDA: set_bit1_C2FE. 94 only. Always sets sflags8 bit 1 (the bclr is skipped). Called from updateplayers (hockey94_02)
+SetSflags8Bit1	;94 only. Always sets sflags8 bit 1 (the bclr is skipped). Called from updateplayers (hockey94_02)
 	bra.w	.set
 	bclr	#1,(sflags8).w
 	bra.w	.ex
@@ -706,7 +706,7 @@ SetSflags8Bit1	;IDA: set_bit1_C2FE. 94 only. Always sets sflags8 bit 1 (the bclr
 	bset	#1,(sflags8).w	;set bit 1 of sflags8
 .ex
 	rts
-AttribAdjust	;IDA name (and comments). 94 only: an attribute under $32 becomes d0 / 2 + $19. Called from AttribRating (stats94), PrintOverallRating (high94_2) and PrintMatchupRatings (hockey94_07)
+AttribAdjust	;(and comments). 94 only: an attribute under $32 becomes d0 / 2 + $19. Called from AttribRating (stats94), PrintOverallRating (high94_2) and PrintMatchupRatings (hockey94_07)
 	cmp.w	#$32,d0	;'2'   ; compare $32 to d0
 	bge.w	.exit	;branch if greater than
 	asr.w	#1,d0	;divide by 2
@@ -733,7 +733,7 @@ PuckComingToward	;nothing calls it. Z clear when the puck is within $1E of playe
 .x
 	movem.w	(sp)+,d0-d1
 	rts
-ReadGoaliePulled	;IDA name (and comments). 94 only: Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
+ReadGoaliePulled	;(and comments). 94 only: Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
 	;(logic94_1), assdefo (logic94_2), asspuckc (logic94_3) and assnearest (logic94_4)
 	movem.l	a1,-(sp)
 	movea.l	#tmstruct,a1
@@ -767,7 +767,7 @@ EndOneTimer	;94 only. End a one-timer for a3: bits cleared, onetimerplayer = -1,
 	move.w	(sp)+,d1
 	movem.l	(sp)+,d0/a0
 	rts
-newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, TitleImg) with the vblank TitleVBlank, song $78, then the
+newTitleScreen	;94 only: the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, TitleImg) with the vblank TitleVBlank, song $78, then the
 	;scrolling credits (Credits, CreditsList text; CreditsPrintRow, CreditsWait) until start. Called from Opening (hockey94_06)
 	move	#$2700,sr
 	move.w	(VDP_CNTR).l,(seed).w
@@ -791,7 +791,7 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	clr.w	(Vscroll).w
 	jsr	(printz).l
 	String	-TXMAP1,0,0
-	move.l	#$80,d0	;IDA hid this (and the Strings)
+	move.l	#$80,d0	;(and the Strings)
 	moveq	#$20,d1
 	move.l	#$7FF,d2
 	jsr	(eraser).l
@@ -964,7 +964,7 @@ CreditsWait	;94 only. Credits: wait for vcount, run the clampcounter count down;
 	addq.w	#4,sp
 .x
 	rts
-VBlank_TitleScreen	;newTitleScreen vblank: line scroll table (SortCords) and Vscroll, sprites, cramfade, CreditsScrollStep, p_music_vblank (was: TitleVBlank)
+VBlank_TitleScreen	;newTitleScreen vblank: line scroll table (SortCords) and Vscroll, sprites, cramfade, CreditsScrollStep, p_music_vblank
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#2,(disflags).w
 	bne.w	.1
@@ -1136,7 +1136,7 @@ ClearPenalties	;94 only. Clear the penalties: PBnum, Penaltytimer, Pencntdwn, Pe
 	bsr.w	clrTmPdst
 	movem.l	(sp)+,d0/a0
 	rts
-clrTmPdst	;IDA name (and comments). 94 only
+clrTmPdst	;(and comments). 94 only
 	move.w	#$19,d0	;19 = 25 decimal (max roster size)
 	adda.w	#$66,a0	;'f'   ; Starting at (C734-home, CA98-away) and decrementing
 .loop
@@ -1202,7 +1202,7 @@ HotColdIcon	;94 only. The icon by the name of player iconplayer of team a2 at x 
 .x
 	movem.l	(sp)+,d0/a0-a1
 	rts
-chgplayer	;IDA name (and comments). 94 only: the pad d4 takes the nearest free skater to where the puck is going (not a goalie, not locked or
+chgplayer	;(and comments). 94 only: the pad d4 takes the nearest free skater to where the puck is going (not a goalie, not locked or
 	;unavailable; in a penalty shot / shootout only BA_Sktr_SCnum or BA_Goalie_SCnum), or sweep checks when it is the same one. Called from
 	;changeplayer (logic94_1)
 	btst	#6,(sflags5).w	;Check bit 6. This is never set anywhere
@@ -1276,15 +1276,15 @@ chgplayer	;IDA name (and comments). 94 only: the pad d4 takes the nearest free s
 	beq.w	swpchk	;player is same so sweep check
 	move.w	d6,d0	;d0 now is new player
 	tst.w	d4
-	beq.w	j_setc1player	;IDA hid this
+	beq.w	j_setc1player
 	bra.w	j_setc2player
 .ex
 	movem.l	(sp)+,d0-d6/a0-a1
-exit	;IDA name
+exit
 	rts
-swpchk	;IDA name. Sweepcheck (logic94_1)
+swpchk	;Sweepcheck (logic94_1)
 	jmp	Sweepcheck
-j_setc1player	;IDA: setc1player (a thunk IDA gave its target's name)
+j_setc1player	;(a thunk its target's name)
 	jmp	setc1player
-j_setc2player	;IDA: setc2player (a thunk IDA gave its target's name)
+j_setc2player	;(a thunk its target's name)
 	jmp	setc2player

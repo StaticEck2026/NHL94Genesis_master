@@ -1,12 +1,12 @@
 ; $0138AC  Adapted from hockey93.asm: puck, players, walls, fights, goals
 ;	NHL 94 (retail) segment $138AC-$14549
 ;	92 hockey.asm part 2, first half, as 93 hockey93_03.asm: checkcoll, checkplcoll, checkcx, newcheck, checkint (with
-;	.ci, IDA checkint_ci), checkcheck and CCStart, checkinglist, checkagr, holdcheck, Bcheck, FallDown, setInjuryType. checkfight
+;ci), checkcheck and CCStart, checkinglist, checkagr, holdcheck, Bcheck, FallDown, setInjuryType. checkfight
 ;	(hockey94_04, an rts in 94) follows at $1454A (bsr.w displacement at $13B1E).
-;	Transcribed from lst/nhl94.bin.lst lines 48480-49542. Global names are the IDA names (this range has no IDA auto names).
-;	IDA labels that would split a routine are locals: .ci in checkint (93 .ci), .PlayerControlled and .CheckingCalc in CCStart, .CmpPlayerStk,
-;	.AddChktoPlayerStats and .FallList in FallDown. Local labels are the IDA local names (_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop,
-;	numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;Transcribed from lst/nhl94.bin.lst lines 48480-49542. Global names are the (this range has no names).
+;that would split a routine are locals:.ci in checkint (93.ci),.PlayerControlled and.CheckingCalc in CCStart,.CmpPlayerStk
+;AddChktoPlayerStats and.FallList in FallDown. Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop
+;numbered), with the unless generic, in an
 ;	SPA values are frames94 table offsets, written as numbers with the frames94 name in the comment.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
@@ -94,7 +94,7 @@ checkcoll	;d2 = new x coord, d3 = new y coord, a3 = struct of object. Check wall
 	rts
 checkplcoll	;check collision with other players. d2/d3 = x/y cords, a3 = struct. Walk up and down the OOlist from a3 and call checkcx for each
 	;object within $10 in y (92 collrad*2). Called from checkcoll
-	btst	#5,pflags2(a3)	;pflags2 bit 5 (93: no player coll bit, 92 pf2npc = 7; IDA comment: line change mode)
+	btst	#5,pflags2(a3)	;pflags2 bit 5 (93: no player coll bit, 92 pf2npc = 7; line change mode)
 	bne.w	.ex
 	cmpi.w	#$B,SCnum(a3)	;#11, SCnum
 	bgt.w	.ex
@@ -287,7 +287,7 @@ checkint	;check for interference penalty. player a2 interferes with a3 or vice-v
 	exg	a2,a3
 	move.l	(sp)+,d0
 	rts
-.ci	;IDA: checkint_ci. 93 checkint .ci. a2 = goalie, a3 = player interfering with goalie. a3 falls. 94: the interference penalty ($22) needs a3
+.ci	;93 checkint.ci. a2 = goalie, a3 = player interfering with goalie. a3 falls. 94: the interference penalty ($22) needs a3
 	;in the crease area (y $EF-$10A toward a2's goal, x within $14), a CPU player or a pad player's joystick player, and randomd0($28 - aggres) <=
 	;4 (93: randomd0($14 - byte $73) <= 2)
 	tst.w	$34(a2)	;test for goalie
@@ -354,7 +354,7 @@ checkcheck	;player is in contact: look for various contact events. Runs CCStart 
 	bsr.w	CCStart
 	movem.l	(sp)+,d0-d4/a0-a3
 	rts
-CCStart	;IDA name (93 checkcheck .cc). Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdcheck, SPAsweepchk to Bcheck; otherwise
+CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdcheck, SPAsweepchk to Bcheck; otherwise
 	;only a3 in SPAburst checks. Sets a3's check anim from checkinglist; a big enough hit on a skater makes a2 fall, with a charging ($16 / $18)
 	;or roughing ($1A / $1C) roll from checkagr. 94: the hit uses wallcollduringcheck and half the Chk rating, and each penalty goes through
 	;PenShotChk
@@ -396,10 +396,10 @@ CCStart	;IDA name (93 checkcheck .cc). Player a3 is checking player a2. Holds (S
 	moveq	#$78,d0	;NHL92 uses 60 decimal, this is 120 decimal (most likely due to change in attribute math)
 	btst	#3,pflags(a3)	;checks if player a3 is player controlled
 	beq.w	.CheckingCalc
-.PlayerControlled	;IDA: PlayerControlled (no xref; a label inside CCStart). Changes d0 from 120 to 240
+.PlayerControlled	;(no xref; a label inside CCStart). Changes d0 from 120 to 240
 	;changes d0 from 120 to 240
 	asl.w	#1,d0
-.CheckingCalc	;IDA: CheckingCalc (a label inside CCStart)
+.CheckingCalc	;(a label inside CCStart)
 	sub.b	weight(a3),d0	;subtract wgt of a3 player from d0. a3 is player checking.
 	add.b	$67(a2),d0	;add wgt of a2 player to d0
 	lsr.w	#1,d0	;shift d0 1 right word length (divide by 2)
@@ -441,7 +441,7 @@ CCStart	;IDA name (93 checkcheck .cc). Player a3 is checking player a2. Holds (S
 	bsr.w	AddPenalty
 .dn2
 	bra.w	FallDown
-checkinglist	;IDA name (93 checkcheck .list). Check anim by direction from a3 to a2, SPA offsets
+checkinglist	;(93 checkcheck.list). Check anim by direction from a3 to a2, SPA offsets
 	dc.w	$B96	;SPAshoulderchkl
 	dc.w	$BC8	;SPAshoulderchkr
 	dc.w	$C2C	;SPAhipchkr
@@ -560,10 +560,10 @@ holdcheck	;player a2 is in hold animation looking to hold opponent a3. Entered f
 	bhi.w	.ex
 	btst	#4,(gmode).w	;check for highlight
 	bne.w	.ex
-	move.w	#$24,d0	;penalty $24 after SPAHold2 (IDA comment: PenHooking?)
+	move.w	#$24,d0	;penalty $24 after SPAHold2 ( PenHooking?)
 	cmpi.w	#$CC2,SPA(a3)	;SPAHold2
 	beq.w	.addpen
-	move.w	#$1E,d0	;penalty $1E after SPAhook2 (IDA comment: PenHolding)
+	move.w	#$1E,d0	;penalty $1E after SPAhook2 ( PenHolding)
 .addpen
 	jsr	(PenShotChk).l
 	bsr.w	AddPenalty
@@ -654,7 +654,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	move.w	#$11E6,d1	;SPAstumble. toddle animation?
 	btst	#pf3wall,pflags3(a3)	;wall collision bit
 	bne.w	.cont2	;jump if hitting wall
-.CmpPlayerStk	;IDA: CmpPlayerStk (no xref; a label inside FallDown). a2's Stk value. Compares to $18 (24 decimal)
+.CmpPlayerStk	;(no xref; a label inside FallDown). a2's Stk value. Compares to $18 (24 decimal)
 	;a2's Stk value. Compares to 18 (24 decimal)
 	cmpi.b	#$18,stickhand(a2)	;Start of toddle check
 	blt.w	.cont2	;jump if less than
@@ -675,7 +675,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	btst	#pfteam,pflags(a3)
 	beq.w	.AddChktoPlayerStats
 	adda.w	#tmsize,a0	;Change to Away Team Stats
-.AddChktoPlayerStats	;IDA: AddChktoPlayerStats (a label inside FallDown)
+.AddChktoPlayerStats	;(a label inside FallDown)
 	addq.w	#1,$10(a0)	;Add 1 Chk to Team Total
 	clr.w	d0
 	move.b	pnum(a3),d0	;Index of Player
@@ -838,7 +838,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	bset	#0,pflags(a2)	;set pfdoff (deceleration)
 	movem.l	(sp)+,d0/a0	;pop from stack
 	bra.w	.8
-.FallList	;IDA: FallList (a table inside FallDown). Fall anim by where a2 is: above, right, below, left (2 words each)
+.FallList	;(a table inside FallDown). Fall anim by where a2 is: above, right, below, left (2 words each)
 	dc.w	$1776	;SPAboardtop
 	dc.w	$1776	;SPAboardtop
 	dc.w	$17E8	;SPAboardright
@@ -975,9 +975,9 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 ;	92 hockey.asm part 2, second half, as 93 hockey93_04.asm: checkfight (an rts in 94; 93 SetInst is gone), checkwallcoll,
 ;	checkgoal (with the 93 Goal code as .goal, and the 93 Goal local .setass), GetPeriodTimeRemaining, checkgoalp, CheckBump, wallcollb, wallcoll,
 ;	checkpuckcoll_sfx and checkpuckcoll. puckstick (hockey94_05) follows at $150E4 (bsr.w displacement at $14EC8).
-;	Transcribed from lst/nhl94.bin.lst lines 49543-50531. Global names are the IDA names, or the 93 name where IDA has an auto
-;	name or a 2 suffix (checkwallcoll, wallcollb). IDA _sfx (before checkpuckcoll, entered from it) is the global checkpuckcoll_sfx.
-;	Local labels are the IDA local names (_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;Transcribed from lst/nhl94.bin.lst lines 49543-50531. Global names are the or the 93 name where an auto
+;name or a 2 suffix (checkwallcoll, wallcollb). (before checkpuckcoll, entered from it) is the global checkpuckcoll_sfx.
+;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $1C OldXpos, $20 OldYpos,
@@ -988,7 +988,7 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 
 checkfight	;94: an rts. 93 checkfight looked for the start of a fight between players a2 and a3 (94 has no fight code). Called from checkcx (hockey94_03)
 	rts
-checkwallcoll	;IDA: checkwallcoll2. 93 name. d2/d3 = x/y to test, a3 = object, wcradiusx/wcradiusy = radius. Check the corner circles, the goals
+checkwallcoll	;d2/d3 = x/y to test, a3 = object, wcradiusx/wcradiusy = radius. Check the corner circles, the goals
 	;(checkgoal with a2 = SortCords+(13*SCstruct) top, SortCords+(12*SCstruct) bottom) and then the side and end boards. Calls wallcollb on a hit, with d0/d1 = cos/sin of
 	;the wall. Called from checkcoll (hockey94_03)
 	bclr	#pf3wall,pflags3(a3)	;wall collision bit
@@ -1253,11 +1253,11 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	beq.w	.11
 	btst	#0,(gmode2).w	;94: no new assignments in a shootout
 	bne.w	.11
-	addq.w	#1,$362(a2)	;add to SH Goals (IDA comment)
+	addq.w	#1,$362(a2)	;add to SH Goals
 .11
 	bclr	#4,(gmode2).w
 	beq.w	.12
-	addq.w	#1,$35A(a2)	;add to BA Goals (IDA comment)
+	addq.w	#1,$35A(a2)	;add to BA Goals
 .12
 	btst	#5,(sflags2).w	;sf2pwrplay
 	beq.w	.14
@@ -1378,7 +1378,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	bsr.w	AddPenalty2
 	movea.l	(sp)+,a3
 	rts
-.setass	;IDA: setass. 93 Goal .setass (93 IDA ResetTeamPlayerAssignments). d0 = assignment, a2 = team. Give each skater of team a2 that is not fighting
+.setass	;93 Goal.setass (93 ). d0 = assignment, a2 = team. Give each skater of team a2 that is not fighting
 	;assignment d0, clear pfnc. 94 also clears $64 bit 3 (one-timer) and then calls EndOneTimer. Called from checkgoal (.goal)
 	move.l	a3,-(sp)
 	movea.w	$22(a2),a3	;tmsort
@@ -1399,7 +1399,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	dbf	d3,.loop3
 	movea.l	(sp)+,a3
 	rts
-GetPeriodTimeRemaining	;93 name. Return d0 = (gsp << 14 | PerTimeTotal) - gameclock. Called from checkgoal (ScoreSum entry) and InProgress (penalty94_1)
+GetPeriodTimeRemaining	;Return d0 = (gsp << 14 | PerTimeTotal) - gameclock. Called from checkgoal (ScoreSum entry) and InProgress (penalty94_1)
 	move.w	(gsp).w,d0
 	swap	d0
 	clr.w	d0
@@ -1492,7 +1492,7 @@ CheckBump	;supply minimum separation velocity for coll with walls/goal/net. a2 =
 	bne.w	rtss2
 	move.l	#8,d0
 	bra.w	AddPenalty2
-wallcollb	;IDA: wallcollb2. 93 name. Check for puck over wall. a3 = object, d0/d1 = cos/sin of the wall. Not the puck, or Zpos up to $12:
+wallcollb	;Check for puck over wall. a3 = object, d0/d1 = cos/sin of the wall. Not the puck, or Zpos up to $12
 	;wallcoll. Zpos above $1D, or above $12 with Ypos below $118: out of play. Otherwise only at x $D-$F with Yvel >= $FA0 (else wallcoll): halve
 	;Yvel, SPA $1078 on the next struct, sfx $E and crowd, then out of play. Out of play: sfslock, pfnc, and while the clock runs penalty 6
 	;(PenOOP) for ltplayer. Called from checkwallcoll
@@ -1629,7 +1629,7 @@ wallcoll	;d0 = cosine, d1 = sine of angle of incidence with wall, a3 = object. B
 	addq.w	#4,sp
 	movem.l	(sp)+,d2-d3
 	rts
-checkpuckcoll_sfx	;IDA: _sfx (a local of wallcoll in IDA, entered from checkpuckcoll; a global so it does not clash with sfx). Puck in the air: sfx 5 once when sflags4 bit 2 is set
+checkpuckcoll_sfx	;(a local of wallcoll in, entered from checkpuckcoll; a global so it does not clash with sfx). Puck in the air: sfx 5 once when sflags4 bit 2 is set
 	bclr	#2,(sflags4).w
 	beq.w	rtss2
 	move.w	#5,-(sp)
@@ -1756,11 +1756,11 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	cmp.l	#$40,d0	;compare cbody squared to d0
 	bhi.w	.exit	;exit if higher
 	bsr.w	puckbody
-.ret	;IDA: _exit
+.ret
 .exit
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-.cbg	;IDA: _cbg. Goalie body reach by Agl/2 (words, 0-$1E)
+.cbg	;Goalie body reach by Agl/2 (words, 0-$1E)
 	dc.w	$C	;Agility 0 (rounded down to nearest even number)
 	dc.w	$C	;2
 	dc.w	$D	;4 (0.8 or 1)
@@ -1781,7 +1781,7 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	dc.w	$F	;34
 	dc.w	$F	;36
 	dc.w	$F	;38
-.cbgsq	;IDA: _cbgsq. Reach squared
+.cbgsq	;Reach squared
 	dc.w	$90
 	dc.w	$90
 	dc.w	$A9
@@ -1908,10 +1908,10 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 ;	rtss2 (the shared rts), puckgoalie, deflect, makepde, getpde, setpde, SetPersonel, SetPlList, TryAddPlayerToList, the
 ;	94-only SetupPenaltyShot, forcepldata, ResetBench, Setplass, setplayer, ClampNibble. The vblank handler (93 VBlank,
 ;	video94_1) follows at $15D9A.
-;	Transcribed from lst/nhl94.bin.lst lines 50532-51764. Global names are the IDA names, or the 93 name where the routine is the 93 one (TryAddPlayerToList, ClampNibble). IDA _glue (puckstick, also
-;	entered from puckgoalie) is the 93 global puckglue. IDA labels that would split a routine are locals:
+;Transcribed from lst/nhl94.bin.lst lines 50532-51764. Global names are the or the 93 name where the routine is the 93 one (TryAddPlayerToList, ClampNibble). (puckstick, also
+;entered from puckgoalie) is the 93 global puckglue. that would split a routine are locals
 ;	.CheckStkForContactWithSkater and .PlayerPassOrLoosePuckStkLoad in puckstick, .AwayTeam in setplayer. Local labels are
-;	the IDA local names (_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $28 Xvel, $2A Yvel, $2C Zvel,
@@ -1956,7 +1956,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	beq.w	.steal	;branch if goalie
 	tst.w	position(a0)	;check if goalie
 	beq.w	rtss2	;no stealing from goalie
-.CheckStkForContactWithSkater	;IDA: CheckStkForContactWithSkater (no xref; a label inside puckstick). Stk for puckc
+.CheckStkForContactWithSkater	;(no xref; a label inside puckstick). Stk for puckc
 	;Stk for puckc
 	move.b	stickhand(a0),d0
 	lsr.b	#1,d0	;divide by 2
@@ -2025,7 +2025,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	bne.w	.nohand	;branch if so
 	btst	#pf3onetimer,pflags3(a2)	;check if one timer
 	bne.w	.onetimer	;branch if so
-.PlayerPassOrLoosePuckStkLoad	;IDA: PlayerPassOrLoosePuckStkLoad (no xref; a label inside puckstick)
+.PlayerPassOrLoosePuckStkLoad	;(no xref; a label inside puckstick)
 	move.b	stickhand(a2),d1
 	mulu.w	#$15E,d1
 .nohand
@@ -2048,7 +2048,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	move.w	#$18,SPAnum(a2)
 .ex2
 	rts
-puckglue	;IDA: _glue, a local of puckstick that puckgoalie also branches to (93 name). Player a2 takes the puck (92 puckstick .glue): faceoff
+puckglue	;a local of puckstick that puckgoalie also branches to. Player a2 takes the puck (92 puckstick.glue): faceoff
 	;and pass stats, crowd song, goalie hold time (temp5), then .setd0player
 	move.w	#7,-(sp)	;SFXpuckget (song)
 	move.w	SCnum(a2),d0	;move SCnum into d0
@@ -2088,7 +2088,7 @@ puckglue	;IDA: _glue, a local of puckstick that puckgoalie also branches to (93 
 	cmpi.w	#$2F4,SPA(a2)	;SPAgdive. check for goalie dive animation
 	bne.w	.setd0player	;branch if not equal
 	move.w	#5,temp5(a2)	;set temp5 to 5
-.setd0player	;IDA: _setd0player (93 setd0player). Give control of player d0 to a controller if his team is controlled. 94 checks the pads 3 and 4 too (cont3team / cont4team)
+.setd0player	;(93 setd0player). Give control of player d0 to a controller if his team is controlled. 94 checks the pads 3 and 4 too (cont3team / cont4team)
 	cmp.w	(c1playernum).w,d0
 	beq.w	rtss2	;exit if player controlled
 	cmp.w	(c2playernum).w,d0
@@ -2321,12 +2321,12 @@ puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save 
 	bne.w	.bounceoff	;branch if so
 	clr.w	Zvel(a3)	;clear puck Zvel
 	bra.w	puckglue
-.list	dc.w	$73	;IDA: _list. Save attribute offsets: GGSleft
+.list	dc.w	$73	;Save attribute offsets: GGSleft
 	;GGSleft
 	dc.w	$6E	;GGSright
 	dc.w	$70	;GSSleft
 	dc.w	$72	;GSSright
-.list2	dc.b	$55	;IDA: _list2. 2 bit save odds per quadrant, one byte per goalie frame from SPFgoalie
+.list2	dc.b	$55	;2 bit save odds per quadrant, one byte per goalie frame from SPFgoalie
 	;odds for stopping puck in each quadrant for each possible goalie frame
 	dc.b	$9D
 	dc.b	$67	;g
@@ -2445,7 +2445,7 @@ puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save 
 	dc.b	$57	;W
 	dc.b	$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5
 	dc.b	$A5,$A5,$A5,$A5,$A5,$A5,$A5,$A5
-.list3	dc.b	$9D	;IDA: _list3. The same for the 94 goalie frames from $292
+.list3	dc.b	$9D	;The same for the 94 goalie frames from $292
 	dc.b	$67	;g
 	dc.b	$9D
 	dc.b	$67	;g
@@ -2531,7 +2531,7 @@ setpde	;d1 = rostnum of player * 2, a2 = team struct, d0 = new energy level (0 i
 .0
 	move.w	d0,tmpde(a2,d1.w)
 	rts
-setpersonel	;IDA name (93 setpersonel). This will set personnel on team a2 according to team a2's registers: PlList (SetPlList) gives the players
+setpersonel	;(93 setpersonel). This will set personnel on team a2 according to team a2's registers: PlList (SetPlList) gives the players
 	;wanted on the ice; each sort obj gets newpos / newpnum
 	movem.l	d0-d5/a0-a4,-(sp)
 	movea.w	tmsort(a2),a3	;#tmsort
@@ -2656,7 +2656,7 @@ SetPlList	;create PlList of players who we want on the ice now. a2 = team struct
 	bsr.w	TryAddPlayerToList
 	beq.s	.try
 	bra.s	.next1
-TryAddPlayerToList	;IDA: findAvailablePlayer. d0 = player number (1 based), d4 = PlList slot. Put d0 in the slot if he is on the bench or
+TryAddPlayerToList	;d0 = player number (1 based), d4 = PlList slot. Put d0 in the slot if he is on the bench or
 	;ice (not in the box, not injured) and not in PlList yet; return d1 = 0 (Z set) if not
 	move.w	d0,d1
 	subq.w	#1,d0
@@ -2728,7 +2728,7 @@ forcepldata	;no skating on/off: force players to correct data (for faceoffs only
 	beq.w	.0
 	move.w	SCnum(a3),-(sp)	;push SCNum to stack
 	move.w	#$F,SCnum(a3)	;put F into SCNum
-	jsr	(Set4WayPlayerStub).l	;IDA nullsub: an rts
+	jsr	(Set4WayPlayerStub).l	;an rts
 	move.w	(sp)+,SCnum(a3)	;pop original SCNum back into SCNum
 .0
 	move.w	d0,position(a3)	;move newpos(d0) into position
@@ -2796,7 +2796,7 @@ Setplass	;set players (a3) initial assignment from .alist by position
 	lea	.alist(pc),a0
 	move.b	0(a0,d0.w),d0
 	bra.w	assreplace
-.alist	dc.b	$E	;IDA: _alist. assgoalie
+.alist	dc.b	$E	;assgoalie
 	;assgoalie??
 	dc.b	2	;assdefd
 	dc.b	2	;assdefd
@@ -2812,7 +2812,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	movea.w	#(tmstruct-M68K_RAM),a0	;Start of Team Struct
 	btst	#pfteam,pflags(a3)	;checks if home or away (if 0, home)
 	beq.w	.0
-.AwayTeam	;IDA: AwayTeam (no xref; a label inside setplayer)
+.AwayTeam	;(no xref; a label inside setplayer)
 	;$364 = size of Team Struct
 	adda.w	#tmsize,a0
 .0
@@ -2863,7 +2863,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	cmpi.w	#2,(gsp).w	;Check if period is 3rd or OT
 	blt.w	.playdatamove
 	bgt.w	.chklead	;branch if OT
-	jsr	(GetPeriodTime).w	;hockey94_01 (IDA ClockLength). Find period length
+	jsr	(GetPeriodTime).w	;hockey94_01. Find period length
 	lsr.w	#1,d0	;divide by 2 (5 min length = 2:30)
 	cmp.w	(gameclock).w,d0	;compare to game clock
 	bgt.w	.playdatamove	;branch if d0 greater than gameclock (bug)
@@ -2998,7 +2998,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	move.b	d3,aggress(a3)	;Agr gets no bonus
 	andi.b	#$F,aggress(a3)	;mask Agr byte with F, so max is 15 decimal
 	rts
-ClampNibble	;IDA: checkattriblimits. Clamp byte d3 to 0-$1E (93 0-15). Called by setplayer
+ClampNibble	;Clamp byte d3 to 0-$1E (93 0-15). Called by setplayer
 	tst.b	d3	;test if d3 is zero or higher
 	bpl.w	.pos
 	clr.w	d3	;if negative, clear

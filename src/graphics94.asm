@@ -2,12 +2,12 @@
 ;	graphics94.asm: retail $4B5C0-$F66ED (700718 bytes), the data after the sound data (sound94 ends with the sound incbins,
 ;	$1AD90-$4B5BF): the MATCHUPS script and the graphics, up to the 94 code in the high ROM. incbin only, no gap and no overlap. Each file
 ;	is a slice of lst/nhl94.bin written by npm run extractassets (extractAssets94.js) into Extracted\NHL94\Graphics and Text. One slice
-;	per IDA label, except the player cards (IDA unk_C726C): one slice per card (Graphics\PlayerCards), NoPicGoalie2 first, then Card<player>
-;	from the roster String in teamdata94, then PlayerCardsScreenPic. Labels are the 93 names, or named for what the data is, the IDA name where it is not an
-;	auto name, or the name the matched segment uses (IDA hid it in a string) or, for the team logos,
+;per except the player cards: one slice per card (Graphics\PlayerCards), NoPicGoalie2 first, then Card<player>
+;from the roster String in teamdata94, then PlayerCardsScreenPic. Labels are the 93 names, or named for what the data is, the where it is not an
+;auto name, or the name the matched segment uses (it in a string) or, for the team logos
 ;	logo<team>. Files use the 92 / 93 name where the 94 asset is the same one (same use, mostly the same size; 94 in the name when it
 ;	differs), else the extractAssets94.js draft name where its slice lined up, else the label. A map's tiles start past its 8-byte
-;	header: the IDA label there is written as label+8.
+;header: the there is written as label+8.
 ScoutTextScript		;retail $4B5C0-$4B79F (480 bytes). the script ScoutTextPlayer (hockey94_06) types out word by word on the ScoutingReport (MATCHUPS) screen
 	incbin	..\Extracted\NHL94\Text\ScoutTextScript.bin
 	even
@@ -17,34 +17,34 @@ GameSetUpMap	;retail $4B7A0-$4DEED (10062 bytes). the game setup screen bitmap, 
 GameSetUpMap2	;retail $4DEEE-$4E45B (1390 bytes). the second game setup bitmap
 	incbin	..\Extracted\NHL94\Graphics\GameSetUp94-2.map.jim
 	even
-TitleScreenImg		;retail $4E45C-$52DA9 (18766 bytes). IDA TitleScreenImg: the newTitleScreen backdrop (high ROM)
+TitleScreenImg		;retail $4E45C-$52DA9 (18766 bytes). the newTitleScreen backdrop (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\Title94-1.map.jim
 	even
-NHLShieldImg		;retail $52DAA-$5338B (1506 bytes). IDA NHLShieldImg: the NHL shield on newTitleScreen
+NHLShieldImg		;retail $52DAA-$5338B (1506 bytes). the NHL shield on newTitleScreen
 	incbin	..\Extracted\NHL94\Graphics\Title94-2.map.jim
 	even
-PAlogoImg		;retail $5338C-$5394D (1474 bytes). IDA PAlogoImg: the NHLPA logo on newTitleScreen
+PAlogoImg		;retail $5338C-$5394D (1474 bytes). the NHLPA logo on newTitleScreen
 	incbin	..\Extracted\NHL94\Graphics\Title94-3.map.jim
 	even
-TitleImg		;retail $5394E-$54E23 (5334 bytes). IDA TitleImg: the title on newTitleScreen
+TitleImg		;retail $5394E-$54E23 (5334 bytes). the title on newTitleScreen
 	incbin	..\Extracted\NHL94\Graphics\Title94-4.map.jim
 	even
 ScoutMap		;retail $54E24-$55B7D (3418 bytes). 93 ScoutMap: the ScoutingReport and PlayoffScreen background
 	incbin	..\Extracted\NHL94\Graphics\Scouting94.map.jim
 	even
-framermap		;retail $55B7E-$55BF5 (120 bytes). IDA framermap (92 / 93 FramerMap): Framer
+framermap		;retail $55B7E-$55BF5 (120 bytes). (92 / 93 FramerMap): Framer
 	incbin	..\Extracted\NHL94\Graphics\Framer.map.jim
 	even
 ;framermap+8: retail $55B86. the framer tiles (AddFramer, ScoutingReport)
-FaceOffMap		;retail $55BF6-$56059 (1124 bytes). IDA FaceOffMap (92 / 93 name): puckfaceoff2
+FaceOffMap		;retail $55BF6-$56059 (1124 bytes). (92 / 93 name): puckfaceoff2
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.map.jim
 	even
 ;FaceOffMap+8: retail $55BFE. the tiles (puckfaceoff2, ReloadFaceOffMap)
-Rinktilelist		;retail $5605A-$5C407 (25518 bytes). IDA Rinktilelist (93 IceRinkMap): the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, DisplayPeriodOver, crash)
+Rinktilelist		;retail $5605A-$5C407 (25518 bytes). (93 IceRinkMap): the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, DisplayPeriodOver, crash)
 	incbin	..\Extracted\NHL94\Graphics\IceRink94.map.jim
 	even
-Rinktiles	equ	Rinktilelist+8	;retail $56062. IDA Rinktiles: the rink tiles (setupice, ClrHor)
-RefsMap		;retail $5C408-$5CF63 (2908 bytes). IDA RefsMap (92 / 93 name): the ref (PushRef)
+Rinktiles	equ	Rinktilelist+8	;retail $56062. the rink tiles (setupice, ClrHor)
+RefsMap		;retail $5C408-$5CF63 (2908 bytes). (92 / 93 name): the ref (PushRef)
 	incbin	..\Extracted\NHL94\Graphics\Refs.map.jim
 	even
 ;RefsMap+8: retail $5C410. the tiles (puckpenshot, Endfaceoff, StartHL2, ReloadRefTiles)
@@ -56,17 +56,17 @@ Sprites		;retail $5DE7A-$5DE83 (10 bytes). the sprite header (93 Sprites; addfra
 	;$9E6A4) and $408AA (to frameSprData), then a word
 	incbin	..\Extracted\NHL94\Graphics\Sprites.bin
 	even
-Spritetiles		;retail $5DE84-$9E723 (264352 bytes). IDA Spritetiles: the sprite tiles (93 Sprites+$A; addframe2 adds the frame tile offset
+Spritetiles		;retail $5DE84-$9E723 (264352 bytes). the sprite tiles (93 Sprites+$A; addframe2 adds the frame tile offset
 	;to #Spritetiles)
 	incbin	..\Extracted\NHL94\Graphics\Spritetiles.bin
 	even
-frameSprData		;retail $9E724-$A44C7 (23972 bytes). IDA frameSprData: the frame data at Sprites + $408AA (93 FrameDataOff and SprDataBytes)
+frameSprData		;retail $9E724-$A44C7 (23972 bytes). the frame data at Sprites + $408AA (93 FrameDataOff and SprDataBytes)
 	incbin	..\Extracted\NHL94\Graphics\frameSprData.bin
 	even
-Hotlist		;retail $A44C8-$A4B53 (1676 bytes). IDA Hotlist (93 HotList): the hot spot byte pair of each frame (GetHot)
+Hotlist		;retail $A44C8-$A4B53 (1676 bytes). (93 HotList): the hot spot byte pair of each frame (GetHot)
 	incbin	..\Extracted\NHL94\Graphics\Hotlist.bin
 	even
-CrowdFrameList		;retail $A4B54-$A78AD (11610 bytes). IDA CrowdFrameList (93 CrowdSprites): showcrowd
+CrowdFrameList		;retail $A4B54-$A78AD (11610 bytes). (93 CrowdSprites): showcrowd
 	incbin	..\Extracted\NHL94\Graphics\Crowd.anim
 	even
 ;CrowdFrameList+8: retail $A4B5C. the tiles (setupice, ReloadCrowdTiles)
@@ -74,7 +74,7 @@ FaceOffSprites		;retail $A78AE-$A8921 (4212 bytes). 93 FaceOffSprites, same size
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.anim
 	even
 ;FaceOffSprites+8: retail $A78B6. the tiles (puckfaceoff2, ReloadFaceOffTiles)
-ZamFrameList		;retail $A8922-$A9A0F (4334 bytes). IDA ZamFrameList (93 ZamSprites): showzam
+ZamFrameList		;retail $A8922-$A9A0F (4334 bytes). (93 ZamSprites): showzam
 	incbin	..\Extracted\NHL94\Graphics\Zam.anim
 	even
 ;ZamFrameList+8: retail $A892A. the tiles (Intermission)
@@ -116,10 +116,10 @@ ScoresMap		;retail $B3E74-$B4259 (998 bytes). 93 ScoresMap, same size: read by t
 EASportsMap	;retail $B425A-$B517F (3878 bytes). the EA Sports screen map
 	incbin	..\Extracted\NHL94\Graphics\EASportsMap.bin
 	even
-RevRinkTilelist		;retail $B5180-$BB4ED (25454 bytes). IDA RevRinkTilelist: the reversed ice rink (updatescroll, ShowReplayIcon)
+RevRinkTilelist		;retail $B5180-$BB4ED (25454 bytes). the reversed ice rink (updatescroll, ShowReplayIcon)
 	incbin	..\Extracted\NHL94\Graphics\IceRink94Reverse.map.jim
 	even
-RevRinkTiles	equ	RevRinkTilelist+8	;retail $B5188. IDA RevRinkTiles: the tiles (setupice)
+RevRinkTiles	equ	RevRinkTilelist+8	;retail $B5188. the tiles (setupice)
 ReplayMap		;retail $BB4EE-$BC05B (2926 bytes). the replay map ShowReplayBanner shows at 0,0 (16 x 11)
 	incbin	..\Extracted\NHL94\Graphics\ReplayOptions.map.jim
 	even
@@ -127,7 +127,7 @@ ReplayMap		;retail $BB4EE-$BC05B (2926 bytes). the replay map ShowReplayBanner s
 HorRinkMap	;retail $BC05C-$BE269 (8718 bytes). SetHor (93 IceRinkMap)
 	incbin	..\Extracted\NHL94\Graphics\PauseScreen.map.jim
 	even
-icerinkmap	equ	HorRinkMap+8	;retail $BC064. IDA icerinkmap: the tiles (SetHor)
+icerinkmap	equ	HorRinkMap+8	;retail $BC064. the tiles (SetHor)
 PrintFont2Map		;retail $BE26A-$BEFB7 (3406 bytes). the second print font (print, printsmall)
 	incbin	..\Extracted\NHL94\Graphics\SmallFont94.map.jim
 	even
@@ -686,7 +686,7 @@ ArenaGfxBank		;retail $E9ED6-$F3097 (37314 bytes). read in the high ROM near NoN
 PlayoffSprite		;retail $F3098-$F5337 (8864 bytes). PlayoffScreen and DrawPlayoffSprite
 	incbin	..\Extracted\NHL94\Graphics\PlayoffSprite.bin
 	even
-HiScoreImg		;retail $F5338-$F5AF5 (1982 bytes). IDA HiScoreImg: HiScoreScreen (high ROM)
+HiScoreImg		;retail $F5338-$F5AF5 (1982 bytes). HiScoreScreen (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\HiScoreImg.bin
 	even
 HotIconMap		;retail $F5AF6-$F5D1B (550 bytes). read by HotColdIcon (high ROM, not matched yet)
@@ -697,6 +697,6 @@ ColdIconMap		;retail $F5D1C-$F600D (754 bytes). read by HotColdIcon (high ROM, n
 	incbin	..\Extracted\NHL94\Graphics\ColdIconMap.bin
 	even
 ;ColdIconMap+8: retail $F5D24. the tiles (ScoutingReport)
-revframetbl		;retail $F600E-$F66ED (1760 bytes). IDA revframetbl: the replay frame table (RestoreReplayFrame)
+revframetbl		;retail $F600E-$F66ED (1760 bytes). the replay frame table (RestoreReplayFrame)
 	incbin	..\Extracted\NHL94\Graphics\revframetbl.bin
 	even

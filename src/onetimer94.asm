@@ -4,13 +4,13 @@
 ;	setonetimeranim, onetimershot), the 4 way play adaptor test (Detect4WayPlay), the crowd meter (LoadCrowdRec, Crowd_Noise),
 ;	stopna2, the 94 corner wall check (checkcornercoll94, cornercollb94), the hot / cold tables (Create_HotCold_Table, AttributeCalc) and the
 ;	hot / cold player lists for the MATCHUPS text (NextHomeHotPlayer ... GetHotColdTotal). 94 only; 93 has no code here.
-;	Transcribed from lst/nhl94.bin.lst lines 958869-960186. Names and most comments are the IDA ones (this IDA database is
-;	commented); IDA auto names and the IDA placeholders are named for what the
-;	code does. IDA gaps written from the retail bytes: unused code IDA left as dc.b (Read4WayPad1
-;	... Read4WayPad4, Set4WayPlayer, Clamp0to100 and three rts), and labels for the branches IDA wrote as $F66FC / $F6772 / *+4. Locals
-;	are named for what they do (the IDA _x locals keep their name), with the IDA label, unless generic, in an ;IDA: comment.
+;Transcribed from lst/nhl94.bin.lst lines 958869-960186. Names and most comments are the (this is
+;commented); names and the are named for what the
+;code does. written from the retail bytes: unused code as dc.b (Read4WayPad1
+;Read4WayPad4, Set4WayPlayer, Clamp0to100 and three rts), and labels for the branches as $F66FC / $F6772 / *+4. Locals
+;are named for what they do (the locals keep their name), with the unless generic, in an
 
-puckvzadj	;IDA name. 94 only: set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot (logic94_1)
+puckvzadj	;94 only: set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot (logic94_1)
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(pucky).w,d0	;move pucky into d0
 	bpl.w	.dist	;branch if positive
@@ -179,7 +179,7 @@ OneTimerFarTbl	;OneTimerTarget target offsets (x, y) by facing, receiver far fro
 OneTimerGoalieTbl	;OneTimerTarget target offsets (x, y) by facing, goalie
 	dc.w	$FFFB,$FFF7,$32,$FFF7,$32,$FFF7,$32,$FFF7
 	dc.w	$FFFB,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7
-assonetimer	;IDA name (and comments). 94 only: assignment $23 (asstab, hockey94_11), player a3 shooting a one-timer: take control of him
+assonetimer	;(and comments). 94 only: assignment $23 (asstab, hockey94_11), player a3 shooting a one-timer: take control of him
 	;(setc1player / setc2player, also for pads 3 and 4), start the animation (setonetimeranim), then shoot when the puck arrives (EndOneTimer)
 	bclr	#1,pflags(a3)	;pfna - clear new assignment
 	beq.w	.checkxpos	;branch if not new assignment
@@ -228,7 +228,7 @@ assonetimer	;IDA name (and comments). 94 only: assignment $23 (asstab, hockey94_
 	bra.w	.setanim
 .setplayer1
 	jsr	(setc1player).l
-	bra.w	.setanim	;IDA: *+4
+	bra.w	.setanim	;*+4
 .setanim
 	move.w	d0,-(sp)
 	bsr.w	setonetimeranim	;sets the one timer animation
@@ -380,7 +380,7 @@ assonetimer	;IDA name (and comments). 94 only: assignment $23 (asstab, hockey94_
 	jsr	(EndOneTimer).l
 .ex
 	rts
-setonetimeranim	;IDA name. 94 only: the one-timer animation: d1 = $7FC or $92E from the angle to the goal (vtoa, CheckOneTimerFacing)
+setonetimeranim	;94 only: the one-timer animation: d1 = $7FC or $92E from the angle to the goal (vtoa, CheckOneTimerFacing)
 	move.w	#$7FC,d1
 	movem.w	d0-d1,-(sp)	;push to stack d0 and d1
 	move.w	(a3),d0	;move XPos of a3 into d0
@@ -439,7 +439,7 @@ PuckOnAttackHalf	;94 only. d0 = 1 when the puck is on the half of the goal playe
 .ex
 	movem.w	(sp)+,d0-d1
 	rts
-onetimershot	;IDA name (and comments). 94 only: do the one-timer shot (doshot), credit the last two passers as the assists, add to crowdlevel /
+onetimershot	;(and comments). 94 only: do the one-timer shot (doshot), credit the last two passers as the assists, add to crowdlevel /
 	;CwdExciteLvl and to the one-timer attempts ($35C of the team struct). Called from puckstick (hockey94_05)
 	move.w	#4,(passdir).w
 	jsr	(doshot).l
@@ -463,7 +463,7 @@ onetimershot	;IDA name (and comments). 94 only: do the one-timer shot (doshot), 
 	bset	#1,pflags2(a3)	;set animation in progress
 	bset	#1,(sflags6).w	;set bit 1
 	rts
-CheckOneTimerFacing	;94 only, called from setonetimeranim. IDA comment: it does nothing, d0 and d1 are restored at the end; it seems meant to
+CheckOneTimerFacing	;94 only, called from setonetimeranim. it does nothing, d0 and d1 are restored at the end; it seems meant to
 	;change the way the one-timer player faces
 	movem.w	d0-d1,-(sp)	;push d0 and d1 on stack
 	neg.w	d0	;negate d0

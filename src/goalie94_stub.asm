@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0FE1D8-$0FE555, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 DoDMA_clearCallbackPointer = $11738	;jsr / jmp (x).l at $FE2FE
 setc1player = $C0BC		;jsr / jmp (x).l at $FE280
 setc2player = $C0DA		;jsr / jmp (x).l at $FE2BC

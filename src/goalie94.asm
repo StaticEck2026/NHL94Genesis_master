@@ -1,5 +1,5 @@
 ; $0FE1D8  NEW in 94: manual goalie
-ManualGoalieMenu	;IDA left it as data; 93 has no counterpart. "x Manual Goalie" menu item (hockey94_11 menu lists; PrintMenuItem prints
+ManualGoalieMenu	;it as data; 93 has no counterpart. "x Manual Goalie" menu item (hockey94_11 menu lists; PrintMenuItem prints
 	;Manual / Auto Goalie from the same words): with OptNOP set, toggle the goalie mode of the pause pad (goaliemode2 for pad 2, sflags bit 1,
 	;else goaliemode1; both when the pads are on one team). In a penalty shot or shootout (gmode2 bit 0, BA_PS_flags bit 2) the pad then
 	;takes player 0 / 6 or 5 / $B by its mode, when BA_Sktr_SCnum is on its side (setc1player / setc2player)
@@ -159,7 +159,7 @@ ArenaFrames7	;ArenaAnims frame list: (frame, time) byte pairs, $FF loops, $FE en
 ArenaFrames8	;ArenaAnims frame list: (frame, time) byte pairs, $FF loops, $FE ends
 	dc.b	1,$A,2,$A,3,$A,4,$A,5,$A,6,$A,7,$A,8,$A
 	dc.b	9,$A,$A,$A,$B,$A,$C,$A,$D,$A,$E,$A,$F,$7F,$FE,0
-SetCameraTop	;nothing calls it (IDA left it as data). sflags bit 6, xc1 = 0, yc1 = $160
+SetCameraTop	;nothing calls it (it as data). sflags bit 6, xc1 = 0, yc1 = $160
 	bset	#6,(sflags).w
 	move.w	#0,(xc1).w
 	move.w	#$160,(yc1).w

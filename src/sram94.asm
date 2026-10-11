@@ -3,12 +3,12 @@
 ;	94 only (93 sram93 drives a serial EEPROM): the battery save RAM. 94 keeps $2000 bytes on the odd bytes at $200000, copies
 ;	them to M68K_RAM at power on (InitSaveRAM) and protects them with a sum / complement checksum in bytes $1FFE-$1FFF.
 ;	InitSaveRAM, VBcount, ValidateSRAM, ClearSRAM, WriteSRAM, MakeSRAMChecksum, ReadSRAM; p_turnoff (sound94) follows at $1A264.
-;	Transcribed from lst/nhl94.bin.lst lines 61322-61528. Global names are the IDA names; locals are the IDA local names
-;	(_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment. No IDA gaps.
+;Transcribed from lst/nhl94.bin.lst lines 61322-61528. Global names are the locals are the names
+;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ;No
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 
-InitSaveRAM	;IDA name. Called from Begin. Copy the $2000 byte save RAM (the odd bytes at $200000) to M68K_RAM and check its checksum
+InitSaveRAM	;Called from Begin. Copy the $2000 byte save RAM (the odd bytes at $200000) to M68K_RAM and check its checksum
 	;(ValidateSRAM; ValidSRAM 0 = good, -1 = bad). A bad save RAM is cleared (ClearSRAM) and read again. Two power-on tests that never return:
 	;Start+A+C held writes and reads back every bit of every byte, writes $12,$34,$56,$78 to bytes 0-3 and flashes the screen green, or red at the
 	;first bad byte; Start+B+C held flashes green if bytes 0-3 are $12345678, else red
@@ -82,10 +82,10 @@ InitSaveRAM	;IDA name. Called from Begin. Copy the $2000 byte save RAM (the odd 
 SRAMWaitVblank	;94 only. Wait for the next vblank (vcountwait, 93 MenuWaitVblank). Called from InitSaveRAM
 	jsr	(vcountwait).l
 	rts
-VBcount	;IDA name. vbint handler while InitSaveRAM runs: vcount + 1 only
+VBcount	;vbint handler while InitSaveRAM runs: vcount + 1 only
 	addq.w	#1,(vcount).w	;vblank with counter only
 	rte
-ValidateSRAM	;IDA name. Check the save RAM copy in M68K_RAM: byte $1FFF must be the sum of bytes 0-$1FFD, byte $1FFE its complement. ValidSRAM = 0 if they match, -1 if not. Called from InitSaveRAM
+ValidateSRAM	;Check the save RAM copy in M68K_RAM: byte $1FFF must be the sum of bytes 0-$1FFD, byte $1FFE its complement. ValidSRAM = 0 if they match, -1 if not. Called from InitSaveRAM
 	move.w	#$1FFD,d1	;set iterator to  $1FFD
 	clr.w	d0	;clear d0
 	lea	(M68K_RAM).l,a0	;set a0 to start of RAM
@@ -118,7 +118,7 @@ ValidateSRAM	;IDA name. Check the save RAM copy in M68K_RAM: byte $1FFF must be 
 	st	(ValidSRAM).w	;set
 .x
 	rts
-ClearSRAM	;IDA name. Clears first $2000 of RAM and SaveRAM: zero M68K_RAM $0-$1FFF with byte $1FFE = $FF (the checksum of zeros), write it to
+ClearSRAM	;Clears first $2000 of RAM and SaveRAM: zero M68K_RAM $0-$1FFF with byte $1FFE = $FF (the checksum of zeros), write it to
 	;the save RAM, set byte 1 to 1, then MakeSRAMChecksum. Called from InitSaveRAM
 	lea	(M68K_RAM).l,a0
 	move.w	#$1FFF,d0
@@ -138,7 +138,7 @@ ClearSRAM	;IDA name. Clears first $2000 of RAM and SaveRAM: zero M68K_RAM $0-$1F
 	bsr.w	WriteSRAM
 	bsr.w	MakeSRAMChecksum
 	rts
-WriteSRAM	;IDA name. Write data from a0 into SaveRAM: d1 = number of bytes, d0 = first save RAM byte (each byte is the odd byte of a word at
+WriteSRAM	;Write data from a0 into SaveRAM: d1 = number of bytes, d0 = first save RAM byte (each byte is the odd byte of a word at
 	;$200000 + d0 * 2). Called from ClearSRAM, MakeSRAMChecksum and the save code (clrCrowdRAM ...)
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.l	#$200000,a1
@@ -152,7 +152,7 @@ WriteSRAM	;IDA name. Write data from a0 into SaveRAM: d1 = number of bytes, d0 =
 	dbf	d1,.loop
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-MakeSRAMChecksum	;IDA name. Read the whole save RAM to M68K_RAM, put the sum of bytes 0-$1FFD in byte $1FFF and its complement in byte $1FFE,
+MakeSRAMChecksum	;Read the whole save RAM to M68K_RAM, put the sum of bytes 0-$1FFD in byte $1FFF and its complement in byte $1FFE
 	;and write those two bytes back. Called from ClearSRAM and the save code (UpdateRecords ...)
 	lea	(M68K_RAM).l,a0
 	move.l	#$2000,d1
@@ -172,7 +172,7 @@ MakeSRAMChecksum	;IDA name. Read the whole save RAM to M68K_RAM, put the sum of 
 	move.l	#$1FFE,d0
 	bsr.s	WriteSRAM
 	rts
-ReadSRAM	;IDA name. move into a0 location and increment: copy d1 save RAM bytes from byte d0 (the odd bytes at $200000 + d0 * 2) to (a0)+. Called from InitSaveRAM, MakeSRAMChecksum and the save code
+ReadSRAM	;move into a0 location and increment: copy d1 save RAM bytes from byte d0 (the odd bytes at $200000 + d0 * 2) to (a0)+. Called from InitSaveRAM, MakeSRAMChecksum and the save code
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.l	#$200000,a1
 	add.l	d0,d0

@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $009FD0-$00B0E7, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l #x carry the
-; address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 ClrHor = $12B40			;jsr (x).l at $9FEA
 DoFill = $11544			;bsr.w at $9FFC
 ReadJoy1 = $11340		;bra.w at $A430

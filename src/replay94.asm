@@ -5,8 +5,8 @@
 ;	94 adds the reverse angle replay (sflags4 bits 4, 6, 7), the replay icon timer (ShowReplayIcon ... EraseReplayBanner),
 ;	4 way play pads and the fall-down position fixes in updateplayers. doinput (logic94_1) follows at $B0E8.
 ;	Transcribed from lst/nhl94.bin.lst lines 34505-35879. Global names are the 93 names where 93 has the
-;	routine (IDA name, unless generic, in an ;IDA: comment); 94-only routines keep the IDA name. Local labels are the IDA
-;	local names (_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;routine ( unless generic, in an); 94-only routines keep the Local labels are the
+;local names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself, odd data is padded).
@@ -306,7 +306,7 @@ getpzjoy	;read the joystick of the pad that paused. 94: pads 3 and 4 when FourWa
 ShowReplayIcon	;94 only. Show the replay icon (93 ReplayMode does this inline) and start the $F0 frame replayicontimer timer
 	move.w	#$F0,(replayicontimer).w
 	bsr.w	printz
-	String	-(TXPRI+TXMAP3),2,2			;IDA hid this and moveq #$20,d0 in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2			;and moveq #$20,d0 in ori.b / andi.b
 	moveq	#$20,d0
 	moveq	#$55,d1
 	moveq	#8,d2
@@ -323,7 +323,7 @@ ShowReplayIcon	;94 only. Show the replay icon (93 ReplayMode does this inline) a
 	bra.w	dobitmap
 EraseReplayIcon	;94 only. Erase the 8 x 4 replay icon (replayicontimer timer ran out)
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP3),2,2			;IDA hid this and the three moves in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2			;and the three moves in ori.b / andi.b
 	move.w	#8,d0			;8 wide
 	move.w	#4,d1			;4 high
 	move.w	#$7FF,d2
@@ -331,7 +331,7 @@ EraseReplayIcon	;94 only. Erase the 8 x 4 replay icon (replayicontimer timer ran
 ShowReplayBanner	;94 only. Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
 	st	(replayicontimer).w
 	bsr.w	printz
-	String	-(TXPRI+TXMAP3),2,0			;IDA hid this and moveq #0,d0 in ori.b
+	String	-(TXPRI+TXMAP3),2,0			;and moveq #0,d0 in ori.b
 	moveq	#0,d0
 	moveq	#0,d1
 	moveq	#$10,d2
@@ -344,7 +344,7 @@ ShowReplayBanner	;94 only. Show ReplayMap at 0,0 (16 x 11) and stop the replayic
 	bra.w	dobitmap
 EraseReplayBanner	;94 only. Erase the 16 x 11 area ShowReplayBanner drew
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP3),2,2			;IDA hid this and the three moves in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2			;and the three moves in ori.b / andi.b
 	move.w	#$10,d0			;16 wide
 	move.w	#$B,d1			;11 high
 	move.w	#$7FF,d2
@@ -464,7 +464,7 @@ RevReplayAdj	;94 only. Set sflags4 bit 7 for a reverse angle replay, then fall i
 	beq.w	RestoreReplayFrame	;branch if not
 	bset	#7,(sflags4).w	;set bit 7
 ; a4 = current replay frame address to convert into normal coordinates
-RestoreReplayFrame	;IDA: SetRCords (92 name). a4 = current replay frame address to convert into normal cordinates (92
+RestoreReplayFrame	;a4 = current replay frame address to convert into normal cordinates (92
 	;SetRCords), then the other replay variables (92 nonshift). 94 flips x/y and frames for the reverse angle
 	movem.l	d0-d2/a0/a6,-(sp)
 	movea.l	#revframetbl,a6
@@ -729,7 +729,7 @@ updatereplay	;called every frame to save replay events, d7 = elapsed frames
 	move.w	(sp)+,d0
 	move.w	(Hpos).w,(a0)+
 	move.w	(Vpos).w,(a0)+
-rtss8	;IDA name (93 rtss2; 94 rtss2 is the rts at $15464)
+rtss8	;(93 rtss2; 94 rtss2 is the rts at $15464)
 	rts
 ; this routine calls all collision/animation/assignment code for all players
 ; d7 = elapse frames since last call

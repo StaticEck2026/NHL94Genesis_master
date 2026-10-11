@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $00C710-$00D09B, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 EvadePC = $E594			;lea (x,pc) at $CD9E
 ReadGoaliePulled = $FEFCC	;jsr / jmp (x).l at $CD40
 SetSPA = $1073A			;bsr.w / Bcc.w at $C7B4

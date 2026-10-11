@@ -3,12 +3,12 @@
 ;	92 Logic.Asm part 2, as 93 logic93_2.asm: the player assignments assbench ... asswingd. asswingo (logic94_3)
 ;	follows at $D09C. 94 has no fight code: assfight and assfwatch are an rts, and the 93 chkhit, ShowInjuryMsg,
 ;	banner and addinfo are not here. assgoaliebreakwait is new.
-;	Transcribed from lst/nhl94.bin.lst lines 37886-38681. Global names are the IDA names except asseben (IDA
-;	assben) and assfaceoffp1 (IDA assfaceoffpl), the 93 names. Local labels are the IDA local names (_x -> .x,
-;	exit -> .exit, inside assfaceoffp1) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;Transcribed from lst/nhl94.bin.lst lines 37886-38681. Global names are the except asseben (
+;assben) and assfaceoffp1, the 93 names. Local labels are the names (_x ->.x
+;exit ->.exit, inside assfaceoffp1) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	SortCords offsets (93 names): Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44, temp4 $46,
+;SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44, temp4 $46
 ;	SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
 
 assbench
@@ -109,7 +109,7 @@ assbench
 rtss4
 	rts
 ; player a3 should exit bench area
-asseben	;IDA: assben (93 asseben). Player a3 should exit the bench area
+asseben	;(93 asseben). Player a3 should exit the bench area
 	btst	#5,pflags(a3)
 	bne.s	rtss4
 	bclr	#1,pflags(a3)
@@ -309,7 +309,7 @@ assfaceoff
 	rts
 ; assignment for players actually participating in faceoff
 ; a3 = player
-assfaceoffpl	;IDA: assfaceoffpl (93 assfaceoffp1). Face off player (was: assfaceoffp1)
+assfaceoffpl	;(93 assfaceoffp1). Face off player
 	btst	#5,pflags(a3)
 	bne.w	.exit2
 	btst	#0,(sflags2).w
@@ -346,7 +346,7 @@ assfaceoffpl	;IDA: assfaceoffpl (93 assfaceoffp1). Face off player (was: assface
 .d
 	bset	#1,pflags2(a3)
 	bra.w	SetSPA
-.exit	;IDA: exit (a global in IDA; local here so it does not split assfaceoffp1)
+.exit	;(a global in ; local here so it does not split assfaceoffp1)
 	move.b	#$14,nopuck(a3)
 	bra.w	assexit
 .exit2
@@ -356,7 +356,7 @@ assfight	;94: rts only (93 has the fight code here)
 assfwatch	;94: rts only (93 watches the fight)
 	rts	;assfwatch - possible location where players watching fight
 ; player should do nothing
-donothing	;(was: assnothing)
+donothing
 	btst	#5,pflags(a3)	;#pfalock
 	bne.s	assfwatch
 	btst	#3,pflags(a3)	;#pfjoycon

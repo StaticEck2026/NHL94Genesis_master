@@ -4,10 +4,10 @@
 ;	CopyPaletteToCRAM, randomd0s / randomd0, sroot, sfx, song, waitx, IntermissionLoop, waitjoy, orjoy, nodiag,
 ;	ProcessInputWithRepeat, ReadJoy1-4 (94: pads 3 and 4), ReadJoy, jdtab, DoDMApro, DoDMA, DoDMA_nd2, DoFill,
 ;	WaitDMA, setvram, Vmaddr. dobitmap (middle94_2) follows at $1169A.
-;	Transcribed from lst/nhl94.bin.lst lines 44006-44864. Global names are the IDA names except CopyPaletteToCRAM
-;, ProcessInputWithRepeat, DoDMA_nd2 and IntermissionLoop (92 and IDA waitxsr), the 93 names.
-;	IDA dd / nd (inside DoDMA) are the locals .dd / .nd. IDA dmaram? is dmaram (? stripped).
-;	Local labels are the IDA local names (_x -> .x) or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;Transcribed from lst/nhl94.bin.lst lines 44006-44864. Global names are the except CopyPaletteToCRAM
+;ProcessInputWithRepeat, DoDMA_nd2 and IntermissionLoop (92 and), the 93 names.
+;/ nd (inside DoDMA) are the locals.dd /.nd. ? is dmaram (? stripped).
+;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
@@ -143,7 +143,7 @@ cramfade
 	cmp.w	#$80,d6
 	bne.s	.top
 	rts
-CopyPaletteToCRAM	;93 name. Copy all 64 palfadenew colours to colour ram, protected from vblank
+CopyPaletteToCRAM	;Copy all 64 palfadenew colours to colour ram, protected from vblank
 	movem.l	d0/a0-a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
@@ -306,7 +306,7 @@ waitx
 ; special version of waitx for zamboni crossing
 ; wait d0 vblanks or until input from either joystick
 ; retrun joystick variables (d0-d3) if any
-waitxsr	;IDA: waitxsr (92 name). Wait d0 vblanks while the zamboni crosses (was: IntermissionLoop)
+waitxsr	;Wait d0 vblanks while the zamboni crosses
 	movem.l	d4-d7/a0-a3,-(sp)
 	neg.w	d0
 	move.w	d0,(vcount).w
@@ -419,7 +419,7 @@ nodiag
 .ok
 	movem.l	(sp)+,d0/d4-d5
 	rts
-ProcessInputWithRepeat	;93 name. nodiag, then key repeat on d1-d3
+ProcessInputWithRepeat	;nodiag, then key repeat on d1-d3
 	bsr.s	nodiag
 	tst.w	d3
 	beq.w	rtss2
@@ -525,9 +525,9 @@ DoDMA
 	adda.w	d0,a0
 	move.w	d2,d0
 	bra.w	.nd
-.dd	;IDA: dd (a global in IDA; local here, only DoDMA uses it)
+.dd	;(a global in ; local here, only DoDMA uses it)
 	movem.l	d2-d3/a1,-(sp)
-.nd	;IDA: nd
+.nd
 	lea	(VDP_CTRL).l,a1
 	move.w	#VDPR_MODE2+$54,(a1)
 	move.w	#VDPR_AUTOINC+$02,(a1)
@@ -581,7 +581,7 @@ DoDMA
 	move	(sp)+,sr
 	movem.l	(sp)+,d2-d3/a1
 	rts
-DoDMA_nd2	;93 name. vram to vram copy by dma, protected from vblank
+DoDMA_nd2	;vram to vram copy by dma, protected from vblank
 	movem.l	d0-d3/a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
@@ -663,7 +663,7 @@ setvram
 	dbf	d1,.0
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
-setVram_0	;93 name: second half of 92 setVram (no fade): clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
+setVram_0	;second half of 92 setVram (no fade): clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
 	;Falls in from setvram, called from EASportsScreen (attract94) and HiScoreScreen (high94_3)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
@@ -739,10 +739,10 @@ Vmaddr
 ;	printbig, the 94 PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. AddPenalty (penalty94_1) follows
 ;	at $11F2C.
 ;	Transcribed from lst/nhl94.bin.lst lines 44878-45933. Global names are the 93 names where 93 has the routine
-;	(IDA name, unless generic, in an ;IDA: comment); printz2 keeps the IDA name that the earlier segments call (93
+;( unless generic, in an); printz2 keeps the that the earlier segments call (93
 ;	printsmallz). The decompressor handler and four control code labels are
-;	placed at the addresses in jump_table and ControlCodeJumpTable. Local labels are the IDA local names (_x -> .x)
-;	or the 93 local where the code matches, else in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment.
+;placed at the addresses in jump_table and ControlCodeJumpTable. Local labels are the names (_x ->.x)
+;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
@@ -795,14 +795,14 @@ dobitmap
 	move.w	(sp)+,(disflags).w
 	move.w	(sp)+,(printy).w
 	rts
-DecompressGraphicsWithCallback	;93 name. DecompressGraphics, then return 8 bytes past the call (callback data)
+DecompressGraphicsWithCallback	;DecompressGraphics, then return 8 bytes past the call (callback data)
 	move.l	(sp),(callbackPtr).w
 	bsr.w	DecompressGraphics
 	addq.l	#8,(sp)
 	rts
-DoDMA_clearCallbackPointer	;93 name. Clear callbackPtr (93 name), fall into DecompressGraphics
+DoDMA_clearCallbackPointer	;Clear callbackPtr, fall into DecompressGraphics
 	clr.l	(callbackPtr).w
-DecompressGraphics	;93 name. a2 = graphics data, d4 = start char
+DecompressGraphics	;a2 = graphics data, d4 = start char
 	movem.l	d0-d1/a0-a6,-(sp)
 	movea.l	a2,a0
 	move.w	d4,d1
@@ -824,7 +824,7 @@ DecompressGraphics	;93 name. a2 = graphics data, d4 = start char
 .done
 	movem.l	(sp)+,d0-d1/a0-a6
 	rts
-DecompressBytecode	;93 name. Unpack a0 into the 256 byte ring buffer at ThreeStars (93 DispAttribCtr)
+DecompressBytecode	;Unpack a0 into the 256 byte ring buffer at ThreeStars (93 DispAttribCtr)
 	movea.w	#(ThreeStars-M68K_RAM),a1
 	movea.w	#(ThreeStars-M68K_RAM),a3
 	movea.w	#(callbackPtr-M68K_RAM),a4
@@ -842,7 +842,7 @@ DecompressBytecode	;93 name. Unpack a0 into the 256 byte ring buffer at ThreeSta
 	move.w	0(a2,d0.w),d0
 	jsr	0(a2,d0.w)
 	bra.s	.loop
-jump_table	;93 name. DecompressBytecode handler offsets, one per opcode high nibble
+jump_table	;DecompressBytecode handler offsets, one per opcode high nibble
 	dc.w	Opcode_CopyLiteral-jump_table	;0
 	dc.w	Opcode_CopyLiteral-jump_table	;1
 	dc.w	Opcode_ClearBytes-jump_table	;2
@@ -942,7 +942,7 @@ Opcode_CopyBackwardExtended1	;93: opcode A
 	andi.w	#$3F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardExtended2	;93: opcode B. IDA left this handler as dc.b; written from the retail bytes
+Opcode_CopyBackwardExtended2	;93: opcode B. this handler as dc.b; written from the retail bytes
 	move.b	-1(a0),d0
 	asl.w	#8,d0
 	move.b	(a0),d0
@@ -997,7 +997,7 @@ Opcode_CopyBackwardReverseLong	;93: opcode F
 	andi.w	#$7F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardReverseRun
-FlushOutputBuffer	;93 name. Write the full ring buffer to vram
+FlushOutputBuffer	;Write the full ring buffer to vram
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.w	d1,d0
 	bne.w	.size
@@ -1105,7 +1105,7 @@ Framer
 	rts
 ; see print
 ; string macro should follow jsr to this routine
-printsmallz	;93 name (IDA: printz2). String macro follows the call
+printsmallz	;String macro follows the call
 	move.l	a1,-(sp)
 	movea.l	4(sp),a1
 	bsr.w	printsmall
@@ -1123,7 +1123,7 @@ printsmallz	;93 name (IDA: printz2). String macro follows the call
 ; b = color/priority (0-3 = color fam,prio off), (4-7 = color fam, prio on)
 ; xx = x coord to print at
 ; yy = y coord to print at
-printsmall	;IDA: print2. 93 name. Print string macro a1 at printx/y/m with printa; 94 uses the setup font (setupfontchars) when sflags6 bit 3 is set
+printsmall	;Print string macro a1 at printx/y/m with printa; 94 uses the setup font (setupfontchars) when sflags6 bit 3 is set
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movem.l	d0-d3/a0/a2-a3,-(sp)
@@ -1178,7 +1178,7 @@ printsmall	;IDA: print2. 93 name. Print string macro a1 at printx/y/m with print
 	addq.w	#1,(printx).w
 	bsr.w	xyVmMap
 	bra.s	.1
-ControlCodeJumpTable	;93 name. printsmall control codes, indexed by -byte
+ControlCodeJumpTable	;printsmall control codes, indexed by -byte
 	dc.l	rtss2		;0: padding, no-op
 	dc.l	ControlCode_SetMap		;-1: map
 	dc.l	ControlCode_SetAttribute		;-2: palette/priority
@@ -1193,7 +1193,7 @@ ControlCode_SetMapAndPosition	;93: printsmall control code -8, next 4 bytes = at
 	bsr.w	ControlCode_SetMap
 	bsr.w	ControlCode_SetX
 	bra.w	ControlCode_SetY
-ControlCode_SetMap	;93 name. Control code -1, next byte = map number -> printm
+ControlCode_SetMap	;Control code -1, next byte = map number -> printm
 	move.b	(a1)+,d0
 	subq.w	#1,d3
 	andi.w	#3,d0
@@ -1201,20 +1201,20 @@ ControlCode_SetMap	;93 name. Control code -1, next byte = map number -> printm
 	subq.w	#4,d0
 	move.w	d0,(printm).w
 	bra.w	xyVmMap
-ControlCode_SetAttribute	;93 name. Control code -2, next byte = palette/priority -> printa
+ControlCode_SetAttribute	;Control code -2, next byte = palette/priority -> printa
 	move.b	(a1)+,d2
 	andi.w	#7,d2
 	subq.w	#1,d3
 	ror.w	#3,d2
 	move.w	d2,(printa).w
 	rts
-ControlCode_SetX	;93 name. Control code -3, next byte = printx
+ControlCode_SetX	;Control code -3, next byte = printx
 	clr.w	d0
 	move.b	(a1)+,d0
 	subq.w	#1,d3
 	move.w	d0,(printx).w
 	bra.w	xyVmMap
-ControlCode_SetY	;93 name. Control code -4, next byte = printy
+ControlCode_SetY	;Control code -4, next byte = printy
 	clr.w	d0
 	move.b	(a1)+,d0
 	subq.w	#1,d3
@@ -1326,7 +1326,7 @@ print
 	addq.w	#1,(printx).w
 	bsr.w	xyVmMap
 	bra.s	.1
-FormatAndPrintTime	;93 name. d0 bits 14-15 = period, bits 0-13 = seconds
+FormatAndPrintTime	;d0 bits 14-15 = period, bits 0-13 = seconds
 	swap	d0
 	clr.w	d0
 	rol.l	#2,d0
@@ -1337,7 +1337,7 @@ FormatAndPrintTime	;93 name. d0 bits 14-15 = period, bits 0-13 = seconds
 	lsr.w	#2,d0
 	bsr.w	PushTime
 	bra.w	print
-PeriodLabelTable	;93 name. String list for FormatAndPrintTime: " 1", " 2", " 3", "OT"
+PeriodLabelTable	;String list for FormatAndPrintTime: " 1", " 2", " 3", "OT"
 	dc.w	4
 	dc.b	' 1'
 	dc.w	4
@@ -1411,7 +1411,7 @@ PushNumber
 	move.w	d0,-(a1)
 	move.l	(sp)+,d0
 	rts
-PushNumberWidth	;IDA: DeterStrLength? (93 name). Right-justified number
+PushNumberWidth	;?. Right-justified number
 	movem.l	d0-d3,-(sp)	;push to stack
 	movea.w	#(PushWidthBuf+2-M68K_RAM),a1	;move address FFC00A into a1
 	moveq	#1,d2	;move 1 into d2
@@ -1486,7 +1486,7 @@ appstring
 .ex
 	movem.l	(sp)+,d0/a0
 	rts
-printbigz	;93 name. String macro follows the call
+printbigz	;String macro follows the call
 	move.l	a1,-(sp)
 	movea.l	4(sp),a1
 	bsr.w	printbig
@@ -1588,15 +1588,15 @@ PutBigTile
 	move.w	d3,(a0)
 	movem.l	(sp)+,d1/a0
 	rts
-AddSmallFont	;93 name
+AddSmallFont
 	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-AddFramer	;93 name
+AddFramer
 	movea.l	#framermap+8,a2
 	move.w	d4,(framercset).w
 	bra.w	DoDMA_clearCallbackPointer
-AddTeamBlock	;93 name
+AddTeamBlock
 	moveq	#2,d4
 	movea.l	#Teamblocksmap+8,a2
 	bra.w	DoDMA_clearCallbackPointer

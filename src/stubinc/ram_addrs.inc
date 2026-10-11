@@ -1,7 +1,7 @@
 ; ---------- ram names -------------
 M68K_RAM equ $FFFF0000
 sramcleared equ $FFFF1FFE
-replayend equ $FFFFAF54	;93 name: end of the replay frames ($62 bytes each from M68K_RAM); suba4, adda43 and the record step wrap here
+replayend equ $FFFFAF54	;end of the replay frames ($62 bytes each from M68K_RAM); suba4, adda43 and the record step wrap here
 ;$FFFFAFCA is SortCords-SCstruct
 VSCRLPM equ $FFFFB000
 VSPRITES equ $FFFFB002
@@ -89,7 +89,7 @@ palfadenew equ $FFFFBD28
 ;$FFFFBD4A is palfadenew+$22
 ;$FFFFBD4E is palfadenew+$26
 ;$FFFFBD52 is palfadenew+$2A
-;$FFFFBD68 is palfadenew+$40 (IDA CardPalette)
+;$FFFFBD68 is palfadenew+$40
 ;$FFFFBD6A is palfadenew+$42
 ;$FFFFBD82 is palfadenew+$5A
 ;$FFFFBD88 is palfadenew+$60
@@ -175,7 +175,7 @@ lty equ $FFFFBF7E
 iflags equ $FFFFBF80
 icingPlayer equ $FFFFBF81
 clockram equ $FFFFBF86
-;$FFFFBF8C is clockram+6 (IDA clockramend)
+;$FFFFBF8C is clockram+6
 xc1 equ $FFFFBF8E
 yc1 equ $FFFFBF90
 yleader equ $FFFFBF92
@@ -253,7 +253,7 @@ ScoreSumbytes equ $FFFFC472
 ScoreSum equ $FFFFC474
 PenSumLength equ $FFFFC5DC
 PenSum equ $FFFFC5DE
-tmstruct equ $FFFFC6CE	;(was: HmShots)
+tmstruct equ $FFFFC6CE
 HmGoals equ $FFFFC6DA
 ;$FFFFC6E4 is HmShots+tmline
 HomeTeamRosterPtr equ $FFFFC6EC
@@ -311,7 +311,7 @@ TmpOptUserRec equ $FFFFD05E
 TmpOptPen equ $FFFFD060
 TmpOptLine equ $FFFFD062
 demoflag equ $FFFFD064
-seed equ $FFFFD066	;(was: RNGseed)
+seed equ $FFFFD066
 dmaram equ $FFFFD06A
 music_global_tick_counter equ $FFFFD06E
 music_tick_divider equ $FFFFD070

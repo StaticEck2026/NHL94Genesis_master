@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0138AC-$015D99, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddPenalty = $11F2C		;bsr.w / Bcc.w at $13CC0. penalty94_1
 AddPenalty2 = $11F62		;bsr.w / Bcc.w at $1447A. penalty94_1
 GetHot = $106E0			;bsr.w / Bcc.w at $138FC. logic94_5
@@ -46,7 +46,7 @@ EndPenaltyShotPlay = $F37C		;jsr / jmp (x).l at $14814. logic94_4
 EndOneTimer = $FEFF0		;jsr / jmp (x).l at $14A7E
 
 AttributeCalc = $F70E4		;jsr / jmp (x).l at $15BC6
-GetPeriodTime = $784E		;jsr (x).w at $15B66. hockey94_01 (IDA ClockLength)
+GetPeriodTime = $784E		;jsr (x).w at $15B66. hockey94_01
 a2touchpuck = $1013E		;bsr.w / Bcc.w at $151D6. logic94_5
 chkpk2 = $E274			;bsr.w / Bcc.w at $15B16. logic94_3
 Set4WayPlayerStub = $F6E38		;jsr / jmp (x).l at $159D0

@@ -17,3 +17,17 @@ shotdirmath,CalcAngleOffset,93G
 DrawTeamBlockBitmap,dotb,92G/93G
 .loop/.add/.next/.bad/.fill/.halt (checksum94),ValidationLoop/SkipIncrement/ContinueValidation/VDPErrorSetup/VRAMWriteLoop/Halt,92G promoted
 (new label),Opening3,92G
+TXS_MAP,CC_SetMap,93G ControlCode_SetMap
+TXS_ATTR,CC_SetAttribute,93G
+TXS_X,CC_SetX,93G
+TXS_Y,CC_SetY,93G
+TXS_ADDX,CC_AddX,93G
+TXS_ADDY,CC_AddY,93G
+TXS_FONT,CC_SetFont,93G
+TXS_ALL,CC_SetMapAndPosition,93G
+.loop,ValidationLoop,earlier rename (source comment)
+.add,SkipIncrement,earlier rename (source comment)
+.next,ContinueValidation,earlier rename (source comment)
+.bad,VDPErrorSetup,earlier rename (source comment)
+.fill,VRAMWriteLoop,earlier rename (source comment)
+.halt,Halt,earlier rename (source comment)

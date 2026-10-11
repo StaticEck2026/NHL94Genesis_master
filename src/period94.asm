@@ -5,11 +5,11 @@
 ;	TeamStatTextTbl), the Manual Goalie menu item, ChooseSong, the shootout skate paths, the save RAM option and three stars
 ;	blocks, the player picture unpack (UnpackPicture), HiScoreScreen, newTitleScreen and the credits, clrTmPdst and chgplayer.
 ;	94 only; 93 has no code here, except GameStatisticsScreen / DisplayTeamStatsScreen / FormatStatValue / TeamStatTextTbl (stats93).
-;	Transcribed from lst/nhl94.bin.lst lines 970645-976744. The IDA human names are kept; the IDA auto names (sub_, loc_, unk_,
-;	locret_) and the entries IDA has no label for are named for what they do, or the 93 name.
-;	Locals are in the 93 style (.x exit, .loop, numbered) with the IDA label, unless generic, in an ;IDA: comment. IDA left code as data at $FD6B4,
+;Transcribed from lst/nhl94.bin.lst lines 970645-976744. The names are kept; the names (sub_, loc_, unk_
+;locret_) and the entries no label for are named for what they do, or the 93 name.
+;Locals are in the 93 style (.x exit,.loop, numbered) with the unless generic, in an ;code as data at $FD6B4
 ;	$FD7D0, $FD8EC-$FE14B, $FE1D8, $FE4FC and $FEEA0: written from the retail bytes (the instructions and Strings), as are the
-;	Strings and remap table IDA hid in newTitleScreen. The data tables are formatted from the retail bytes.
+;Strings and remap table in newTitleScreen. The data tables are formatted from the retail bytes.
 
 EndShootout	;94 only. Shootout over (CountShootoutGoals, high94_2): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
 	;7-$B are set up (setplayer) above or below the view and get assscore (assinsert 7)
@@ -52,7 +52,7 @@ EndShootout	;94 only. Shootout over (CountShootoutGoals, high94_2): freezewindow
 	dbf	d2,.loop
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ClampPositionBox	;nothing calls it (IDA left it as data). Clamp $44 / $46(a3) to the box for position $34(a3) in PositionBoxes (PositionBoxesTop when bit 7 of
+ClampPositionBox	;nothing calls it (it as data). Clamp $44 / $46(a3) to the box for position $34(a3) in PositionBoxes (PositionBoxesTop when bit 7 of
 	;$62(a3), the top net)
 	movem.l	d0-d7/a0,-(sp)
 	move.w	position(a3),d7
@@ -234,7 +234,7 @@ PrintPlayerNameRight	;94 only. Print the name of player d0 of team a2 (FormatPla
 	jsr	(HotColdIcon).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-SkipNameNumber	;nothing calls it (IDA left it as data). a1 = the FormatPlayerNameWithAttrib String without its first 2 characters (the length word moved up 2)
+SkipNameNumber	;nothing calls it (it as data). a1 = the FormatPlayerNameWithAttrib String without its first 2 characters (the length word moved up 2)
 	movem.l	d0-d7/a0/a2-a3,-(sp)
 	jsr	(FormatPlayerNameWithAttrib).l
 	move.w	(a1),d0
@@ -244,7 +244,7 @@ SkipNameNumber	;nothing calls it (IDA left it as data). a1 = the FormatPlayerNam
 	movem.l	(sp)+,d0-d7/a0/a2-a3
 	rts
 	String	' . '
-PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" menu item (hockey94_11 menu lists): both team logos
+PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (hockey94_11 menu lists): both team logos
 	;(TeamLogoBitmaps, TeamLogoPalettes palettes), then the goals (matchup 0) or shots of each team by period ($342 / $34A of the team struct; OT when
 	;sflags7 bit 1) and the total. Left / right switch, start exits (ExitAttributeScreen2)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -433,7 +433,7 @@ PeriodStatsScreen	;IDA left it as data; 93 has no counterpart. "Period Stats" me
 .13
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
-GameStatisticsScreen	;IDA left it as data; 93 name. "Game Statistics" menu item (hockey94_11 menu lists): both teams' totals
+GameStatisticsScreen	;it as data; 93 name. "Game Statistics" menu item (hockey94_11 menu lists): both teams' totals
 	;(DisplayTeamStatsScreen). 94 has more rows than the screen: up / down scroll them (matchupvis the most, $70 or $30 without penalties,
 	;OptPen), start exits (ExitAttributeScreen2)
 	moveq	#9,d0
@@ -529,31 +529,31 @@ rtsStatScroll	;rts of StatScrollRow / StatScrollRowEnd
 PrintStatScrollArrows	;GameStatisticsScreen scroll arrows (printz2): up ($7B) when VertLineScrolling > 0, down ($7D) when it is below matchupvis
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printsmallz).l
-	String	TXS_FONT,1
+	String	CC_SetFont,1
 	tst.w	(VertLineScrolling).w
 	beq.w	.0
 	jsr	(printsmallz).l
-	String	TXS_ALL,4,3,'&',8,TXS_FONT,1,'{'
+	String	CC_SetMapAndPosition,4,3,'&',8,CC_SetFont,1,'{'
 	bra.w	.1
 .0
 	jsr	(printsmallz).l
-	String	TXS_ALL,4,3,'&',8,TXS_FONT,1,' '
+	String	CC_SetMapAndPosition,4,3,'&',8,CC_SetFont,1,' '
 .1
 	move.w	(matchupvis).w,d0
 	cmp.w	(VertLineScrolling).w,d0
 	beq.w	.2
 	jsr	(printsmallz).l
-	String	TXS_ALL,4,3,'&',$1A,TXS_FONT,1,'}'
+	String	CC_SetMapAndPosition,4,3,'&',$1A,CC_SetFont,1,'}'
 	bra.w	.3
 .2
 	jsr	(printsmallz).l
-	String	TXS_ALL,4,3,'&',$1A,TXS_FONT,1,' '
+	String	CC_SetMapAndPosition,4,3,'&',$1A,CC_SetFont,1,' '
 .3
 	jsr	(printsmallz).l
-	String	TXS_FONT
+	String	CC_SetFont
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-DisplayTeamStatsScreen	;93 name. Team logos (PrintTeamData), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
+DisplayTeamStatsScreen	;Team logos (PrintTeamData), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
 	;off, OptPen) centred, with the home value at x $22 and the visitors' at x 9 (FormatStatValue); SetStatScroll first
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,7
@@ -590,7 +590,7 @@ DisplayTeamStatsScreen	;93 name. Team logos (PrintTeamData), then each TeamStatT
 	addq.w	#2,(printy).w
 	dbf	d6,.loop
 	rts
-FormatStatValue	;93 name. Print TeamStatTextTbl entry a0 for team a2 centred at printx: the value (offsets $A and $352 are times,
+FormatStatValue	;Print TeamStatTextTbl entry a0 for team a2 centred at printx: the value (offsets $A and $352 are times
 	;PushTime), "/second" if any, " (pct%)" for passing. 94: offset $FFFF is the shooting percentage (goals $C * 100 / shots 0), printed with a
 	;"%"
 	movea.w	#(mesarea-M68K_RAM),a3
@@ -660,7 +660,7 @@ FormatStatValue	;93 name. Print TeamStatTextTbl entry a0 for team a2 centred at 
 	jmp	(PushNumber).l
 .8
 	jmp	(PushTime).l
-TeamStatTextTbl	;93 name. Label, then the team struct stat offset and the second offset ($FFFF none). 15 rows
+TeamStatTextTbl	;Label, then the team struct stat offset and the second offset ($FFFF none). 15 rows
 	dc.w	$0008
 	dc.b	'Score',0
 	dc.w	$C,$FFFF
@@ -742,7 +742,7 @@ TeamStatTextTblNoPen	;94 only. The rows without the power play ones, used when p
 	dc.w	$14,$12
 rtsStatTables	;rts after the stat tables (GameStatisticsScreen scroll step)
 	rts
-updatePPTeamTime	;IDA name (and comments). 94 only: one more second of power play time ($352 of the team struct) for the team on the power play
+updatePPTeamTime	;(and comments). 94 only: one more second of power play time ($352 of the team struct) for the team on the power play
 	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime (penalty94_1)
 	btst	#5,(sflags2).w	;check if PP
 	beq.w	.x	;branch if not

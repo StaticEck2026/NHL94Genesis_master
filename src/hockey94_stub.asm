@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0076B2-$007E35, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l #x carry the
-; address; bsr.w / Bcc.w is the displacement word address + displacement. IDA names (93 name in the comment).
+; address; bsr.w / Bcc.w is the displacement word address + displacement. (93 name in the comment).
 AddPenalty2 = $11F62		;jmp (x).l at $7C38
 p_turnoff = $1A264		;jsr (x).l at $76EE. sound94
 ChkGoalies = $F6AA		;bsr.w at $79D0
@@ -40,7 +40,7 @@ ReadJoy4 = $11388		;jsr (x).l at $7CA2
 SetHor = $12B94			;jsr (x).l at $7D80
 Detect4WayPlay = $F6D5E	;jsr (x).l at $7700
 p_initialZ80 = $1ACC2		;jsr (x).l at $76E8. sound94
-cd0 = $18CFC			;movea.l #x at $7AE2. IDA _cd0 (hockey94_11)
+cd0 = $18CFC			;movea.l #x at $7AE2. (hockey94_11)
 assinsert = $10658		;jsr (x).l at $7B66
 assreplace = $10662		;jsr (x).l at $78CA
 checkwindow = $AFCA		;bsr.w at $7990

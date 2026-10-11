@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0F66EE-$0F6D5D, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 SetSPA = $1073A			;jsr / jmp (x).l at $F6A20
 doshot = $C2F2			;jsr / jmp (x).l at $F6CC0
 puckflip = $102D2		;jsr / jmp (x).l at $F67D8

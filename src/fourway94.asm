@@ -22,34 +22,34 @@ Detect4WayPlay	;94 only: detect the 4 way play adaptor (EA 4 Way Play) on port 2
 .x
 	move.w	#$100,(IO_Z80RES).l
 	rts
-Read4WayPad1	;IDA dc.b, no xref. 94 only, unused: read 4 way play pad 1 (ReadJoy1 with the pad word swapped in)
+Read4WayPad1	;no xref. 94 only, unused: read 4 way play pad 1 (ReadJoy1 with the pad word swapped in)
 	move.b	#0,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave1).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave1).w
 	rts
-Read4WayPad2	;IDA dc.b, no xref. 94 only, unused: the same for pad 2
+Read4WayPad2	;no xref. 94 only, unused: the same for pad 2
 	move.b	#$10,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave2).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave2).w
 	rts
-Read4WayPad3	;IDA dc.b, no xref. 94 only, unused: the same for pad 3
+Read4WayPad3	;no xref. 94 only, unused: the same for pad 3
 	move.b	#$20,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave3).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave3).w
 	rts
-Read4WayPad4	;IDA dc.b, no xref. 94 only, unused: the same for pad 4
+Read4WayPad4	;no xref. 94 only, unused: the same for pad 4
 	move.b	#$30,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave4).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave4).w
 	rts
-	rts	;IDA dc.b, no xref
+	rts	;no xref
 Set4WayPlayerStub	;An empty Set4WayPlayer (just rts): forcepldata (hockey94_05) calls it with SCnum $F when a goalie is pulled
 	rts
-Set4WayPlayer	;IDA dc.b, no xref. 94 only, unused: put player a3's number ($52) in the home or away nibble of PadControlBits34 (unless PadControlBits is -1)
+Set4WayPlayer	;no xref. 94 only, unused: put player a3's number ($52) in the home or away nibble of PadControlBits34 (unless PadControlBits is -1)
 	cmpi.w	#$FFFF,(PadControlBits).w
 	beq.w	.x
 	movem.l	d0-d2,-(sp)

@@ -15,9 +15,9 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $00B0E8-$00C70F, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l / move.l #x carry
-; the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names (hockey94_01 names for
+; the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. (hockey94_01 names for
 ; startpause3 / startpause4).
-linelist = $191A6		;movea.l #x at $B994 (IDA: FaceOffsprites)
+linelist = $191A6		;movea.l #x at $B994
 Framer = $119B8			;bsr.w at $B950
 GetHot = $106E0			;bsr.w at $BED2
 PSandSOpassdir = $FE71C		;jsr (x).l at $C63C

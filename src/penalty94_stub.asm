@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $011F2C-$0138AB, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 DoDMA_clearCallbackPointer = $11738	;bsr.w / Bcc.w at $120D6. middle94_2
 DoFill = $11544			;bsr.w / Bcc.w at $12BFA. middle94_1
 Framer = $119B8			;bsr.w / Bcc.w at $127E2. middle94_2
@@ -59,7 +59,7 @@ DoGameFrame = $794E		;jsr (x).w at $136F0. hockey94_01
 GetShifter = $1828A		;bsr.w / Bcc.w at $1315C
 KillCrowd = $169D0		;jsr / jmp (x).l at $13740
 PushNumber = $11D06		;bsr.w / Bcc.w at $12D5A
-PushNumberWidth = $11D3A		;bsr.w / Bcc.w at $12D28. middle94_2 (IDA DeterStrLength?)
+PushNumberWidth = $11D3A		;bsr.w / Bcc.w at $12D28. middle94_2 (?)
 ResetBench = $15A24		;bsr.w / Bcc.w at $13056
 setpersonel = $15788		;bsr.w / Bcc.w at $13802
 setplayercolors = $1720C		;bsr.w / Bcc.w at $13774. hockey94_06

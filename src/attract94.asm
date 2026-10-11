@@ -2,9 +2,9 @@
 ;	NHL 94 (retail) segment $17A18-$17C71
 ;	94 only: the EA Sports screen (EASportsScreen, called from Begin) and the 94 helpers after it, then the
 ;	93 setoptions vblank handler (93 hockey93_08 VBlank_SetOptions). 94 put this code just
-;	before that handler, so the handler ends this segment and DefaultMenus ($17C72, IDA LoadDefMenuOptions,
+;before that handler, so the handler ends this segment and DefaultMenus ($17C72
 ;	hockey94_09) follows. HiScoreScreen ($FED70) is not next to this code and is not in this segment.
-;	Transcribed from lst/nhl94.bin.lst lines 54528-54846. IDA left $17B98-$17C41 as dc.b; it is code with
+;Transcribed from lst/nhl94.bin.lst lines 54528-54846. $17B98-$17C41 as dc.b; it is code with
 ;	no xref and is written as instructions (DrawTeamBlockBitmap, ClearTextBox, SetTeamPrintPos, SetGoalieMode).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
@@ -29,7 +29,7 @@ EASportsScreen	;94 only. Called from Begin. Show the EA Sports screen until a bu
 	bsr.w	setVram_0
 	bsr.w	printz
 	String	-TXMAP2,0,0,0
-	movea.l	#EASportsMap,a2		;screen map. IDA hid this in the string (ori.b #$7C,d0 / ori.b #$5A,a3)
+	movea.l	#EASportsMap,a2		;screen map. in the string (ori.b #$7C,d0 / ori.b #$5A,a3)
 	movea.l	a2,a0
 	movea.l	a2,a1
 	adda.l	(a2)+,a0
@@ -113,7 +113,7 @@ DrawTeamBitmap	;94 only. dobitmap entry d1 of TeamBitmaps (d4 from the caller)
 	moveq	#0,d5
 	bra.w	dobitmap
 
-dotb	;94 only, no xref (IDA dc.b). Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2 (was: DrawTeamBlockBitmap)
+dotb	;94 only, no xref. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
 	clr.w	d0
 	asl.w	#1,d1
 	movea.l	#Teamblocksmap,a0
@@ -127,14 +127,14 @@ dotb	;94 only, no xref (IDA dc.b). Like DrawTeamBitmap with Teamblocksmap, d4 = 
 	moveq	#2,d5
 	bra.w	dobitmap
 
-ClearOptionDisplay	;94 only, no xref (IDA dc.b). Set the print position, then erase 12 x 2 at it (was: ClearTextBox)
+ClearOptionDisplay	;94 only, no xref. Set the print position, then erase 12 x 2 at it
 	bsr.w	setoptions_printpos2
 	moveq	#$C,d0			;12
 	moveq	#2,d1			;2
 	move.w	#$7FF,d2
 	bra.w	eraser
 
-setoptions_printpos2	;94 only (IDA dc.b). printz position string, then printx = $1A when a2 is the home team (was: SetTeamPrintPos)
+setoptions_printpos2	;94 only. printz position string, then printx = $1A when a2 is the home team
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),2,$A,0
 	cmpa.w	#(tmstruct-M68K_RAM),a2	;home team struct?
@@ -142,7 +142,7 @@ setoptions_printpos2	;94 only (IDA dc.b). printz position string, then printx = 
 	move.w	#$1A,(printx).w
 	rts
 
-SetGoalieMode	;94 only, no xref (IDA dc.b). $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
+SetGoalieMode	;94 only, no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
 	;a value from the team's .sodds
 	movem.l	d0/a0,-(sp)
 	clr.w	$26(a2)

@@ -176,14 +176,14 @@ TXPAL2 equ $20
 TXPAL3 equ $30
 TXPRI equ $40		;high priority
 ;printsmall / printz2 (ControlCodeJumpTable, -byte): the code, then its argument bytes
-TXS_MAP equ $FF		;-1: map
-TXS_ATTR equ $FE		;-2: palette/priority (printa)
-TXS_X equ $FD		;-3: printx
-TXS_Y equ $FC		;-4: printy
-TXS_ADDX equ $FB		;-5: add signed byte to printx
-TXS_ADDY equ $FA		;-6: add signed byte to printy
-TXS_FONT equ $F9		;-7: char set
-TXS_ALL equ $F8		;-8: attribute, map, x, y
+CC_SetMap equ $FF		;-1: map
+CC_SetAttribute equ $FE		;-2: palette/priority (printa)
+CC_SetX equ $FD		;-3: printx
+CC_SetY equ $FC		;-4: printy
+CC_AddX equ $FB		;-5: add signed byte to printx
+CC_AddY equ $FA		;-6: add signed byte to printy
+CC_SetFont equ $F9		;-7: char set
+CC_SetMapAndPosition equ $F8		;-8: attribute, map, x, y
 
 ;game sound effect numbers (sfx / song argument; 92 / 93 SFX names). 95 maps them through SfxTable
 SFXsiren equ $0

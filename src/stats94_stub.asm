@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0080D4-$009FCF, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddFramer = $11F12		;jsr / jmp (x).l at $9D56
 AddSmallFont = $11F04		;jsr / jmp (x).l at $9C40
 AdvanceStringPtr = $13510	;jsr / jmp (x).l at $8BBE
@@ -25,7 +25,7 @@ CalcAttrib = $FA9F8		;jsr / jmp (x).l at $8D70
 DecompressGraphicsWithCallback = $1172C	;bsr.w / Bcc.w at $9C30
 DoDMA_clearCallbackPointer = $11738	;bsr.w / Bcc.w at $9D32
 ExitAttribText = $19FF8		;#x at $8844
-linelist = $191A6		;#x at $860E (IDA: FaceOffsprites)
+linelist = $191A6		;#x at $860E
 FormatAndPrintTime = $11C72	;jsr / jmp (x).l at $90A0
 FormatPlayerName = $18B26	;jsr / jmp (x).l at $979C
 FormatPlayerNameShort = $18B6E	;jsr / jmp (x).l at $8660

@@ -4,14 +4,14 @@
 ;	featured player pictures (FeaturedPictures), the save RAM records (team, player, crowd and user records), the Player Cards screens and
 ;	CalcAttrib, the user record NAME ENTRY screen, Record Holders, the playoff round screen (PlayoffRoundScreen) and the shootout (shooters
 ;	menu, next shooter, "SHOOTOUT WON BY"). 94 only; 93 has no code here.
-;	Transcribed from lst/nhl94.bin.lst lines 963039-969431. There are no 93 counterparts: the IDA human names are kept, and the IDA auto
-;	names and the entries IDA has no label for are named for what they do.
-;	Locals are in the 93 style (.x exit, .loop, numbered), with the IDA label, unless generic, in an ;IDA: comment; the IDA _x locals keep their
-;	name. IDA gaps written from the retail bytes: the inline Strings after the print calls and the remap tables (IDA
-;	code), the code IDA hid behind them (;IDA hid this), and the picture lists IDA read as code ($F92F4-$F98C5). The palettes IDA read
-;	as code ($F8BF4-$F92F3, TeamPalettes) are .pal incbins. The IDA labels inside Strings are not labels.
+;Transcribed from lst/nhl94.bin.lst lines 963039-969431. There are no 93 counterparts: the names are kept, and the
+;names and the entries no label for are named for what they do.
+;Locals are in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; the locals keep their
+;name. written from the retail bytes: the inline Strings after the print calls and the remap tables (
+;code), the code behind them, and the picture lists as code ($F92F4-$F98C5). The palettes
+;as code ($F8BF4-$F92F3, TeamPalettes) are.pal incbins. The inside Strings are not labels.
 
-wallcollduringcheck	;IDA name (and comments). 94 only: during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
+wallcollduringcheck	;(and comments). 94 only: during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
 	;with his size + $17 (checkcornercoll94, high94_1). Called from CCStart (hockey94_03)
 	tst.w	$34(a2)	;check if goalie
 	beq.w	.end
@@ -30,7 +30,7 @@ wallcollduringcheck	;IDA name (and comments). 94 only: during a check, a skater 
 	movem.l	(sp)+,d0-d7
 .end
 	rts
-setSlotBit	;IDA name (and comments). 94 only: sflags6 bit 5 (the slot) = the puck carrier is in the slot in front of the goal. Called from DoGameFrame (hockey94_01)
+setSlotBit	;(and comments). 94 only: sflags6 bit 5 (the slot) = the puck carrier is in the slot in front of the goal. Called from DoGameFrame (hockey94_01)
 	bclr	#5,(sflags6).w	;clears Slot Bit
 	tst.w	(puckc).w
 	bmi.w	.ex	;exit if no puckc
@@ -891,7 +891,7 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 WritePlayerRecord	;94 only. Write the 4 byte player record (PlayerRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
-clrCrowdRAM	;IDA name (clrCrowdRAM?). 94 only: read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
+clrCrowdRAM	;(clrCrowdRAM?). 94 only: read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
 	;LoadCrowdRec (high94_1) and DisplayGameStats (stats94)
 	bclr	#6,(sflags6).w
 CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from clrCrowdRAM and WriteCrowdRecord
@@ -1278,7 +1278,7 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	move.w	(smallfontchars).w,d4
 	movea.l	#SmallFontMap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$05234167,$89ABCDEF	;remap table (IDA: code)
+	dc.l	$05234167,$89ABCDEF	;remap table
 	jsr	(printz).l
 	String	-TXMAP3,0,0
 	movea.l	#PlayerCardsScreenPic,a0	;the Player Cards screen picture (graphics94)
@@ -1288,7 +1288,7 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	adda.l	(a2)+,a1
 	clr.w	d1
 	clr.w	d0
-	moveq	#$28,d2	;IDA hid this
+	moveq	#$28,d2
 	move.w	#$1C,d3
 	moveq	#$D,d5
 	move.w	#1,d4
@@ -1434,7 +1434,7 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	jsr	(eraser).l
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
-	movea.l	(sp),a0	;IDA hid this
+	movea.l	(sp),a0
 	tst.w	(a0)
 	bne.w	.1
 	bsr.w	PrintCardRecords
@@ -1455,9 +1455,9 @@ DrawPlayerCard	;94 only. Draw a player card: picture (DrawPictureBox), name, "Re
 	move.w	#$64,(palcount).w
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
-	move.w	(HomeTeam).w,d0	;IDA hid this
-	tst.w	(cardvis).w	;IDA hid this
-	beq.w	.4	;IDA hid this
+	move.w	(HomeTeam).w,d0
+	tst.w	(cardvis).w
+	beq.w	.4
 	move.w	(VisTeam).w,d0
 .4
 	move.w	d0,(TempWord2).w
@@ -1588,22 +1588,22 @@ PrintCardRecords	;94 only. Player card "Records" column
 	move.w	#$64,(palcount).w
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
-	move.w	#8,d1	;IDA hid this
-	jsr	(PrintCardTeam).l	;IDA hid this
+	move.w	#8,d1
+	jsr	(PrintCardTeam).l
 	move.w	#3,d0
 	move.w	#$F,d1
 	jsr	(PrintStartingLine).l
 	move.w	#8,d0
 	move.w	#$B,d1
 	jsr	(PrintTeamRating).l
-	move.w	#$15,(printx).w	;IDA hid this
+	move.w	#$15,(printx).w
 	move.w	#$C,(printy).w
-	move.w	(printx).w,-(sp)	;IDA hid this
-	jsr	(printsmallz).l	;IDA hid this
+	move.w	(printx).w,-(sp)
+	jsr	(printsmallz).l
 	String	'  Records'
-	move.w	(sp)+,(printx).w	;IDA hid this
-	addq.w	#1,(printy).w	;IDA hid this
-	jsr	(printsmallz).l	;IDA hid this
+	move.w	(sp)+,(printx).w
+	addq.w	#1,(printy).w
+	jsr	(printsmallz).l
 	String	'-----------'
 	move.w	(HomeTeam).w,d1
 	tst.w	(cardvis).w
@@ -1644,7 +1644,7 @@ ClearCardText	;94 only. Player card: erase the text area and redraw the team bit
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
-	move.w	d0,(printx).w	;IDA hid this
+	move.w	d0,(printx).w
 	move.w	d1,(printy).w
 	move.w	(cardlogochars1).w,d4
 	move.w	(HomeTeam).w,d3
@@ -1862,9 +1862,9 @@ PrintOverallRating	;94 only. Player card "Overall Rating" (CalcAttrib, AttribAdj
 	move.w	d1,-(sp)
 	jsr	(printsmallz).l
 	String	'Overall'
-	move.w	(sp)+,(printx).w	;IDA hid this
-	addq.w	#1,(printy).w	;IDA hid this
-	jsr	(printsmallz).l	;IDA hid this
+	move.w	(sp)+,(printx).w
+	addq.w	#1,(printy).w
+	jsr	(printsmallz).l
 	String	'Rating   '
 	movea.l	#tmstruct,a2
 	tst.w	(cardvis).w
@@ -1885,7 +1885,7 @@ PrintOverallRating	;94 only. Player card "Overall Rating" (CalcAttrib, AttribAdj
 	movea.l	#mesarea,a1
 	jsr	(printsmall).l
 	movem.l	(sp)+,d0-d7/a0-a6
-CardStub	;An rts with no caller (IDA nullsub)
+CardStub	;An rts with no caller
 	rts
 PrintStartingLine	;Player card "Starting Line": the line slots the player starts in (LinePosNames position names)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -1910,9 +1910,9 @@ PrintStartingLine	;Player card "Starting Line": the line slots the player starts
 	move.w	d0,-(sp)
 	jsr	(printsmallz).l
 	String	'Starting Line'
-	addq.w	#2,(printy).w	;IDA hid this
-	move.w	(sp),(printx).w	;IDA hid this
-	movea.l	#LinePosNames,a1	;IDA hid this
+	addq.w	#2,(printy).w
+	move.w	(sp),(printx).w
+	movea.l	#LinePosNames,a1
 .loop
 	cmpi.w	#2,(a1)
 	beq.w	.2
@@ -1934,7 +1934,7 @@ PrintStartingLine	;Player card "Starting Line": the line slots the player starts
 	move.w	(sp)+,d0
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-LinePosNames	;IDA hid the movea.l #$FA9D2. Position names; an empty String ends the list
+LinePosNames	;the movea.l #$FA9D2. Position names; an empty String ends the list
 	String	'G   '
 	String	'LD  '
 	String	'RD  '
@@ -1942,7 +1942,7 @@ LinePosNames	;IDA hid the movea.l #$FA9D2. Position names; an empty String ends 
 	String	'C   '
 	String	'RW  '
 	dc.w	2
-CalcAttrib	;IDA name (and comments). 94 only: the overall rating of player d0: his attributes weighted by OvrPlayerWgtList (skaters) or
+CalcAttrib	;(and comments). 94 only: the overall rating of player d0: his attributes weighted by OvrPlayerWgtList (skaters) or
 	;OvrGoalWgtList (goalies), and by AttribWgtList. Called from getNameandAttrib (stats94) and PrintOverallRating
 	move.l	a6,-(sp)	;push a6 to stack
 	clr.w	(OvrDivisor).w
@@ -2049,11 +2049,11 @@ CalcAttrib	;IDA name (and comments). 94 only: the overall rating of player d0: h
 .4
 	movea.l	(sp)+,a6
 	rts
-OvrPlayerWgtList	dc.b	2	;IDA name. CalcAttrib skater weights
+OvrPlayerWgtList	dc.b	2	;CalcAttrib skater weights
 	dc.b	2,2,2,4,6,2,4,2,4,6,6,4,2,2,2
-OvrGoalWgtList	dc.b	2	;IDA name. CalcAttrib goalie weights
+OvrGoalWgtList	dc.b	2	;CalcAttrib goalie weights
 	dc.b	2,2,2,2,2,2,2,9,9,2,2,9,2,2,2
-AttribWgtList	dc.b	2	;IDA name. CalcAttrib attribute weights
+AttribWgtList	dc.b	2	;CalcAttrib attribute weights
 	dc.b	2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the roster index: ReadAttributeNibble, GetDefenseStart)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -2077,16 +2077,16 @@ PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the
 	ble.w	.1
 	jsr	(printsmallz).l
 	String	' Goalie'
-	bra.w	.3	;IDA hid this
+	bra.w	.3
 .1
-	jsr	(printsmallz).l	;IDA hid this
+	jsr	(printsmallz).l
 	String	' Forward'
 	bra.w	.3
 .2
 	jsr	(printsmallz).l
 	String	' Defenseman'
 .3
-	tst.w	(sp)+	;IDA hid this
+	tst.w	(sp)+
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 PrintTeamRating	;94 only. Player card "Team Rating" (GetTeamRating, high ROM)
@@ -2321,7 +2321,7 @@ DrawPictureBox	;94 only. Player card picture box (DrawPlayerPicture, UnpackPictu
 	bsr.w	DrawPlayerPicture
 	jsr	(printz).l
 	String	-(TXPRI+TXPAL3+TXMAP2),1,8
-	move.w	(cardlogochars2).w,d4	;IDA hid this
+	move.w	(cardlogochars2).w,d4
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -2448,23 +2448,23 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	move.w	d4,(framercset).w
 	movea.l	#framermap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$91234567,$89ABCDEF	;remap table (IDA: code)
+	dc.l	$91234567,$89ABCDEF	;remap table
 	move.w	d4,(nameframechars).w
 	movea.l	#framermap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$91234560,$89ABCDEF	;remap table (IDA: code)
+	dc.l	$91234560,$89ABCDEF	;remap table
 	move.w	d4,(smallfontchars).w
 	jsr	(AddSmallFont).l
 	jsr	(printz).l
 	String	-TXMAP1,0,0
-	moveq	#$28,d0	;IDA hid this
-	moveq	#$1C,d1	;IDA hid this
-	move.w	#$7FF,d2	;IDA hid this
-	jsr	(eraser).l	;IDA hid this
+	moveq	#$28,d0
+	moveq	#$1C,d1
+	move.w	#$7FF,d2
+	jsr	(eraser).l
 	jsr	(setupIceRinkMap).l
-	jsr	(printz).l	;IDA hid this
+	jsr	(printz).l
 	String	-TXMAP2,0,0
-	movea.l	#ScoutMap,a0	;IDA hid this (and printz Strings)
+	movea.l	#ScoutMap,a0	;(and printz Strings)
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -2813,7 +2813,7 @@ NameEntryHelp	;94 only. Name entry help text ("D-Pad up/down to move arrows.", "
 	addq.w	#1,(printy).w
 	jsr	(printz).l
 	String	'Press START to      '
-	addq.w	#1,(printy).w	;IDA hid this
+	addq.w	#1,(printy).w
 	move.w	(sp),(printx).w
 	jsr	(printz).l
 	String	'select name.        '
@@ -2945,8 +2945,8 @@ PrintNameLog	;94 only. Name entry: the "Name Log" list (PrintNameField, GetLogNa
 	move.w	(namelogsel).w,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),5,8
-	move.w	#6,d7	;IDA hid this
-	move.w	#1,(namelogsel).w	;IDA hid this
+	move.w	#6,d7
+	move.w	#1,(namelogsel).w
 	movea.l	#TempBuffer,a1
 .loop
 	bsr.w	GetLogName
@@ -2977,7 +2977,7 @@ PrintLogArrows	;94 only. Name entry: print the two arrow Strings at a1 on name l
 	beq.w	.0
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),3,8
-	move.w	(namelogarrows).w,d0	;IDA hid this
+	move.w	(namelogarrows).w,d0
 	subq.w	#1,d0
 	add.w	d0,(printy).w
 	move.l	a1,-(sp)

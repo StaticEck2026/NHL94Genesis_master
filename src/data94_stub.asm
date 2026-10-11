@@ -15,14 +15,14 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $017C72-$01A04F, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 playoffseats = $5576		;#x at $17D24
 randomd0 = $11086		;bsr.w / Bcc.w at $17D18
 rtss2 = $15464			;bsr.w / Bcc.w at $18100
 WriteLineData = $FE696		;jsr / jmp (x).l at $18144
 
 Framer = $119B8			;bsr.w / Bcc.w at $18548
-GetPeriodTime = $784E		;jsr (x).w at $18624. hockey94_01 (IDA ClockLength)
+GetPeriodTime = $784E		;jsr (x).w at $18624. hockey94_01
 Rinktilelist = $5605A		;#x at $1856A
 appendz = $11D96			;bsr.w / Bcc.w at $18AAE
 appstring = $11D9E		;bsr.w / Bcc.w at $18AB8

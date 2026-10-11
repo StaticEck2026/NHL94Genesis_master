@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $015D9A-$0169F9, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 CrowdFrameList = $A4B54		;#x at $161DA. 93 CrowdSprites
 Crowd_Noise = $F6EBE		;jsr / jmp (x).l at $15F00
 DoDMA = $113E4			;bsr.w / Bcc.w at $15E7E. middle94_1

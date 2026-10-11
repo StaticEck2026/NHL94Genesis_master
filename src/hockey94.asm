@@ -4,7 +4,7 @@
 ;	screen draw routine and seta2, the same split as 93 hockey93_01.asm. The menu engine Pausemode
 ;	calls (93 menu93.asm InitMenuState) follows at $7E36.
 ;	Transcribed from lst/nhl94.bin.lst lines 29709-30309. Global names are the 93 names where 93 has
-;	the same routine (IDA name, unless generic, in an ;IDA: comment); 94-only routines keep the IDA name.
+;the same routine ( unless generic, in an); 94-only routines keep the
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz2 use the String macro (length word includes itself).
@@ -20,9 +20,9 @@ Begin	;cold start, entered from Start. Clear RAM, init sound and menus, go to ti
 .0	clr.l	(a0)+			;clear RAM $B000-$DEF3
 	cmpa.w	#$DEF4,a0
 	blt.s	.0
-	clr.w	(PALflag).w		;clear the PAL flag (IDA: DMA flag)
+	clr.w	(PALflag).w		;clear the PAL flag (flag)
 	move.w	(VDP_CTRL).l,d0
-	andi.w	#1<<PAL_MODE,d0		;VDP status bit 0 = PAL (50 Hz). IDA calls it DMA busy; that is bit 1
+	andi.w	#1<<PAL_MODE,d0		;VDP status bit 0 = PAL (50 Hz). it DMA busy; that is bit 1
 	move.w	d0,(music_global_tick_counter).w
 	beq.w	.ntsc
 	bset	#0,(PALflag).w	;PAL
@@ -113,7 +113,7 @@ ResetClock	;set period length and stop clock
 	bset	#gmclock,(gmode).w		;gmclock: stop clock
 	rts
 
-GetPeriodTime	;IDA: ClockLength. Return d0 = period length in seconds for the period length option
+GetPeriodTime	;Return d0 = period length in seconds for the period length option
 	move.w	(OptPerlen).w,d0
 	asl.w	#1,d0
 	lea	.timetab(pc),a0
@@ -166,7 +166,7 @@ StartPer	;start a period: reset stack, rink and clock, face off, run the game lo
 	bge.w	Gameloop
 	bset	#7,(sflags3).w		;set for periods 1 and 2 only
 
-Gameloop	;IDA: GameLoop. Main loop for game
+Gameloop	;Main loop for game
 	bsr.w	DoGameFrame
 	bsr.w	demoread		;check if demo mode
 	btst	#sfpz,(sflags).w		;sfpz
@@ -194,7 +194,7 @@ DoGameFrame	;wait for at least one vblank, then run one frame of game logic
 	bsr.w	updatereplay
 	jmp	setvideo
 
-periodicevents	;IDA: periodiceevents. Called every time thru game loop with d7 = elapsed frames
+periodicevents	;Called every time thru game loop with d7 = elapsed frames
 	jsr	(PenaltyManager).l
 	bsr.w	updatecrowdf
 	jsr	(RunArenaAnim).l
@@ -269,7 +269,7 @@ UpdateCwdExcite	;called once per second. Track peak and running total of crowd e
 updatecrowdf	;this is called every game loop with d7 = elapsed frames
 	;this will update the current frame of crowd animation
 	cmpi.w	#$15E,(crowdlevel).w
-	blt.w	.dec			;IDA: start
+	blt.w	.dec
 	subq.w	#3,(crowdlevel).w	;loud crowd calms down faster
 .dec	sub.w	d7,(crowdlevel).w
 	bpl.w	.0
@@ -285,7 +285,7 @@ updatecrowdf	;this is called every game loop with d7 = elapsed frames
 	addq.w	#2,(crowdstep).w
 	andi.w	#$1E,(crowdstep).w	;%00011110
 	add.w	(crowdstep).w,d0
-	movea.l	#cd0,a0			;$fftt frame/time table (92 .cd0, IDA _cd0)
+	movea.l	#cd0,a0			;$fftt frame/time table (92.cd0)
 	move.b	0(a0,d0.w),(crowdframe+1).w
 	clr.w	d1
 	move.b	1(a0,d0.w),d1
@@ -425,7 +425,7 @@ startpause4	;94 only: pause initiated by cont 4 (4 way play). Also from doinput+
 	bset	#1,(sflags).w		;sfpj
 	bra.s	startpause
 
-Pausemode	;IDA: PauseMode. Game is in pause mode now
+Pausemode	;Game is in pause mode now
 	jsr	(forceblack).l		;fade screen to black
 	move.w	d0,-(sp)
 	move.w	(vcount).w,d0
@@ -483,7 +483,7 @@ SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
 	jsr	(setvideo).l
 	jsr	(KillCrowd).l
 	jsr	(printsmallz).l		;erase playfield 3
-	String	TXS_MAP,3,TXS_X,0,TXS_Y,0	;IDA hid this in ori.b #3,a0
+	String	CC_SetMap,3,CC_SetX,0,CC_SetY,0	;in ori.b #3,a0
 	moveq	#$20,d0			;32
 	moveq	#$1C,d1			;28
 	move.w	#$7FF,d2

@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside $0169FA-$017A17, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
-; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. IDA names.
+; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddFramer = $11F12		;bsr.w / Bcc.w at $16ACA. middle94_2
 DisplayTeamStatsForPlayoffs = $182A2		;bsr.w / Bcc.w at $172B2
 AddSmallFont = $11F04		;bsr.w / Bcc.w at $173BA. middle94_2

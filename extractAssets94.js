@@ -64,8 +64,8 @@ const assets = [
     { name: 'ANHh.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000533C, end: 0x0000535C }, // ANH home
     { name: 'ANHv.pal', folder: 'NHL94/Graphics/Pals', start: 0x0000535C, end: 0x0000537C }, // ANH visitor
     // { name: 'Hockey.snd', folder: 'NHL94/Sound', start: 0x0000F4C8, end: 0x00024214 },
-    // NHL 94 $1AD90-$F66ED, the incbins of src/sound94.asm ($1AD90-$4B5BF) and src/graphics94.asm: one slice per IDA label (the 92 / 93 file name where the asset
-    // lines up, else the label), contiguous, end exclusive. Labels IDA made from constants or from data read as code are not slice
+    // NHL 94 $1AD90-$F66ED, the incbins of src/sound94.asm ($1AD90-$4B5BF) and src/graphics94.asm: one slice per (the 92 / 93 file name where the asset
+    // lines up, else the label), contiguous, end exclusive. Labels from constants or from data read as code are not slice
     // boundaries (see graphics94.asm). Replaces the 94 draft entries $4B7A0-$C0D12 (unknown6, unknown7, unknown9 broken; logos overlapping).
     // NHL 94 sound data ($1AD90-$4B5BF, src/sound94.asm): split as 93 sound93. The Z80 driver, PCM samples and FM patches are byte-identical to 93
     // and keep the 93 file names; sounds 0-$2F are the 93 streams; the songs ($30-$7A) are 94. Pad bytes and the pointer tables are in the source.
@@ -275,7 +275,7 @@ const assets = [
     { name: 'NoPicSkater1.bin', folder: 'NHL94/Graphics', start: 0x000C682E, end: 0x000C6B98 }, // unk_C682E
     { name: 'NoPicSkater2.bin', folder: 'NHL94/Graphics', start: 0x000C6B98, end: 0x000C6F02 }, // unk_C6B98
     { name: 'NoPicGoalie1.bin', folder: 'NHL94/Graphics', start: 0x000C6F02, end: 0x000C726C }, // unk_C6F02
-    // The player cards ($C726C-$E9A7F, IDA unk_C726C): one file per card, named for the player (roster String in src/teamdata94.asm), then the Player Cards screen picture
+    // The player cards ($C726C-$E9A7F): one file per card, named for the player (roster String in src/teamdata94.asm), then the Player Cards screen picture
     { name: 'NoPicGoalie2.bin', folder: 'NHL94/Graphics', start: 0x000C726C, end: 0x000C75D6 }, // NoPicGoalie2
     { name: 'CardAndyMoog.bin', folder: 'NHL94/Graphics/PlayerCards', start: 0x000C75D6, end: 0x000C7940 }, // CardAndyMoog
     { name: 'CardRayBourque.bin', folder: 'NHL94/Graphics/PlayerCards', start: 0x000C7940, end: 0x000C7CAA }, // CardRayBourque
