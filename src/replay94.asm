@@ -2,11 +2,7 @@
 ;	UpdateCameraPos, RestoreReplayFrame, updatereplay, rtss8, updateplayers, updateanim, freezewindow, checkwindow.
 ;	94 adds the reverse angle replay (sflags4 bits 4, 6, 7), the replay icon timer (ShowReplayIcon ... EraseReplayBanner),
 ;	4 way play pads and the fall-down position fixes in updateplayers. doinput follows at $B0E8.
-;	Transcribed from lst/nhl94.bin.lst lines 34505-35879. Global names are the 93 names where 93 has the
-;routine ( unless generic, in an); routines keep the Local labels are the
-;local names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
-;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
+;	The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself, odd data is padded).
 ;	Replay frames are $62 bytes from M68K_RAM to replayend ($FFFFAF54); recbpr is the record
 ;	pointer. SortCords objects are $80 bytes (SCstruct).

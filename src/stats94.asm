@@ -5,17 +5,12 @@
 ;	94 changes from 93: 94 RAM (PenSum, ScoreSum, VertLineScrolling ...), printz2 / printsmall for the small text, the OptLine line icon
 ;	entries (MenuIconPosTable-6, the byte before AttributeMenuTable), the crowd meter arena / league records (save RAM), GetDefenseStart and
 ;	ReloadRinkGraphics; the 93 Game Statistics screen is not here.
-;Transcribed from lst/nhl94.bin.lst lines 30583-34504. Global names are the s where an auto name or no label, or where
-;the routine is the 93 one (AttribRating, HandedTextTbl, WaitVSyncAndReadInput) ( unless generic, in an); kept
-;	names: PrintAttribHeader, getNameandAttrib, attribjmp. New in 94 routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). Locals are the 93
-;locals where the code matches, else named for what they do, with the unless generic, in an ;LineEditorMenu
-;SelectAttributeItem and DisplayPlayerSelectMenu are 93 globals that as labels inside the routine before. written from the retail bytes
-;the inline Strings after printz / printz2 / printbigz and the remap tables after DecompressGraphicsWithCallback, the
-;code behind them, DecodePlayerAttributes and PenaltySummaryScreen ... DisplayPenaltyEntry, and
-;	the data tables in their 93 form.
+;New in 94 routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). written from the retail bytes the inline Strings after printz / printz2
+;/ printbigz and the remap tables after DecompressGraphicsWithCallback, the code behind them, DecodePlayerAttributes and PenaltySummaryScreen ...
+;DisplayPenaltyEntry, and the data tables in their 93 form.
 
-ShowScores	;"Scores" screen: the other games of the night in gsstruct (DisplayGameInfo) over the Scores bitmap
-	;(ScoresMap, 93 name); up / down scroll, start exits (ExitAttributeScreen2). Menu item handler (menu lists)
+ShowScores	;"Scores" screen: the other games of the night in gsstruct over the Scores bitmap
+	;(ScoresMap); up / down scroll, start exits (ExitAttributeScreen2). Menu item handler (menu lists)
 	moveq	#6,d0
 	moveq	#$1A,d1
 	bsr.w	SetupScreen
@@ -307,8 +302,8 @@ SelectAttributeItem	;Line editor: C pressed on slot TestList. Build the list of 
 	move.w	(TestList).w,d2
 	bsr.w	UpdatePlayerAttribute	;put the picked player in the slot
 	bra.w	LineEditorMenu
-PrintAttribHeader	;Line editor player list: the column header of attribute page DispAttribCtr (PAttribColumns), then 6 rows
-	;of names and that attribute (getNameandAttrib), the selected row highlighted
+PrintAttribHeader	;Line editor player list: the column header of attribute page DispAttribCtr, then 6 rows
+	;of names and that attribute, the selected row highlighted
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),$16,1
 .0
@@ -386,7 +381,7 @@ DrawAttributeMenu	;Line editor: draw the line icons for the cursor's line (Attri
 	jsr	(printsmall).l
 	clr.w	(printfontset).w
 	rts
-	dc.b	1	;94: the entry before AttributeMenuTable (read with OptLine set)
+	dc.b	1	;the entry before AttributeMenuTable (read with OptLine set)
 AttributeMenuTable	;Per line: bit mask of the lines drawn together
 	dc.b	7,7,7,$18,$18,$60,$60
 DrawMenuIcon	;Line editor: draw line d5 (its name from linelist, then its player slots) at MenuIconPosTable (OptLine: the entry before)
@@ -563,7 +558,7 @@ UpdatePlayerAttribute	;Put player d0 (1 based) in line slot d2 of team a2; if he
 	move.b	d0,0(a0,d2.w)
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-DecodePlayerAttributes	;93 name; Load team a2's lines from databuffer: byte 0 = team + 1, then one nibble
+DecodePlayerAttributes	;Load team a2's lines from databuffer: byte 0 = team + 1, then one nibble
 	;per slot in AttributeOffsetTbl order, relative to the first forward (or defenseman for slots 1-2). Menu item handler
 	movem.l	d0-d4/a0/a3,-(sp)
 	movea.w	#(databuffer-M68K_RAM),a0
@@ -637,7 +632,7 @@ EncodePlayerAttributes	;Reverse of DecodePlayerAttributes: pack team a2's lines 
 	jsr	(WriteLineData).l
 	movem.l	(sp)+,d0-d4/a0-a3
 	rts
-AttributeOffsetTbl	;93 name; #$898A. Line slots saved in databuffer ($FF ends)
+AttributeOffsetTbl	;#$898A. Line slots saved in databuffer ($FF ends)
 	dc.b	1,2,3,4,5
 	dc.b	9,$A,$B,$C,$D
 	dc.b	$11,$12,$13,$14,$15
@@ -860,7 +855,7 @@ DisplayPlayerList	;Draw roster page SelectedPlayerIdx (0 goalies, 1-7 lines): ti
 	addq.w	#2,(printy).w
 	dbf	d1,.5
 	rts
-GoalieRowText	;93 name; #$8CAE. Position text for the goalie rows
+GoalieRowText	;#$8CAE. Position text for the goalie rows
 	String	'G'
 	String	'G'
 	String	'G'
@@ -1146,7 +1141,7 @@ GoalTypeTbl	;ScoreSum byte 2 & $7F: SH2, SH, even, PP, PP2
 	String	' '
 	String	'PP'
 	String	'PP2'
-PenaltySummaryScreen	;93 name; "Penalty Summary": one 3 row entry per penalty (4 bytes each from PenSum, PenSumLength
+PenaltySummaryScreen	;"Penalty Summary": one 3 row entry per penalty (4 bytes each from PenSum, PenSumLength
 	;bytes), scrolled as ScoringSummaryScreen. Menu item handler
 	moveq	#$A,d0
 	moveq	#$19,d1
@@ -1200,14 +1195,14 @@ PenaltySummaryScreen	;93 name; "Penalty Summary": one 3 row entry per penalty (4
 .scroll
 	bsr.w	CheckPenaltyScroll
 	bra.s	.loop
-CheckPenaltyScroll	;93 name; PenaltySummaryScreen per frame: add PlayerScrollCtr to VertLineScrolling (0 ... SelectedPlayerIdx). Falls into UpdatePenaltyScroll
+CheckPenaltyScroll	;PenaltySummaryScreen per frame: add PlayerScrollCtr to VertLineScrolling (0 ... SelectedPlayerIdx). Falls into UpdatePenaltyScroll
 	move.w	(PlayerScrollCtr).w,d0
 	beq.w	rtss8
 	add.w	(VertLineScrolling).w,d0
 	bmi.w	rtss8
 	cmp.w	(SelectedPlayerIdx).w,d0
 	bgt.w	rtss8
-UpdatePenaltyScroll	;93 name; Set VertLineScrolling = d0. Stop on an entry boundary (24 lines), draw the entry coming into view, VSRAM = VertLineScrolling - $50
+UpdatePenaltyScroll	;Set VertLineScrolling = d0. Stop on an entry boundary (24 lines), draw the entry coming into view, VSRAM = VertLineScrolling - $50
 	move.w	(VertLineScrolling).w,d1
 	move.w	d0,(VertLineScrolling).w
 	ext.l	d0
@@ -1242,7 +1237,7 @@ UpdatePenaltyScroll	;93 name; Set VertLineScrolling = d0. Stop on an entry bound
 	move.w	d0,(a0)
 	move.w	(sp)+,(disflags).w
 	rts
-DisplayPenaltyLineUp	;93 name; Draw penalty entry (d0 high word) at the top of the window
+DisplayPenaltyLineUp	;Draw penalty entry (d0 high word) at the top of the window
 	move.l	d0,-(sp)
 	swap	d0
 	move.w	d0,d3
@@ -1257,7 +1252,7 @@ DisplayPenaltyLineUp	;93 name; Draw penalty entry (d0 high word) at the top of t
 	bsr.w	DisplayPenaltyEntry
 	move.l	(sp)+,d0
 	rts
-DisplayPenaltyLineDown	;93 name; Draw penalty entry (d0 high word) + 5 at the bottom of the window
+DisplayPenaltyLineDown	;Draw penalty entry (d0 high word) + 5 at the bottom of the window
 	move.l	d0,-(sp)
 	swap	d0
 	addq.w	#5,d0
@@ -1273,7 +1268,7 @@ DisplayPenaltyLineDown	;93 name; Draw penalty entry (d0 high word) + 5 at the bo
 	bsr.w	DisplayPenaltyEntry
 	move.l	(sp)+,d0
 	rts
-DisplayPenaltyEntry	;93 name; Print PenSum entry d3: time, team (bit 7 of byte 2 = away), minutes and name from PenaltyList, player (byte 3)
+DisplayPenaltyEntry	;Print PenSum entry d3: time, team (bit 7 of byte 2 = away), minutes and name from PenaltyList, player (byte 3)
 	move.w	(printy).w,-(sp)
 	moveq	#$28,d0
 	moveq	#3,d1
@@ -1706,7 +1701,7 @@ GetStatsValue	;d2 += word d0 of the RAM table at StatsOffsetTbl2+d1 (0 = none)
 	movea.w	0(a1,d1.w),a1
 	add.w	0(a1,d0.w),d2
 	rts
-StatsOffsetTbl2	;93 name; #$98E6. Playoff stat RAM tables per column (G, A, G+A, SOG, PIM)
+StatsOffsetTbl2	;#$98E6. Playoff stat RAM tables per column (G, A, G+A, SOG, PIM)
 	dc.w	$CD96,0,$CDCA,0,$CD96,$CDCA,$CDFE,0,$CE32,0
 AttributeOffsetTbl2	;Team struct byte arrays per column, same order
 	dc.w	$B4,$FFFF,$CE,$FFFF,$B4,$CE,$E8,$FFFF,$102,$FFFF
@@ -1717,7 +1712,7 @@ AttributeMenuTxt	;Stats screen column headers (goalie header, then 5 columns)
 	String	' Pts'
 	String	' SOG'
 	String	' PIM'
-AttributeTitleTxt	;93 name; the lea in DisplayAttributeMenu. Sort column titles
+AttributeTitleTxt	;the lea in DisplayAttributeMenu. Sort column titles
 	String	'    Goalie Saves   ]'
 	String	'[      Goals       ]'
 	String	'[     Assists      ]'
@@ -1771,7 +1766,7 @@ CrowdMeterScreen	;"Crowd Meter": current, average and peak level (DisplayGameSta
 	bne.w	ExitAttributeScreen2
 	bra.s	.loop
 DisplayGameStats	;Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteLvl / NumCwdExciteLvl) and MaxCwdExciteLvl
-	;in dB (FormatPercentage). 94: with save RAM (ValidSRAM) the arena record of HomeTeam and the league record (GetLeagueCrowdRecord), read into the buffer
+	;in dB (FormatPercentage). 94: with save RAM (ValidSRAM) the arena record of HomeTeam and the league record, read into the buffer
 	;at ThreeStars by clrCrowdRAM (high ROM); 0 reads as $50
 	bsr.w	printsmallz
 	String	CC_SetMapAndPosition,4,2,4,$C,'Current Level',CC_SetX,$1C
@@ -1913,9 +1908,8 @@ SetupScreen	;Common start of the stats screens: blank, 40 cell mode, the framer 
 	rts
 ExitAttributeScreen2	;Leave a stats screen: blank, then ReloadRinkGraphics
 	bsr.w	forceblack
-ReloadRinkGraphics	;the 93 version after its forceblack (no 93 label): back to 32 cell mode and reload the rink (Rinktiles
-	;or RevRinkTiles in a reverse angle replay), font, framer, EASN and team graphics. Falls out through setplayercolors. Also called from the
-	;replay code
+ReloadRinkGraphics	;after the forceblack: back to 32 cell mode and reload the rink (Rinktiles or RevRinkTiles in a reverse angle
+	;replay), font, framer, EASN and team graphics. Falls out through setplayercolors. Also called from the replay code
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	move.w	(VSCRLPM).w,d0
@@ -1973,8 +1967,8 @@ TimeoutMenu	;Pause menu "Timeout" for team a2: switch the menu to PauseText2, sh
 	jsr	(RestoreTeamEnergy).l
 	moveq	#$78,d0
 	bra.w	waitx
-SelectGoalieMenu	;93 name; it in TimeoutMenu's String. Pick team a2's goalie (or no goalie) from a list (DisplayPlayerSelectMenu, 93
-	;DisplayPlayerSelectMenu) with up / down, C or start; sets $26(a2) and SetPersonel. Menu item handler
+SelectGoalieMenu	;it in TimeoutMenu's String. Pick team a2's goalie (or no goalie) from a list (DisplayPlayerSelectMenu)
+	;with up / down, C or start; sets $26(a2) and SetPersonel. Menu item handler
 	move.w	(menuitem).w,-(sp)
 	move.w	(menuitem+2).w,-(sp)
 	bsr.w	ReadAttributeNibble

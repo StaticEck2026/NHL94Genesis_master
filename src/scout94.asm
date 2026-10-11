@@ -5,11 +5,8 @@
 ;	to the end of the ROM with the menu code (setoptions). The text player itself (/
 ;	UpdateScoutingDisplay / ScrollDisplayUp) is StartScoutText / ScoutTextPlayer / ScoutTextNextLine. The rest (Stanley Cup
 ;	screen, TitleScreen, the sprite list helpers, CheckSound) is not here. EndShootout follows (called from CountShootoutGoals).
-;Transcribed from lst/nhl94.bin.lst lines 969432-970644. Global names are the or the 93 name where an auto
-;name. Local labels are the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;with no xref, written as instructions with -style names. Each DecompressGraphicsWithCallback is followed by its 8 byte remap
-;table (it as code). The printz / printz2 / printbigz strings (and others, four with a word dropped), the
-;instructions in them, and the String tables were read at each address.
+;Each DecompressGraphicsWithCallback is followed by its 8 byte remap table (it as code). The printz / printz2 / printbigz
+;strings (and others, four with a word dropped), the instructions in them, and the String tables were read at each address.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $DF / $DE the same with printa
@@ -287,7 +284,7 @@ PrintMatchupRating	;Print the team rating of team a0 (GetTeamRating: the TeamRat
 	jsr	(printsmall).l
 	move.l	(sp)+,d0
 	rts
-PrintTwoSpaces	;Print 2 spaces at printx / printy (TwoSpacesTxt) and keep printx
+PrintTwoSpaces	;Print 2 spaces at printx / printy and keep printx
 	move.l	a1,-(sp)
 	move.w	(printx).w,-(sp)
 	movea.l	#TwoSpacesTxt,a1
@@ -526,7 +523,7 @@ MatchupPosNames	;Position names of matchups 1-6
 	String	'left defenseman '
 	String	'right defenseman'
 	String	'     goalie     '
-GetMatchupPlayers	;matchuphome / matchupvis = the home / visitors player of the matchup (GetMatchupPlayer). Called from ScoutingReport and PageMatchup
+GetMatchupPlayers	;matchuphome / matchupvis = the home / visitors player of the matchup. Called from ScoutingReport and PageMatchup
 	movem.l	d0/a0-a1,-(sp)
 	movea.l	#tmstruct,a0
 	bsr.w	GetMatchupPlayer

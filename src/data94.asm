@@ -4,10 +4,7 @@
 ;	with no gap. ResolveGames starts.
 ;94 keeps the playoff bits in pwddatabuffer and saves them through WriteLineData (where 93 calls BitsToPW).
 ;	94 adds FourWayPlay (cont3team / cont4team, the Three and Four player choices) and Shootout, and has 9 menu options (93 7).
-;Transcribed from lst/nhl94.bin.lst lines 54836-55537. Global names are the or the 93 name where an auto name.
-;Locals are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic
-;in an
-;The only is BitWidthTable.
+
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;RAM: potree, WinBits, pojoy, statsbuffer
@@ -104,9 +101,8 @@ NewPO	;New playoff generates tree with same team 1. Called from j_NewPO. Falls i
 	clr.w	6(a0)	;gspobwins
 	adda.w	#$10,a0	;gssize
 	dbf	d0,.cg	;falls into MakeTree
-maketree	;Make the playoff tree (potree, 93 name) from playoffseats and the winbits (WinBits, 93
-	;WinBits), clear the scores of this round's games and set their teams (.sett), then FigureJoy. Called from ContinuePlayoffs, EncodePW
-	;(SetupStart); falls in from NewPO
+maketree	;Make the playoff tree (potree) from playoffseats and WinBits, clear the scores of this round's games and set their teams
+	;(.sett), then FigureJoy. Called from ContinuePlayoffs and EncodePW; falls in from NewPO
 	movem.l	d0-d4/a0-a3,-(sp)
 	move.w	(postarts).w,d1
 	asl.w	#4,d1
@@ -139,7 +135,7 @@ maketree	;Make the playoff tree (potree, 93 name) from playoffseats and the winb
 	clr.w	gss2(a1)	;gss2
 	clr.w	gsper(a1)	;gsper
 	bclr	#1,gsflags(a1)	;hilite requested
-	bsr.w	.sett	;93 local .sett
+	bsr.w	.sett
 	adda.w	#gssize,a1
 	dbf	d1,.loop
 	bsr.w	FigureJoy
@@ -338,8 +334,8 @@ GetRandomUnusedTeam	;Calls randomd0 when changing options: return d0 = a random 
 	bset	d0,d3
 	bne.s	GetRandomUnusedTeam
 	rts
-ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables; the 5 words are kept. pojoy has 8
-	;values (93 4), and without FourWayPlay pojoy 1 / 2 become 4. Called from ContinuePlayoffs, EncodePW and GameSetUp
+ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables; the 5 words are kept. pojoy has 8 values (93
+	;4), and without FourWayPlay pojoy 1 / 2 become 4. Called from ContinuePlayoffs and EncodePW and GameSetUp
 	moveq	#4,d0
 	lea	$A(a3),a0
 .save
@@ -532,7 +528,7 @@ SuperDiv	;5 words at a3 divided by 1 word (d0); d0 = remainder on exit
 	move.w	d2,d0
 	movem.l	(sp)+,d1-d2/a0
 	rts
-GetShifter	;Returns d1 = number of games - 1, d2 = first bit of WinBits (WinBits)
+GetShifter	;Returns d1 = number of games - 1, d2 = first bit of WinBits
 	move.l	d0,-(sp)
 	moveq	#-$10,d2
 	moveq	#$10,d1
@@ -629,15 +625,11 @@ ReadTeamStats	;Unpack the $68 playoff stat totals from the bit stream into stats
 	dbf	d0,.loop
 	rts
 ;	NHL 94 (retail) segment
-;	(DisplayPeriodOver, FindMaxAttributeTEam, CalculateTeamAttributes / Values), the injury box (ShowInjuryBox), the penalty
-;	shot box (PenaltyShotBox), the goal box (DisplayPlayerAttributeMenu), box, the player name formatters (GetTempPlayerName, getname ...
+;	(DisplayPeriodOver, FindMaxAttributeTEam, CalculateTeamAttributes / Values), the injury box, the penalty
+;	shot box, the goal box, box, the player name formatters (GetTempPlayerName, getname ...
 ;	FinalizeTextBuffer, getplayername, d0toascii) and AddError, Illinst, ZeroDiv and crash. cd0 follows.
-;Transcribed from lst/nhl94.bin.lst lines 55538-56542. Global names are the or the 93 name where an auto name
-;(unless generic, in an); the exception handlers have vector names. Locals are the names (_x ->.x)
-;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; crash's helper is the 93 local.ri.
-;written from the retail bytes: the printz / printbigz / appendz strings that as code or dc.b, the instructions
-;in them (moveq #$1B,d0, moveq #$13,d0, move.w (BA_Checker_Offset).w,d0, two move.w d0,-(sp), the exception handlers'
-;	move.l $A(sp),d0 / 2(sp),d0), and the printbig String tables.
+;Written from the retail bytes: the printz / printbigz / appendz strings that as code or dc.b, the instructions in them (moveq #$1B,d0, moveq #$13,d0,
+;move.w (BA_Checker_Offset).w,d0, two move.w d0,-(sp), the exception handlers' move.l $A(sp),d0 / 2(sp),d0), and the printbig String tables.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2, $E gsflags.
@@ -932,7 +924,7 @@ CalculateTeamAttributeValues	;Star scores of team a2 (a3 = other team) to (a4)+,
 	addq.w	#4,a4
 	dbf	d4,.loop
 	rts
-ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset (GetPlayerNameWithAttrib), 'Out for period', or 'Out for game'
+ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset, 'Out for period', or 'Out for game'
 	;when sflags7 bit 5 is set (94), and 'the game' over 'period' when puck_pflags2 bit 0 is set. Jumped to from CheckInjury
 	;so global
 	movem.l	d0-d2/a0-a4,-(sp)
@@ -1303,8 +1295,8 @@ ZeroDiv	; Divide by zero vector, falls into crash
 	String	-(TXPRI+TXMAP3),0,0,'Division by zero'
 	move.l	2(sp),d0
 	move.l	d0,d1
-crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktilelist palette + $20
-	;to cram $20 and hang. Branched to from AddError and Illinst, falls in from ZeroDiv
+crash	;printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktilelist palette + $20 to cram $20
+	;and hang. Branched to from AddError and Illinst, falls in from ZeroDiv
 	movea.w	#(mesarea-M68K_RAM),a0
 	move.w	#$18,(a0)+	;2+3+8+3+8 (93 form)
 	move.b	#$BD,(a0)+	;92 -$43
@@ -1333,7 +1325,7 @@ crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs fr
 	dbf	d0,.pal
 .end
 	bra.w	.end
-.ri	;93 local .ri. d0 as 8 hex digits to (a0)+
+.ri	;d0 as 8 hex digits to (a0)+
 	moveq	#7,d2
 .top
 	rol.l	#4,d0
@@ -1352,9 +1344,8 @@ crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs fr
 ;the 94 penalty shot table (PenShotPenalties), bfasciicon, linelist, PlayerPositionText, PerLabels, sizetab, sublist
 ;	priolist, the playoff tree layout (PlayoffTreeSetup), the attribute column lists, and the menu item lists for the pause,
 ;	intermission and line editor exit menus. (InitSaveRAM) starts.
-;Transcribed from lst/nhl94.bin.lst lines 56543-61321 (/ dc.w / dc.l). Global names are the or the 93 name where
-;an auto name or no label. the code reads inside a table stay (PAttribOverall
-;PAttribOverallMask, GAttribOverall, GAttribOverallMask). Two attribute column longs as offsets are dc.w pairs.
+;The code reads inside a table stay (PAttribOverall PAttribOverallMask, GAttribOverall, GAttribOverallMask).
+;Two attribute column longs as offsets are dc.w pairs.
 ;	Code addresses in the tables are the routines in the earlier segments (asstab, the menu handlers); handlers in the stats code
 ;	and the high ROM that no matched segment owns are equated by name in hockey94_11_stub.asm.
 ;	Menu item lists (as 93): two printsmall control Strings, then per item a String and the handler address (dc.l). Item 0 leaves the menu,
@@ -1448,8 +1439,8 @@ Penaltylist	;93 numbers. Penalty number = word offset into this table; 94 adds 8
 
 ;format
 ;	dc.w	$ttmm	;tt=slow dnw time in half secs,mm=penalty min.
-;	String	'penalty text'
-;	dc.w	$ffdd,$ffdd,$ffdd,...	;ff = frame,dd=delay (neg for end)
+;	String  'penalty text' dc.w     $ffdd,$ffdd,$ffdd,... ;ff =
+;	frame,dd=delay (neg for end)
 
 .eop	dc.w	$0100
 	String	'Period Over'

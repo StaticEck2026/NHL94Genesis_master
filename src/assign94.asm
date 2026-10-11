@@ -2,11 +2,7 @@
 ;	, as 93: the player assignments assbench ... asswingd. asswingo
 ;	follows at $D09C. 94 has no fight code: assfight and assfwatch are an rts, and the, ShowInjuryMsg
 ;	banner and addinfo are not here. assgoaliebreakwait is new.
-;Transcribed from lst/nhl94.bin.lst lines 37886-38681. Global names are the except asseben (
-;assben) and assfaceoffp1, the 93 names. Local labels are the names (_x ->.x
-;exit ->.exit, inside assfaceoffp1) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
-;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
+;The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44, temp4 $46
 ;	SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
 
@@ -350,9 +346,9 @@ assfaceoffpl	;Face off player
 	bra.w	assexit
 .exit2
 	rts
-assfight	;94: rts only (93 has the fight code here)
+assfight	;rts only (93 has the fight code here)
 	rts	;assfight - possible location where fighting logic used to be
-assfwatch	;94: rts only (93 watches the fight)
+assfwatch	;rts only (93 watches the fight)
 	rts	;assfwatch - possible location where players watching fight
 ; player should do nothing
 donothing
@@ -468,7 +464,7 @@ assdefo
 .noboost
 	move.l	#2,d0	;assdefd
 	btst	#4,tmflags(a2)	;check if team is offsides
-	bne.w	assreplace	;if so, assreplace (assdefd)
+	bne.w	assreplace	;if so, assreplace
 	move.w	(pucky).w,d1	;move pucky into d1
 	btst	#7,pflags(a3)	;#pfgoal - check which net to score on
 	bne.w	.de1	;branch if top

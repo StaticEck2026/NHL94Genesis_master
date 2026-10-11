@@ -1,7 +1,6 @@
-;	NHL 94 (retail) segment
-;	The $FF fill $FFB10-$FFFFF follows (nhl94.asm
-;	dcb.b after this include). 94 has no SecurityCheck word before it (93 retail has a $FFFF word; 93 Rev A has none), and its own long
-;count and sum. Transcribed from lst/nhl94.bin.lst lines 976745-976783. The segment ends at $FFE00, so the fill comes from the retail bytes.
+;	NHL 94 (retail) segment The $FF fill $FFB10-$FFFFF follows (nhl94.asm dcb.b after this include). 94 has no SecurityCheck word before it (93
+;	retail has a $FFFF word; 93 Rev A has none), and its own long count and sum. The segment ends at $FFE00, so the fill comes from the retail
+;	bytes.
 
 ValidationRoutine	; Called once at power on from Start. Adds
 	;every ROM long from 0 up to this routine, skipping the header long at $18C. Returns if the sum is right, else turns the screen red and

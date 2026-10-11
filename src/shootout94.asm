@@ -419,7 +419,7 @@ PrintShooterSlots	;Shootout shooters: "Shooters" 1. 2. 3.
 	jsr	(printsmallz).l
 	String	CC_SetX,$1A,CC_SetY,$C,'Goalie'
 	rts
-PrintShooterBox	;Shootout shooters: the selected player box (getname)
+PrintShooterBox	;Shootout shooters: the selected player box
 	jsr	(printsmallz).l
 	String	CC_SetMapAndPosition,4,2,8,7,CC_SetFont,1
 	moveq	#$18,d0

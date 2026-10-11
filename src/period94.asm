@@ -4,10 +4,9 @@
 ;	TeamStatTextTbl), the Manual Goalie menu item, ChooseSong, the shootout skate paths, the save RAM option and three stars
 ;	blocks, the player picture unpack (UnpackPicture), HiScoreScreen, newTitleScreen and the credits, clrTmPdst and chgplayer.
 ;	New in 94; 93 has no code here, except GameStatisticsScreen / DisplayTeamStatsScreen / FormatStatValue / TeamStatTextTbl.
-;Transcribed from lst/nhl94.bin.lst lines 970645-976744. The names are kept; the names (sub_, loc_, unk_
-;locret_) and the entries no label for are named for what they do, or the 93 name.
-;Locals are in the 93 style (.x exit,.loop, numbered) with the unless generic, in an ;code as data
-;Strings and remap table in newTitleScreen. The data tables are formatted from the retail bytes.
+;The names are kept; the names (sub_, loc_, unk_ locret_) and the entries no label for are named for
+;what they do, or the
+;The data tables are formatted from the retail bytes.
 
 EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
 	;7-$B are set up (setplayer) above or below the view and get assscore (assinsert 7)
@@ -431,9 +430,8 @@ PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (
 .13
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
-GameStatisticsScreen	;it as data; 93 name. "Game Statistics" menu item (menu lists): both teams' totals
-	;(DisplayTeamStatsScreen). 94 has more rows than the screen: up / down scroll them (matchupvis the most, $70 or $30 without penalties,
-	;OptPen), start exits (ExitAttributeScreen2)
+GameStatisticsScreen	;it as data; "Game Statistics" menu item (menu lists): both teams' totals (DisplayTeamStatsScreen). 94 has more rows than the screen:
+	;up / down scroll them (matchupvis the most, $70 or $30 without penalties, OptPen), start exits (ExitAttributeScreen2)
 	moveq	#9,d0
 	moveq	#$1A,d1
 	jsr	(SetupScreen).l

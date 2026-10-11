@@ -97,9 +97,9 @@ stopna2	; Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goa
 	clr.w	Yvel(a3)
 .ex
 	rts
-checkcornercoll94	;(and ). 210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
-	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to
-	;Called from wallcollduringcheck. the 93 version
+checkcornercoll94	;(and). 210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
+	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to Called from
+	;wallcollduringcheck.
 	bclr	#pf3wall,pflags3(a3)	;clears bit 4 in pflags3 (not used in 92)
 	move.w	#$88,d4	;sideline
 	sub.w	(wcradiusx).w,d4	;BD22 = wcradiusx
@@ -169,7 +169,7 @@ checkcornercoll94	;(and ). 210 = blue line to the end of the rink, corner radius
 	neg.w	d1
 	cmp.w	d4,d2
 	ble.w	cornercollb94
-.rtss3	;the 93 version branches to the shared rtss here
+.rtss3	;branches to the shared rtss here
 	rts
 cornercollb94	;Thunk: jmp wallcollb
 	jmp	wallcollb

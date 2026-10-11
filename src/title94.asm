@@ -1,4 +1,4 @@
-ChooseSong	;SongNum = byte SongIndex of the 6 song bytes of team HmTeam (TeamSongs), or one of the 8 of RandomSongs at random
+ChooseSong	;SongNum = byte SongIndex of the 6 song bytes of team HmTeam, or one of the 8 of RandomSongs at random
 	;when 0; $FFFF with gmode bit 4. Called from StartPer, checkgoal, puckshootout and LeadSong
 	movem.l	d0-d1/a0-a1,-(sp)
 	btst	#4,(gmode).w
@@ -54,7 +54,7 @@ TeamSongs	;ChooseSong: 6 songs per team (TeamList order), 0 = random (RandomSong
 	dc.b	$54,$55,$53,0,$5A,0
 RandomSongs	;ChooseSong: the 8 songs for a random pick
 	dc.b	$34,$40,$42,$49,$58,$5C,$65,$66
-ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer (ReadSRAM); sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin and
+ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer; sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin and
 	;GameSetUp
 	movem.l	d0-d1/a0,-(sp)
 	move.l	#$100,d1
@@ -156,8 +156,8 @@ ShootoutPath6	;ShootoutPaths path: x, y points; $80 in the high byte ends it (lo
 	dc.w	$1C,$F4,8,$E0,$8020,6
 ShootoutPath7	;ShootoutPaths path: x, y points; $80 in the high byte ends it (low byte: sopathend, then sopathdir)
 	dc.w	$FFE6,$F8,0,$E0,$8020,2
-NextPathPoint	;Next point of shootout path sopath (sopathpoint): sopathx / sopathy = x (turned by bit 0 of $76(a3)) / y; at
-	;the end ($80) sflags7 bit 3, sopathend and sopathdir (passdir)
+NextPathPoint	;Next point of shootout path sopath: sopathx / sopathy = x (turned by bit 0 of $76(a3)) / y; at
+	;the end ($80) sflags7 bit 3, sopathend and sopathdir
 	movem.l	d0-d7/a0-a6,-(sp)
 	cmpi.b	#$80,(sopathx).w
 	beq.w	.x
@@ -504,7 +504,7 @@ getFgtbyte	;(and comments). Called from setInjuryType
 chkFgtBit1	;test bit 1 of $74(a2). Called from setInjuryType
 	btst	#1,fighting(a2)
 	rts
-RandomFaceoffAnim	;d0 = a random faceoff animation from FaceoffAnims (StartArenaAnim), 6 when fox <= -$40 and foy <= $C0. Called from puckfaceoff
+RandomFaceoffAnim	;d0 = a random faceoff animation from FaceoffAnims, 6 when fox <= -$40 and foy <= $C0. Called from puckfaceoff
 	movem.l	a0,-(sp)
 	movea.l	#FaceoffAnims,a0
 	move.w	#$64,d0
@@ -537,7 +537,7 @@ CheckScoreLeader	;Compare the scores ($24 of HmShots / AwShots) and test $28 of 
 .x
 	movem.l	(sp)+,d0-d2/a0-a2
 	rts
-DrawPlayoffSprite	;The PlayoffSprite sprite at playoffspritex / playoffspritey (SetSframe) in Satt, then end the sprite list (Sattsize = its size). Called from PlayoffScreen
+DrawPlayoffSprite	;The PlayoffSprite sprite at playoffspritex / playoffspritey in Satt, then end the sprite list (Sattsize = its size). Called from PlayoffScreen
 	movea.w	#(Satt-M68K_RAM),a6
 	moveq	#1,d6
 	movea.l	#PlayoffSprite,a0

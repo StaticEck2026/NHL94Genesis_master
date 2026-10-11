@@ -8,11 +8,6 @@
 ;	(UpdateBothTeamDisplays ... AddTeamSpriteFrame) are not here (UpdateBothTeamDisplays is called in their place). VBlank_SetOptions; DefaultMenus, NewPO, MakeTree and
 ;	FigureJoy are. This range is in the 94 code at the end of the ROM, after the hot / cold player code (GetHotColdTotal)
 ;	before wallcollduringcheck.
-;Transcribed from lst/nhl94.bin.lst lines 960187-963038. Global names are the (GameSetUp ... GameSetUp_4 are)
-;locals are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the
-;unless generic, in an
-;	reached across a global label stay
-;	global (PrintOptTeamName, SetupDemo, SetupStart, DrawTeamLogo, DrawLogoBox, rtsSetup).
 ;SetFrameRectUnused) or unlabeled (CheckNOPUnused); LoadSetupTiles (and code); the five DecompressGraphicsWithCallback remap
 ;tables; the printz Strings ( some with a word dropped) and the instructions in them; the menu text as String
 ;tables; TeamLogoBitmaps as dc.l. PlayerCardScreen continues past 's end of function.
@@ -24,9 +19,9 @@
 ;	5 C pressed, 6 / 7 home / visitors logo shown. Pad bits: ubut 0, dbut 1, lbut 2, rbut 3, cbut 5, sbut 7.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $BF map 1 + priority).
 
-GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs
-	;the menu: up / down move the frame (MoveMenuFrame), left / right change the option (GameSetUp_3) and redraw (FixModeOptions), start begins the game
-	;(SetupStart), and $5460 frames without a press start a demo (SetupDemo). the 93 version from .keep on
+GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
+	;right change the option (GameSetUp_3) and redraw (FixModeOptions), start begins the game (SetupStart), and $5460 frames without a
+	;press start a demo (SetupDemo).
 	jsr	(ReadLineData).l
 	movea.l	#pwddatabuffer,a3	;saved playoff state
 	jsr	(ReadPassBits).l
@@ -426,10 +421,9 @@ OptionLimits	;Number of values of each option
 	dc.w	5,8,$1C,$1C,3,2,2,3,3
 OptionLimits4Way	;The same with FourWayPlay (12 player choices)
 	dc.w	5,$C,$1C,$1C,3,2,2,3,3
-GameSetUp_3	;93 setoptions.IncItem: add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). 94: entering
-	;Shootout saves User Records, Penalties and Line Changes (TmpOptUserRec ...), leaving restores them; Team 1 in new playoffs has $1A teams; the
-	;Players range depends on the mode and FourWayPlay. A new play mode starts the playoffs (ContinuePlayoffs / j_NewPO). Called from GameSetUp and
-	;PrintOptions
+GameSetUp_3	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). 94: entering Shootout saves User Records, Penalties and
+	;Line Changes (TmpOptUserRec ...), leaving restores them; Team 1 in new playoffs has $1A teams; the Players range depends on the mode and
+	;FourWayPlay. A new play mode starts the playoffs (ContinuePlayoffs / j_NewPO). Called from GameSetUp and PrintOptions
 	tst.w	d7
 	bne.w	.2
 	movem.w	d0/d2,-(sp)
@@ -602,8 +596,8 @@ PrintOptions	;ps: limit each option (GameSetUp_3 with d2 = 0) and print the line
 	jsr	(ResetCardTimer).l
 .x
 	rts
-GameSetUp_4	;93 setoptions.psd: print the value of option d7 at x $11 on its line (past row $1B: nothing). Team 1 / 2 go to PrintOptTeamName
-	;Per. Length in Shootout prints 'N/A'; Players with FourWayPlay uses the second list (+$B0). Called from PrintOptions
+GameSetUp_4	;print the value of option d7 at x $11 on its line (past row $1B: nothing). Team 1 / 2 go to PrintOptTeamName Per. Length in
+	;Shootout prints 'N/A'; Players with FourWayPlay uses the second list (+$B0). Called from PrintOptions
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),$11,$10	;/ move.b d0,d0
 	move.w	(setupfirstline).w,d0
@@ -873,10 +867,10 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	st	(tmstruct).w
 	st	(AwShots).w
 	rts
-GameSetUp_2	;93 setoptions.top /.wait: wait up to $5460 frames (6 minutes) for a press on any pad (4 with FourWayPlay); return d1 =
-	;the presses, 0 on timeout. C does not return: it sets setupcardflags bit 5 (next player card sooner). When only one logo is shown (after a
-	;player card) redraws the team blocks. For the first $E10 frames of the wait, and while a card is up, runs the player cards (PlayerCardTimer), else
-	;resets their timer (ResetCardTimer). Called from GameSetUp
+GameSetUp_2	;wait up to $5460 frames (6 minutes) for a press on any pad (4 with FourWayPlay); return d1 = the presses, 0 on timeout. C does not return: it sets
+	;setupcardflags bit 5 (next player card sooner). When only one logo is shown (after a player card) redraws the team blocks. For the first $E10
+	;frames of the wait, and while a card is up, runs the player cards (PlayerCardTimer), else resets their timer (ResetCardTimer). Called from
+	;GameSetUp
 	move.l	#$5460,d6	;21600 frames
 .loop
 	move.w	(vcount).w,d1
@@ -956,7 +950,7 @@ SetupDemo	;demo: no press for $5460 frames. Clear demoflag, seed RNGseed, Regula
 	clr.w	(OptNOP).w	;Demo
 	clr.w	(OptLine).w
 	move.w	#1,(OptPen).w	;On
-SetupStart	;ex: start. Copy Goalies to both teams, set pojoy (SetPojoyMode), seed RNGseed, and keep OptLine / OptPlayMode
+SetupStart	;ex: start. Copy Goalies to both teams, set pojoy, seed RNGseed, and keep OptLine / OptPlayMode
 	;in TmpOptLine2 / TempOptPlayMode: Auto line changes play as On with sflags7 bit 4, Shootout as Regular Season with gmode2 bit 0
 	;(ClearShootout). Then jmp MakeTree. Branched to from GameSetUp
 	move.w	(OptGoalie).w,-(sp)
@@ -1047,7 +1041,7 @@ EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear bo
 .x
 	movem.l	(sp)+,d0-d7
 	rts
-DrawHomeBlock	;Draw the home team block: the logo box (LogoBoxHome) and the HomeTeam logo (logoteam) at x $19, y 6. setupcardflags bit 2
+DrawHomeBlock	;Draw the home team block: the logo box and the HomeTeam logo (logoteam) at x $19, y 6. setupcardflags bit 2
 	;home drawn, bit 6: home logo shown. Called from GameSetUp and GameSetUp_2
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	EraseCard
@@ -1068,7 +1062,7 @@ DrawHomeBlock	;Draw the home team block: the logo box (LogoBoxHome) and the Home
 	String	-TXMAP1,0,0	;x3
 	move.w	#$19,(printx).w	;in the string
 	bra.w	DrawTeamLogo
-DrawVisBlock	;The same for the visitors: logo box (LogoBoxVis), logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
+DrawVisBlock	;The same for the visitors: logo box, logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr.w	EraseCard
 	bset	#3,(setupcardflags).w
@@ -1087,7 +1081,7 @@ DrawVisBlock	;The same for the visitors: logo box (LogoBoxVis), logo at x 9. set
 	jsr	(printz).l
 	String	-(TXPAL3+TXMAP1),0,0
 	move.w	#9,(printx).w
-DrawTeamLogo	;Draw the logo of team logoteam (TeamLogoBitmaps) at printx, y 6, 6 x 6, palette TeamLogoPalettes + team * 8 - $20 (home, color fam
+DrawTeamLogo	;Draw the logo of team logoteam at printx, y 6, 6 x 6, palette TeamLogoPalettes + team * 8 - $20 (home, color fam
 	;2) or - $40 (visitors, color fam 3), then wait $B4 frames before a player card (carddelay). Branched to from DrawHomeBlock
 	move.w	#$B4,(carddelay).w	;180 frames
 	move.w	#6,(printy).w

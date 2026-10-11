@@ -3,11 +3,8 @@
 ;	setonetimeranim, onetimershot), the 4 way play adaptor test (Detect4WayPlay), the crowd meter (LoadCrowdRec, Crowd_Noise),
 ;	stopna2, the 94 corner wall check, the hot / cold tables (Create_HotCold_Table, AttributeCalc) and the
 ;	hot / cold player lists for the MATCHUPS text (NextHomeHotPlayer ... GetHotColdTotal). New in 94; 93 has no code here.
-;Transcribed from lst/nhl94.bin.lst lines 958869-960186. Names and most comments are the (this is
-;commented); names and the are named for what the
-;code does. written from the retail bytes: unused code as dc.b (Read4WayPad1
-;Locals
-;are named for what they do (the locals keep their name), with the unless generic, in an
+;Names and most comments are the (this is commented); names and the are named for what the code
+;does.
 
 puckvzadj	;set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot
 	movem.l	d0-d7/a0-a6,-(sp)

@@ -49,7 +49,7 @@ ScoreOdds	=	10
 ; .sr, .sodds, .ls 8 lines of 8 player numbers (1 = first .pld entry), .pld players ended by an
 ; empty String, then 4 Strings: city, abbreviation, nickname, arena (93 has only city and abbreviation).
 ;------------------------
-; Player ratings, 93 names (Player macro: name, then 16 nibbles unwl,sodp,chga,eytm):
+; Player ratings (Player macro: name, then 16 nibbles unwl,sodp,chga,eytm)
 ;u - uniform # x10
 ;n - uniform # x1
 ;w - weight
@@ -668,7 +668,7 @@ LosAngeles	;LA, $1E52
 .ar	;arena.
 	String	'Great Western Forum'
 
-Dallas	;DAL, $214E. the 93 version North Stars
+Dallas	;DAL, $214E. the 93 North Stars
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -676,7 +676,7 @@ Dallas	;DAL, $214E. the 93 version North Stars
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;the 93 version palettes, unchanged in 94
+.pad	;palettes unchanged from 93
 	incbin	..\Extracted\NHL94\Graphics\Pals\DALh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\DALv.pal
 .sr	;4 bytes in 94 (93: 8, hex2)
@@ -1732,7 +1732,7 @@ Anaheim	;ANH, $5330. new in 94
 .ar	;arena.
 	String	'Pond'
 
-playoffseats	;$5576. 93 name. movea.l #$5576 in the playoff tree setup. 32 rows of 16 team numbers (93: 34)
+playoffseats	;$5576. movea.l #$5576 in the playoff tree setup. 32 rows of 16 team numbers (93: 34)
 	dc.b	BUF,BOS,MTL,QUE, NYI,WSH,NJ,PIT, TOR,DET,STL,CHI, LA,CGY,WPG,VAN
 	dc.b	NYI,BUF,TB,MTL, QUE,PIT,NYR,BOS, CGY,TOR,LA,VAN, STL,DET,DAL,CHI
 	dc.b	NJ,PIT,PHI,BUF, HFD,MTL,WSH,BOS, DAL,TOR,EDM,CHI, SJ,VAN,LA,DET
@@ -1770,7 +1770,7 @@ playoffseats	;$5576. 93 name. movea.l #$5576 in the playoff tree setup. 32 rows 
 	dc.b	WSH,FLA,NJ,PIT, BOS,MTL,TB,BUF, SJ,STL,DET,CHI, ANH,LA,WPG,VAN
 
 
-Credits	;$5776. 93 name. Title screen scroller: movea.l #Credits (copyright lines), then #CreditsList
+Credits	;$5776. Title screen scroller: movea.l #Credits (copyright lines), then #CreditsList
 	String	'$ 1993 Electronic Arts'
 	String	'Licensed by'
 	String	'Sega Enterprises Ltd.'

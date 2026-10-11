@@ -2,15 +2,11 @@
 ;	first half, as 93: VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAlist, SetScroll2
 ;	setvideo and the sprite builders it calls (updatescroll, showref, checkfo, showzam, SetSframe, showcrowd). showclock
 ;	follows.
-;Transcribed from lst/nhl94.bin.lst lines 51765-52286. Global names are the or the 93 name where an
-;auto name. The 93 writes as locals are
-;locals: showzam.ftab, showcrowd.pb and.sc. Local labels are the names
-;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
+;The source has the real cmp / cmpi; fixopcodes.js patches
+;the cmp encoding after assembly.
 ;	Bits: disflags 0 dfok, 2 dfng, 3 dfclock, 4 face off; sflags 0 sfpz, 7 sfhor; sflags2 1 sf2refref.
 
-VBlank	;93 name; 93 Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
+VBlank	;Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
 	;dfok is set, cramfade, then the game clock. gmode2 bit 2 keeps the clock running after the whistle, and with gmode2 bit 1
 	;(penalty shot / shootout) shootoutclock counts down instead (shootoutjiffy jiffies, not while gmode2 bit 7 is set)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -88,7 +84,7 @@ DoDMAList	;(symbols are case-insensitive). Transfer data from dmalist. Also call
 	cmpa.l	#DMAList,a6
 	bne.s	.0
 	rts
-SetScroll2	;93 name; 93 Write Hscroll / Vscroll to the vdp. Called from DumpSprites
+SetScroll2	;Write Hscroll / Vscroll to the vdp. Called from DumpSprites
 	move.w	(VSCRLPM).w,d0
 	addq.w	#2,d0
 	bsr.w	Vmaddr
@@ -450,13 +446,9 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 ;	NHL 94 (retail) segment
 ;	RenderSmallFontChar, ButtonLabelCharTable, addframe, addframe2, find3d, updatesound and KillCrowd. setupice
 ;	follows.
-;Transcribed from lst/nhl94.bin.lst lines 52287-53021. Global names are the or the 93 name where an
-;auto name. The 93 writes as locals are locals: showclock.char
-;	checksso .ca and .tab; the 94 horizontal clock code's .digit and .digits
-;sit inside showclock too, so the 93 body stays the local.3. Local labels are the names
-;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;the two clock strings after printz as ori.b / btst; they are written with the String macro. The tables
-;	left as dc.b (.digits, .tab, ButtonLabelCharTable) are String / dc.w / dc.b.
+;The 94 horizontal clock code's .digit and .digits sit
+;inside showclock, so the original body stays the local .3. The tables left as dc.b (.digits, .tab, ButtonLabelCharTable) are String
+;/ dc.w / dc.b.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Object offsets, as 92 / 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
@@ -522,7 +514,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	String	'7'
 	String	'8'
 	String	'9'
-.3	;The the 93 version body: returns unless dfclock is set
+.3	;Returns unless dfclock is set
 	bclr	#3,(disflags).w	;dfclock
 	beq.w	rtss2
 	btst	#3,(sflags2).w
@@ -938,7 +930,7 @@ addframe2	;d0/d1 = x/y coord on screen, a3 = object, a5 = dma trans, a6 = sprite
 	sub.w	(a2),d2	;sub data at a2 from d2
 .noxflip
 	add.w	d2,d0	;add d2 to d0 (d0 = Xpos of Sort Cord)
-	move.w	d0,6(a6)	;move sprite's Xpos into 6+a6 position (Satt)
+	move.w	d0,6(a6)	;move sprite's Xpos into 6+a6 position
 	move.b	7(a2),2(a6)	;move sizetab byte into 2+a6
 	move.b	d6,3(a6)	;move d6 (link counter) into 3+a6
 	move.w	6(a2),d2	;move 6+a2 into d2 (to be used to check palette and set HVFlip)

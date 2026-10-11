@@ -4,10 +4,8 @@
 ;	94 changes from 93: the menu state is menuitem-menudraw; printz2 (93
 ;	printsmallz); a handler can keep its own screen (sflags5 bit 1); the 94 item printer PrintMenuItem (the Manual /
 ;	Auto Goalie item); PrintTeamData copies 11 words from TeamBlockMap (93 12 words); vcountwait reads oldvcount twice.
-;Transcribed from lst/nhl94.bin.lst lines 30310-30582. Global names are the s where an auto name ( unless generic
-;in an); PrintMenuItem is New in 94; vcountwait is the Locals are the 93 locals, with
-;the unless generic, in an ; the new 94 locals are named for what they do. the inline Strings after printz2 (
-;ori.b / move.l / btst), and the two PrintMenuItem Strings ( no label:.manual,.auto).
+;The inline Strings after printz2 ( ori.b / move.l / btst), and the two PrintMenuItem Strings ( no
+;label:.manual,.auto).
 
 InitMenuState	;Start a menu: a0 = item list, a1 = screen draw routine; selection and first shown item 0. Falls into
 	;DrawMenuScreen. Called from PauseMode, and the stats code
@@ -63,7 +61,7 @@ HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the
 	dbf	d0,.4
 	movea.l	(a0),a0
 	jsr	(a0)	;the handler of the selected item
-	bclr	#1,(sflags5).w	;94: the handler drew its own screen
+	bclr	#1,(sflags5).w	;the handler drew its own screen
 	bne.w	.noredraw
 	bsr.w	DrawMenuScreen
 .noredraw

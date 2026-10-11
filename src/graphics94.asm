@@ -1,12 +1,8 @@
-;	the data after the sound data (ends with the sound incbins
-;	incbin only, no gap and no overlap. Each file
-;	is a slice of lst/nhl94.bin written by npm run extractassets into Extracted\\Graphics and Text. One slice
-;per except the player cards: one slice per card (Graphics\PlayerCards), NoPicGoalie2 first, then Card<player>
-;from the roster String, then PlayerCardsScreenPic. Labels are the 93 names, or named for what the data is, the where it is not an
-;auto name, or the name the matched segment uses (it in a string) or, for the team logos
-;	logo<team>. Files use the 92 / 93 name where the 94 asset is the same one (same use, mostly the same size; 94 in the name when it
-;	differs), else draft name where its slice lined up, else the label. A map's tiles start past its 8-byte
-;header: the there is written as label+8.
+;	the data after the sound data (ends with the sound incbins incbin only, no gap and no overlap. Each file is a slice of
+;	lst/nhl94.bin written by npm run extractassets into Extracted\\Graphics and Text. One slice per except the player cards: one
+;	slice per card (Graphics\PlayerCards), NoPicGoalie2 first, then Card<player> from the roster String, then PlayerCardsScreenPic.
+;	Files use the where the 94 asset is the same one (same use, mostly the same size; 94 in the name when it differs), else draft
+;	name where its slice lined up, else the label. A map's tiles start past its 8-byte header: the there is written as label+8.
 ScoutTextScript		;the script ScoutTextPlayer types out word by word on the ScoutingReport (MATCHUPS) screen
 	incbin	..\Extracted\NHL94\Text\ScoutTextScript.bin
 	even
@@ -61,7 +57,7 @@ Spritetiles		;the sprite tiles (+$A; addframe2 adds the frame tile offset
 frameSprData
 	incbin	..\Extracted\NHL94\Graphics\frameSprData.bin
 	even
-Hotlist		;the hot spot byte pair of each frame (GetHot)
+Hotlist		;the hot spot byte pair of each frame
 	incbin	..\Extracted\NHL94\Graphics\Hotlist.bin
 	even
 CrowdFrameList		;showcrowd
@@ -108,7 +104,7 @@ RonBarrMap		;same size: the Ron Barr picture (ScoutingReport). The old
 	;RonBarrCompressed.map.jim ran 4 bytes into ScoresMap
 	incbin	..\Extracted\NHL94\Graphics\RonBarr.map.jim
 	even
-ScoresMap		;same size: read by the 93 version code (from $80D4; not matched yet)
+ScoresMap		;same size: read by 93 code (from $80D4; not matched yet)
 	incbin	..\Extracted\NHL94\Graphics\Scores.map.jim
 	even
 EASportsMap	;the EA Sports screen map

@@ -1,22 +1,13 @@
-;	NHL 94 (retail) segment
-;68k side of the sound driver, as 93 (same driver, revised): p_turnoff, play_sfx_or_music_track (
-;p_initfx), play_new_song, the 94 pad readers (ReadJoyData ... ResetZ80Bus, run from p_music_vblank), p_music_vblank (
-;	MusicVB), UploadCommandBufferToZ80, ProcessOneMusicTrack and the event handlers, UpdateChannelFrequencyAndVolume, the 94
-;volume routine SetChannelVolume, p_initialZ80 and ClearAllTrackAndSFXSlots. Then, as 93 (incbins after the
-;	driver), the sound data from to: the Z80 program (Z80_Program_Code, loaded by p_initialZ80), the PCM sample table
-;	the 12 samples (pcm_sample_table), the FM patches (fm_instrument_patches), the pointer table of sounds 0-$7A (MusicTrackPointerTable,
-;	songs from SongPointerTable) and the 122 sound and song event streams, each incbin a file written by npm run extractassets
-;	split as 93 (93 file names where the bytes are the same: the Z80 driver, samples, patches and sounds 0-$2F).
-;	94 changes from 93: sounds 0-$7A (93 0-$37) through a long pointer table (93 word offsets), 8 byte channel structs (93 6), a voice
-;	volume word (+4) and the controller event handle_command_30, the vblank pad reading, and the Rev A 93 50 Hz tempo block.
-;Transcribed from lst/nhl94.bin.lst lines 61529-63138. Global names are the s where the routine is the 93 one or
-;an auto name or no label (in an), else the Locals are the 93 local where the code matches (.fnum,.bendtab,.veltab), else in
-;the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; handle_command_30
-;	dc.b, written as instructions; the tables are written as in 93.
-;RAM (ram_addrs.inc 93 names): fm_track_slots (8 x 6 bytes), fm_channel_structs (94: 6 x 8 bytes
-;	+0 key, +1 note, +2 volume, +3 patch, +4 output channel, +5 age, +6 bit 0 on), fm_voice_usage_table (8 bytes per key:
-;	word +0 pitch bend, +3 patch, word +4 volume), Z80_command_buffer (33 bytes, copied to Z80 RAM $02), per_channel_attenuation_table
-;	per_channel_attenuation_table, music_needs_z80_update.
+;	NHL 94 (retail) segment 68k side of the sound driver, as 93 (same driver, revised): p_turnoff, play_sfx_or_music_track ( p_initfx),
+;play_new_song, the 94 pad readers (ReadJoyData ... ResetZ80Bus, run from p_music_vblank), p_music_vblank ( MusicVB),
+;UploadCommandBufferToZ80, ProcessOneMusicTrack and the event handlers, UpdateChannelFrequencyAndVolume, the 94 volume routine
+;SetChannelVolume, p_initialZ80 and ClearAllTrackAndSFXSlots. 94 changes from 93: sounds 0-$7A (93 0-$37) through a long pointer table
+;(93 word offsets), 8 byte channel structs (93 6), a voice volume word (+4) and the controller event handle_command_30, the vblank pad
+;reading, and the Rev A 93 50 Hz tempo block.
+;RAM (ram_addrs.inc): fm_track_slots (8 x 6 bytes), fm_channel_structs (94: 6 x 8 bytes +0 key, +1 note, +2 volume, +3 patch, +4
+;	output channel, +5 age, +6 bit 0 on), fm_voice_usage_table (8 bytes per key: word +0 pitch bend, +3 patch, word +4 volume),
+;	Z80_command_buffer (33 bytes, copied to Z80 RAM $02), per_channel_attenuation_table per_channel_attenuation_table,
+;	music_needs_z80_update.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 
@@ -83,7 +74,7 @@ play_new_song	;Stop the song in progress: free the first slot whose pointer is a
 	;and key off its channels. Called from play_sfx_or_music_track, DoGameFrame and others
 	movem.l	d0-d3/a0-a3,-(sp)
 	move	sr,-(sp)
-	move	#$2700,sr	;94: no interrupts while the slots change
+	move	#$2700,sr	;no interrupts while the slots change
 	lea	(fm_track_slots).w,a1
 	moveq	#7,d3
 	movea.l	(SongPointerTable).l,a0
@@ -96,7 +87,7 @@ play_new_song	;Stop the song in progress: free the first slot whose pointer is a
 	clr.b	(Z80_command_buffer+4).w
 	move.l	#-1,-6(a1)	;free the slot
 	moveq	#5,d1
-	lea	(fm_channel_structs).w,a2	;the 93 version (94: 6 x 8 bytes)
+	lea	(fm_channel_structs).w,a2	;6 x 8 bytes in 94
 .kill
 	move.b	(a2),d2
 	andi.w	#7,d2
@@ -115,7 +106,7 @@ play_new_song	;Stop the song in progress: free the first slot whose pointer is a
 	move	(sp)+,sr
 	movem.l	(sp)+,d0-d3/a0-a3
 	rts
-ReadJoyData	;read the pads every vblank (p_music_vblank). With FourWayPlay, pads 1-4 through the 4 way adaptor (ReadPad4Way1 ...
+ReadJoyData	;read the pads every vblank. With FourWayPlay, pads 1-4 through the 4 way adaptor (ReadPad4Way1 ...
 	;ReadPad4Way4) to pad4way1-pad4way4, else pads 1 and 2 (ReadPad1, ReadPad2)
 	movem.l	d1/a0,-(sp)
 	tst.w	(FourWayPlay).w
@@ -234,7 +225,7 @@ ResetZ80Bus	;Reset the Z80 and wait for its bus
 	rts
 p_music_vblank	;(vblank handler). Read the pads (ReadJoyData, 94), clear the change bits, run the 8 track slots (d7 = track
 	;7-0), send the buffer if anything changed and age the channels. 94 keeps the Rev A 93 50 Hz block: with PALflag bit 0 set the slots run
-	;again every 6th frame (music_tick_divider). Called from the vblank handlers
+	;again every 6th frame. Called from the vblank handlers
 	bsr.w	ReadJoyData
 	clr.b	(music_needs_z80_update).w
 	clr.l	(Z80_command_buffer).w	;key off/on, volume, frequency bits
@@ -363,7 +354,7 @@ ClearZ80SpecialEffectsFlags	;Clear Z80 RAM $8E (Z80_RAM+$8E, the PCM rate byte w
 	clr.w	(IO_Z80BUS).l
 	rts
 handle_command_10	;Event $1x: key on note +2 at volume +3 on channel +1 bits 3-0 of track d7 (volume 0 = key off). An FM
-	;patch takes a free channel or the oldest one; a PCM patch ($60 up) sets the sample start / end (pcm_sample_table, 93 name) in Z80 RAM
+	;patch takes a free channel or the oldest one; a PCM patch ($60 up) sets the sample start / end (pcm_sample_table) in Z80 RAM
 	;$23-$28. Then the volume (SetChannelVolume) and the frequency (UpdateChannelFrequencyAndVolume)
 	tst.b	3(a0)
 	beq.s	handle_command_00	;volume 0: key off

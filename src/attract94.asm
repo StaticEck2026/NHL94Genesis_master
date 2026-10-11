@@ -1,9 +1,9 @@
 ;	NHL 94 (retail) segment
 ;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and the 94 helpers after it, then the
-;	the 93 version vblank handler. 94 put this code just
-;	) follows. HiScoreScreen is not next to this code and is not in this segment.
-;Transcribed from lst/nhl94.bin.lst lines 54528-54846. it is code with
-;	no xref and is written as instructions (DrawTeamBlockBitmap, ClearTextBox, SetTeamPrintPos, SetGoalieMode).
+;	93 vblank handler. 94 put this code just) follows. HiScoreScreen is not next to this code and is not in
+;	this segment.
+;It is code with no xref and is written as instructions (DrawTeamBlockBitmap, ClearTextBox, SetTeamPrintPos,
+;	SetGoalieMode).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself).
@@ -170,8 +170,8 @@ SetGoalieMode	;no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, 
 .x	movem.l	(sp)+,d0/a0
 	rts
 
-VBlank_SetOptions	;vbint handler stored by setoptions.
-	;the 92 version (cramfade unless dfng), plus DumpSprites2 when dfok is set
+VBlank_SetOptions	;vbint handler stored by setoptions. the 92 routine (cramfade unless
+	;dfng), plus DumpSprites2 when dfok is set
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w		;dfng
 	bne.w	.nograph

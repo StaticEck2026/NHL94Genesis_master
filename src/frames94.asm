@@ -4,7 +4,7 @@
 ;	SPAlist, which the code uses (movea.l #SPAlist,a0 is $5B1C). Same order as 93 except: the 93 fight tables
 ;	(fight ... finjury) are gone, 14 tables new in 94 come after flip, and injury1 is last.
 
-; Sprite Frame (SPF) base indices. 93 names, 94 values: 94 gready has 3 frames per direction (93: 2),
+; Sprite Frame (SPF) base indices. 94 gready has 3 frames per direction (93: 2)
 ; so every base from SPFSiren up is 8 higher than 93. Frames 658 and up are new in 94 and have no name.
 SPFskatewp	=	1
 SPFskate	=	SPFskatewp+40	; 41

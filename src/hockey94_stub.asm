@@ -15,7 +15,7 @@
 	include	stubinc\ram_addrs.inc	;RAM names
 
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l #x carry the
-; address; bsr.w / Bcc.w is the displacement word address + displacement. (93 name in the comment).
+; address; bsr.w / Bcc.w is the displacement word address + displacement.
 AddPenalty2 = $11F62		;jmp (x).l at $7C38
 p_turnoff = $1A264		;jsr (x).l at $76EE.
 ChkGoalies = $F6AA		;bsr.w at $79D0

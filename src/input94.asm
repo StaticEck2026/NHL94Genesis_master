@@ -1,10 +1,7 @@
 ;	NHL 94 (retail) segment
 ;	, as 93: controller input for skaters (doinput ... setpads)
 ;	check4bench. assbench follows at $C710.
-;Transcribed from lst/nhl94.bin.lst lines 35886-37885. Global names are the which are the
-;92 / 93 names here, except SetLCmode2, setpads and restorepl.
-;Local labels are the names (_x ->.x, loop ->.loop, even ->.even) or the
-;	(doinput_cbut -> .B470, glb_B8AA -> .0).
+;X, loop ->.loop, even ->.even) or the (doinput_cbut -> .B470, glb_B8AA -> .0).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself).
@@ -617,7 +614,7 @@ SetLCmode
 .0
 	bclr	#3,(sflags).w
 	bset	#3,pflags2(a3)
-SetLCmode2	;93 name; 93 a2 = team struct. Draw the line change box
+SetLCmode2	;93 a2 = team struct. Draw the line change box
 	bsr.w	setlccords
 	cmpi.w	#$F,(printy).w
 	blt.w	.box

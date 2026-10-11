@@ -2,10 +2,8 @@
 ;	VBjsr / Begin through seta2: up to the end of Pausemode, plus the pause
 ;	screen draw routine and seta2, the same split as 93. The menu engine Pausemode
 ;	calls follows at $7E36.
-;	Transcribed from lst/nhl94.bin.lst lines 29709-30309. Global names are the 93 names where 93 has
-;the same routine ( unless generic, in an); routines keep the
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
-;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
+;	The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after
+;assembly.
 ;	Inline print strings after printz2 use the String macro (length word includes itself).
 
 VBjsr	;Vertical blank interrupt (vector $78), jumps through the vbint RAM vector
@@ -19,7 +17,7 @@ Begin	;cold start, entered from Start. Clear RAM, init sound and menus, go to ti
 .0	clr.l	(a0)+			;clear RAM $B000-$DEF3
 	cmpa.w	#$DEF4,a0
 	blt.s	.0
-	clr.w	(PALflag).w		;clear the PAL flag (flag)
+	clr.w	(PALflag).w		;clear the PAL flag
 	move.w	(VDP_CTRL).l,d0
 	andi.w	#1<<PAL_MODE,d0		;VDP status bit 0 = PAL (50 Hz). it DMA busy; that is bit 1
 	move.w	d0,(music_global_tick_counter).w
@@ -405,7 +403,7 @@ HandleJoy1	;Any button on the pad just read (d1) ends the demo
 	jmp	ExitToOpening		;exit demo
 
 startpause1	;pause initiated by cont 1
-	clr.w	(pausepad).w		;94: pausing pad number (0 = pad 1 or 2)
+	clr.w	(pausepad).w		;pausing pad number (0 = pad 1 or 2)
 	bclr	#1,(sflags).w		;sfpj
 	bra.w	startpause
 startpause2	;pause initiated by cont 2

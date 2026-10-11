@@ -3,12 +3,11 @@
 ;	featured player pictures (FeaturedPictures), the save RAM records (team, player, crowd and user records), the Player Cards screens and
 ;	CalcAttrib, the user record NAME ENTRY screen, Record Holders, the playoff round screen (PlayoffRoundScreen) and the shootout (shooters
 ;	menu, next shooter, "SHOOTOUT WON BY"). New in 94; 93 has no code here.
-;Transcribed from lst/nhl94.bin.lst lines 963039-969431. There are no 93 counterparts: the names are kept, and the
-;names and the entries no label for are named for what they do.
-;Locals are in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; the locals keep their
-;name. written from the retail bytes: the inline Strings after the print calls and the remap tables (
-;code), the code behind them, and the picture lists as code. The palettes
-;as code (TeamPalettes) are.pal incbins. The inside Strings are not labels.
+;There are no 93 counterparts: the names are kept, and the names and the entries no label for are named for what
+;they do.
+;Written from the retail bytes: the inline Strings after the print calls and the remap tables ( code), the
+;code behind them, and the picture lists as code. The palettes as code (TeamPalettes) are.pal incbins. The
+;inside Strings are not labels.
 
 wallcollduringcheck	;(and comments). during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
 	;with his size + $17. Called from CCStart
@@ -887,7 +886,7 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
 	rts
-WritePlayerRecord	;Write the 4 byte player record (PlayerRecordIO)
+WritePlayerRecord	;Write the 4 byte player record
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
 clrCrowdRAM	;(clrCrowdRAM?). read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
@@ -934,7 +933,7 @@ WriteTeamRecord	;Write the team record block (TeamRecordIO)
 WriteNameLog	;Write the user name log ($80 bytes at namelog) to save RAM $DA0 (NameLogIO)
 	bset	#6,(sflags6).w
 	bra.w	NameLogIO
-ReadNameLog	;Read the user name log from save RAM $DA0 to namelog (NameLogIO). Called from GameSetUp
+ReadNameLog	;Read the user name log from save RAM $DA0 to namelog. Called from GameSetUp
 	bclr	#6,(sflags6).w
 NameLogIO	;A user record block: read or write (sflags6 bit 6)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -1413,7 +1412,7 @@ WrapCardIndex	;Wrap the card index (a0) into 0 ... cardcount - 1
 	move.w	(sp)+,d0
 	rts
 DrawPlayerCard	;Draw a player card: picture (DrawPictureBox), name, "Records" and "This Game" columns (PrintCardRecords, PrintSaveRecordLine, PrintGoalRecordLine), Overall
-	;Rating (PrintOverallRating), Starting Line (PrintStartingLine), position (PrintCardPosition), goals / assists or saves (PrintGoalsAssists, PrintSaves)
+	;Rating (PrintOverallRating), Starting Line (PrintStartingLine), position, goals / assists or saves (PrintGoalsAssists, PrintSaves)
 	movem.l	d0-d7/a1-a6,-(sp)
 	move.l	a0,-(sp)
 	move.w	(HomeTeam).w,d0
@@ -2390,7 +2389,7 @@ GetCardPlayer	;cardplayer = the roster index of card cardindex from the card's t
 	move.w	d0,(cardplayer).w
 	movem.l	(sp)+,d1/a0
 	rts
-BuildCardPlayerLists	;Build the player card order of both teams: home at homecardlist, away at awaycardlist (BuildCardPlayerList)
+BuildCardPlayerLists	;Build the player card order of both teams: home at homecardlist, away at awaycardlist
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#homecardlist,a1
 	movea.l	#tmstruct,a0

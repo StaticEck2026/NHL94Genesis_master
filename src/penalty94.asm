@@ -3,11 +3,7 @@
 ;	limitfo, UpdatePA, SetPA, SetPA2, PushRef, prefmes, PrintPenaltyMessagesString, PenGoalStuff, ClearPenaltyBuffer,
 ;	updatepentime, ProcessPenaltyList, RemovePlayerFromList, chkatop, releasepl, GetLowestPen, updatepwrplay, ClrHor,
 ;	SetHor. PrintScores1 follows. The PenaltyList data is.
-;Transcribed from lst/nhl94.bin.lst lines 45937-47135. Global names are the or the 93 name where
-;an auto name, a spelling variant or the 93 routine (ClearPenaltyBuffer, GetLowestPen) ( unless generic, in an). Local labels are the names (_x ->.x)
-;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;the printz / appendz strings as dc.b or ori.b; they are written with the String macro (length word
-;includes itself and the 0 pad). The instruction in the SetHor string is written out.
+;The instruction in the SetHor string is written out.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Penalty numbers are PenaltyList word offsets, as 93: EOG 4, OOP 6, whistle $A, icing $C, goal $E, offsides $10,
@@ -58,7 +54,7 @@ AddPenalty2	;forced penalties like face off and game over. d0 = penalty number, 
 	adda.w	0(a0,d0.w),a0
 	tst.b	1(a0)	;penalty minutes
 	beq.w	.noplayer
-	bmi.w	.noplayer	;94: negative minutes too
+	bmi.w	.noplayer	;negative minutes too
 	btst	#6,pflags(a3)	;pfteam. DelayedPen bit 1 home, bit 2 away
 	bne.w	.away
 	bset	#1,(DelayedPen).w
@@ -126,7 +122,7 @@ chkprogress	;control progress of ref and game control thru penalty events. 94: w
 	adda.w	0(a1,d0.w),a1
 	tst.b	1(a1)	;penalty minutes
 	beq.s	.find
-	bmi.s	.find	;94: negative minutes too
+	bmi.s	.find	;negative minutes too
 	bset	#sf2drec,(sflags2).w	;sf2drec: switch to horizontal mode for player to enter penalty box
 	move.w	(vcount).w,-(sp)
 	bsr.w	forceblack
@@ -139,7 +135,7 @@ chkprogress	;control progress of ref and game control thru penalty events. 94: w
 	bsr.w	NewTicker3
 	st	(puckc).w
 	movea.w	#(puckx-M68K_RAM),a3
-	move.l	#$1A,d0	;puckunflip (asstab)
+	move.l	#$1A,d0	;puckunflip
 	bsr.w	assinsert
 	move.w	#$1C20,temp1(a3)	;temp1 = 120*60
 	st	(RefStep).w
@@ -265,7 +261,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	clr.w	d2
 	move.b	1(a1),d2	;penalty minutes
 	beq.w	.sa2	;no player involved
-	bmi.w	.sa2	;94: negative minutes too
+	bmi.w	.sa2	;negative minutes too
 	cmp.b	#5,d2
 	bne.w	.1
 	bset	#5,(sflags5).w
@@ -357,10 +353,10 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	bclr	#gmpen,(gmode).w	;gmpen
 	movea.w	#(puckx-M68K_RAM),a3
 	bclr	#6,(BA_PS_flags).w
-	move.w	#$1B,d0	;puckfaceoff (asstab)
+	move.w	#$1B,d0	;puckfaceoff
 	btst	#3,(BA_PS_flags).w
 	beq.w	.5
-	move.w	#$1E,d0	;puckshootout (asstab): penalty shot
+	move.w	#$1E,d0	;puckshootout: penalty shot
 .5
 	bsr.w	assreplace
 .ex
@@ -532,7 +528,7 @@ limitfo	;limit face off to 5-20 feet from walls of rink. Checks every player in 
 .1
 	move.w	d0,(fox).w
 	rts
-UpdatePA	;animate ref in ref window. As the 93 version for game over, and the horizontal penalty message line is reprinted when penmsgtimer runs out
+UpdatePA	;animate ref in ref window. As 93 for game over, and the horizontal penalty message line is reprinted when penmsgtimer runs out
 	tst.w	(RefCnt).w
 	bmi.w	rtss2
 	sub.w	d7,(RefCnt).w
@@ -1007,14 +1003,9 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 ;	RestoreTeamEnergy, reenergizeteam, Intermission, InitScores, UpdateScores, SetScore, sctab, NewTicker, NewTicker2,
 ;	NewTicker3, NewTicker3pt2, GameLabels, ClearTickerArea, SetTickerAreaPosition, PrintStringFromList, AdvanceStringPtr,
 ;	DoHiLights, StartHL, StartHL2. checkcoll follows.
-;Transcribed from lst/nhl94.bin.lst lines 47136-48479. Global names are the or the 93 name where an
-;auto name or where the routine is the 93 one (AdvanceStringPtr). 94
-;NewTicker3pt2 ; the are kept. The routines that 93 writes as locals are locals here too (.dispen,.r,.tn
-;setteam,.ranres,.sv,.lo), and is the 93 SetScore.getscore. Local labels are the names (_x ->.x) or the 93
-;local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the in an
-;the printz strings as dc.b, ori.b or (in StartHL2) as code; they are written with the String macro (length
-;word includes itself and the 0 pad). Five instructions in strings are written out. The tables as dc.b
-;	(.sslist, sctab, GameLabels, .postab) are written as dc.l / dc.w / String.
+;94 NewTicker3pt2 ; locals here too (.dispen,.r,.tn
+;setteam,.ranres,.sv,.lo), and is the 93 SetScore.getscore. Five instructions in strings are written out.
+;The tables as dc.b (.sslist, sctab, GameLabels, .postab) are written as dc.l / dc.w / String.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	94 team struct from HmShots / AwShots (tmsize $364): 0 tmshots, $C tmscore, $16 tmline, $1E tmdata, $22 tmsort, $24 tmap,
@@ -1076,7 +1067,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	beq.w	.2
 	move.w	#4,d0
 .2
-	movea.l	#PenShotPenalties2,a1	;94: the horizontal rink always takes the name from PenShotPenalties2
+	movea.l	#PenShotPenalties2,a1	;the horizontal rink always takes the name from PenShotPenalties2
 	bsr.w	AdvanceStringPtr
 	move.w	(a1),d0
 	lsr.w	#1,d0	;center the period name on x $11
@@ -1189,7 +1180,7 @@ pplpen	;93 ?. Print one penalty box line: player number and time remaining. a2 =
 	clr.w	d0
 	move.b	-8(a1),d0	;player number (BCD)
 	move.w	(printx).w,-(sp)
-	movea.w	#(TextBuffer-M68K_RAM),a1	;the 93 version (mesarea+2)
+	movea.w	#(TextBuffer-M68K_RAM),a1	;mesarea+2
 	bsr.w	ConverByteToDigits
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	#4,(a1)	;string length: 2 digits

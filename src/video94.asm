@@ -2,12 +2,8 @@
 ;	CopyPaletteToCRAM, randomd0s / randomd0, sroot, sfx, song, waitx, IntermissionLoop, waitjoy, orjoy, nodiag,
 ;	ProcessInputWithRepeat, ReadJoy1-4, ReadJoy, jdtab, DoDMApro, DoDMA, DoDMA_nd2, DoFill
 ;	WaitDMA, setvram, Vmaddr. dobitmap follows.
-;Transcribed from lst/nhl94.bin.lst lines 44006-44864. Global names are the except CopyPaletteToCRAM
-;ProcessInputWithRepeat, DoDMA_nd2 and IntermissionLoop (92 and), the 93 names.
-;/ nd (inside DoDMA) are the locals.dd /.nd. ? is dmaram (? stripped).
-;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
-;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
+;/ nd (inside DoDMA) are the locals.dd /.nd. ? is dmaram (? stripped). The source has the real cmp / cmpi;
+;fixopcodes.js patches the cmp encoding after assembly.
 
 remap
 	move.w	(disflags).w,-(sp)
@@ -661,7 +657,7 @@ setvram
 	dbf	d1,.0
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
-setVram_0	;second half of the 92 version (no fade): clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
+setVram_0	;second half of setVram without the fade: clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
 	;Falls in from setvram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
@@ -729,17 +725,11 @@ Vmaddr
 	andi.w	#3,d0
 	move.l	d0,Vctrl-Vdata(a0)
 	rts
-;	NHL 94 (retail) segment
-;	DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode, jump_table, the Opcode_* handlers,
-;	FlushOutputBuffer), xyVmMap, eraser, Framer, printz2 / printsmall and the control codes, printz / print,
+;	NHL 94 (retail) segment DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode, jump_table, the Opcode_*
+;	handlers, FlushOutputBuffer), xyVmMap, eraser, Framer, printz2 / printsmall and the control codes, printz / print,
 ;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber, PushNumberWidth, appendz / appstring, printbigz /
-;	printbig, the PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. AddPenalty follows
-;	Transcribed from lst/nhl94.bin.lst lines 44878-45933. Global names are the 93 names where 93 has the routine
-;( unless generic, in an); printz2 keeps the that the earlier segments call (93
-;	printsmallz). The decompressor handler and four control code labels are
-;placed at the addresses in jump_table and ControlCodeJumpTable. Local labels are the names (_x ->.x)
-;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
+;	printbig, the PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. The decompressor handler and four
+;	control code labels are placed at the addresses in jump_table and ControlCodeJumpTable. The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
 dobitmap
@@ -855,7 +845,7 @@ jump_table	;DecompressBytecode handler offsets, one per opcode high nibble
 	dc.w	Opcode_CopyBackwardReverseShort-jump_table	;D
 	dc.w	Opcode_CopyBackwardReverseMedium-jump_table	;E
 	dc.w	Opcode_CopyBackwardReverseLong-jump_table	;F
-Opcode_CopyLiteral	;93: opcodes 0-1, copy (low 5 bits)+1 bytes from the data
+Opcode_CopyLiteral	;opcodes 0-1, copy (low 5 bits)+1 bytes from the data
 	move.b	-1(a0),d0
 	andi.w	#$1F,d0
 .loop
@@ -866,7 +856,7 @@ Opcode_CopyLiteral	;93: opcodes 0-1, copy (low 5 bits)+1 bytes from the data
 .next
 	dbf	d0,.loop
 	rts
-Opcode_ClearBytes	;93: opcode 2, write (low 4 bits)+1 zero bytes
+Opcode_ClearBytes	;opcode 2, write (low 4 bits)+1 zero bytes
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 .loop
@@ -877,7 +867,7 @@ Opcode_ClearBytes	;93: opcode 2, write (low 4 bits)+1 zero bytes
 .next
 	dbf	d0,.loop
 	rts
-Opcode_Fillbytes	;93: opcode 3, write the next data byte (low 4 bits)+3 times
+Opcode_Fillbytes	;opcode 3, write the next data byte (low 4 bits)+3 times
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 	addq.w	#2,d0
@@ -890,7 +880,7 @@ Opcode_Fillbytes	;93: opcode 3, write the next data byte (low 4 bits)+3 times
 .next
 	dbf	d0,.loop
 	rts
-Opcode_CopyBackwardShort	;93: opcodes 4-7, copy from back in the output buffer
+Opcode_CopyBackwardShort	;opcodes 4-7, copy from back in the output buffer
 	move.b	-1(a0),d0
 	andi.w	#7,d0
 	addq.w	#1,d0
@@ -898,7 +888,7 @@ Opcode_CopyBackwardShort	;93: opcodes 4-7, copy from back in the output buffer
 	lsr.w	#3,d2
 	andi.w	#7,d2
 	addq.w	#1,d2
-CopyBackwardRun	;93: shared copy loop, d0 = count-1, d2 = distance back
+CopyBackwardRun	;shared copy loop, d0 = count-1, d2 = distance back
 	neg.b	d2
 	add.b	d1,d2
 .loop
@@ -910,13 +900,13 @@ CopyBackwardRun	;93: shared copy loop, d0 = count-1, d2 = distance back
 .next
 	dbf	d0,.loop
 	rts
-Opcode_CopyBackwardMedium	;93: opcode 8
+Opcode_CopyBackwardMedium	;opcode 8
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 	addq.w	#2,d0
 	move.b	(a0)+,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardLong	;93: opcode 9
+Opcode_CopyBackwardLong	;opcode 9
 	move.b	(a0),d0
 	asl.b	#1,d0
 	move.b	-1(a0),d0
@@ -927,7 +917,7 @@ Opcode_CopyBackwardLong	;93: opcode 9
 	andi.w	#$7F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardExtended1	;93: opcode A
+Opcode_CopyBackwardExtended1	;opcode A
 	move.b	-1(a0),d0
 	asl.w	#8,d0
 	move.b	(a0),d0
@@ -938,7 +928,7 @@ Opcode_CopyBackwardExtended1	;93: opcode A
 	andi.w	#$3F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardExtended2	;93: opcode B. this handler as dc.b; written from the retail bytes
+Opcode_CopyBackwardExtended2	;opcode B. this handler as dc.b; written from the retail bytes
 	move.b	-1(a0),d0
 	asl.w	#8,d0
 	move.b	(a0),d0
@@ -949,7 +939,7 @@ Opcode_CopyBackwardExtended2	;93: opcode B. this handler as dc.b; written from t
 	andi.w	#$1F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardReverseShort	;93: opcodes C-D, copy backwards through the source
+Opcode_CopyBackwardReverseShort	;opcodes C-D, copy backwards through the source
 	move.b	-1(a0),d0
 	andi.w	#3,d0
 	addq.w	#1,d0
@@ -957,7 +947,7 @@ Opcode_CopyBackwardReverseShort	;93: opcodes C-D, copy backwards through the sou
 	lsr.w	#2,d2
 	andi.w	#7,d2
 	addq.w	#1,d2
-CopyBackwardReverseRun	;93: shared reverse copy loop
+CopyBackwardReverseRun	;shared reverse copy loop
 	neg.b	d2
 	add.b	d1,d2
 .loop
@@ -969,7 +959,7 @@ CopyBackwardReverseRun	;93: shared reverse copy loop
 .next
 	dbf	d0,.loop
 	rts
-Opcode_CopyBackwardReverseMedium	;93: opcode E. Distance 0 is the end code
+Opcode_CopyBackwardReverseMedium	;opcode E. Distance 0 is the end code
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 	addq.w	#2,d0
@@ -982,7 +972,7 @@ Opcode_CopyBackwardReverseMedium	;93: opcode E. Distance 0 is the end code
 	addq.w	#4,sp
 	movem.l	(sp)+,d0-d3/a0-a2
 	rts
-Opcode_CopyBackwardReverseLong	;93: opcode F
+Opcode_CopyBackwardReverseLong	;opcode F
 	move.b	(a0),d0
 	asl.b	#1,d0
 	move.b	-1(a0),d0
@@ -1184,7 +1174,7 @@ ControlCodeJumpTable	;printsmall control codes, indexed by -byte
 	dc.l	ControlCode_AddY		;-6: y offset
 	dc.l	ControlCode_SetFont		;-7: char set
 	dc.l	ControlCode_SetMapAndPosition		;-8: attribute, map, x, y
-ControlCode_SetMapAndPosition	;the 93 version control code -8, next 4 bytes = attribute, map, x, y
+ControlCode_SetMapAndPosition	;control code -8, next 4 bytes = attribute, map, x, y
 	bsr.w	ControlCode_SetAttribute
 	bsr.w	ControlCode_SetMap
 	bsr.w	ControlCode_SetX
@@ -1216,19 +1206,19 @@ ControlCode_SetY	;Control code -4, next byte = printy
 	subq.w	#1,d3
 	move.w	d0,(printy).w
 	bra.w	xyVmMap
-ControlCode_AddX	;93: control code -5, add the next (signed) byte to printx
+ControlCode_AddX	;control code -5, add the next (signed) byte to printx
 	move.b	(a1)+,d0
 	ext.w	d0
 	subq.w	#1,d3
 	add.w	d0,(printx).w
 	bra.w	xyVmMap
-ControlCode_AddY	;93: control code -6, add the next (signed) byte to printy
+ControlCode_AddY	;control code -6, add the next (signed) byte to printy
 	move.b	(a1)+,d0
 	ext.w	d0
 	subq.w	#1,d3
 	add.w	d0,(printy).w
 	bra.w	xyVmMap
-ControlCode_SetFont	;93: control code -7, next byte = char set index
+ControlCode_SetFont	;control code -7, next byte = char set index
 	clr.w	d0
 	move.b	(a1)+,d0
 	subq.w	#1,d3

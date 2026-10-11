@@ -1,5 +1,5 @@
 	org	$00000100
-;					Data	  	No.		Address	Description
+;					Data No. Address	Description
 	dc.b	'SEGA GENESIS    '	; 01	$100	Sega Genesis ID (16 bytes)
 	dc.b	'(C)T-50 1993.JUL'	; 02	$110	company ID / release date (YYYY.MMM) (16 bytes)
 	dc.b	'NHL Hockey ''94  '	; 03	$120	game title for US market (48 bytes)

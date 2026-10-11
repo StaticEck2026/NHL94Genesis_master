@@ -1,11 +1,6 @@
 ;	NHL 94 (retail) segment
 ;	assgoaliecpu, ClampYPosition, AdjustFacingDirection, goaliesave), assgoalietopuck, the breakaway code
 ;	asspuckc, chkpk / chkpk2, chk4pass and EvadePC. checkob follows at $E62E.
-;Transcribed from lst/nhl94.bin.lst lines 38682-40488. Global names are the except ClampYPosition
-; and AdjustFacingDirection, the 93 names. Local labels are the names
-;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ;is the global checkanim
-;	(used across a
-;	global label).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36
@@ -1642,9 +1637,6 @@ EvadePC
 ;	NHL 94 (retail) segment
 ;	penalty shot code (puckshootout, puckpenshot), puckfaceoff, ChkGoalies, ReturnGoalies, CPgoalie, CompLine,
 ;	puckfaceoff2, ResetAndSelectPlayers, updatefaceoff, Endfaceoff, pucknorm. ChkOffsides follows at $FFEA.
-;Transcribed from lst/nhl94.bin.lst lines 40493-42593. Global names are the routines keep the
-;names. Local labels are the names (_x ->.x, gmclock ->.gmclock) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the
-;unless generic, in an ;WaitForFaceoffLineChanges and PenaltyShotEndReturn stay global: they are used across a global label.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz / printz2 use the String macro (length word includes itself).
@@ -3502,12 +3494,7 @@ pucknorm
 ;	puckIChk, puckunflip / puckflip / puckshadow, findpc, skateto, avdgoal, skatetopuckinit / skatetopuck, assexit /
 ;	assinsert / assreplace, vtoa, GetHot, SetSPA, doplayeracc, goalieacc, noturn0 / noturn, playeracc, MaxSpeed,
 ;	dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap follows.
-;Transcribed from lst/nhl94.bin.lst lines 42598-43998. Global names are the except
-;	ClearOffsidesIfAllPlayers, UnpackNibbles and WeightedRandomSelect, the
-;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop
-;numbered), with the unless generic, in an
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
-;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
+;The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34
 ;	SCnum $52, facedir $54, SPA $58, SPAnum $5A, SPAcnt $5C, pflags $62, pflags2 $63.
 
