@@ -1,4 +1,3 @@
-; $0FE556  NEW in 94: song select, title, credits
 ChooseSong	;SongNum = byte SongIndex of the 6 song bytes of team HmTeam (TeamSongs), or one of the 8 of RandomSongs at random
 	;when 0; $FFFF with gmode bit 4. Called from StartPer, checkgoal, puckshootout and LeadSong
 	movem.l	d0-d1/a0-a1,-(sp)
@@ -559,7 +558,7 @@ DrawPlayoffSprite	;The PlayoffSprite sprite at playoffspritex / playoffspritey (
 	lsr.w	#1,d0
 	move.w	d0,(Sattsize).w
 	rts
-HiScoreScreen	;vb2, the $F4378 bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (attract mode)
+HiScoreScreen	;vb2, the bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (attract mode)
 	move.l	#vb2,(vbint).w
 	bclr	#1,(disflags).w
 	move.w	#5,(Map3col1).w

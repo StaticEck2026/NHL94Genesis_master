@@ -1,14 +1,13 @@
-; $01A050  Adapted from sram93.asm: save data
-;	NHL 94 (retail) segment $1A050-$1A263
-;	New in 94 (93 drives a serial EEPROM): the battery save RAM. 94 keeps $2000 bytes on the odd bytes at $200000, copies
+;	NHL 94 (retail) segment
+;	New in 94 (93 drives a serial EEPROM): the battery save RAM. 94 keeps $2000 bytes on the odd bytes, copies
 ;	them to M68K_RAM at power on (InitSaveRAM) and protects them with a sum / complement checksum in bytes $1FFE-$1FFF.
-;	InitSaveRAM, VBcount, ValidateSRAM, ClearSRAM, WriteSRAM, MakeSRAMChecksum, ReadSRAM; p_turnoff follows at $1A264.
+;	InitSaveRAM, VBcount, ValidateSRAM, ClearSRAM, WriteSRAM, MakeSRAMChecksum, ReadSRAM; p_turnoff follows.
 ;Transcribed from lst/nhl94.bin.lst lines 61322-61528. Global names are the locals are the names
 ;(_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ;No
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 
-InitSaveRAM	;Called from Begin. Copy the $2000 byte save RAM (the odd bytes at $200000) to M68K_RAM and check its checksum
+InitSaveRAM	;Called from Begin. Copy the $2000 byte save RAM (the odd bytes) to M68K_RAM and check its checksum
 	;(ValidateSRAM; ValidSRAM 0 = good, -1 = bad). A bad save RAM is cleared (ClearSRAM) and read again. Two power-on tests that never return:
 	;Start+A+C held writes and reads back every bit of every byte, writes $12,$34,$56,$78 to bytes 0-3 and flashes the screen green, or red at the
 	;first bad byte; Start+B+C held flashes green if bytes 0-3 are $12345678, else red
@@ -79,7 +78,7 @@ InitSaveRAM	;Called from Begin. Copy the $2000 byte save RAM (the odd bytes at $
 	move.w	#$E0,d3	;green
 	move.w	#$20,d4
 	bra.s	.loadcolor	;branch (screen flashes green)
-SRAMWaitVblank	;Wait for the next vblank (vcountwait, 93 MenuWaitVblank). Called from InitSaveRAM
+SRAMWaitVblank	;Wait for the next vblank (vcountwait). Called from InitSaveRAM
 	jsr	(vcountwait).l
 	rts
 VBcount	;vbint handler while InitSaveRAM runs: vcount + 1 only
@@ -139,7 +138,7 @@ ClearSRAM	;Clears first $2000 of RAM and SaveRAM: zero M68K_RAM $0-$1FFF with by
 	bsr.w	MakeSRAMChecksum
 	rts
 WriteSRAM	;Write data from a0 into SaveRAM: d1 = number of bytes, d0 = first save RAM byte (each byte is the odd byte of a word at
-	;$200000 + d0 * 2). Called from ClearSRAM, MakeSRAMChecksum and the save code (clrCrowdRAM ...)
+	;Called from ClearSRAM, MakeSRAMChecksum and the save code (clrCrowdRAM ...)
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.l	#$200000,a1
 	add.l	d0,d0
@@ -172,7 +171,7 @@ MakeSRAMChecksum	;Read the whole save RAM to M68K_RAM, put the sum of bytes 0-$1
 	move.l	#$1FFE,d0
 	bsr.s	WriteSRAM
 	rts
-ReadSRAM	;move into a0 location and increment: copy d1 save RAM bytes from byte d0 (the odd bytes at $200000 + d0 * 2) to (a0)+. Called from InitSaveRAM, MakeSRAMChecksum and the save code
+ReadSRAM	;move into a0 location and increment: copy d1 save RAM bytes from byte d0 (the odd bytes + d0 * 2) to (a0)+. Called from InitSaveRAM, MakeSRAMChecksum and the save code
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.l	#$200000,a1
 	add.l	d0,d0

@@ -474,9 +474,6 @@ replaydelay equ $FFFFDEF0
 PALflag equ $FFFFDEF2
 Stack equ $FFFFFFFE
 Z80_RAM equ $A00000
-;$A00083 is Z80_RAM+$83
-;$A0008E is Z80_RAM+$8E
-;$A02000 is Z80_RAM+$2000
 Z80_YM2612 equ $A04000
 ; ----------------------------------
 

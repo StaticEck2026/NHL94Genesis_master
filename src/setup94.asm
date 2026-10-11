@@ -1,11 +1,9 @@
-; $0169FA  Adapted from hockey93.asm: ice setup, intermission, playoff screen
-;	NHL 94 (retail) segment $169FA-$17A17
-;	92 hockey.asm part 3, first half, as 93 hockey93_06.asm: setupice, setupice_highlight, setupIceRinkMap, setupEASNmap, the
-;	94-only tile reloads (ReloadEnergyBarTiles ... ReloadFaceOffMap), setupTeamBlocksMap, CopyTeamBlockMapData, defaultsprites, defaultsprites2,
+;	NHL 94 (retail) segment
+;	tile reloads (ReloadEnergyBarTiles ... ReloadFaceOffMap), setupTeamBlocksMap, CopyTeamBlockMapData, defaultsprites, defaultsprites2,
 ;	SprSort, resetplstuff, clearTeamStats, setteams, InitTeamSructure, setplayercolors, PeriodOver, IntermissionStart, GameOver,
-;	ExitToOpening, Opening, Opening2, PlayoffScreen and its helpers, PlayoffScreenText, then the 94-only text player
-;	(StartScoutText, ScoutTextPlayer, ScoutTextNextLine) that ScoutingReport uses. EASportsScreen follows at $17A18.
-;	There is no 93 ScoutingReport here: the listing has no ScoutingReport label.
+;	ExitToOpening, Opening, Opening2, PlayoffScreen and its helpers, PlayoffScreenText, then the text player
+;	(StartScoutText, ScoutTextPlayer, ScoutTextNextLine) that ScoutingReport uses. EASportsScreen follows.
+;	There is no the 93 version here: the listing has no ScoutingReport label.
 ;Transcribed from lst/nhl94.bin.lst lines 53022-54525. Global names are the or the 93 name where an auto
 ;name or where the routine is the 93 one (setplayercolors). Local labels are the names (_x ->.x) or the 93
 ;local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
@@ -51,7 +49,7 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 .0
 	bsr.w	DoDMA_clearCallbackPointer
 	jsr	(LoadHomeTeamGfx).l
-	move.w	d4,(EASNcset).w	;93 EASNcset
+	move.w	d4,(EASNcset).w
 	bsr.w	setupEASNmap
 	move.w	d4,(energybarchars).w	;energy bar chars
 	movea.l	#EnergyBarMap+8,a2
@@ -65,11 +63,11 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	bsr.w	defaultsprites
 	bsr.w	setupIceRinkMap
 	bsr.w	AddFramer
-	move.w	d4,(smallfontchars).w	;93 smallfontchars
+	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
 	dc.l	$43434567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
-	move.w	d4,(BigFontChars).w	;93 BigFontChars
+	move.w	d4,(BigFontChars).w
 	movea.l	#BigFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
 	dc.l	$71234567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
@@ -740,7 +738,7 @@ PeriodOver	;what to do if period over. Branched to from puckfaceoff when the clo
 	move.w	#4,(gsp).w
 .0
 	bsr.w	forceblack
-IntermissionStart	;93 name; 93 PeriodOver tail: reset the clock, song $79, ticker scores, playoff stats at the end
+IntermissionStart	;93 name; the 93 version tail: reset the clock, song $79, ticker scores, playoff stats at the end
 	;(AddPOStats), Intermission, then StartPer or GameOver. Also jumped to from StartGame
 	jsr	(ResetClock).w
 	move.w	d0,-(sp)
@@ -795,7 +793,7 @@ Opening2	;reset the stack and clear the variables, then options (GameSetUp, User
 Opening3	bsr.w	PlayoffScreen
 	btst	#0,(gmode2).w
 	bne.w	.1
-	jsr	(ScoutingReport).l	;92 Opening4 (not a label here: 94 skips it in shootouts, .1 below is local to Opening3)
+	jsr	(ScoutingReport).l	;the 92 version (not a label here: 94 skips it in shootouts, .1 below is local to Opening3)
 .1
 	jmp	(StartGame).w
 PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver and Opening2. Runs its own vblank (PlayoffScreenDataTable) and

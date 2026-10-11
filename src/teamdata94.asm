@@ -1,6 +1,5 @@
-; $00030A  Adapted from teamdata93.asm: teams, palettes, credits text
-;NHL 94 team data. Retail $00030A-$005B1B (22546 bytes), from the lst/nhl94.bin.lst.
-;	Layout of 93 teamdata93.asm: the team address table, one block per team, playoffseats, Credits.
+;NHL 94 team data., from the lst/nhl94.bin.lst.
+;	Layout of 93: the team address table, one block per team, playoffseats, Credits.
 ;	94 has 26 teams plus the two all star teams (93: 24 plus two). Minnesota is now Dallas; Anaheim and
 ;	Florida are new. 94 team blocks are not in TeamList order (ASE and ASW first, FLA and ANH last).
 
@@ -46,7 +45,7 @@ ScoreOdds	=	10
 
 ;------------------------
 ; Team block: 6 offset words (the equates above), .pad home and visitor palettes (16 colours each, incbin <team>h.pal / <team>v.pal
-; as 93; files from extractAssets94.js, 94 in the name where the colours differ from 93),
+; as 93; files, 94 in the name where the colours differ from 93)
 ; .sr, .sodds, .ls 8 lines of 8 player numbers (1 = first .pld entry), .pld players ended by an
 ; empty String, then 4 Strings: city, abbreviation, nickname, arena (93 has only city and abbreviation).
 ;------------------------
@@ -669,7 +668,7 @@ LosAngeles	;LA, $1E52
 .ar	;arena.
 	String	'Great Western Forum'
 
-Dallas	;DAL, $214E. 93 Minnesota North Stars
+Dallas	;DAL, $214E. the 93 version North Stars
 .0
 	dc.w	.pld-.0
 	dc.w	.pad-.0
@@ -677,7 +676,7 @@ Dallas	;DAL, $214E. 93 Minnesota North Stars
 	dc.w	.ls-.0
 	dc.w	.sr-.0
 	dc.w	.sodds-.0
-.pad	;93 Minnesota palettes, unchanged in 94
+.pad	;the 93 version palettes, unchanged in 94
 	incbin	..\Extracted\NHL94\Graphics\Pals\DALh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\DALv.pal
 .sr	;4 bytes in 94 (93: 8, hex2)
@@ -1777,7 +1776,7 @@ Credits	;$5776. 93 name. Title screen scroller: movea.l #Credits (copyright line
 	String	'Sega Enterprises Ltd.'
 	String	-1
 
-CreditsList	;$57B8 (93 Credits+$42). The credits after the copyright lines
+CreditsList	;$57B8. The credits after the copyright lines
 	String	'Design adapted by'
 	String	'Michael Brook'
 	String	-1

@@ -14,8 +14,8 @@ FIFO_EMPTY equ 9
 
 
 
-; ------------- 93 structure and flag equates (ram93.asm names, 94 values) -------------
-; Included by every *_stub.asm and by nhl94.asm. Names are the NHLPA93Genesis ram93.asm names; the value is 94's.
+; ------------- 93 structure and flag equates -------------
+; Included by every *_stub.asm and by nhl94.asm. Names are the NHLPA93Genesis names; the value is 94's.
 
 Sortobjs equ 16		;number of sorted graphics objects
 SCstruct equ $80		;ram for each sortobj (SortCords entry)
@@ -86,7 +86,7 @@ spodds equ $70
 stickhand equ $71
 endurance equ $72
 handed equ $76		;bit0 set is left handed
-;player struct fields after handed's neighbours, not named in 93 ram93.asm (names from the 92/93/94 comments)
+;player struct fields after handed's neighbours, not named in 93 (names from the 92/93/94 comments)
 pflags3 equ $64		;player flags 3 (92: not used)
 pf3oside equ 0		;offsides
 pf3break equ 1		;on a breakaway
@@ -134,7 +134,7 @@ sf3rmplay equ 1		;play mode on for replay
 sf3alttree equ 2		;alt. tree
 sf3sbut equ 3		;flag for start button
 
-;team variables (HmShots / AwShots = the home / away team struct; 93 hmtmstruct / awtmstruct)
+;team variables (HmShots / AwShots = the home / away team struct)
 tmshots equ $0		;shots stat
 tmPwrGoals equ $2		;power play goals stat
 tmPwrPlays equ $4		;power plays stat
@@ -185,7 +185,7 @@ CC_AddY equ $FA		;-6: add signed byte to printy
 CC_SetFont equ $F9		;-7: char set
 CC_SetMapAndPosition equ $F8		;-8: attribute, map, x, y
 
-;game sound effect numbers (sfx / song argument; 92 / 93 SFX names). 95 maps them through SfxTable
+;game sound effect numbers (sfx / song argument). 95 maps them through SfxTable
 SFXsiren equ $0
 SFXbeep1 equ $1
 SFXbeep2 equ $2
@@ -216,7 +216,7 @@ SFX26 equ $26
 SFX27 equ $27
 SFXpuckwall1 equ $28		;+0-3
 SFXpuckice equ $2C		;+0-3
-;94 song numbers
+;song numbers
 SngTitle equ $78
 SngEOG equ $79
 SngScout equ $7A

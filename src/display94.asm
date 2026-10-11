@@ -1,8 +1,7 @@
-; $015D9A  Adapted from video93.asm: vblank, clock, crowd, rink scroll
-;	NHL 94 (retail) segment $15D9A-$162FD
-;	92 Video.asm first half, as 93 video93_1.asm: VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAlist, SetScroll2,
+;	NHL 94 (retail) segment
+;	first half, as 93: VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAlist, SetScroll2
 ;	setvideo and the sprite builders it calls (updatescroll, showref, checkfo, showzam, SetSframe, showcrowd). showclock
-;	follows at $162FE.
+;	follows.
 ;Transcribed from lst/nhl94.bin.lst lines 51765-52286. Global names are the or the 93 name where an
 ;auto name. The 93 writes as locals are
 ;locals: showzam.ftab, showcrowd.pb and.sc. Local labels are the names
@@ -12,7 +11,7 @@
 ;	Bits: disflags 0 dfok, 2 dfng, 3 dfclock, 4 face off; sflags 0 sfpz, 7 sfhor; sflags2 1 sf2refref.
 
 VBlank	;93 name; 93 Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
-	;dfok is set, cramfade, then the game clock. 94: gmode2 bit 2 keeps the clock running after the whistle, and with gmode2 bit 1
+	;dfok is set, cramfade, then the game clock. gmode2 bit 2 keeps the clock running after the whistle, and with gmode2 bit 1
 	;(penalty shot / shootout) shootoutclock counts down instead (shootoutjiffy jiffies, not while gmode2 bit 7 is set)
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w	;dfng: don't touch the vdp
@@ -34,7 +33,7 @@ VBlank	;93 name; 93 Main vblank code for game play (vbint target, set by setupic
 	bne.w	.1
 	tst.w	(gameclock).w
 	beq.w	.c
-	subi.w	#$AAA,(gameclock+2).w	;jiffy ($10000/24). gameclock+2 = gameclock+2
+	subi.w	#$AAA,(gameclock+2).w	;jiffy. gameclock+2 = gameclock+2
 	bcc.w	.c
 	bset	#dfclock,(disflags).w	;dfclock
 	subq.w	#1,(gameclock).w
@@ -45,7 +44,7 @@ VBlank	;93 name; 93 Main vblank code for game play (vbint target, set by setupic
 	move.w	#SFXbeep2,-(sp)	;SFXbeep2, played when gameclock reaches 60
 	bsr.w	sfx
 .c
-	addq.w	#1,(vcount).w	;92 Vcount
+	addq.w	#1,(vcount).w
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
@@ -74,7 +73,7 @@ DumpSprites	;Transfer (by dma) scroll stuff, sprite table, vram data in dmalist.
 	bsr.w	SetScroll2
 DumpSprites2	;Transfer sprite table, then the dma list. Falls into DoDMAlist. Also called from VBlank_SetOptions
 	movea.w	#(Satt-M68K_RAM),a0
-	move.w	(Sattsize).w,d0	;93 Sattsize: words
+	move.w	(Sattsize).w,d0	;words
 	move.w	(VSPRITES).w,d1
 	bsr.w	DoDMA
 DoDMAList	;(symbols are case-insensitive). Transfer data from dmalist. Also called from setupice
@@ -125,12 +124,12 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 	move.l	a6,d0
 	subi.l	#Satt,d0
 	lsr.w	#1,d0	;words
-	move.w	d0,(Sattsize).w	;93 Sattsize
+	move.w	d0,(Sattsize).w
 	move.l	a5,(DMAlistend).w
 	bset	#dfok,(disflags).w	;dfok
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-updatescroll	;(92 name; 93 show_rink). Using hpos and vpos set scroll cords; queue rink map rows on the dma list (a5) when vertical
+updatescroll	; Using hpos and vpos set scroll cords; queue rink map rows on the dma list (a5) when vertical
 	;scrolling needs new rows. Called from setvideo. 94 takes the rows from Rinktilelist, or RevRinkTilelist in a reverse angle replay
 	;(sflags4 bit 4)
 	btst	#7,(sflags).w	;sfhor
@@ -224,7 +223,7 @@ showref	;draw ref graphics. a5 = dma list, a6 = sprite table, d6 = link counter.
 	add.w	d1,d0
 	dbf	d2,.0
 	rts
-checkfo	;check for face off sprites (93 checkfo and checkfo2; 94 has no checkfo2 label). 3 entries of fofdata2: word frame, word flags. Called from setvideo
+checkfo	;check for face off sprites. 3 entries of fofdata2: word frame, word flags. Called from setvideo
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	rtss2
 	btst	#4,(disflags).w	;face off flag
@@ -235,7 +234,7 @@ checkfo	;check for face off sprites (93 checkfo and checkfo2; 94 has no checkfo2
 	move.w	(a3),d4
 	bmi.w	.1
 	beq.w	.1
-	movea.l	#FaceOffSprites,a2	;93 FaceOffSprites
+	movea.l	#FaceOffSprites,a2
 	adda.l	4(a2),a2
 	add.w	d4,d4
 	move.w	2(a2,d4.w),d5
@@ -269,7 +268,7 @@ checkfo	;check for face off sprites (93 checkfo and checkfo2; 94 has no checkfo2
 	move.w	2(a3),d1
 	andi.w	#$F800,d1
 	eor.w	d1,d2
-	add.w	(faceoffvrcset).w,d2	;93 faceoffvrcset
+	add.w	(faceoffvrcset).w,d2
 	move.w	d2,4(a6)
 	addq.w	#1,d6
 	addq.w	#8,a6
@@ -282,7 +281,7 @@ checkfo	;check for face off sprites (93 checkfo and checkfo2; 94 has no checkfo2
 showzam	;zamboni. a5 = dma list, a6 = sprite table, d6 = link counter. Draws frame 1, frame 2-4 picked by x, then frame 5 (home score not ahead) or a .ftab frame. Called from setvideo
 	move.w	(zamx).w,d0
 	bmi.w	rtss2	;no zamboni
-	movea.l	#ZamFrameList,a0	;93 ZamSprites
+	movea.l	#ZamFrameList,a0
 	lsr.w	#2,d0
 	move.w	#$12A,d1	;y (92 128+200)
 	moveq	#1,d2
@@ -350,7 +349,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	;counter. 94: no crowd in a reverse angle replay. Called from setvideo
 	btst	#4,(sflags4).w	;check if reverse angle replay
 	bne.w	.x	;branch if so
-	movea.l	#CrowdFrameList,a1	;93 CrowdSprites
+	movea.l	#CrowdFrameList,a1
 	adda.l	4(a1),a1
 	move.w	(Hpos).w,d4
 	move.w	(Vpos).w,d5
@@ -448,10 +447,9 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	movem.l	(sp)+,d0-d5
 .x
 	rts
-;	NHL 94 (retail) segment $162FE-$169F9
-;	92 Video.asm second half, as 93 video93_2.asm: showclock, checksso, setsortcords, setffo, uppads, FormatControllerDisplay,
+;	NHL 94 (retail) segment
 ;	RenderSmallFontChar, ButtonLabelCharTable, addframe, addframe2, find3d, updatesound and KillCrowd. setupice
-;	follows at $169FA.
+;	follows.
 ;Transcribed from lst/nhl94.bin.lst lines 52287-53021. Global names are the or the 93 name where an
 ;auto name. The 93 writes as locals are locals: showclock.char
 ;	checksso .ca and .tab; the 94 horizontal clock code's .digit and .digits
@@ -461,11 +459,11 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 ;	left as dc.b (.digits, .tab, ButtonLabelCharTable) are String / dc.w / dc.b.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
-;	Object offsets, as 92 / 93: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
-;	92 ffosize = $1C, ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
+;	Object offsets, as 92 / 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
+;	92 used $1C, ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
 
 showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94: on the horizontal rink the clock is printed (printz / print
-	;with .digits; not in a shootout, gmode2 bit 0). On the vertical rink (.3, the 93 showclock body) it goes in the dma list, only when
+	;with .digits; not in a shootout, gmode2 bit 0). On the vertical rink (.3) it goes in the dma list, only when
 	;dfclock is set; with gmode2 bit 1 (penalty shot / shootout) shootoutclock is shown instead of gameclock. a5 = dma list
 	btst	#7,(sflags).w	;sfhor
 	beq.w	.3
@@ -524,20 +522,20 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	String	'7'
 	String	'8'
 	String	'9'
-.3	;The 93 showclock body: returns unless dfclock is set
+.3	;The the 93 version body: returns unless dfclock is set
 	bclr	#3,(disflags).w	;dfclock
 	beq.w	rtss2
 	btst	#3,(sflags2).w
 	bne.w	rtss2
 	cmpi.w	#4,(gsp).w	;no clock update when gsp = 4
 	beq.w	rtss2
-	movea.w	#(clockram+6-M68K_RAM),a0	;end of the 5 word clock buffer (92 clockram+(5*2)); written backward
-	movea.l	#SmallFontMap,a1	;93 smallfontmap
+	movea.w	#(clockram+6-M68K_RAM),a0	;end of the 5 word clock buffer; written backward
+	movea.l	#SmallFontMap,a1
 	adda.l	4(a1),a1
 	move.w	$78(a1),d0	;4+(':'*2)
-	add.w	(smallfontchars).w,d0	;93 smallfontchars
+	add.w	(smallfontchars).w,d0
 	ori.w	#$8000,d0
-	move.w	d0,(clockram).w	;colon (93 clockram)
+	move.w	d0,(clockram).w	;colon
 	move.w	(gameclock).w,d0
 	btst	#1,(gmode2).w	;penalty shot / shootout clock
 	beq.w	.4
@@ -811,7 +809,7 @@ FormatControllerDisplay	;Queue the 3 character label of a pad object. d1 = label
 .1
 	move.b	0(a4,d2.w),d2
 	moveq	#2,d0
-RenderSmallFontChar	;Dma one small font tile (SmallFontMap, 93 smallfontmap) to the object's chars. d2 = ascii char, d0 = char slot, a0 = object (VRchar), a5 = dma list
+RenderSmallFontChar	;Dma one small font tile (SmallFontMap) to the object's chars. d2 = ascii char, d0 = char slot, a0 = object (VRchar), a5 = dma list
 	movea.l	#SmallFontMap,a3
 	adda.l	4(a3),a3
 	add.w	d2,d2
@@ -853,7 +851,7 @@ addframe2	;d0/d1 = x/y coord on screen, a3 = object, a5 = dma trans, a6 = sprite
 	move.w	frame(a3),d4	;move frame back into d4
 	andi.w	#$7FF,d4	;pass first 11 bits
 	movea.l	#Sprites,a2	;sprite frame list
-	adda.l	4(a2),a2	;add long word at offset 4 to a2 address ($408AA). a2 now $9E724
+	adda.l	4(a2),a2	;add long word at offset 4 to a2 address. a2 now
 	add.w	d4,d4	;add d4 to itself
 	cmp.w	2(a2),d4	;compare offset 2 of a2 to d4. Offset 2 = $69E
 	bge.w	.exit	;branch if greater than or equal
@@ -904,7 +902,7 @@ addframe2	;d0/d1 = x/y coord on screen, a3 = object, a5 = dma trans, a6 = sprite
 	add.w	VRchar(a3),d3	;add VRChar of player struct to d3
 	ext.l	d2	;extend d2 (clears out upper word)
 	asl.l	#5,d2	;mult d2 by 32
-	addi.l	#Spritetiles,d2	;($5DE84)
+	addi.l	#Spritetiles,d2
 	asl.w	#4,d4	;mult by 16 (# of sprite tiles by 16)
 	asl.w	#5,d3	;mult by 32 (# of prev sprite tiles+VrChar by 32)
 	move.l	d2,(a5)+
@@ -965,7 +963,7 @@ addframe2	;d0/d1 = x/y coord on screen, a3 = object, a5 = dma trans, a6 = sprite
 	movem.l	(sp)+,d0-d5/a0-a2
 	move.w	(sp)+,attribute(a3)
 	rts
-find3d	;input: d0 = xfield, d1 = yfield, d2 = height off field. Output: d0 = xscreen, d1 = yscreen, or d1 = $4E20 (92 osflag) when off screen
+find3d	;input: d0 = xfield, d1 = yfield, d2 = height off field. Output: d0 = xscreen, d1 = yscreen, or d1 = $4E20 when off screen
 	btst	#sfhor,(sflags).w
 	beq.w	.nhor
 	exg	d0,d1

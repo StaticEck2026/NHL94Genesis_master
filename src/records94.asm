@@ -1,4 +1,3 @@
-; $0FBB88  NEW in 94: name entry and record holders
 UserNameEntry	;With user records on (OptUserRec 0): the name entry (NameEntryScreen) for the pads in use. Called from PeriodOver
 	tst.w	(OptUserRec).w
 	bne.w	.x
@@ -475,7 +474,7 @@ RecHolderVsTxt	dc.b	0	;PrintPlayerRecords data
 	dc.b	8,$20
 	dc.b	$76	;v
 	dc.b	$73	;s
-	dc.b	$2E	;.
+	dc.b	$2E
 	dc.b	$20,0
 PrintRecordName	;Record Holders: print a value (AppendUserName)
 	move.w	d7,-(sp)

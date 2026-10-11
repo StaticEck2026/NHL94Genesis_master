@@ -1,18 +1,17 @@
-; $01A264  Adapted from sound93.asm: sound driver, then the sound data
-;	NHL 94 (retail) segment $1A264-$4B5BF
-;68k side of the sound driver, as 93 sound93 (same driver, revised): p_turnoff, play_sfx_or_music_track (
+;	NHL 94 (retail) segment
+;68k side of the sound driver, as 93 (same driver, revised): p_turnoff, play_sfx_or_music_track (
 ;p_initfx), play_new_song, the 94 pad readers (ReadJoyData ... ResetZ80Bus, run from p_music_vblank), p_music_vblank (
 ;	MusicVB), UploadCommandBufferToZ80, ProcessOneMusicTrack and the event handlers, UpdateChannelFrequencyAndVolume, the 94
-;volume routine SetChannelVolume, p_initialZ80 and ClearAllTrackAndSFXSlots. Then, as 93 sound93 (incbins after the
-;	driver), the sound data from $1AD90 to $4B5BF: the Z80 program (Z80_Program_Code, loaded by p_initialZ80), the PCM sample table and
+;volume routine SetChannelVolume, p_initialZ80 and ClearAllTrackAndSFXSlots. Then, as 93 (incbins after the
+;	driver), the sound data from to: the Z80 program (Z80_Program_Code, loaded by p_initialZ80), the PCM sample table
 ;	the 12 samples (pcm_sample_table), the FM patches (fm_instrument_patches), the pointer table of sounds 0-$7A (MusicTrackPointerTable,
 ;	songs from SongPointerTable) and the 122 sound and song event streams, each incbin a file written by npm run extractassets
-;	(extractAssets94.js), split as 93 (93 file names where the bytes are the same: the Z80 driver, samples, patches and sounds 0-$2F).
+;	split as 93 (93 file names where the bytes are the same: the Z80 driver, samples, patches and sounds 0-$2F).
 ;	94 changes from 93: sounds 0-$7A (93 0-$37) through a long pointer table (93 word offsets), 8 byte channel structs (93 6), a voice
 ;	volume word (+4) and the controller event handle_command_30, the vblank pad reading, and the Rev A 93 50 Hz tempo block.
 ;Transcribed from lst/nhl94.bin.lst lines 61529-63138. Global names are the s where the routine is the 93 one or
 ;an auto name or no label (in an), else the Locals are the 93 local where the code matches (.fnum,.bendtab,.veltab), else in
-;the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; handle_command_30 ($1AC82-$1ACBF) is
+;the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; handle_command_30
 ;	dc.b, written as instructions; the tables are written as in 93.
 ;RAM (ram_addrs.inc 93 names): fm_track_slots (8 x 6 bytes), fm_channel_structs (94: 6 x 8 bytes
 ;	+0 key, +1 note, +2 volume, +3 patch, +4 output channel, +5 age, +6 bit 0 on), fm_voice_usage_table (8 bytes per key:
@@ -25,10 +24,10 @@ p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute ev
 	;and stop the PCM channel. Called from Begin and the game screens
 	movem.l	d0-d7/a0-a2,-(sp)
 	bsr.w	ClearAllTrackAndSFXSlots
-	move.b	#$77,(Z80_command_buffer).w	;93 Z80_command_buffer: key off channels 0-2, 4-6
+	move.b	#$77,(Z80_command_buffer).w	;key off channels 0-2, 4-6
 	move.b	#$77,(Z80_command_buffer+2).w	;volume change on 0-2, 4-6
 	moveq	#6,d0
-	movea.w	#(per_channel_attenuation_table-M68K_RAM),a0	;93 per_channel_attenuation_table: 7 volume bytes
+	movea.w	#(per_channel_attenuation_table-M68K_RAM),a0	;7 volume bytes
 .loop
 	move.b	#$7F,(a0)+	;$7F = silent
 	dbf	d0,.loop
@@ -47,7 +46,7 @@ play_sfx_or_music_track	;Start sound d0 (0-$7A; 93 0-$37) in the track slot with
 	blt.w	.0
 	bsr.w	play_new_song	;song: stop the current song
 .0
-	lea	(fm_track_slots).w,a1	;93 fm_track_slots: 8 x 6 bytes
+	lea	(fm_track_slots).w,a1	;8 x 6 bytes
 	moveq	#7,d3
 .loop
 	move.l	(a1),d1
@@ -66,7 +65,7 @@ play_sfx_or_music_track	;Start sound d0 (0-$7A; 93 0-$37) in the track slot with
 	move.l	a0,(a2)
 	clr.w	4(a2)
 	move.b	(a0),5(a2)	;first delay
-	lea	(fm_voice_usage_table).w,a0	;93 fm_voice_usage_table
+	lea	(fm_voice_usage_table).w,a0
 	asl.w	#3,d2
 	adda.w	d2,a0
 	moveq	#7,d0	;the 8 midi channels of this track
@@ -97,7 +96,7 @@ play_new_song	;Stop the song in progress: free the first slot whose pointer is a
 	clr.b	(Z80_command_buffer+4).w
 	move.l	#-1,-6(a1)	;free the slot
 	moveq	#5,d1
-	lea	(fm_channel_structs).w,a2	;93 fm_channel_structs (94: 6 x 8 bytes)
+	lea	(fm_channel_structs).w,a2	;the 93 version (94: 6 x 8 bytes)
 .kill
 	move.b	(a2),d2
 	andi.w	#7,d2
@@ -237,7 +236,7 @@ p_music_vblank	;(vblank handler). Read the pads (ReadJoyData, 94), clear the cha
 	;7-0), send the buffer if anything changed and age the channels. 94 keeps the Rev A 93 50 Hz block: with PALflag bit 0 set the slots run
 	;again every 6th frame (music_tick_divider). Called from the vblank handlers
 	bsr.w	ReadJoyData
-	clr.b	(music_needs_z80_update).w	;93 music_needs_z80_update
+	clr.b	(music_needs_z80_update).w
 	clr.l	(Z80_command_buffer).w	;key off/on, volume, frequency bits
 	clr.b	(Z80_command_buffer+4).w	;patch bits
 .loop
@@ -591,7 +590,7 @@ SetChannelVolume	;Set the volume of channel struct a2: note volume (+2) * the vo
 	st	(music_needs_z80_update).w
 	movem.l	(sp)+,d0
 	rts
-.veltab	;attenuation by volume / 8 (93 handle_command_10 .veltab)
+.veltab	;attenuation by volume / 8
 	dc.b	$1A,$18,$16,$14,$12,$10,$0E,$0C,$0A,$08,$06,$04,$03,$02,$01,$00
 .0
 	move.w	#$100,(IO_Z80BUS).l
@@ -727,10 +726,10 @@ ClearAllTrackAndSFXSlots	;Free the 8 track slots and reset the 6 channel structs
 	dbf	d0,.chan
 	rts
 
-;	Sound data, as 93 sound93: $1AD90-$4B5BF. The Z80 driver, the PCM samples and the FM patches are the 93 files (same bytes); the pointer
+;	The Z80 driver, the PCM samples and the FM patches are the 93 files (same bytes); the pointer
 ;	tables are written with the labels; each sound and song event stream is its own file (loop pointers written as dc.l).
-Z80_Program_Code	;First byte of the Z80 program ($1AD90, movea.l in p_initialZ80); the rest of the Z80 blob from $1AD91 and the data
-	;after it are the incbins below. p_initialZ80 copies $295 bytes from here (through $1B024, into pcm_sample_table, as 93 does)
+Z80_Program_Code	;First byte of the Z80 program (movea.l in p_initialZ80); the rest of the Z80 blob from and the data
+	;after it are the incbins below. p_initialZ80 copies $295 bytes from here (through, into pcm_sample_table, as 93 does)
 	dc.b	$18
 	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93.bin	;the 93 Z80 driver after its first byte, up to the ld bc of the FM patch bank address
 	dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80	;Z80 ld bc,$8000+(fm_instrument_patches&$7FFF): bank window address of the FM patches
@@ -927,16 +926,16 @@ sfx_beep2_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_beep2_cmdstream.bin	;sound $2 (SFXbeep2)
 	even
 sfx_horn_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_horn_cmdstream.bin	;sound $4 (92 SFXhorn)
+	incbin	..\Extracted\NHL94\Sound\sfx_horn_cmdstream.bin	;sound $4
 	even
 sfx_stdef_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_stdef_cmdstream.bin	;sound $6 (92 SFXstdef)
+	incbin	..\Extracted\NHL94\Sound\sfx_stdef_cmdstream.bin	;sound $6
 	even
 sfx_puckget_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_puckget_cmdstream.bin	;sound $7 (92 SFXpuckget)
+	incbin	..\Extracted\NHL94\Sound\sfx_puckget_cmdstream.bin	;sound $7
 	even
 sfx_puckice1_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_puckice1_cmdstream.bin	;sound $2C (92 SFXpuckice)
+	incbin	..\Extracted\NHL94\Sound\sfx_puckice1_cmdstream.bin	;sound $2C
 	even
 sfx_puckice2_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_puckice2_cmdstream.bin	;sound $2D
@@ -948,16 +947,16 @@ sfx_puckice4_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_puckice4_cmdstream.bin	;sound $2F
 	even
 sfx_puckbody_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_puckbody_cmdstream.bin	;sound $24 (92 SFXpuckbody)
+	incbin	..\Extracted\NHL94\Sound\sfx_puckbody_cmdstream.bin	;sound $24
 	even
 sfx_oooh_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_oooh_cmdstream.bin	;sound $8 (92 SFXoooh)
+	incbin	..\Extracted\NHL94\Sound\sfx_oooh_cmdstream.bin	;sound $8
 	even
 sfx_puckpost_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_puckpost_cmdstream.bin	;sound $25 (92 SFXpuckpost)
+	incbin	..\Extracted\NHL94\Sound\sfx_puckpost_cmdstream.bin	;sound $25
 	even
 sfx_playerwall_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_playerwall_cmdstream.bin	;sound $20 (92 SFXplayerwall)
+	incbin	..\Extracted\NHL94\Sound\sfx_playerwall_cmdstream.bin	;sound $20
 	even
 sfx_id_21_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_id_21_cmdstream.bin	;sound $21
@@ -981,14 +980,14 @@ sfx_puckwall4_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_puckwall4_cmdstream.bin	;sound $2B
 	even
 sfx_whistle_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_whistle_cmdstream.bin	;sound $3 (92 SFXwhistle)
+	incbin	..\Extracted\NHL94\Sound\sfx_whistle_cmdstream.bin	;sound $3
 	even
 	dc.b	$FF,$FF			;pad: retail leftover bytes (93 has none here)
 sfx_shotwiff_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_shotwiff_cmdstream.bin	;sound $5 (92 SFXshotwiff)
+	incbin	..\Extracted\NHL94\Sound\sfx_shotwiff_cmdstream.bin	;sound $5
 	even
 sfx_check1_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_check1_cmdstream.bin	;sound $1C (92 SFXcheck)
+	incbin	..\Extracted\NHL94\Sound\sfx_check1_cmdstream.bin	;sound $1C
 	even
 sfx_check2_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_check2_cmdstream.bin	;sound $1D
@@ -1000,7 +999,7 @@ sfx_check4_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_check4_cmdstream.bin	;sound $1F
 	even
 sfx_pass1_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_pass1_cmdstream.bin	;sound $10 (92 SFXpass)
+	incbin	..\Extracted\NHL94\Sound\sfx_pass1_cmdstream.bin	;sound $10
 	even
 sfx_pass2_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_pass2_cmdstream.bin	;sound $11
@@ -1012,7 +1011,7 @@ sfx_pass4_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_pass4_cmdstream.bin	;sound $13
 	even
 sfx_shotbh1_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_shotbh1_cmdstream.bin	;sound $14 (92 SFXshotbh)
+	incbin	..\Extracted\NHL94\Sound\sfx_shotbh1_cmdstream.bin	;sound $14
 	even
 sfx_shotbh2_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_shotbh2_cmdstream.bin	;sound $15
@@ -1024,7 +1023,7 @@ sfx_shotbh4_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_shotbh4_cmdstream.bin	;sound $17
 	even
 sfx_shotfh1_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_shotfh1_cmdstream.bin	;sound $18 (92 SFXshotfh)
+	incbin	..\Extracted\NHL94\Sound\sfx_shotfh1_cmdstream.bin	;sound $18
 	even
 sfx_shotfh2_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_shotfh2_cmdstream.bin	;sound $19
@@ -1057,7 +1056,7 @@ sfx_id_0D_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_id_0D_cmdstream.bin	;sound $D
 	even
 sfx_siren_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_siren_cmdstream.bin	;sound $0 (92 SFXsiren)
+	incbin	..\Extracted\NHL94\Sound\sfx_siren_cmdstream.bin	;sound $0
 	even
 fmtune_id_30_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_30_cmdstream.bin	;song $30: ChooseSong, TeamSongs BOS

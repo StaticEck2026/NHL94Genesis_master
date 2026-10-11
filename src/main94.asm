@@ -1,4 +1,3 @@
-; $000000  Adapted from main93.asm: header, startup, vectors
 	include	macros\genesis.mac
 
 ;	68000
@@ -68,6 +67,6 @@ Start	;($200). Power on: the Sega hardware init, then the checksum, then the gam
 		nop
 		nop
 	ENDIF
-	;94 has no jsr KillCrowd here (93 Start calls it after ValidationRoutine)
+	;94 has no jsr KillCrowd here
 
-	bra.w	Begin	;($76B8). Last instruction of main94 ($306-$309). starts at $30A
+	bra.w	Begin	;($76B8). Last instruction ($306-$309). starts at $30A

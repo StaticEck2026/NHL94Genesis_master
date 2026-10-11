@@ -1,6 +1,5 @@
-; $00B0E8  Adapted from logic93.asm: controller input and line changes
-;	NHL 94 (retail) segment $B0E8-$C70F
-;	92 Logic.Asm part 1, as 93 logic93_1.asm: controller input for skaters (doinput ... setpads) and
+;	NHL 94 (retail) segment
+;	, as 93: controller input for skaters (doinput ... setpads)
 ;	check4bench. assbench follows at $C710.
 ;Transcribed from lst/nhl94.bin.lst lines 35886-37885. Global names are the which are the
 ;92 / 93 names here, except SetLCmode2, setpads and restorepl.
@@ -645,7 +644,7 @@ SetLCmode2	;93 name; 93 a2 = team struct. Draw the line change box
 	move.w	tmline(a2),d0
 .pr
 	movea.w	#(mesarea-M68K_RAM),a1
-	move.l	#$44120,(a1)	;String length 4, 'A ' (93 showfaceoff #$44120)
+	move.l	#$44120,(a1)	;String length 4, 'A '
 	add.b	d4,2(a1)
 	bsr.w	print
 	move.w	d0,-(sp)

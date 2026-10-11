@@ -1,12 +1,12 @@
-	include	macros\genesis.mac	;String, Player (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String, Player
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	teamdata94 segment stub. Retail $00030A-$005B1B.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-; External addresses outside $00030A-$005B1B: none. TeamList and the team block offsets point inside the segment.
+; External addresses outside: none. TeamList and the team block offsets point inside the segment.
 ; .region code
 	org	$30A
 

@@ -1,7 +1,5 @@
-;          Adapted from ram93.asm: equates only
+;          equates only
 ; ;Variables
-; Asound	=	$c00011 	;analog sound
-; Vdata	=	$c00000	;video ports
 ; Vctrl	=	Vdata+4
 
 ; MaxSprites	=	64	;max sprites during game (64 because 32 col mode)
@@ -9,8 +7,6 @@
 ; refwidth	=	7	;width of ref.map frames
 ; refheight	=	8	;height of ref.map frames
 
-; Joy1	=	$a10003	;controller ports
-; Joy2	=	$a10005
 ; Stack	=	$fffffdf0	;stack goes below sound Ram		
 
 ; ;joystick button equates
@@ -22,7 +18,6 @@
 ; cbut	=	5	;c button
 ; abut	=	6	;a button
 ; sbut	=	7	;start button
-; HVcount	=	$c00008	;Video port
 
 ; osflag	=	20000	;flag for off screen graphic
 
@@ -313,7 +308,6 @@
 ; ifok	=	2
 
 ; jps	=	24	;jiffys per second
-; jiffy	=	$10000/jps
 ; clockram	rs.w	5	;ram for dma transfer of clock digits
 
 ; xc1	rs.w	1	;scroll lock x cord

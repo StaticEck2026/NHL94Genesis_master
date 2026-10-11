@@ -1,9 +1,7 @@
-; $017C72  Adapted from hockey93.asm: menus, season results, string tables
-;	NHL 94 (retail) segment $17C72-$1837F
-;92 hockey.asm DefaultMenus, NewPO, MakeTree, FigureJoy and the playoff password code, as 93 hockey93_09: DefaultMenus (
-;	LoadDefMenuOptions), ContinuePlayoffs (93 NewPO), NewPO (93 SelectRandomPlayoffTree), MakeTree, FigureJoy, InitializeGameStructures, OptionRNG,
+;	NHL 94 (retail) segment
+;	LoadDefMenuOptions), ContinuePlayoffs, NewPO, MakeTree, FigureJoy, InitializeGameStructures, OptionRNG
 ;	ReadPassBits ... SuperDiv, GetShifter, and the playoff stat packing (AddPOStats, BitWidthTable, ReadTeamStats). It follows
-;	($17C71) with no gap. ResolveGames starts hockey94_10.
+;	with no gap. ResolveGames starts.
 ;94 keeps the playoff bits in pwddatabuffer and saves them through WriteLineData (where 93 calls BitsToPW).
 ;	94 adds FourWayPlay (cont3team / cont4team, the Three and Four player choices) and Shootout, and has 9 menu options (93 7).
 ;Transcribed from lst/nhl94.bin.lst lines 54836-55537. Global names are the or the 93 name where an auto name.
@@ -12,8 +10,8 @@
 ;The only is BitWidthTable.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
-;RAM: potree, WinBits, pojoy (93 playoffroundoffset), statsbuffer
-;	tpassbits. gsstruct game ($10 bytes, 93 gstruct): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2,
+;RAM: potree, WinBits, pojoy, statsbuffer
+;	tpassbits. gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2
 ;	$E gsflags (bits 0 gsftf teams flipped, 1 gsfhl hilite, 2 gsfso series over).
 
 DefaultMenus	;Set the default menu choices for the beginning of the game: the 9 option words from defmenuoptions (93: 7). Called once from Begin
@@ -36,9 +34,9 @@ defmenuoptions	;(93 DefaultMenus.defom). Regular Season, One - Home, MTL, LA, 10
 	dc.w	1	;User Records
 	dc.w	0	;Penalties
 	dc.w	1	;Line Changes
-ContinuePlayoffs	;kept: this is 93 NewPO, but the name NewPO to the next routine (93 SelectRandomPlayoffTree). Continue playoffs
-	;read the playoff state back from the saved bits at pwddatabuffer, rebuild the tree and set OptNOP from pojoy (93 playofflevel
-	;= 7 - playoffroundoffset; 94 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called from hockey94_08 (GoContinuePlayoffs, GameSetUp_3)
+ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue playoffs
+	;read the playoff state back from the saved bits at pwddatabuffer, rebuild the tree and set OptNOP from pojoy (
+	;= 7 - playoffroundoffset; 94 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, GameSetUp_3)
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	ReadPassBits
@@ -72,7 +70,7 @@ ContinuePlayoffs	;kept: this is 93 NewPO, but the name NewPO to the next routine
 .x
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-NewPO	;(93 SelectRandomPlayoffTree). New playoff generates tree with same team 1. Called from hockey94_08 (j_NewPO). Falls into MakeTree
+NewPO	;New playoff generates tree with same team 1. Called from j_NewPO. Falls into MakeTree
 	moveq	#$20,d0	;' '   ; 20 = 32 decimal
 	bsr.w	randomd0
 .top
@@ -140,7 +138,7 @@ maketree	;Make the playoff tree (potree, 93 name) from playoffseats and the winb
 	clr.w	gss1(a1)	;gsstruct: gss1
 	clr.w	gss2(a1)	;gss2
 	clr.w	gsper(a1)	;gsper
-	bclr	#1,gsflags(a1)	;hilite requested (92 gsfhl)
+	bclr	#1,gsflags(a1)	;hilite requested
 	bsr.w	.sett	;93 local .sett
 	adda.w	#gssize,a1
 	dbf	d1,.loop
@@ -155,7 +153,7 @@ maketree	;Make the playoff tree (potree, 93 name) from playoffseats and the winb
 	beq.w	.1
 	cmpi.w	#5,(bosgames).w
 	beq.w	.1
-	bset	#0,gsflags(a1)	;teams are flipped (92 gsftf)
+	bset	#0,gsflags(a1)	;teams are flipped
 	move.b	(a0)+,gst2+1(a1)
 	move.b	(a0)+,gst1+1(a1)
 	rts
@@ -164,7 +162,7 @@ maketree	;Make the playoff tree (potree, 93 name) from playoffseats and the winb
 	move.b	(a0)+,gst1+1(a1)
 	move.b	(a0)+,gst2+1(a1)
 	rts
-FigureJoy	;(92 / 93 FigureJoy). Set contteams appropriately: cont1team ... cont4team (94 adds 3 and 4 for FourWayPlay). In the playoffs
+FigureJoy	;Set contteams appropriately: cont1team ... cont4team (94 adds 3 and 4 for FourWayPlay). In the playoffs
 	;(not Shootout, gmode2 bit 0) find this round's game of the po team and set the teams and pads from .pojoylist (.pojoylist2 with
 	;FourWayPlay); otherwise from .noplist by OptNOP. After a demo (demoflag clear), and outside the playoffs, fill gsstruct with random matchups
 	;(InitializeGameStructures). Called from MakeTree and GameSetUp
@@ -203,7 +201,7 @@ FigureJoy	;(92 / 93 FigureJoy). Set contteams appropriately: cont1team ... cont4
 	beq.w	.it22
 	move.w	#5,d0
 .it22
-	move.w	(a1),(Opt2Team).w	;(93 menuawayteam)
+	move.w	(a1),(Opt2Team).w
 	move.w	gst2(a1),(Opt1Team).w
 	bra.w	.itx
 .it1
@@ -211,7 +209,7 @@ FigureJoy	;(92 / 93 FigureJoy). Set contteams appropriately: cont1team ... cont4
 	move.w	gst2(a1),(Opt2Team).w
 	move.w	(a1),(Opt1Team).w
 .itx
-	add.w	(pojoy).w,d0	;(93 playoffroundoffset)
+	add.w	(pojoy).w,d0
 	move.w	d1,(gamenum).w
 	move.w	(a1),(HomeTeam).w
 	move.w	gst2(a1),(VisTeam).w
@@ -340,7 +338,7 @@ GetRandomUnusedTeam	;Calls randomd0 when changing options: return d0 = a random 
 	bset	d0,d3
 	bne.s	GetRandomUnusedTeam
 	rts
-ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables; the 5 words are kept. 94: pojoy has 8
+ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables; the 5 words are kept. pojoy has 8
 	;values (93 4), and without FourWayPlay pojoy 1 / 2 become 4. Called from ContinuePlayoffs, EncodePW and GameSetUp
 	moveq	#4,d0
 	lea	$A(a3),a0
@@ -350,7 +348,7 @@ ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables;
 	moveq	#7,d2
 	movea.w	#(gsstruct+(7*$10)-M68K_RAM),a1	;last gsstruct game (gsstruct + 7 * $10)
 .loop
-	bclr	#2,gsflags(a1)	;series over (92 gsfso)
+	bclr	#2,gsflags(a1)	;series over
 	moveq	#5,d0
 	bsr.w	SuperDiv
 	move.w	d0,gspobwins(a1)	;gspobwins
@@ -369,10 +367,10 @@ ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables;
 	dbf	d2,.loop
 	move.w	#$4000,d0
 	bsr.w	SuperDiv
-	move.w	d0,(WinBits).w	;winbits (93 WinBits)
+	move.w	d0,(WinBits).w	;winbits
 	move.w	#8,d0
 	bsr.w	SuperDiv
-	move.w	d0,(pojoy).w	;(93 playoffroundoffset)
+	move.w	d0,(pojoy).w
 	tst.w	(FourWayPlay).w
 	bne.w	.1
 	cmpi.w	#1,(pojoy).w
@@ -411,7 +409,7 @@ EncodePW	;After a playoff game compute winners and save the bits if needed. 94 r
 	beq.w	rtss2
 	move.w	#1,(OptPlayMode).w	;continue playoffs
 	move.w	#1,(TempOptPlayMode).w
-	bsr.w	ResolveGames	;93 ResolveGames
+	bsr.w	ResolveGames
 	bsr.w	maketree
 	cmpi.w	#4,(gamelevel).w
 	beq.w	.0	;finished playoffs
@@ -420,9 +418,9 @@ EncodePW	;After a playoff game compute winners and save the bits if needed. 94 r
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	WritePassBits
 	jsr	(WriteLineData).l
-	btst	#sf3alttree,(sflags3).w	;93 sf3alttree
+	btst	#sf3alttree,(sflags3).w
 	beq.w	rtss2
-	movea.w	#(tpassbits-M68K_RAM),a3	;bits before all games resolved (93 tpassbits)
+	movea.w	#(tpassbits-M68K_RAM),a3	;bits before all games resolved
 	bsr.w	ReadPassBits
 	bra.w	maketree
 .0
@@ -534,7 +532,7 @@ SuperDiv	;5 words at a3 divided by 1 word (d0); d0 = remainder on exit
 	move.w	d2,d0
 	movem.l	(sp)+,d1-d2/a0
 	rts
-GetShifter	;(92 / 93 GetShifter). Returns d1 = number of games - 1, d2 = first bit of WinBits (WinBits)
+GetShifter	;Returns d1 = number of games - 1, d2 = first bit of WinBits (WinBits)
 	move.l	d0,-(sp)
 	moveq	#-$10,d2
 	moveq	#$10,d1
@@ -562,7 +560,7 @@ DisplayTeamStatsForPlayoffs	;Add the po team's game stats to its packed playoff 
 .0
 	adda.w	#$B4,a2
 	moveq	#$67,d0	;$68 stats
-	movea.w	#(statsbuffer-M68K_RAM),a1	;93 statsbuffer
+	movea.w	#(statsbuffer-M68K_RAM),a1
 .loop
 	clr.w	d1
 	move.b	(a2)+,d1
@@ -630,20 +628,19 @@ ReadTeamStats	;Unpack the $68 playoff stat totals from the bit stream into stats
 	move.w	d1,(a0)+
 	dbf	d0,.loop
 	rts
-;	NHL 94 (retail) segment $18380-$18CFB
-;	92 hockey.asm ResolveGames and the 92 exception handlers, as 93 hockey93_10: ResolveGames, the end of game Stars of the Game box
-;	(DisplayPeriodOver, FindMaxAttributeTEam, CalculateTeamAttributes / Values), the injury box (ShowInjuryBox), the 94-only penalty
+;	NHL 94 (retail) segment
+;	(DisplayPeriodOver, FindMaxAttributeTEam, CalculateTeamAttributes / Values), the injury box (ShowInjuryBox), the penalty
 ;	shot box (PenaltyShotBox), the goal box (DisplayPlayerAttributeMenu), box, the player name formatters (GetTempPlayerName, getname ...
-;	FinalizeTextBuffer, getplayername, d0toascii) and AddError, Illinst, ZeroDiv and crash. cd0 follows at $18CFC.
+;	FinalizeTextBuffer, getplayername, d0toascii) and AddError, Illinst, ZeroDiv and crash. cd0 follows.
 ;Transcribed from lst/nhl94.bin.lst lines 55538-56542. Global names are the or the 93 name where an auto name
-;( unless generic, in an); the exception handlers have the main94 vector names. Locals are the names (_x ->.x)
+;(unless generic, in an); the exception handlers have vector names. Locals are the names (_x ->.x)
 ;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; crash's helper is the 93 local.ri.
 ;written from the retail bytes: the printz / printbigz / appendz strings that as code or dc.b, the instructions
 ;in them (moveq #$1B,d0, moveq #$13,d0, move.w (BA_Checker_Offset).w,d0, two move.w d0,-(sp), the exception handlers'
 ;	move.l $A(sp),d0 / 2(sp),d0), and the printbig String tables.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
-;	gsstruct game ($10 bytes, 93 gstruct): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2, $E gsflags.
+;	gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2, $E gsflags.
 ;	Team struct: $C goals, $28 team, $B4 / $CE / $E8 goals / assists / shots bytes per roster slot, $136 frames on ice; tmsize $364.
 
 ResolveGames	;Compute winners and losers for playoff matchups. Called from EncodePW
@@ -665,7 +662,7 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 	cmpi.w	#4,gspobwins(a0)
 	beq.w	.b1
 	clr.w	d3
-	btst	#0,gsflags(a0)	;teams flipped (92 gsftf)
+	btst	#0,gsflags(a0)	;teams flipped
 	beq.w	.0
 	eori.w	#gspobwins-gspotwins,d3
 .0
@@ -715,9 +712,9 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 .crn
 	suba.w	#gssize,a0
 	dbf	d1,.cr0
-	movea.w	#(tpassbits-M68K_RAM),a3	;bits before advancing to next round (93 tpassbits)
+	movea.w	#(tpassbits-M68K_RAM),a3	;bits before advancing to next round
 	bsr.w	WritePassBits
-	bset	#sf3alttree,(sflags3).w	;93 sf3alttree
+	bset	#sf3alttree,(sflags3).w
 .nextround
 	clr.w	(bosgames).w	;advance to next round
 	bsr.w	GetShifter
@@ -738,7 +735,7 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 	moveq	#1,d1
 	asl.w	d2,d1
 	subq.w	#1,d1
-	and.w	d1,(WinBits).w	;clear this round's winbits (93 WinBits)
+	and.w	d1,(WinBits).w	;clear this round's winbits
 	asl.w	d2,d3
 	or.w	d3,(WinBits).w
 	addq.w	#1,(gamelevel).w
@@ -767,7 +764,7 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 	rts
 DisplayPeriodOver	;End of game Stars of the Game box. Called from UpdatePA while RefPen is the game over
 	;penalty. Waits for RefCnt <= $40 and runs once (gmode bit 7); 94 then sets disflags bit 3 and waits a vblank. Frames the box, draws a bitmap
-	;from Rinktilelist (93 IceRinkMap), then the three best star scores (FindMaxAttributeTEam): team abbreviation and getname. Song $F when the
+	;from Rinktilelist, then the three best star scores (FindMaxAttributeTEam): team abbreviation and getname. Song $F when the
 	;home team won
 	cmpi.w	#$40,(RefCnt).w
 	bgt.w	rtss2	;ref animation not far enough yet
@@ -823,7 +820,7 @@ DisplayPeriodOver	;End of game Stars of the Game box. Called from UpdatePA while
 .nosong
 	movem.l	(sp)+,d0-d5/a0-a4
 	rts
-FindMaxAttributeTEam	;Take the highest of the 52 star scores at ThreeStars (93 DispAttribCtr; 26 per team, home first)
+FindMaxAttributeTEam	;Take the highest of the 52 star scores at ThreeStars
 	;and clear it. Returns d0 = player slot, a2 = its team struct. Called from DisplayPeriodOver
 	movem.l	d1-d2/a1/a4,-(sp)
 	movea.w	#(ThreeStars-M68K_RAM),a4
@@ -886,7 +883,7 @@ CalculateTeamAttributeValues	;Star scores of team a2 (a3 = other team) to (a4)+,
 	sub.w	tmscore(a3),d3	;goal difference (HmGoals / AwGoals)
 	ext.l	d3
 	moveq	#$19,d4	;26 slots
-	jsr	(ReadAttributeNibble).l	;d0 = goalies on the team (93 ReadAttributeNibble)
+	jsr	(ReadAttributeNibble).l	;d0 = goalies on the team
 	neg.w	d0
 	add.w	d4,d0
 .loop
@@ -936,7 +933,7 @@ CalculateTeamAttributeValues	;Star scores of team a2 (a3 = other team) to (a4)+,
 	dbf	d4,.loop
 	rts
 ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset (GetPlayerNameWithAttrib), 'Out for period', or 'Out for game'
-	;when sflags7 bit 5 is set (94), and 'the game' over 'period' when puck_pflags2 bit 0 (93 pf2fight) is set. Jumped to from CheckInjury
+	;when sflags7 bit 5 is set (94), and 'the game' over 'period' when puck_pflags2 bit 0 is set. Jumped to from CheckInjury
 	;so global
 	movem.l	d0-d2/a0-a4,-(sp)
 	bsr.w	printz
@@ -1123,7 +1120,7 @@ DisplayPlayerAttributeMenu	;Goal box. Closes both line change boxes, then printb
 	bclr	#5,(sflags4).w
 	movem.l	(sp)+,d0-d2/a0-a4
 	rts
-GoalBigTxt	String	$BF,$F,3,'GOAL!',$BF,$C,5	;printbig Strings for DisplayPlayerAttributeMenu (93 attrText): GOAL!, then HAT TRICK!
+GoalBigTxt	String	$BF,$F,3,'GOAL!',$BF,$C,5	;printbig Strings for DisplayPlayerAttributeMenu: GOAL!, then HAT TRICK!
 	String	$BF,$C,3,'HAT TRICK!',$BF,$C,5
 PPGoalBigTxt	String	$BF,$D,3,'PP GOAL!',$BF,$C,5	;The same after DelayedPen bit 0: PP GOAL!, then HAT TRICK!
 	String	$BF,$C,3,'HAT TRICK!',$BF,$C,5
@@ -1286,27 +1283,27 @@ ConverByteToDigits	;converts decimal number in d0 to ascii: two ascii digits of 
 	addi.b	#$30,d0	;'0'   ; add $30 (48 dec) to d0
 	move.b	d0,(a1)+	;move d0 into a1 and increment
 	rts
-AddError	;(92 / 93 name, main94 vectors). Address error vector; 94 has no BusError, the bus error vector also points here
+AddError	; Address error vector; 94 has no BusError, the bus error vector also points here
 	move	#$2700,sr
 	bsr.w	printbigz
 	String	-(TXPRI+TXMAP3),0,0,'Address Error'
 	move.l	$A(sp),d0	;pc.
 	move.l	2(sp),d1	;access address
 	bra.w	crash
-Illinst	;(92 / 93 name, main94 vectors). Illegal instruction vector
+Illinst	; Illegal instruction vector
 	move	#$2700,sr
 	bsr.w	printbigz
 	String	-(TXPRI+TXMAP3),0,0,'Illegal Instruction'
 	move.l	2(sp),d0
 	move.l	d0,d1
 	bra.w	crash
-ZeroDiv	;(92 / 93 name, main94 vectors). Divide by zero vector, falls into crash
+ZeroDiv	; Divide by zero vector, falls into crash
 	move	#$2700,sr
 	bsr.w	printbigz
 	String	-(TXPRI+TXMAP3),0,0,'Division by zero'
 	move.l	2(sp),d0
 	move.l	d0,d1
-crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktilelist palette + $20 (93 IceRinkMap)
+crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktilelist palette + $20
 	;to cram $20 and hang. Branched to from AddError and Illinst, falls in from ZeroDiv
 	movea.w	#(mesarea-M68K_RAM),a0
 	move.w	#$18,(a0)+	;2+3+8+3+8 (93 form)
@@ -1350,11 +1347,11 @@ crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs fr
 	move.b	d1,(a0)+
 	dbf	d2,.top
 	rts
-;	NHL 94 (retail) segment $18CFC-$1A04F
-;	Data only, as 93 hockey93_11: the 92 crowd frame table (updatecrowdf .cd0), the player logic assignment table asstab, PenaltyList,
+;	NHL 94 (retail) segment
+;	Data only, as 93: the 92 crowd frame table (updatecrowdf .cd0), the player logic assignment table asstab, PenaltyList
 ;the 94 penalty shot table (PenShotPenalties), bfasciicon, linelist, PlayerPositionText, PerLabels, sizetab, sublist
 ;	priolist, the playoff tree layout (PlayoffTreeSetup), the attribute column lists, and the menu item lists for the pause,
-;	intermission and line editor exit menus. sram94 (InitSaveRAM) starts at $1A050.
+;	intermission and line editor exit menus. (InitSaveRAM) starts.
 ;Transcribed from lst/nhl94.bin.lst lines 56543-61321 (/ dc.w / dc.l). Global names are the or the 93 name where
 ;an auto name or no label. the code reads inside a table stay (PAttribOverall
 ;PAttribOverallMask, GAttribOverall, GAttribOverallMask). Two attribute column longs as offsets are dc.w pairs.
@@ -1377,8 +1374,8 @@ cd0	;$fftt = frame/time for various levels of crowd excitement. 92 updatecrowdf.
 	dc.w	$0e03,$0f03,$1003,$1103,$1203,$0b03,$0c03,$0d03
 	dc.w	$1203,$1103,$1003,$0f03,$0e03,$0d03,$0c03,$0b03
 
-asstab	;jump table of all the player logic assignments. 92 / 93 asstab; 94 adds 7 entries ($1D-$23). Used by updateplayers
-	dc.l	rtss2		;0 (93 rtss)
+asstab	;jump table of all the player logic assignments. 92 / ; 94 adds 7 entries ($1D-$23). Used by updateplayers
+	dc.l	rtss2		;0
 	dc.l	assdefo		;1 adefo
 	dc.l	assdefd		;2 adefd
 	dc.l	asswingd		;3 awingd
@@ -1392,7 +1389,7 @@ asstab	;jump table of all the player logic assignments. 92 / 93 asstab; 94 adds 
 	dc.l	assbench		;$B abench
 	dc.l	asspenalty	;$C apenalty
 	dc.l	assdopen		;$D adopen
-	dc.l	assgoaliecpu	;$E agoalie (93 assgoalie)
+	dc.l	assgoaliecpu	;$E agoalie
 	dc.l	assgoalietopuck	;$F
 	dc.l	asspuckc		;$10 apuckc
 	dc.l	assnearest	;$11 anearest
@@ -1404,7 +1401,7 @@ asstab	;jump table of all the player logic assignments. 92 / 93 asstab; 94 adds 
 	dc.l	assfaceoffpl	;$17
 	dc.l	pucknorm		;$18 puck logic
 	dc.l	puckshadow	;$19
-	dc.l	puckunflip	;$1A (93 pucknothing)
+	dc.l	puckunflip	;$1A
 	dc.l	puckfaceoff	;$1B
 	dc.l	puckfaceoff2	;$1C
 	dc.l	assgoaliectrl	;$1D
@@ -1546,7 +1543,7 @@ PenShotPenalties	;the penalty shot penalty number for penalty number d0 (word of
 	dc.w	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,$38,$3C
 	dc.w	$36,$3A,$2E,$30,$34,-1,-1,-1,-1,-1,-1,-1
 
-bfasciicon	;equates to find each char definition for bigfont.map. 92 bfasciicon, 93 values. Indexed by ascii
+bfasciicon	;equates to find each char definition for bigfont.map., 93 values. Indexed by ascii
 	;- $20 in PrintBigChar (called from printbig)
 ;	 - -! " # $ % & -' * +, - -. /
 	dc.b	-76,-73,00,00,00,00,00,-71,00,00,00,00,00,00,-72,00
@@ -1584,10 +1581,10 @@ PenShotPenalties2	String	'1',$12	;the same with a blank last entry. Used by Prin
 	String	'OT'
 	String	'  '
 
-sizetab	;sprite size code to tile count. 92 video.asm sizetab, used by addframe2
+sizetab	;sprite size code to tile count. sizetab, used by addframe2
 	dc.b	1,2,3,4,2,4,6,8,3,6,9,12,4,8,12,16
 
-sublist	;substitution lists by position (goalie, LD, RD, LW, C, RW, extra attacker). 92 sublist; 93 / 94 word offsets from
+sublist	;substitution lists by position (goalie, LD, RD, LW, C, RW, extra attacker). ; 93 / 94 word offsets
 	;sublist. Used by SetPlList
 	dc.w	.defl-sublist		;goalie
 	dc.w	.defl-sublist
@@ -1754,7 +1751,7 @@ PauseMenuItems	;pause menu item list (PauseMode)
 	String	'  Instant Replay  '
 	dc.l	ReplayMode
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
@@ -1771,25 +1768,25 @@ PauseText	;Pause menu item list (PauseMode)
 	String	'  Instant Replay  '
 	dc.l	ReplayMode
 	String	'  Change Goalie   '
-	dc.l	SelectGoalieMenu	;93 SelectGoalieMenu
+	dc.l	SelectGoalieMenu
 	String	'    Edit Lines    '
-	dc.l	LineEditor	;93 LineEditor
+	dc.l	LineEditor
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen	;93 GameStatisticsScreen
+	dc.l	GameStatisticsScreen
 	String	'   Player Stats   '
-	dc.l	PlayerStatsScreen	;93 PlayerStatsScreen
+	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
-	dc.l	ScoringSummaryScreen	;93 ScoringSummaryScreen
+	dc.l	ScoringSummaryScreen
 	String	' Penalty Summary  '
-	dc.l	PenaltySummaryScreen	;93 PenaltySummaryScreen
+	dc.l	PenaltySummaryScreen
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Crowd Meter    '
-	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
+	dc.l	CrowdMeterScreen
 	String	'     Timeout      '
-	dc.l	TimeoutMenu	;93 TimeoutMenu
+	dc.l	TimeoutMenu
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
@@ -1808,23 +1805,23 @@ PauseText2	;Pause menu item list without Timeout (PauseMode)
 	String	'  Instant Replay  '
 	dc.l	ReplayMode
 	String	'  Change Goalie   '
-	dc.l	SelectGoalieMenu	;93 SelectGoalieMenu
+	dc.l	SelectGoalieMenu
 	String	'    Edit Lines    '
-	dc.l	LineEditor	;93 LineEditor
+	dc.l	LineEditor
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen	;93 GameStatisticsScreen
+	dc.l	GameStatisticsScreen
 	String	'   Player Stats   '
-	dc.l	PlayerStatsScreen	;93 PlayerStatsScreen
+	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
-	dc.l	ScoringSummaryScreen	;93 ScoringSummaryScreen
+	dc.l	ScoringSummaryScreen
 	String	' Penalty Summary  '
-	dc.l	PenaltySummaryScreen	;93 PenaltySummaryScreen
+	dc.l	PenaltySummaryScreen
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Crowd Meter    '
-	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
+	dc.l	CrowdMeterScreen
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
@@ -1843,76 +1840,76 @@ ShootoutIntermissionMenu	;Intermission menu in Shootout (gmode2 bit 0)
 	String	'  Shootout SetUp  '
 	dc.l	ShootoutShooters
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
 	dc.l	RecordHoldersScreen
 	String	$FF
 
-StartGameText	;Intermission menu for gsp 0 (penalty94_2.sslist)
+StartGameText	;Intermission menu for gsp 0
 	String	$FE,5
 	String	$FE,4
 	String	'    Start Game    '
 	dc.l	rtss2
 	String	'  Change Goalie   '
-	dc.l	SelectGoalieMenu	;93 SelectGoalieMenu
+	dc.l	SelectGoalieMenu
 	String	'    Edit Lines    '
-	dc.l	LineEditor	;93 LineEditor
+	dc.l	LineEditor
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
 	dc.l	RecordHoldersScreen
 	String	$FF
 
-StartGameTextPO	;Intermission menu for gsp 0 in the playoffs (penalty94_2.sslist)
+StartGameTextPO	;Intermission menu for gsp 0 in the playoffs
 	String	$FE,5
 	String	$FE,4
 	String	'    Start Game    '
 	dc.l	rtss2
 	String	'  Change Goalie   '
-	dc.l	SelectGoalieMenu	;93 SelectGoalieMenu
+	dc.l	SelectGoalieMenu
 	String	'    Edit Lines    '
-	dc.l	LineEditor	;93 LineEditor
+	dc.l	LineEditor
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'  Playoff Stats   '
-	dc.l	DisplayTeamStats	;93 DisplayTeamStats
+	dc.l	DisplayTeamStats
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
 	dc.l	RecordHoldersScreen
 	String	$FF
 
-IntermissionText	;Intermission menu for gsp 1-3 (penalty94_2.sslist)
+IntermissionText	;Intermission menu for gsp 1-3
 	String	$FE,5
 	String	$FE,4
 	String	'   Resume Game    '
 	dc.l	rtss2
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen	;93 GameStatisticsScreen
+	dc.l	GameStatisticsScreen
 	String	'   Player Stats   '
-	dc.l	PlayerStatsScreen	;93 PlayerStatsScreen
+	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
-	dc.l	ScoringSummaryScreen	;93 ScoringSummaryScreen
+	dc.l	ScoringSummaryScreen
 	String	' Penalty Summary  '
-	dc.l	PenaltySummaryScreen	;93 PenaltySummaryScreen
+	dc.l	PenaltySummaryScreen
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Crowd Meter    '
-	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
+	dc.l	CrowdMeterScreen
 	String	'  Change Goalie   '
-	dc.l	SelectGoalieMenu	;93 SelectGoalieMenu
+	dc.l	SelectGoalieMenu
 	String	'    Edit Lines    '
-	dc.l	LineEditor	;93 LineEditor
+	dc.l	LineEditor
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
@@ -1923,25 +1920,25 @@ IntermissionText	;Intermission menu for gsp 1-3 (penalty94_2.sslist)
 	dc.l	ManualGoalieMenu
 	String	$FF
 
-ExitGameText	;Intermission menu for gsp 4 (penalty94_2.sslist)
+ExitGameText	;Intermission menu for gsp 4
 	String	$FE,5
 	String	$FE,4
 	String	'    Exit Game     '
 	dc.l	rtss2
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen	;93 GameStatisticsScreen
+	dc.l	GameStatisticsScreen
 	String	'   Player Stats   '
-	dc.l	PlayerStatsScreen	;93 PlayerStatsScreen
+	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
-	dc.l	ScoringSummaryScreen	;93 ScoringSummaryScreen
+	dc.l	ScoringSummaryScreen
 	String	' Penalty Summary  '
-	dc.l	PenaltySummaryScreen	;93 PenaltySummaryScreen
+	dc.l	PenaltySummaryScreen
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Crowd Meter    '
-	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
+	dc.l	CrowdMeterScreen
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
@@ -1950,25 +1947,25 @@ ExitGameText	;Intermission menu for gsp 4 (penalty94_2.sslist)
 	dc.l	PeriodStatsScreen
 	String	$FF
 
-ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs (penalty94_2.sslist)
+ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs
 	String	$FE,5
 	String	$FE,4
 	String	'    Exit Game     '
 	dc.l	rtss2
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen	;93 GameStatisticsScreen
+	dc.l	GameStatisticsScreen
 	String	'   Player Stats   '
-	dc.l	PlayerStatsScreen	;93 PlayerStatsScreen
+	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
-	dc.l	ScoringSummaryScreen	;93 ScoringSummaryScreen
+	dc.l	ScoringSummaryScreen
 	String	' Penalty Summary  '
-	dc.l	PenaltySummaryScreen	;93 PenaltySummaryScreen
+	dc.l	PenaltySummaryScreen
 	String	'   Team Roster    '
-	dc.l	TeamRosterScreen	;93 TeamRosterScreen
+	dc.l	TeamRosterScreen
 	String	'   Other Scores   '
-	dc.l	ShowScores	;93 ShowScores
+	dc.l	ShowScores
 	String	'   Crowd Meter    '
-	dc.l	CrowdMeterScreen	;93 CrowdMeterScreen
+	dc.l	CrowdMeterScreen
 	String	'   Player Cards   '
 	dc.l	PlayerCards
 	String	'  Record Holders  '
@@ -1985,9 +1982,9 @@ AttributeScreenText	;Line editor exit menu (the line editor at $882E)
 	String	'Set Original lines'
 	dc.l	InitTeamSructure+$10	;the line copy loop of InitTeamSructure, as 93
 	String	'  Save Team Line  '
-	dc.l	EncodePlayerAttributes	;93 EncodePlayerAttributes
+	dc.l	EncodePlayerAttributes
 	String	'  Load Team Line  '
-	dc.l	DecodePlayerAttributes	;93 DecodePlayerAttributes
+	dc.l	DecodePlayerAttributes
 	String	$FF
 
 ExitAttribText	;Line editor exit menu without Load Team Line ($8844)
@@ -1998,6 +1995,6 @@ ExitAttribText	;Line editor exit menu without Load Team Line ($8844)
 	String	'Set Original lines'
 	dc.l	InitTeamSructure+$10	;the line copy loop of InitTeamSructure, as 93
 	String	'  Save Team Line  '
-	dc.l	EncodePlayerAttributes	;93 EncodePlayerAttributes
+	dc.l	EncodePlayerAttributes
 	String	$FF
 

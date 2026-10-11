@@ -1,8 +1,8 @@
-	include	macros\genesis.mac	;String (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	checks94 segment stub. Retail $00D09C-$010EDF.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -14,19 +14,19 @@
 	include	stubinc\equals.inc	;VDP status bits
 	include	stubinc\ram_addrs.inc	;RAM names
 
-; External addresses outside $00D09C-$010EDF, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
+; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddPenalty2 = $11F62		;jsr / jmp (x).l at $D408
 printscores1 = $12C04		;bsr.w / Bcc.w at $E25C
 ReadGoaliePulled = $FEFCC	;jsr / jmp (x).l at $E016
 setpersonel = $15788		;bsr.w / Bcc.w at $E258
-donothing = $CBE4		;bsr.w / Bcc.w at $D0AC. logic94_2
-check4bench = $C67A		;bsr.w / Bcc.w at $D0B0. logic94_1
-dopass = $BC64			;jsr / jmp (x).l at $E2DA. logic94_1
+donothing = $CBE4		;bsr.w / Bcc.w at $D0AC.
+check4bench = $C67A		;bsr.w / Bcc.w at $D0B0.
+dopass = $BC64			;jsr / jmp (x).l at $E2DA.
 randomd0 = $11086		;jsr / jmp (x).l at $E2F2
 randomd0s = $1107A		;bsr.w / Bcc.w at $D17C
 rtss2 = $15464			;bsr.w / Bcc.w at $D476
-rtss21 = $CF98			;bsr.w / Bcc.w at $D0A2. logic94_2
+rtss21 = $CF98			;bsr.w / Bcc.w at $D0A2.
 sfx = $11132			;bsr.w / Bcc.w at $D572
 sroot = $110BE			;bsr.w / Bcc.w at $D972
 AvgCline = $12EF6		;bsr.w / Bcc.w at $E248
@@ -51,7 +51,7 @@ burst = $BB62			;bsr.w / Bcc.w at $EB72
 changeplayer = $BFBC		;bsr.w / Bcc.w at $FD38
 checkpuckcoll = $14D8C		;bsr.w / Bcc.w at $FFD6
 checkwindow = $AFCA		;bsr.w / Bcc.w at $F06C
-clockcont_0 = $7B5C		;bsr.w / Bcc.w at $F496. hockey94_01
+clockcont_0 = $7B5C		;bsr.w / Bcc.w at $F496.
 dobitmap = $1169A		;bsr.w / Bcc.w at $FBAC
 eraser = $1197E			;bsr.w / Bcc.w at $FE14
 forceblack = $10F32		;bsr.w / Bcc.w at $EFA0
@@ -83,12 +83,12 @@ LeadSong = $FF7E2		;jsr / jmp (x).l at $FCA6
 RefsMap = $5C408		;#x at $EFC6
 FaceOffSprites = $A78AE		;#x at $FB2C
 
-AddPenalty = $11F2C		;bsr.w / Bcc.w at $10136
-Hotlist = $A44C8			;#x at $106F4
-Sweepcheck = $C0AE		;bsr.w / Bcc.w at $1063A
-getpde = $1575A			;bsr.w / Bcc.w at $10C6E
-setpde = $1577A			;bsr.w / Bcc.w at $10D48
-stopna2 = $F6F8C			;jsr / jmp (x).l at $10A2A
+AddPenalty = $11F2C		;bsr.w / Bcc.w
+Hotlist = $A44C8			;#x
+Sweepcheck = $C0AE		;bsr.w / Bcc.w
+getpde = $1575A			;bsr.w / Bcc.w
+setpde = $1577A			;bsr.w / Bcc.w
+stopna2 = $F6F8C			;jsr / jmp (x).l
 
 ; Main segment code
 	include	checks94.asm

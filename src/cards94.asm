@@ -1,6 +1,5 @@
-; $0F8B5A  NEW in 94: player cards and matchup palettes
-;	NHL 94 (retail) segment $F8B5A-$FCB99
-;	94 code in the high ROM, between hockey94_08 and hockey94_07: wallcollduringcheck, setSlotBit, the team palettes (TeamPalettes) and
+;	NHL 94 (retail) segment
+;	94 code in the high ROM, between and: wallcollduringcheck, setSlotBit, the team palettes (TeamPalettes)
 ;	featured player pictures (FeaturedPictures), the save RAM records (team, player, crowd and user records), the Player Cards screens and
 ;	CalcAttrib, the user record NAME ENTRY screen, Record Holders, the playoff round screen (PlayoffRoundScreen) and the shootout (shooters
 ;	menu, next shooter, "SHOOTOUT WON BY"). New in 94; 93 has no code here.
@@ -8,8 +7,8 @@
 ;names and the entries no label for are named for what they do.
 ;Locals are in the 93 style (.x exit,.loop, numbered), with the unless generic, in an ; the locals keep their
 ;name. written from the retail bytes: the inline Strings after the print calls and the remap tables (
-;code), the code behind them, and the picture lists as code ($F92F4-$F98C5). The palettes
-;as code ($F8BF4-$F92F3, TeamPalettes) are.pal incbins. The inside Strings are not labels.
+;code), the code behind them, and the picture lists as code. The palettes
+;as code (TeamPalettes) are.pal incbins. The inside Strings are not labels.
 
 wallcollduringcheck	;(and comments). during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
 	;with his size + $17. Called from CCStart
@@ -813,7 +812,7 @@ RecVsTxt	dc.b	0	;PrintRecordVs text
 	dc.b	6
 	dc.b	$76	;v
 	dc.b	$73	;s
-	dc.b	$2E	;.
+	dc.b	$2E
 	dc.b	$20
 AppendRecordHolder	;Append the user name of the record holder (byte 1 of record a0, or read record d0 / d1 when a0 is 0) to a1 (AppendUserName)
 	movem.l	d0-d7/a1-a2,-(sp)
@@ -1194,7 +1193,7 @@ UpdatePlayerRecords	;After a game: for the 26 players of team a2, keep each new 
 	addq.w	#1,d0
 	dbf	d2,.loop
 	rts
-CountGoalies	;homegoalies / awaygoalies = goalies of the home / away team (ReadAttributeNibble). Called from hockey94_10 and PlayerCards
+CountGoalies	;homegoalies / awaygoalies = goalies of the home / away team (ReadAttributeNibble). Called and PlayerCards
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#tmstruct,a2
 	jsr	(ReadAttributeNibble).l
@@ -1837,7 +1836,7 @@ CardVsTxt	dc.b	0	;PrintCardRecordLine text
 	dc.b	6,$20
 	dc.b	$76	;v
 	dc.b	$73	;s
-	dc.b	$2E	;.
+	dc.b	$2E
 CardEmptyTxt	dc.b	0	;PrintCardRecordLine text
 	dc.b	4,$20,0
 AppendTeamName	;Append the city name of team d0 (TeamList block Strings) to a1 (appstring)
@@ -1934,7 +1933,7 @@ PrintStartingLine	;Player card "Starting Line": the line slots the player starts
 	move.w	(sp)+,d0
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-LinePosNames	;the movea.l #$FA9D2. Position names; an empty String ends the list
+LinePosNames	;Position names; an empty String ends the list
 	String	'G   '
 	String	'LD  '
 	String	'RD  '
@@ -3058,7 +3057,7 @@ LetterGrid	dc.b	$41	;Name entry data
 	dc.b	$58	;X
 	dc.b	$59	;Y
 	dc.b	$5A	;Z
-	dc.b	$2E	;.
+	dc.b	$2E
 	dc.b	$31	;1
 	dc.b	$32	;2
 	dc.b	$20

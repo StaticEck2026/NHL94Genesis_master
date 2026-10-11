@@ -1,12 +1,11 @@
-; $04B5C0  Adapted from graphics93.asm: graphics only
-;	graphics94.asm:, the data after the sound data (ends with the sound incbins
-;	$1AD90-$4B5BF): the MATCHUPS script and the graphics, up to the 94 code in the high ROM. incbin only, no gap and no overlap. Each file
-;	is a slice of lst/nhl94.bin written by npm run extractassets (extractAssets94.js) into Extracted\NHL94\Graphics and Text. One slice
+;	the data after the sound data (ends with the sound incbins
+;	incbin only, no gap and no overlap. Each file
+;	is a slice of lst/nhl94.bin written by npm run extractassets into Extracted\\Graphics and Text. One slice
 ;per except the player cards: one slice per card (Graphics\PlayerCards), NoPicGoalie2 first, then Card<player>
 ;from the roster String, then PlayerCardsScreenPic. Labels are the 93 names, or named for what the data is, the where it is not an
 ;auto name, or the name the matched segment uses (it in a string) or, for the team logos
 ;	logo<team>. Files use the 92 / 93 name where the 94 asset is the same one (same use, mostly the same size; 94 in the name when it
-;	differs), else the extractAssets94.js draft name where its slice lined up, else the label. A map's tiles start past its 8-byte
+;	differs), else draft name where its slice lined up, else the label. A map's tiles start past its 8-byte
 ;header: the there is written as label+8.
 ScoutTextScript		;the script ScoutTextPlayer types out word by word on the ScoutingReport (MATCHUPS) screen
 	incbin	..\Extracted\NHL94\Text\ScoutTextScript.bin
@@ -32,19 +31,19 @@ TitleImg		;the title on newTitleScreen
 ScoutMap		;the ScoutingReport and PlayoffScreen background
 	incbin	..\Extracted\NHL94\Graphics\Scouting94.map.jim
 	even
-framermap		;(92 / 93 FramerMap): Framer
+framermap		;Framer
 	incbin	..\Extracted\NHL94\Graphics\Framer.map.jim
 	even
 ;framermap+8: the framer tiles (AddFramer, ScoutingReport)
-FaceOffMap		;(92 / 93 name): puckfaceoff2
+FaceOffMap		;: puckfaceoff2
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.map.jim
 	even
 ;FaceOffMap+8: the tiles (puckfaceoff2, ReloadFaceOffMap)
-Rinktilelist		;(93 IceRinkMap): the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, DisplayPeriodOver, crash)
+Rinktilelist		;the ice rink (updatescroll, setupIceRinkMap, ShowReplayIcon, DisplayPeriodOver, crash)
 	incbin	..\Extracted\NHL94\Graphics\IceRink94.map.jim
 	even
 Rinktiles	equ	Rinktilelist+8	;the rink tiles (setupice, ClrHor)
-RefsMap		;(92 / 93 name): the ref (PushRef)
+RefsMap		;: the ref (PushRef)
 	incbin	..\Extracted\NHL94\Graphics\Refs.map.jim
 	even
 ;RefsMap+8: the tiles (puckpenshot, Endfaceoff, StartHL2, ReloadRefTiles)
@@ -52,21 +51,20 @@ RefMap2		;the horizontal ref (PushRef)
 	incbin	..\Extracted\NHL94\Graphics\Refs2.map.jim
 	even
 ;RefMap2+8: the tiles (chkprogress, ReloadRefHorTiles)
-Sprites		;the sprite header (addframe2): long offsets from here $4082A (to
-	;$9E6A4) and $408AA (to frameSprData), then a word
+Sprites		;the sprite header (addframe2): long offsets from here (to
 	incbin	..\Extracted\NHL94\Graphics\Sprites.bin
 	even
-Spritetiles		;the sprite tiles (93 Sprites+$A; addframe2 adds the frame tile offset
+Spritetiles		;the sprite tiles (+$A; addframe2 adds the frame tile offset
 	;to #Spritetiles)
 	incbin	..\Extracted\NHL94\Graphics\Spritetiles.bin
 	even
-frameSprData		;the frame data at Sprites + $408AA (93 FrameDataOff and SprDataBytes)
+frameSprData
 	incbin	..\Extracted\NHL94\Graphics\frameSprData.bin
 	even
 Hotlist		;the hot spot byte pair of each frame (GetHot)
 	incbin	..\Extracted\NHL94\Graphics\Hotlist.bin
 	even
-CrowdFrameList		;(93 CrowdSprites): showcrowd
+CrowdFrameList		;showcrowd
 	incbin	..\Extracted\NHL94\Graphics\Crowd.anim
 	even
 ;CrowdFrameList+8: the tiles (setupice, ReloadCrowdTiles)
@@ -74,7 +72,7 @@ FaceOffSprites		;same size: checkfo
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.anim
 	even
 ;FaceOffSprites+8: the tiles (puckfaceoff2, ReloadFaceOffTiles)
-ZamFrameList		;(93 ZamSprites): showzam
+ZamFrameList		;showzam
 	incbin	..\Extracted\NHL94\Graphics\Zam.anim
 	even
 ;ZamFrameList+8: the tiles (Intermission)
@@ -97,7 +95,7 @@ Teamblocksmap		;the team blocks (setupTeamBlocksMap, DrawTeamBlocks, DrawTeamBlo
 TeamBitmaps		;dobitmap entries (DrawTeamBitmap)
 	incbin	..\Extracted\NHL94\Graphics\TeamBlocks94.map.jim
 	even
-;TeamBitmaps+8: the tiles (LoadSetupTiles, where 93 setoptions called AddTeamBlock)
+;TeamBitmaps+8: the tiles (LoadSetupTiles)
 EASNmap		;the EASN logo (EASNLogo)
 	incbin	..\Extracted\NHL94\Graphics\EASN.map.jim
 	even
@@ -107,10 +105,10 @@ Arrowsmap		;same size: the playoff tree arrows (DrawPlayoffBracket)
 	even
 ;Arrowsmap+8: the tiles (PlayoffScreen)
 RonBarrMap		;same size: the Ron Barr picture (ScoutingReport). The old
-	;extractAssets94.js RonBarrCompressed.map.jim ran 4 bytes into ScoresMap
+	;RonBarrCompressed.map.jim ran 4 bytes into ScoresMap
 	incbin	..\Extracted\NHL94\Graphics\RonBarr.map.jim
 	even
-ScoresMap		;same size: read by the 93 ShowScores code (from $80D4; not matched yet)
+ScoresMap		;same size: read by the 93 version code (from $80D4; not matched yet)
 	incbin	..\Extracted\NHL94\Graphics\Scores.map.jim
 	even
 EASportsMap	;the EA Sports screen map
@@ -124,7 +122,7 @@ ReplayMap		;the replay map ShowReplayBanner shows at 0,0 (16 x 11)
 	incbin	..\Extracted\NHL94\Graphics\ReplayOptions.map.jim
 	even
 ;ReplayMap+8: the tiles (ReplayMode)
-HorRinkMap	;SetHor (93 IceRinkMap)
+HorRinkMap	;SetHor
 	incbin	..\Extracted\NHL94\Graphics\PauseScreen.map.jim
 	even
 icerinkmap	equ	HorRinkMap+8	;the tiles (SetHor)
@@ -138,7 +136,7 @@ SetupMenuMap		;the setoptions menu background (setoptions, MoveMenuFrame)
 SetupFramerMap		;the setoptions framer
 	incbin	..\Extracted\NHL94\Graphics\GameSetupBkgd2.map.jim
 	even
-;SetupFramerMap+8: the framer tiles (setoptions; 93 FramerMap+8)
+;SetupFramerMap+8: the framer tiles (setoptions)
 LogoBoxMap		;the logo box (DrawLogoBox, LogoBoxRight)
 	incbin	..\Extracted\NHL94\Graphics\GameSetupLogoBorder.map.jim
 	even

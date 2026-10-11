@@ -1,8 +1,8 @@
-	include	macros\genesis.mac	;String (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	replay94 segment stub. Retail $009FD0-$00B0E7.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -14,7 +14,7 @@
 	include	stubinc\equals.inc	;VDP status bits
 	include	stubinc\ram_addrs.inc	;RAM names
 
-; External addresses outside $009FD0-$00B0E7, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l #x carry the
+; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l #x carry the
 ; address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 ClrHor = $12B40			;jsr (x).l at $9FEA
 DoFill = $11544			;bsr.w at $9FFC
@@ -24,13 +24,13 @@ ReadJoy3 = $11370		;beq.w at $A440
 ReadJoy4 = $11388		;bra.w at $A444
 RevRinkTilelist = $B5180		;movea.l #x at $A478
 Rinktilelist = $5605A		;movea.l #x at $A468
-SPAlist = $5B1C			;movea.l #x at $AEFA. frames94
+SPAlist = $5B1C			;movea.l #x at $AEFA.
 SetHor = $12B94			;jsr (x).l at $A40A
 SprSort = $1702E			;jsr (x).l at $A032
 asstab = $18D7C			;movea.l #x at $AE88
 checkcoll = $138AC		;jsr (x).l at $AEB8
 dobitmap = $1169A		;bra.w at $A486
-doinput = $B0E8			;bsr.w at $AD22. logic94_1, the next byte
+doinput = $B0E8			;bsr.w at $AD22., the next byte
 eraser = $1197E			;jmp (x).l at $A4A2
 forceblack = $10F32		;bsr.w at $9FD6
 forceblack2 = $10F5C		;bsr.w at $A544
@@ -51,7 +51,7 @@ ReloadRinkGraphics = $9CDC			;jsr (x).l at $A3D6
 setpads = $C656			;bsr.w at $A1C8
 PlaceBoardFall = $FEB54		;jsr (x).l at $AAA0
 ReplayMap = $BB4EE		;movea.l #x at $A4C6
-vcountwait = $80BA		;jsr (x).l at $A548. 93 MenuWaitVblank
+vcountwait = $80BA		;jsr (x).l at $A548.
 vtoa = $10676			;jsr (x).l at $A15A
 
 ; Main segment code

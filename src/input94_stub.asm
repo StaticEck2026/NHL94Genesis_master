@@ -1,8 +1,8 @@
-	include	macros\genesis.mac	;String (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	input94 segment stub. Retail $00B0E8-$00C70F.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -14,7 +14,7 @@
 	include	stubinc\equals.inc	;VDP status bits
 	include	stubinc\ram_addrs.inc	;RAM names
 
-; External addresses outside $00B0E8-$00C70F, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l / move.l #x carry
+; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l and movea.l / move.l #x carry
 ; the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement. (names for
 ; startpause3 / startpause4).
 linelist = $191A6		;movea.l #x at $B994
@@ -31,7 +31,7 @@ assreplace = $10662		;jsr (x).l at $B234
 box = $18A56			;jsr (x).l at $B946
 checkob = $E62E			;bsr.w at $B72E
 chgplayer = $FF9A8		;jsr (x).l at $BFBC
-dirtab = $10E64			;movea.l #x at $BB92
+dirtab = $10E64			;movea.l #x at $
 doplayeracc = $10750		;bne.w at $B626
 eraser = $1197E			;bsr.w at $BB5A
 getpde = $1575A			;jsr (x).l at $BB62
@@ -49,8 +49,8 @@ sfx = $11132			;bsr.w at $BE1C
 sroot = $110BE			;bsr.w at $B55E
 startpause1 = $7CBC		;bne.w at $B178
 startpause2 = $7CCA		;bne.w at $B17C
-startpause3 = $7CDC		;beq.w at $B18C. hockey94_01
-startpause4 = $7CEA		;bra.w at $B190. hockey94_01
+startpause3 = $7CDC		;beq.w at $B18C.
+startpause4 = $7CEA		;bra.w at $B190.
 linebar = $12E66		;bsr.w at $B9A0
 PrintStringFromList = $13508		;bsr.w at $B99A
 OneTimerPass = $F6778		;jsr (x).l at $BCA4

@@ -1,10 +1,8 @@
-; $011F2C  Adapted from penalty93.asm: penalties, scoreboard, highlights
-;	NHL 94 (retail) segment $11F2C-$12C03
-;	92 Penalty.Asm part 1, as 93 penalty93_1.asm: AddPenalty, AddPenalty2, PenaltyManager, chkprogress, the 94-only
+;	NHL 94 (retail) segment
 ;	PenShotChk and getBAplayerInfo (penalty shot on a breakaway), InProgress, coinsearch, checkfornewpen, Stop4Pen,
 ;	limitfo, UpdatePA, SetPA, SetPA2, PushRef, prefmes, PrintPenaltyMessagesString, PenGoalStuff, ClearPenaltyBuffer,
 ;	updatepentime, ProcessPenaltyList, RemovePlayerFromList, chkatop, releasepl, GetLowestPen, updatepwrplay, ClrHor,
-;	SetHor. PrintScores1 follows at $12C04. The PenaltyList data is at $18E0C.
+;	SetHor. PrintScores1 follows. The PenaltyList data is.
 ;Transcribed from lst/nhl94.bin.lst lines 45937-47135. Global names are the or the 93 name where
 ;an auto name, a spelling variant or the 93 routine (ClearPenaltyBuffer, GetLowestPen) ( unless generic, in an). Local labels are the names (_x ->.x)
 ;or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
@@ -22,22 +20,22 @@ AddPenalty	;add penalty d0 (PenaltyList offset) for player a3. Ignored while the
 	;pflags2 bit 2 set (94), or offsides when offsides are off. Falls into AddPenalty2
 	btst	#gmclock,(gmode).w	;gmclock
 	bne.w	rtss2
-	cmp.w	#$C,d0	;icing (92 PenIcing = 8)
+	cmp.w	#$C,d0	;icing (92 used 8)
 	beq.w	AddPenalty2
 	tst.w	(OptPen).w
 	beq.w	rtss2	;penalties off
-	btst	#2,pflags2(a3)	;pflags2 bit 2, which releasepl sets (93 comment: 92 pf2unav)
+	btst	#2,pflags2(a3)	;pflags2 bit 2, which releasepl sets
 	bne.w	rtss2
 	btst	#gmoffs,(gmode).w	;gmoffs: offsides on
 	bne.w	AddPenalty2
-	cmp.w	#$10,d0	;offsides (92 PenOffsides = $A)
+	cmp.w	#$10,d0	;offsides (92 used $A)
 	beq.w	rtss2
 AddPenalty2	;forced penalties like face off and game over. d0 = penalty number, a3 = player or player on penalized team. From $E (goal) up: crowd
 	;and song. 94: a penalty with minutes sets DelayedPen bit 1 (home) or bit 2 (away)
 	btst	#sfhor,(sflags).w	;sfhor: nothing in horizontal mode
 	bne.w	rtss2
 	movem.l	d1/a0-a1,-(sp)
-	cmp.w	#$E,d0	;goal (92 PenGoal = 6) and up
+	cmp.w	#$E,d0	;goal (92 used 6) and up
 	blt.w	.nonoise
 	addi.w	#$C8,(crowdlevel).w	;200
 	move.w	#$C,-(sp)	;song $C for the home team
@@ -68,7 +66,7 @@ AddPenalty2	;forced penalties like face off and game over. d0 = penalty number, 
 .away
 	bset	#2,(DelayedPen).w
 .setpenflag
-	bset	#4,pflags2(a3)	;pflags2 bit 4 (92 pf2pen, bit 6 in 92)
+	bset	#4,pflags2(a3)	;pflags2 bit 4
 	beq.w	.noplayer
 	clr.w	(a1)	;player already has a penalty, drop this one
 .noplayer
@@ -135,13 +133,13 @@ chkprogress	;control progress of ref and game control thru penalty events. 94: w
 	move.w	(sp)+,(vcount).w
 	bsr.w	SetHor
 	move.w	(ExtraChars).w,d4	;load horizontal ref tiles
-	movea.l	#RefMap2+8,a2	;93 RefMap2+8
+	movea.l	#RefMap2+8,a2	;+8
 	bsr.w	DoDMA_clearCallbackPointer
 	bsr.w	NewTicker
-	bsr.w	NewTicker3	;93 NewTicker3
+	bsr.w	NewTicker3
 	st	(puckc).w
 	movea.w	#(puckx-M68K_RAM),a3
-	move.l	#$1A,d0	;puckunflip (asstab $18DE4)
+	move.l	#$1A,d0	;puckunflip (asstab)
 	bsr.w	assinsert
 	move.w	#$1C20,temp1(a3)	;temp1 = 120*60
 	st	(RefStep).w
@@ -343,7 +341,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	bsr.w	assreplace
 	movem.l	(sp)+,d0-d1/a1-a4
 	bsr.w	SetPA
-	bsr.w	USBoard	;93 USBoard
+	bsr.w	USBoard
 	bra.w	.ex
 .sa2
 	clr.w	(a0)	;93 .sa2
@@ -359,10 +357,10 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	bclr	#gmpen,(gmode).w	;gmpen
 	movea.w	#(puckx-M68K_RAM),a3
 	bclr	#6,(BA_PS_flags).w
-	move.w	#$1B,d0	;puckfaceoff (asstab $18DE8)
+	move.w	#$1B,d0	;puckfaceoff (asstab)
 	btst	#3,(BA_PS_flags).w
 	beq.w	.5
-	move.w	#$1E,d0	;puckshootout (asstab $18DF4): penalty shot
+	move.w	#$1E,d0	;puckshootout (asstab): penalty shot
 .5
 	bsr.w	assreplace
 .ex
@@ -432,7 +430,7 @@ checkfornewpen	;look for new penalty (entered thru addpenalty(2)). Stops play at
 .dc
 	bset	#gmpendel,(gmode).w	;gmpendel
 	bne.s	.next
-	move.w	#$2C,d0	;delayed penalty (92 PenDelay = $24)
+	move.w	#$2C,d0	;delayed penalty (92 used $24)
 	bsr.w	SetPA
 	bra.s	.next
 Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot from the penalty type, blow the whistle. 94 adds play_new_song before the whistle. Also entered from puckfaceoff
@@ -440,15 +438,15 @@ Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot fro
 	bne.w	.skipfo
 	clr.w	d0
 	clr.w	d1
-	cmpi.b	#$E,-2(a0)	;goal (92 PenGoal = 6): center ice
+	cmpi.b	#$E,-2(a0)	;goal (92 used 6): center ice
 	beq.w	.noticing
 	move.w	(ltx).w,d0
 	move.w	(lty).w,d1
-	cmpi.b	#6,-2(a0)	;OOP (92 PenOOP = $C)
+	cmpi.b	#6,-2(a0)	;OOP (92 used $C)
 	beq.w	.noticing
 	move.w	(puckx).w,d0
 	move.w	(pucky).w,d1
-	cmpi.b	#$C,-2(a0)	;icing (92 PenIcing = 8)
+	cmpi.b	#$C,-2(a0)	;icing (92 used 8)
 	bne.w	.noticing
 	move.l	a3,-(sp)
 	movea.w	#(SortCords-M68K_RAM),a3
@@ -495,9 +493,9 @@ Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot fro
 	clr.w	(Pencntdwn).w
 	bset	#gmpen,(gmode).w	;gmpen
 	jsr	(play_new_song).l
-	move.w	#SFXwhistle,-(sp)	;whistle (92 SFXwhistle = 10)
+	move.w	#SFXwhistle,-(sp)	;whistle (92 used 10)
 	bsr.w	sfx
-	move.w	#$A,d0	;whistle (92 PenWhistle = $26)
+	move.w	#$A,d0	;whistle (92 used $26)
 	bra.w	SetPA
 limitfo	;limit face off to 5-20 feet from walls of rink. Checks every player in PenBuf
 	movem.l	d0-d1/a0-a1,-(sp)
@@ -514,7 +512,7 @@ limitfo	;limit face off to 5-20 feet from walls of rink. Checks every player in 
 	andi.w	#$7F,d0
 	asl.w	#7,d0	;scsize
 	movea.w	#(SortCords-M68K_RAM),a1
-	move.w	#$58,d1	;92 blueline
+	move.w	#$58,d1
 	btst	#pfgoal,pflags(a1,d0.w)	;pfgoal
 	bne.w	.0
 	neg.w	d1
@@ -534,16 +532,16 @@ limitfo	;limit face off to 5-20 feet from walls of rink. Checks every player in 
 .1
 	move.w	d0,(fox).w
 	rts
-UpdatePA	;animate ref in ref window. As 93: DisplayPeriodOver for game over, and the horizontal penalty message line is reprinted when penmsgtimer runs out
+UpdatePA	;animate ref in ref window. As the 93 version for game over, and the horizontal penalty message line is reprinted when penmsgtimer runs out
 	tst.w	(RefCnt).w
 	bmi.w	rtss2
 	sub.w	d7,(RefCnt).w
 	bpl.w	.0
 	bsr.w	SetPA2
 .0
-	cmpi.w	#4,(RefPen).l	;game over (92 PenEOG = 4)
+	cmpi.w	#4,(RefPen).l	;game over (92 used 4)
 	bne.w	.1
-	bsr.w	DisplayPeriodOver	;93 DisplayPeriodOver
+	bsr.w	DisplayPeriodOver
 .1
 	sub.w	d7,(penmsgtimer).w
 	bpl.w	rtss2
@@ -551,7 +549,7 @@ UpdatePA	;animate ref in ref window. As 93: DisplayPeriodOver for game over, and
 	bsr.w	PrintPenaltyMessagesString
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$11,$B	;/ btst d5,d0
-	bsr.w	GetPlayerName	;93 GetPlayerName
+	bsr.w	GetPlayerName
 	move.w	(a1),d0
 	lsr.w	#1,d0
 	sub.w	d0,(printx).w	;center it
@@ -565,9 +563,9 @@ SetPA	;start ref animation. d0 = animation (penalty number). 94: animations from
 .1
 	clr.w	(RefStep).w
 	bsr.w	prefmes
-	cmp.w	#$E,d0	;goal (92 PenGoal = 6)
+	cmp.w	#$E,d0	;goal (92 used 6)
 	bne.w	.2
-	bsr.w	DisplayPlayerAttributeMenu	;93 DisplayPlayerAttributeMenu
+	bsr.w	DisplayPlayerAttributeMenu
 .2
 	btst	#0,(gmode2).w
 	beq.w	.0
@@ -624,7 +622,7 @@ PushRef	;tell vblank what to display. d0 = ref frame, $40 clears the window. The
 	movea.l	#RefsMap,a0
 	btst	#sfhor,(sflags).w	;sfhor
 	beq.w	.m1
-	movea.l	#RefMap2,a0	;93 RefMap2
+	movea.l	#RefMap2,a0
 .m1
 	adda.l	4(a0),a0
 	addq.w	#4,a0
@@ -796,7 +794,7 @@ ProcessPenaltyList	;a2 = team. Walks the penalty box list ($9A): the first two p
 	cmp.w	#$FFFF,d1	;exactly three in the list: check the second only
 	bne.w	rtss2
 .two
-	move.w	(TextBuffer).w,d0	;second serving player (mesarea+2, 93 TextBuffer)
+	move.w	(TextBuffer).w,d0	;second serving player (mesarea+2)
 .0
 	cmpi.w	#5,tmpdst(a2,d0.w)
 	bgt.w	rtss2
@@ -830,11 +828,11 @@ RemovePlayerFromList	;Remove the entry before a0 from a penalty box list by shif
 chkatop	;attack time of possession stat update. Called once a second from updatepentime
 	moveq	#0,d1
 	move.w	(pucky).w,d0
-	cmp.w	#$58,d0	;92 blueline
+	cmp.w	#$58,d0
 	bgt.w	.1
 	move.l	#tmsize,d1	;tmsize
 	neg.w	d0
-	cmp.w	#$58,d0	;92 blueline
+	cmp.w	#$58,d0
 	blt.w	rtss2
 .1
 	btst	#gmdir,(gmode).w	;gmdir
@@ -867,7 +865,7 @@ releasepl	;player's penalty time is up so let him out (if appropriate). a2 = tea
 	move.b	0(a0,d1.w),position+1(a3)
 	bsr.w	Setplass
 	bsr.w	setplayer
-	bset	#2,pflags2(a3)	;pflags2 bit 2 (93: 92 pf2unav, bit 4 in 92)
+	bset	#2,pflags2(a3)	;pflags2 bit 2
 	movem.l	(sp)+,d0-d3/a0-a3
 	rts
 GetLowestPen	;a2 = shorthanded team, a3 = team on the power play. Return d0 = power play time left from the penalty box times. Called from updatepwrplay
@@ -984,7 +982,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 	bsr.w	SprSort
 	bsr.w	printz
 	String	-TXMAP2,0,0
-	movea.l	#HorRinkMap,a1	;in the string (ori.b x3). 93 IceRinkMap; is HorRinkMap+8
+	movea.l	#HorRinkMap,a1	;in the string (ori.b x3). ; is HorRinkMap+8
 	adda.l	4(a1),a1
 	movea.l	#icerinkmap,a2	;93 #$310
 	clr.w	d0
@@ -994,7 +992,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 	move.w	(rinkvrcset).w,d4
 	moveq	#0,d5
 	bsr.w	dobitmap
-	bsr.w	USBoard	;93 USBoard
+	bsr.w	USBoard
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	.ex
 	move.w	#$800,d0	;92 $1000
@@ -1004,15 +1002,14 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 .ex
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-;	NHL 94 (retail) segment $12C04-$138AB
-;	92 Penalty.Asm part 2, as 93 penalty93_2.asm: PrintScores1, PrintTeamNameAndScore, PrintTeamLogoAndScore, EASNLogo,
+;	NHL 94 (retail) segment
 ;	USBoard, pplpen, linebar, getlinee, AvgCline, ChkShotStat, loadTeamStruct, SetupTeamForIntermission, the 94-only
 ;	RestoreTeamEnergy, reenergizeteam, Intermission, InitScores, UpdateScores, SetScore, sctab, NewTicker, NewTicker2,
 ;	NewTicker3, NewTicker3pt2, GameLabels, ClearTickerArea, SetTickerAreaPosition, PrintStringFromList, AdvanceStringPtr,
-;	DoHiLights, StartHL, StartHL2. checkcoll follows at $138AC.
+;	DoHiLights, StartHL, StartHL2. checkcoll follows.
 ;Transcribed from lst/nhl94.bin.lst lines 47136-48479. Global names are the or the 93 name where an
-;auto name or where the routine is the 93 one (AdvanceStringPtr). 94 is 93 CheckGameTickerStatus and
-;NewTicker3pt2 is 93 NewTicker3; the are kept. The routines that 93 writes as locals are locals here too (.dispen,.r,.tn
+;auto name or where the routine is the 93 one (AdvanceStringPtr). 94
+;NewTicker3pt2 ; the are kept. The routines that 93 writes as locals are locals here too (.dispen,.r,.tn
 ;setteam,.ranres,.sv,.lo), and is the 93 SetScore.getscore. Local labels are the names (_x ->.x) or the 93
 ;local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the in an
 ;the printz strings as dc.b, ori.b or (in StartHL2) as code; they are written with the String macro (length
@@ -1045,7 +1042,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),1,$18
 	move.w	(gsp).w,d0	;period name
-	movea.l	#PerLabels,a1	;93 PerLabels
+	movea.l	#PerLabels,a1
 	btst	#1,(gmode2).w
 	beq.w	.1
 	move.w	#4,d0
@@ -1110,7 +1107,7 @@ PrintTeamLogoAndScore	;Draw the team logo map (PrintTeamData, d0 = offset) 5 col
 	;then the score of team a2 in big font, centered 2 rows lower; 94 moves a 2 digit score one more left. Called twice from PrintScores1
 	move.w	(printx).w,-(sp)
 	subq.w	#5,(printx).w
-	jsr	(PrintTeamData).l	;93 PrintTeamData
+	jsr	(PrintTeamData).l
 	move.w	(sp)+,(printx).w
 	addq.w	#2,(printy).w
 	move.w	tmscore(a2),d0	;tmscore
@@ -1132,14 +1129,14 @@ EASNLogo	;Draw the EASN logo map at x 1, y $19 on the vertical ice rink if no po
 	bne.w	rtss2
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),1,$19		;/ move.b d0,-(a4)
-	movea.l	#EASNmap,a1	;93 EASNmap
+	movea.l	#EASNmap,a1
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2	;93 #$310
 	clr.w	d0
 	clr.w	d1
 	move.w	(a1),d2	;width and height from the map header
 	move.w	2(a1),d3
-	move.w	(EASNcset).w,d4	;93 EASNcset
+	move.w	(EASNcset).w,d4
 	clr.w	d5
 	bra.w	dobitmap
 USBoard	;Update score board, including the players in the penalty box and their time remaining. Called from InProgress and SetHor
@@ -1192,8 +1189,8 @@ pplpen	;93 ?. Print one penalty box line: player number and time remaining. a2 =
 	clr.w	d0
 	move.b	-8(a1),d0	;player number (BCD)
 	move.w	(printx).w,-(sp)
-	movea.w	#(TextBuffer-M68K_RAM),a1	;93 TextBuffer (mesarea+2)
-	bsr.w	ConverByteToDigits	;93 ConverByteToDigits
+	movea.w	#(TextBuffer-M68K_RAM),a1	;the 93 version (mesarea+2)
+	bsr.w	ConverByteToDigits
 	movea.w	#(mesarea-M68K_RAM),a1
 	move.w	#4,(a1)	;string length: 2 digits
 	bsr.w	print
@@ -1217,7 +1214,7 @@ linebar	;Draw the energy bar of line d0 for team a2 at printx/printy (bitmap fro
 	moveq	#$F,d1	;d1 = bar frame (15 = empty)
 	sub.w	d0,d1
 	clr.w	d0
-	movea.l	#EnergyBarMap,a1	;93 EnergyBarMap
+	movea.l	#EnergyBarMap,a1
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2	;93 #$310
 	move.w	(a1),d2
@@ -1427,7 +1424,7 @@ Intermission	;end of period junk (zamboni/stats). As 93: opens the pause menu sc
 	adda.w	#SCstruct,a0	;SCstruct
 	dbf	d0,.0
 	move.w	(ExtraChars).w,d4
-	movea.l	#ZamFrameList+8,a2	;93 ZamSprites+8
+	movea.l	#ZamFrameList+8,a2	;+8
 	bsr.w	DoDMA_clearCallbackPointer
 	move.w	#$140,(zamx).w	;320
 	move.w	(gsp).w,d0
@@ -1444,14 +1441,14 @@ Intermission	;end of period junk (zamboni/stats). As 93: opens the pause menu sc
 .2
 	bset	#sfpz,(sflags).w	;sfpz
 	movea.l	#SetupPauseScreen,a1
-	jsr	(InitMenuState).w	;93 InitMenuState
+	jsr	(InitMenuState).w
 	bsr.w	GetShifter
 	move.w	d1,(TickerNum).w
 .top
 	tst.w	(TickerNum).w
 	bmi.w	.doh	;no more ticker games
 	bsr.w	NewTicker2
-	bsr.w	NewTicker3	;93 NewTicker3
+	bsr.w	NewTicker3
 	move.w	#$96,d0	;150 frames
 	bsr.w	waitxsr
 	btst	#7,d1	;sbut
@@ -1558,7 +1555,7 @@ SetScore	;add to score for game in a0. After period 3 a game within one goal goe
 	asl.w	#2,d0
 	movea.w	#$30E,a1	;TeamList (93 $314)
 	movea.l	0(a1,d0.w),a1
-	adda.w	8(a1),a1	;92 ScoreOdds
+	adda.w	8(a1),a1
 	move.b	(a1),d0
 	andi.w	#$70,d0
 	lsr.w	#1,d0	;row * 8
@@ -1631,7 +1628,7 @@ NewTicker3	;Display ticker score for game d3 (a0 = gstruct entry), skip if d3 is
 	bsr.w	PrintStringFromList
 	move.w	8(a0),d0	;gsper
 	subq.w	#1,d0
-	movea.l	#PerLabels,a1	;93 PerLabels
+	movea.l	#PerLabels,a1
 	bsr.w	AdvanceStringPtr
 	move.w	(a1),d0	;period name centered on x+$17
 	lsr.w	#1,d0
@@ -1687,7 +1684,7 @@ SetTickerAreaPosition	;Set printx/printy/printm for the ticker box (x 3, y $17; 
 PrintStringFromList	;Print string d0 of the String list a1 with printsmall
 	bsr.w	AdvanceStringPtr
 	bra.w	printsmall
-AdvanceStringPtr	;Return a1 = string d0 of the String list a1 (92 Fprint without the print)
+AdvanceStringPtr	;Return a1 = string d0 of the String list a1
 	bra.w	.0
 .loop
 	adda.w	(a1),a1
@@ -1773,13 +1770,13 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	st	(puckcross2).w
 	st	(puckcross6).w
 	jsr	(p_turnoff).l
-	bsr.w	setupice_highlight	;93 setupice_highlight
+	bsr.w	setupice_highlight
 	bsr.w	ClrHor
 	movea.l	#VDP_DATA,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)	;window H position 0
 	move.w	#VDPR_WINY,Vctrl-Vdata(a0)	;window V position 0
 	move.w	(ExtraChars).w,d4	;ref cam chars
-	movea.l	#RefsMap+8,a2	;93 RefsMap+8
+	movea.l	#RefsMap+8,a2	;+8
 	bsr.w	DoDMA_clearCallbackPointer
 	clr.w	(Vpos).w
 	clr.w	(Hpos).w
@@ -1851,7 +1848,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	bsr.w	SetHor
 	bsr.w	setvideo
 	jsr	(SetupPauseScreen).w	;pause menu screen
-	jsr	(DrawMenuScreen).w	;93 DrawMenuScreen
+	jsr	(DrawMenuScreen).w
 	move.w	#$18,(palcount).w
 	move.w	#SngEOG,-(sp)	;song $79 (93 $36)
 	bsr.w	song
@@ -1876,7 +1873,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 .exit2
 	bset	#sf3sbut,(sflags3).w	;93 .exit2. sf3sbut
 .exit
-	movem.l	(sp)+,d0-d7/a0-a6	;93 .exit
+	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 .nhl1
 	bsr.w	.lo	;93 .nhl1

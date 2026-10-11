@@ -1,21 +1,19 @@
-; $0FCB9A  NEW in 94: matchups and scouting report
-;	NHL 94 (retail) segment $FCB9A-$FD617
-;	The 94 ScoutingReport, rewritten as the pregame MATCHUPS screen, with its 94-only helpers: ScoutCrowdRecord and
+;	NHL 94 (retail) segment
+;	The ScoutingReport, rewritten as the pregame MATCHUPS screen, with its helpers: ScoutCrowdRecord
 ;	GetTeamNickname / GetTeamArena (team data for the text player's '@', '=' '*' and '^' ';'), the unused ScoutCrowdRecordBy / GetTeamCity, the matchup
 ;	pager PageMatchup, the rating, picture and position helpers, StatsText, and the advantage marks (PrintAdvantageMarks). 94 moved this screen
-;	to the end of the ROM with the menu code (setoptions). The text player itself (93 InitScoutingDisplay /
-;	UpdateScoutingDisplay / ScrollDisplayUp) is StartScoutText / ScoutTextPlayer / ScoutTextNextLine. The rest of hockey93_07 (Stanley Cup
+;	to the end of the ROM with the menu code (setoptions). The text player itself (/
+;	UpdateScoutingDisplay / ScrollDisplayUp) is StartScoutText / ScoutTextPlayer / ScoutTextNextLine. The rest (Stanley Cup
 ;	screen, TitleScreen, the sprite list helpers, CheckSound) is not here. EndShootout follows (called from CountShootoutGoals).
 ;Transcribed from lst/nhl94.bin.lst lines 969432-970644. Global names are the or the 93 name where an auto
 ;name. Local labels are the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
-;written from the retail bytes: $FCBD8-$FCC75 (ScoutCrowdRecordBy, GetTeamCity) and $FD60E-$FD617 (an empty routine) are
 ;with no xref, written as instructions with -style names. Each DecompressGraphicsWithCallback is followed by its 8 byte remap
 ;table (it as code). The printz / printz2 / printbigz strings (and others, four with a word dropped), the
 ;instructions in them, and the String tables were read at each address.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $DF / $DE the same with printa
-;	$4000). printz2 (93 printsmallz) codes: $F8 attribute,map,x,y; $F9 char set. Pad bits: dbut 1, cbut 5, abut 6, sbut 7.
+;	$4000). printz2 codes: $F8 attribute,map,x,y; $F9 char set. Pad bits: dbut 1, cbut 5, abut 6, sbut 7.
 
 ScoutCrowdRecord	;The text player's '@' (ScoutTextPlayer): return a1 = the home team's crowd record in dB as a String at TempBuffer (SRAM team record
 	;byte 8, 80 if 0). clrCrowdRAM reads the 16 byte SRAM record of team d1 ($B60 + d1 * 16) to a0
@@ -109,7 +107,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	addi.w	#$24,d4
 	move.w	d4,(vispicchars).w	;visitors picture chars
 	addi.w	#$24,d4
-	move.w	d4,(BigFontChars).w	;93 BigFontChars
+	move.w	d4,(BigFontChars).w
 	movea.l	#BigFontMap+8,a2	;big font tiles
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$05431567,$79ABCDEF	;remap table (/ move.b / muls.w / ori.b)
@@ -131,7 +129,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	adda.l	(a2)+,a1
 	clr.w	d0
 	clr.w	d1
-	moveq	#$28,d2	;40 x 28 background (93 ScoutMap)
+	moveq	#$28,d2	;40 x 28 background
 	moveq	#$1C,d3
 	moveq	#3,d5	;color fam 1-2
 	jsr	(dobitmap).l
@@ -157,7 +155,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	jsr	(Framer).l
 	jsr	(printz).l
 	String	-TXMAP1,1,1		;/ btst d0,d0
-	movea.l	#RonBarrMap,a0	;Ron Barr picture (93 Ronbarrmap): palette offset, then map header offset
+	movea.l	#RonBarrMap,a0	;Ron Barr picture: palette offset, then map header offset
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -183,7 +181,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	move.w	#$18,(palcount).w	;24
 	move.l	#vb2,(vbint).w
 	move	#$2500,sr
-	jsr	(InitScoutingDisplay).l	;93 InitScoutingDisplay: a0 = the paragraph list
+	jsr	(InitScoutingDisplay).l	;a0 = the paragraph list
 	move.w	#$1B,(a0)+	;paragraph numbers in ScoutTextScript: 'Hi, I'm Ron Barr ...'
 	move.w	#$1D,(a0)+	;empty paragraph: a blank line
 	move.w	#$1A,(a0)+	;'Welcome to a sold out ^ ...'
@@ -249,7 +247,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	beq.w	.upd
 	st	(asv).w
 .upd
-	jsr	(UpdateScoutingDisplay).l	;93 UpdateScoutingDisplay
+	jsr	(UpdateScoutingDisplay).l
 	subq.w	#1,(screentimer).w
 	bpl.w	.top
 	tst.w	(OptNOP).w

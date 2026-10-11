@@ -1,8 +1,8 @@
-	include	macros\genesis.mac	;String (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	stats94 segment stub. Retail $0080D4-$009FCF.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -14,7 +14,7 @@
 	include	stubinc\equals.inc	;VDP status bits
 	include	stubinc\ram_addrs.inc	;RAM names
 
-; External addresses outside $0080D4-$009FCF, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
+; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 AddFramer = $11F12		;jsr / jmp (x).l at $9D56
 AddSmallFont = $11F04		;jsr / jmp (x).l at $9C40

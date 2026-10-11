@@ -1,4 +1,3 @@
-; $0FE1D8  NEW in 94: manual goalie
 ManualGoalieMenu	;it as data; 93 has no counterpart. "x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	;Manual / Auto Goalie from the same words): with OptNOP set, toggle the goalie mode of the pause pad (goaliemode2 for pad 2, sflags bit 1,
 	;else goaliemode1; both when the pads are on one team). In a penalty shot or shootout (gmode2 bit 0, BA_PS_flags bit 2) the pad then

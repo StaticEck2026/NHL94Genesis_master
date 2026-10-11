@@ -1,10 +1,8 @@
-; $017A18  NEW in 94: EA Sports attract screen
-;	NHL 94 (retail) segment $17A18-$17C71
+;	NHL 94 (retail) segment
 ;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and the 94 helpers after it, then the
-;	93 setoptions vblank handler (93 VBlank_SetOptions). 94 put this code just
-;before that handler, so the handler ends this segment and DefaultMenus ($17C72
-;	hockey94_09) follows. HiScoreScreen ($FED70) is not next to this code and is not in this segment.
-;Transcribed from lst/nhl94.bin.lst lines 54528-54846. $17B98-$17C41 as dc.b; it is code with
+;	the 93 version vblank handler. 94 put this code just
+;	) follows. HiScoreScreen is not next to this code and is not in this segment.
+;Transcribed from lst/nhl94.bin.lst lines 54528-54846. it is code with
 ;	no xref and is written as instructions (DrawTeamBlockBitmap, ClearTextBox, SetTeamPrintPos, SetGoalieMode).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
@@ -55,7 +53,7 @@ EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or 
 .ex	move	#$2700,sr
 	rts
 
-SetPojoyMode	;Set pojoy from the number of players for play modes 2 and 3. Called from $F844A
+SetPojoyMode	;Set pojoy from the number of players for play modes 2 and 3.
 	cmpi.w	#2,(OptPlayMode).w
 	blt.w	rtss2
 	cmpi.w	#4,(OptPlayMode).w
@@ -173,13 +171,13 @@ SetGoalieMode	;no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, 
 	rts
 
 VBlank_SetOptions	;vbint handler stored by setoptions.
-	;92 vb2 (cramfade unless dfng), plus DumpSprites2 when dfok is set
+	;the 92 version (cramfade unless dfng), plus DumpSprites2 when dfok is set
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w		;dfng
 	bne.w	.nograph
 	bclr	#dfok,(disflags).w		;dfok
 	beq.w	.fade
-	bsr.w	DumpSprites2		;93 DumpSprites2
+	bsr.w	DumpSprites2
 .fade	bsr.w	cramfade
 .nograph	addq.w	#1,(vcount).w
 	jsr	(p_music_vblank).l

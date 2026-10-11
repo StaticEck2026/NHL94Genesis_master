@@ -1,7 +1,6 @@
-; $00C710  Adapted from logic93.asm: player assignments
-;	NHL 94 (retail) segment $C710-$D09B
-;	92 Logic.Asm part 2, as 93 logic93_2.asm: the player assignments assbench ... asswingd. asswingo
-;	follows at $D09C. 94 has no fight code: assfight and assfwatch are an rts, and the 93 chkhit, ShowInjuryMsg,
+;	NHL 94 (retail) segment
+;	, as 93: the player assignments assbench ... asswingd. asswingo
+;	follows at $D09C. 94 has no fight code: assfight and assfwatch are an rts, and the, ShowInjuryMsg
 ;	banner and addinfo are not here. assgoaliebreakwait is new.
 ;Transcribed from lst/nhl94.bin.lst lines 37886-38681. Global names are the except asseben (
 ;assben) and assfaceoffp1, the 93 names. Local labels are the names (_x ->.x
@@ -215,7 +214,7 @@ asspenalty
 	move.w	temp4(a3),d1
 	movea.l	#rtss2,a0
 	bra.w	skateto
-.clrplayer	;take the joystick off player a3 (92 asspenalty .clrplayer, 93 global clrplayer)
+.clrplayer	;take the joystick off player a3
 	btst	#3,pflags(a3)
 	beq.w	rtss4
 	clr.w	d4
@@ -274,7 +273,7 @@ assepen
 	bra.w	assexit
 ; moves the goalie not being used during shootout/pen shot off the screen
 ; a3 = goalie who is to be taken off ice
-assgoaliebreakwait	;(asstab entry $18DFC)
+assgoaliebreakwait	;(asstab entry)
 	btst	#5,pflags(a3)	;check if animation locked
 	bne.w	.exit	;exit if so
 	btst	#2,(BA_PS_flags).w	;check if pen shot
@@ -309,7 +308,7 @@ assfaceoff
 	rts
 ; assignment for players actually participating in faceoff
 ; a3 = player
-assfaceoffpl	;(93 assfaceoffp1). Face off player
+assfaceoffpl	;Face off player
 	btst	#5,pflags(a3)
 	bne.w	.exit2
 	btst	#0,(sflags2).w

@@ -1,7 +1,5 @@
-; $00D09C  Adapted from logic93.asm: checks before the display code
-;	NHL 94 (retail) segment $D09C-$E62D
-;	92 Logic.Asm part 3, as 93 logic93_3.asm: asswingo, asscenterd, asscentero, the goalie (assgoaliectrl,
-;	assgoaliecpu, ClampYPosition, AdjustFacingDirection, goaliesave), assgoalietopuck, the 94 breakaway code,
+;	NHL 94 (retail) segment
+;	assgoaliecpu, ClampYPosition, AdjustFacingDirection, goaliesave), assgoalietopuck, the breakaway code
 ;	asspuckc, chkpk / chkpk2, chk4pass and EvadePC. checkob follows at $E62E.
 ;Transcribed from lst/nhl94.bin.lst lines 38682-40488. Global names are the except ClampYPosition
 ; and AdjustFacingDirection, the 93 names. Local labels are the names
@@ -954,7 +952,7 @@ goaliesave
 	asr.w	Yvel(a3)
 	asr.w	Yvel(a3)
 	rts
-.saveanim	;(93 GoalieSaveList): SPA per save type. Same 10 words as the unreferenced table at $B602
+.saveanim	;SPA per save type. Same 10 words as the unreferenced table at $B602
 	dc.w	$146
 	;blocker save
 	dc.w	$178	;glove save
@@ -1641,11 +1639,10 @@ EvadePC
 	moveq	#6,d0
 .ex
 	rts
-;	NHL 94 (retail) segment $E62E-$FFE9
-;	92 Logic.Asm part 4, as 93 logic93_4.asm: checkob, assnearest, check4check, asspassrec, assshoot, the 94 shootout /
+;	NHL 94 (retail) segment
 ;	penalty shot code (puckshootout, puckpenshot), puckfaceoff, ChkGoalies, ReturnGoalies, CPgoalie, CompLine,
 ;	puckfaceoff2, ResetAndSelectPlayers, updatefaceoff, Endfaceoff, pucknorm. ChkOffsides follows at $FFEA.
-;Transcribed from lst/nhl94.bin.lst lines 40493-42593. Global names are the 94-only routines keep the
+;Transcribed from lst/nhl94.bin.lst lines 40493-42593. Global names are the routines keep the
 ;names. Local labels are the names (_x ->.x, gmclock ->.gmclock) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the
 ;unless generic, in an ;WaitForFaceoffLineChanges and PenaltyShotEndReturn stay global: they are used across a global label.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
@@ -3502,11 +3499,9 @@ pucknorm
 	bne.w	checkpuckcoll
 	bsr.w	puckunflip
 	bra.w	checkpuckcoll
-;	NHL 94 (retail) segment $FFEA-$10EDF
-;	92 Logic.Asm part 5, as 93 logic93_5.asm: ChkOffsides, ClearOffsidesIfAllPlayers, a2offsides, a2touchpuck,
 ;	puckIChk, puckunflip / puckflip / puckshadow, findpc, skateto, avdgoal, skatetopuckinit / skatetopuck, assexit /
 ;	assinsert / assreplace, vtoa, GetHot, SetSPA, doplayeracc, goalieacc, noturn0 / noturn, playeracc, MaxSpeed,
-;	dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap follows at $10EE0.
+;	dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap follows.
 ;Transcribed from lst/nhl94.bin.lst lines 42598-43998. Global names are the except
 ;	ClearOffsidesIfAllPlayers, UnpackNibbles and WeightedRandomSelect, the
 ;Local labels are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop

@@ -1,5 +1,4 @@
-; $0F66EE  NEW in 94: one-timer
-;	NHL 94 (retail) segment $F66EE-$F739D
+;	NHL 94 (retail) segment
 ;	94 code in the high ROM, after the graphics: the one-timer (puckvzadj, OneTimerPass / OneTimerTarget pass target, assonetimer,
 ;	setonetimeranim, onetimershot), the 4 way play adaptor test (Detect4WayPlay), the crowd meter (LoadCrowdRec, Crowd_Noise),
 ;	stopna2, the 94 corner wall check, the hot / cold tables (Create_HotCold_Table, AttributeCalc) and the
@@ -7,7 +6,7 @@
 ;Transcribed from lst/nhl94.bin.lst lines 958869-960186. Names and most comments are the (this is
 ;commented); names and the are named for what the
 ;code does. written from the retail bytes: unused code as dc.b (Read4WayPad1
-;Read4WayPad4, Set4WayPlayer, Clamp0to100 and three rts), and labels for the branches as $F66FC / $F6772 / *+4. Locals
+;Locals
 ;are named for what they do (the locals keep their name), with the unless generic, in an
 
 puckvzadj	;set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot

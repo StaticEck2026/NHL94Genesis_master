@@ -1,16 +1,14 @@
-; $009FD0  Adapted from hockey93.asm: replay
-;	NHL 94 (retail) segment $9FD0-$B0E7
-;	92 hockey.asm part 1, second half, as 93 hockey93_02.asm: ReplayMode, getpzjoy, suba4 / adda4,
+;	NHL 94 (retail) segment
 ;	UpdateCameraPos, RestoreReplayFrame, updatereplay, rtss8, updateplayers, updateanim, freezewindow, checkwindow.
 ;	94 adds the reverse angle replay (sflags4 bits 4, 6, 7), the replay icon timer (ShowReplayIcon ... EraseReplayBanner),
 ;	4 way play pads and the fall-down position fixes in updateplayers. doinput follows at $B0E8.
 ;	Transcribed from lst/nhl94.bin.lst lines 34505-35879. Global names are the 93 names where 93 has the
-;routine ( unless generic, in an); 94-only routines keep the Local labels are the
+;routine ( unless generic, in an); routines keep the Local labels are the
 ;local names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the unless generic, in an
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself, odd data is padded).
-;	Replay frames are $62 bytes from M68K_RAM (92 replaystart) to replayend ($FFFFAF54); recbpr is the record
+;	Replay frames are $62 bytes from M68K_RAM to replayend ($FFFFAF54); recbpr is the record
 ;	pointer. SortCords objects are $80 bytes (SCstruct).
 
 ReplayMode	;$9FD0. Instant replay play-back control and display code. Called from the pause menu.
@@ -290,7 +288,7 @@ ReplayMode	;$9FD0. Instant replay play-back control and display code. Called fro
 	jsr	(setvideo).l
 	move.w	#$18,(palcount).w
 	rts
-getpzjoy	;read the joystick of the pad that paused. 94: pads 3 and 4 when FourWayPlay (pausepad = 3 or 4)
+getpzjoy	;read the joystick of the pad that paused. pads 3 and 4 when FourWayPlay (pausepad = 3 or 4)
 	tst.w	(FourWayPlay).w
 	bne.w	.0
 .loop
@@ -303,7 +301,7 @@ getpzjoy	;read the joystick of the pad that paused. 94: pads 3 and 4 when FourWa
 	cmpi.w	#3,(pausepad).w
 	beq.w	ReadJoy3
 	bra.w	ReadJoy4
-ShowReplayIcon	;Show the replay icon (93 ReplayMode does this inline) and start the $F0 frame replayicontimer timer
+ShowReplayIcon	;Show the replay icon and start the $F0 frame replayicontimer timer
 	move.w	#$F0,(replayicontimer).w
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),2,2			;and moveq #$20,d0 in ori.b / andi.b
@@ -418,7 +416,7 @@ adda42	;adda4 without the sf2drec look-ahead: stop at the record point, else sho
 	cmpa.l	(recbpr).w,a4
 	beq.w	rtss8
 	bsr.w	RestoreReplayFrame
-adda43	;a4 += replay frame size ($62), wrapping from replayend to M68K_RAM (92 replaystart)
+adda43	;a4 += replay frame size ($62), wrapping from replayend to M68K_RAM
 	adda.w	#$62,a4
 	cmpa.l	#replayend,a4
 	bne.w	rtss8
@@ -465,7 +463,7 @@ RevReplayAdj	;Set sflags4 bit 7 for a reverse angle replay, then fall into Resto
 	bset	#7,(sflags4).w	;set bit 7
 ; a4 = current replay frame address to convert into normal coordinates
 RestoreReplayFrame	;a4 = current replay frame address to convert into normal cordinates (92
-	;SetRCords), then the other replay variables (92 nonshift). 94 flips x/y and frames for the reverse angle
+	;SetRCords), then the other replay variables. 94 flips x/y and frames for the reverse angle
 	movem.l	d0-d2/a0/a6,-(sp)
 	movea.l	#revframetbl,a6
 	movea.l	a4,a0
@@ -729,7 +727,7 @@ updatereplay	;called every frame to save replay events, d7 = elapsed frames
 	move.w	(sp)+,d0
 	move.w	(Hpos).w,(a0)+
 	move.w	(Vpos).w,(a0)+
-rtss8	;(93 rtss2; 94 rtss2 is the rts at $15464)
+rtss8
 	rts
 ; this routine calls all collision/animation/assignment code for all players
 ; d7 = elapse frames since last call

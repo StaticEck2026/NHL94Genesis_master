@@ -1,8 +1,8 @@
-	include	macros\genesis.mac	;String (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	sram94 segment stub. Retail $01A050-$01A263.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -14,10 +14,10 @@
 	include	stubinc\equals.inc	;VDP status bits
 	include	stubinc\ram_addrs.inc	;RAM names
 
-; External addresses outside $01A050-$01A263, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x and
+; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
-ReadJoy1 = $11340		;jsr / jmp (x).l at $1A062
-vcountwait = $80BA		;jsr / jmp (x).l at $1A140
+ReadJoy1 = $11340		;jsr / jmp (x).l
+vcountwait = $80BA		;jsr / jmp (x).l
 
 ; Main segment code
 	include	sram94.asm

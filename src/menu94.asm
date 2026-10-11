@@ -1,7 +1,6 @@
-; $007E36  Adapted from menu93.asm: menu core
-;	NHL 94 (retail) segment $7E36-$80D3
-;	The menu engine, as 93 menu93: InitMenuState through vcountwait (93 MenuWaitVblank). The scrolling menu of the pause screen
-;	(PauseMode), also used, middle94_1 and the stats code after it.
+;	NHL 94 (retail) segment
+;	The scrolling menu of the pause screen
+;	(PauseMode), also used, and the stats code after it.
 ;	94 changes from 93: the menu state is menuitem-menudraw; printz2 (93
 ;	printsmallz); a handler can keep its own screen (sflags5 bit 1); the 94 item printer PrintMenuItem (the Manual /
 ;	Auto Goalie item); PrintTeamData copies 11 words from TeamBlockMap (93 12 words); vcountwait reads oldvcount twice.
@@ -11,7 +10,7 @@
 ;ori.b / move.l / btst), and the two PrintMenuItem Strings ( no label:.manual,.auto).
 
 InitMenuState	;Start a menu: a0 = item list, a1 = screen draw routine; selection and first shown item 0. Falls into
-	;DrawMenuScreen. Called from PauseMode, penalty94_2 and the stats code
+	;DrawMenuScreen. Called from PauseMode, and the stats code
 	move.l	a0,(menulist).w	;item list
 	move.l	a1,(menudraw).w	;draw routine
 	clr.w	(menuitem).w	;selected item
@@ -36,7 +35,7 @@ SetMenuPrintX	;printx = the left edge of the menu box: 5 in 32 column mode, else
 	rts
 HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the selection, C runs the item's handler and
 	;redraws the menu (94: not if the handler set sflags5 bit 1). Returns eq to leave the menu (start, or C on item 0), ne to stay. Called
-	;from PauseMode, middle94_1 and the stats code
+	;from PauseMode, and the stats code
 	btst	#7,d1	;sbut
 	bne.w	.flip	;start: Z clear, flipped to eq
 	btst	#1,d1	;dbut
@@ -106,7 +105,7 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 	move.w	#$D,(printy).w
 	movea.l	(menulist).w,a1
 	jsr	(printsmall).l	;the menu title
-	jsr	(printsmallz).l	;clear the 4 item rows (93 printsmallz)
+	jsr	(printsmallz).l	;clear the 4 item rows
 	dc.w	$0026	;String length, 36 bytes: too many for the macro (as 93). / move.l / btst
 	dc.b	$FB,$01,$20,$FB,$FF,$FA,$01,$20,$FB,$FF,$FA,$01
 	dc.b	$20,$FB,$FF,$FA,$01,$20,$FB,$12,$20,$FB,$FF,$FA
@@ -179,7 +178,7 @@ PrintMenuItem	;Print menu item a1 and step a1 past it. An item whose text starts
 .auto
 	String	'   Auto Goalie    '	;no label
 PrintTeamData	;Copy 2 rows of 11 map words (93 12) from TeamBlockMap+d0 (93 $FFC210) to printx / printy, then printx += 11
-	;(93 12). Saves d0-d2/a0-a1. Called from penalty94_2 (PrintTeamLogoAndScore) and the stats code
+	;(93 12). Saves d0-d2/a0-a1. Called from PrintTeamLogoAndScore and the stats code
 	movem.l	d0-d2/a0-a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;dfng: don't int graphics
@@ -199,7 +198,7 @@ PrintTeamData	;Copy 2 rows of 11 map words (93 12) from TeamBlockMap+d0 (93 $FFC
 	move.w	(sp)+,(disflags).w
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-vcountwait	;and comment (93 MenuWaitVblank): waits till vcount changes, then resyncs vcount. Saves d0. 94 reads oldvcount twice. Called from PauseMode, hockey94_02 and the stats code
+vcountwait	;and comment: waits till vcount changes, then resyncs vcount. Saves d0. 94 reads oldvcount twice. Called from PauseMode, and the stats code
 	move.w	d0,-(sp)
 	move.w	(oldvcount).w,d0
 	move.w	(oldvcount).w,d0

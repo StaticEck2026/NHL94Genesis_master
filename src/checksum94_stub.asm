@@ -1,8 +1,8 @@
-	include	macros\genesis.mac	;String (main94.asm includes it in the full build)
+	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	checksum94 segment stub. Retail $0FFAC0-$0FFB0F.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -14,7 +14,7 @@
 	include	stubinc\equals.inc	;VDP status bits
 	include	stubinc\ram_addrs.inc	;RAM names
 
-; External addresses outside $0FFAC0-$0FFB0F: none. Every branch in the segment is a bra.s / Bcc.s / dbf to a label
+; External addresses outside: none. Every branch in the segment is a bra.s / Bcc.s / dbf to a label
 ; inside it (checked against the retail displacements), and the only absolute addresses are the VDP ports (ports.inc).
 
 ; Main segment code

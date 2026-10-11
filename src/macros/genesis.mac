@@ -66,7 +66,7 @@ HEX2 MACRO    ; macro for hex data
     dc.w    $\1,$\2,$\3,$\4     ; handle 4 words at a time, add $ prefix
     ENDM
 
-; Player record (93 genesis93.mac PLAYER): String-style name (dc.b 0, length; name; 0 pad to even), then 4 rating words
+; Player record: String-style name (dc.b 0, length; name; 0 pad to even), then 4 rating words
 PLAYER MACRO
 @begin = *
     dc.b $00, $00

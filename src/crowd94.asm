@@ -1,4 +1,3 @@
-; $0F6E8A  NEW in 94: crowd meter and hot / cold players
 LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (clrCrowdRAM into the buffer at ThreeStars), $50 when none. Called from StartGame
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(HomeTeam).w,d1
@@ -76,7 +75,7 @@ Crowd_Noise	;(Crowd_Noise?). the crowd meter each frame: crowd noise on / off (s
 	movem.l	(sp)+,d0-d7/a0-a6
 .ex1
 	rts
-stopna2	;(92 / 93 name). Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from logic94_5 (goalieacc)
+stopna2	; Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goalieacc
 	tst.w	Xvel(a3)
 	bpl.w	.xp
 	addi.w	#$7D0,Xvel(a3)
@@ -100,7 +99,7 @@ stopna2	;(92 / 93 name). Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. 
 	rts
 checkcornercoll94	;(and ). 210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
 	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to
-	;cornercollb94. Called from wallcollduringcheck. 93 checkwallcoll is
+	;Called from wallcollduringcheck. the 93 version
 	bclr	#pf3wall,pflags3(a3)	;clears bit 4 in pflags3 (not used in 92)
 	move.w	#$88,d4	;sideline
 	sub.w	(wcradiusx).w,d4	;BD22 = wcradiusx
@@ -170,7 +169,7 @@ checkcornercoll94	;(and ). 210 = blue line to the end of the rink, corner radius
 	neg.w	d1
 	cmp.w	d4,d2
 	ble.w	cornercollb94
-.rtss3	;(a second the global one is logic94_1's). 93 checkwallcoll branches to the shared rtss here
+.rtss3	;the 93 version branches to the shared rtss here
 	rts
 cornercollb94	;Thunk: jmp wallcollb
 	jmp	wallcollb

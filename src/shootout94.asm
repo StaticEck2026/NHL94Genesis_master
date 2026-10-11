@@ -1,4 +1,3 @@
-; $0FC47C  NEW in 94: shootout
 ClearShootout	;Clear the player structs (SortCords) and the shootout state.
 	movea.l	#SortCords,a0
 	move.w	#$3FF,d0

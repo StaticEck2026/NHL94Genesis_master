@@ -1,6 +1,5 @@
-; $0080D4  Adapted from stats93.asm: scores, line editor, roster, scoring and penalty summaries, player stats, crowd meter, goalie select
-;	NHL 94 (retail) segment $80D4-$9FCF
-;	The stats screens, as 93 stats93: Scores (ShowScores), Line Editor, Team Roster, Scoring Summary, Penalty Summary, Player Stats /
+;	NHL 94 (retail) segment
+;	The stats screens, as 93: Scores (ShowScores), Line Editor, Team Roster, Scoring Summary, Penalty Summary, Player Stats /
 ;	Playoff Stats, Crowd Meter, the Timeout and goalie select menu items, and their helpers (SetupScreen, ExitAttributeScreen2,
 ;	ReadAttributeNibble ... WaitVSyncAndReadInput). The screens are menu item handlers (the menu lists) run from the pause menu.
 ;	94 changes from 93: 94 RAM (PenSum, ScoreSum, VertLineScrolling ...), printz2 / printsmall for the small text, the OptLine line icon
@@ -8,7 +7,7 @@
 ;	ReloadRinkGraphics; the 93 Game Statistics screen is not here.
 ;Transcribed from lst/nhl94.bin.lst lines 30583-34504. Global names are the s where an auto name or no label, or where
 ;the routine is the 93 one (AttribRating, HandedTextTbl, WaitVSyncAndReadInput) ( unless generic, in an); kept
-;	names: PrintAttribHeader, getNameandAttrib, attribjmp. New in 94 routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). Locals are the 93 stats93
+;	names: PrintAttribHeader, getNameandAttrib, attribjmp. New in 94 routines are named for what they do (ReloadRinkGraphics, GetDefenseStart). Locals are the 93
 ;locals where the code matches, else named for what they do, with the unless generic, in an ;LineEditorMenu
 ;SelectAttributeItem and DisplayPlayerSelectMenu are 93 globals that as labels inside the routine before. written from the retail bytes
 ;the inline Strings after printz / printz2 / printbigz and the remap tables after DecompressGraphicsWithCallback, the
@@ -52,7 +51,7 @@ ShowScores	;"Scores" screen: the other games of the night in gsstruct (DisplayGa
 	subi.w	#$15,d0
 	bmi.w	.loop
 	asl.w	#3,d0
-	move.w	d0,(SelectedPlayerIdx).w	;scroll limit (93 SelectedPlayerIdx)
+	move.w	d0,(SelectedPlayerIdx).w	;scroll limit
 	bsr.w	DrawScrollArrows
 .loop
 	bsr.w	vcountwait
@@ -157,7 +156,7 @@ ScrollArrowTable	;DrawScrollArrows Strings: none, up, down (only 3 entries, as 9
 	String	'{',$FB,$FF,$FA,$13,' ',$F9
 	String	' ',$FB,$FF,$FA,$13,'}',$F9
 LineEditor	;"Line Editor" screen for team a2: line slot cursor (TestList), C picks a player for the slot from the
-	;list, start runs the exit menu (ExitAttributeScreen). 94 OptLine (manual lines off) limits the cursor. Menu item handler
+	;list, start runs the exit menu (ExitAttributeScreen). OptLine (manual lines off) limits the cursor. Menu item handler
 	bset	#0,tmflags(a2)
 	moveq	#0,d0
 	moveq	#$1C,d1
@@ -185,7 +184,7 @@ LineEditorMenu	;Slot cursor loop: start exits, C picks a player for the slot (Se
 	btst	#7,d1
 	bne.w	ExitAttributeScreen
 	btst	#5,d1
-	bne.w	SelectAttributeItem	;C: pick a player for the slot (93 SelectAttributeItem)
+	bne.w	SelectAttributeItem	;C: pick a player for the slot
 	moveq	#1,d0
 	btst	#1,d1
 	bne.w	.move
@@ -390,7 +389,7 @@ DrawAttributeMenu	;Line editor: draw the line icons for the cursor's line (Attri
 	dc.b	1	;94: the entry before AttributeMenuTable (read with OptLine set)
 AttributeMenuTable	;Per line: bit mask of the lines drawn together
 	dc.b	7,7,7,$18,$18,$60,$60
-DrawMenuIcon	;Line editor: draw line d5 (its name from linelist, 93 linelist, then its player slots) at MenuIconPosTable (OptLine: the entry before)
+DrawMenuIcon	;Line editor: draw line d5 (its name from linelist, then its player slots) at MenuIconPosTable (OptLine: the entry before)
 	moveq	#6,d0
 	mulu.w	d5,d0
 	lea	MenuIconPosTable(pc),a0
@@ -602,7 +601,7 @@ DecodePlayerAttributes	;93 name; Load team a2's lines from databuffer: byte 0 = 
 .done
 	movem.l	(sp)+,d0-d4/a0/a3
 	rts
-EncodePlayerAttributes	;Reverse of DecodePlayerAttributes: pack team a2's lines into databuffer and convert it (WriteLineData, high ROM; 93 BitsToPW). Menu item handler
+EncodePlayerAttributes	;Reverse of DecodePlayerAttributes: pack team a2's lines into databuffer and convert it (WriteLineData, high ROM). Menu item handler
 	movem.l	d0-d4/a0-a3,-(sp)
 	movea.w	#(databuffer-M68K_RAM),a0
 	move.w	Xvel(a2),d0
@@ -1337,7 +1336,7 @@ ScrollArrowTbl	;None, up, down, both
 	String	'{',$FB,$FF,$FA,$11,' ',$F9
 	String	' ',$FB,$FF,$FA,$11,'}',$F9
 	String	'{',$FB,$FF,$FA,$11,'}',$F9
-DisplayTeamStats	;"Playoff Stats": the playoff totals (ReadTeamStats) of the potreeteam team as DisplayAttributeScreen with d7 = 1. Called from hockey94_06 and the menu lists
+DisplayTeamStats	;"Playoff Stats": the playoff totals (ReadTeamStats) of the potreeteam team as DisplayAttributeScreen with d7 = 1. Called and the menu lists
 	movem.l	a2,-(sp)
 	jsr	(ReadTeamStats).l
 	movea.w	#(potree-M68K_RAM),a0
@@ -1914,7 +1913,7 @@ SetupScreen	;Common start of the stats screens: blank, 40 cell mode, the framer 
 	rts
 ExitAttributeScreen2	;Leave a stats screen: blank, then ReloadRinkGraphics
 	bsr.w	forceblack
-ReloadRinkGraphics	;93 ExitAttributeScreen2 after its forceblack (no 93 label): back to 32 cell mode and reload the rink (Rinktiles,
+ReloadRinkGraphics	;the 93 version after its forceblack (no 93 label): back to 32 cell mode and reload the rink (Rinktiles
 	;or RevRinkTiles in a reverse angle replay), font, framer, EASN and team graphics. Falls out through setplayercolors. Also called from the
 	;replay code
 	move.w	(disflags).w,-(sp)

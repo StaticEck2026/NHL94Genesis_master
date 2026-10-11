@@ -1,10 +1,10 @@
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ;
-;	frames94 segment stub. Retail $005B1C-$0076B1.
+;	Segment stub.
 ;
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-; External addresses outside $005B1C-$0076B1: none. Every word is a direction offset inside its own table,
+; External addresses outside: none. Every word is a direction offset inside its own table
 ; a flag, or a frame / time pair.
 ; .region code
 	org	$5B1C

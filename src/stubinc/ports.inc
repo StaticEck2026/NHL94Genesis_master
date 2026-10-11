@@ -31,7 +31,7 @@ VDP__DATA equ $C00002
 VDP___CNTR equ $C0000C
 VDP____CNTR equ $C0000E
 
-Vdata equ VDP_DATA	;92 ram.asm names: video ports. Control port offset from a0 = Vdata: move.w #x,Vctrl-Vdata(a0) with a0 = VDP_DATA
+Vdata equ VDP_DATA	;names: video ports. Control port offset from a0 = Vdata: move.w #x,Vctrl-Vdata(a0) with a0 = VDP_DATA
 Vctrl equ Vdata+4
 ;VDP register write words for the control port (register number in the high byte): move.w #VDPR_MODE2+$74,(VDP_CTRL)
 VDPR_MODE1 equ $8000

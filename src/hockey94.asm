@@ -1,10 +1,9 @@
-; $0076B2  Adapted from hockey93.asm: game loop, pause
-;	NHL 94 (retail) segment $76B2-$7E35
-;	VBjsr / Begin through seta2: 92 hockey.asm part 1 up to the end of Pausemode, plus the pause
-;	screen draw routine and seta2, the same split as 93 hockey93_01.asm. The menu engine Pausemode
-;	calls (93 menu93.asm InitMenuState) follows at $7E36.
+;	NHL 94 (retail) segment
+;	VBjsr / Begin through seta2: up to the end of Pausemode, plus the pause
+;	screen draw routine and seta2, the same split as 93. The menu engine Pausemode
+;	calls follows at $7E36.
 ;	Transcribed from lst/nhl94.bin.lst lines 29709-30309. Global names are the 93 names where 93 has
-;the same routine ( unless generic, in an); 94-only routines keep the
+;the same routine ( unless generic, in an); routines keep the
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz2 use the String macro (length word includes itself).
@@ -36,7 +35,7 @@ Begin	;cold start, entered from Start. Clear RAM, init sound and menus, go to ti
 	jsr	(InitSaveRAM).l
 	jsr	(ReadLineData).l
 	jsr	(HiScoreScreen).l
-	jsr	(DefaultMenus).l	;hockey94_09
+	jsr	(DefaultMenus).l
 	move.w	(OptLine).w,(TmpOptLine2).w
 	move.w	(OptPlayMode).w,(TempOptPlayMode).w
 	jsr	(orjoy).l		;clear any previous button presses
@@ -48,7 +47,7 @@ StartGame	;reset game state for a new game, then start the first period
 	clr.l	(awaypresses).w
 	clr.l	(homedirpresses).w
 	clr.l	(awaydirpresses).w
-	jsr	(ReadJoy1).l		;pad 1 = $E0 at game start forces 30 second periods (93 ChkShortPeriods)
+	jsr	(ReadJoy1).l		;pad 1 = $E0 at game start forces 30 second periods
 	cmp.b	#$E0,d3
 	bne.w	.chkpen
 	move.w	#3,(OptPerlen).w	;period length index 3 = 30 seconds
@@ -76,7 +75,7 @@ StartGame	;reset game state for a new game, then start the first period
 	jsr	(InitScores).l
 	jsr	(setupice).l
 	jsr	(LoadCrowdRec).l
-	jmp	IntermissionStart		;on to period start (93 IntermissionStart)
+	jmp	IntermissionStart		;on to period start
 
 ClearShotData	;Clear $E4 words at $FFD092 (93: 49 words at $FFCB0A)
 	move.w	#$E3,d0
@@ -215,7 +214,7 @@ periodicevents	;Called every time thru game loop with d7 = elapsed frames
 CheckInjury	;Called once per second. Count down InjCntDown, act on it at zero
 	subq.w	#1,(InjCntDown).w
 	bne.w	rtss8
-	jmp	ShowInjuryBox		;countdown expired (93 ShowInjuryBox)
+	jmp	ShowInjuryBox		;countdown expired
 
 UpdateLineChange	;Called once per second. Restore energy for players on the bench
 	tst.w	(OptLine).w
@@ -389,7 +388,7 @@ demoread	;monitor joystick if in demo mode (called every game loop)
 	jsr	(ReadJoy2).l
 	btst	#7,d1
 	bne.w	startpause2
-	tst.w	(FourWayPlay).w		;94: pads 3 and 4 on the 4 way play adapter
+	tst.w	(FourWayPlay).w		;pads 3 and 4 on the 4 way play adapter
 	beq.w	HandleJoy1
 	jsr	(ReadJoy3).l
 	btst	#7,d1
@@ -403,7 +402,7 @@ demoread	;monitor joystick if in demo mode (called every game loop)
 HandleJoy1	;Any button on the pad just read (d1) ends the demo
 	tst.w	d1
 	beq.w	rtss8			;nothing pressed
-	jmp	ExitToOpening		;exit demo (93 ExitToOpening)
+	jmp	ExitToOpening		;exit demo
 
 startpause1	;pause initiated by cont 1
 	clr.w	(pausepad).w		;94: pausing pad number (0 = pad 1 or 2)
@@ -435,7 +434,7 @@ Pausemode	;Game is in pause mode now
 	jsr	(p_turnoff).l		;shut off sound
 	move.w	(sflags).w,-(sp)
 	bsr.w	seta2			;a2 = team of pausing controller
-	movea.l	#PauseText,a0		;menu item list (93 PauseText)
+	movea.l	#PauseText,a0		;menu item list
 	lea	SetupPauseScreen(pc),a1	;screen draw routine
 	btst	#0,(gmode2).w
 	beq.w	.chk2
@@ -443,16 +442,16 @@ Pausemode	;Game is in pause mode now
 	bra.w	.0
 .chk2	btst	#2,tmflags(a2)		;tmflags
 	beq.w	.0
-	movea.l	#PauseText2,a0		;alternate item list (93 PauseText2)
-.0	bsr.w	InitMenuState		;93 InitMenuState
-.1	bsr.w	vcountwait		;93 MenuWaitVblank
+	movea.l	#PauseText2,a0		;alternate item list
+.0	bsr.w	InitMenuState
+.1	bsr.w	vcountwait
 	bsr.w	getpzjoy
 	jsr	(showclock).l
 	jsr	(ProcessInputWithRepeat).l
-	bsr.w	HandleMenuInput		;93 HandleMenuInput
+	bsr.w	HandleMenuInput
 	bne.s	.1			;eq = leave pause
 
-	;92 PauseExit: restore graphics and return from pause mode
+	;restore graphics and return from pause mode
 	jsr	(forceblack).l
 	move.w	(sp)+,(sflags).w
 	btst	#7,(sflags).w		;sfhor
@@ -474,8 +473,8 @@ Pausemode	;Game is in pause mode now
 	move.w	(vcount).w,(oldvcount).w
 	rts
 
-SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
-	;also called from $13780
+SetupPauseScreen	;Draw routine for the pause menu.
+	;also called
 	movea.l	#VDP_DATA,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)		;playfield 3 width
 	move.w	#VDPR_WINY+$1C,Vctrl-Vdata(a0)		;playfield 3 height

@@ -1,20 +1,18 @@
-; $0F739E  Adapted from hockey93.asm, expanded: game setup and options
-;	NHL 94 (retail) segment $F739E-$F8B59
-;	The 94 game setup screen (93 setoptions). 94 splits 93's setoptions: GameSetUp (called from PeriodOver) runs the menu
-;	and the start / demo exits, setoptions only builds the screen, and GameSetUp_2 waits for a pad (93 .top / .wait). The 93 setoptions
+;	NHL 94 (retail) segment
+;	The 94 game setup screen. 94 splits 93's setoptions: GameSetUp (called from PeriodOver) runs the menu
+;	and the start / demo exits, setoptions only builds the screen, and GameSetUp_2 waits for a pad (/ .wait). The
 ;	locals are 94 routines: MoveMenuFrame (.nms), GameSetUp_3 (.IncItem), WrapOption (.iilimit), PrintOptions (.ps), GameSetUp_4 (.psd),
 ;	PrintOptTeamName (.psdtp), SetFrameRect (.setrect), SetupDemo (.demo), SetupStart (.ex), OptionLimits (.pslim), OptionValueOffsets (.pl), OptionNames (.text).
 ;	94 adds the Goalies and User Records options (9 lines, 6 shown, scrolled by setupfirstline), Shootout, four way play, the team logo
 ;	blocks (DrawHomeBlock / DrawVisBlock) and player cards with user records (PlayerCardTimer, PlayerCardScreen). The 93 team block roster players
 ;	(UpdateBothTeamDisplays ... AddTeamSpriteFrame) are not here (UpdateBothTeamDisplays is called in their place). VBlank_SetOptions; DefaultMenus, NewPO, MakeTree and
-;	FigureJoy are hockey94_09. This range is in the 94 code at the end of the ROM, after the hot / cold player code (GetHotColdTotal) and
-;	before wallcollduringcheck ($F8B5A).
+;	FigureJoy are. This range is in the 94 code at the end of the ROM, after the hot / cold player code (GetHotColdTotal)
+;	before wallcollduringcheck.
 ;Transcribed from lst/nhl94.bin.lst lines 960187-963038. Global names are the (GameSetUp ... GameSetUp_4 are)
 ;locals are the names (_x ->.x) or the 93 local where the code matches, else in the 93 style (.x exit,.loop, numbered), with the
 ;unless generic, in an
 ;	reached across a global label stay
 ;	global (PrintOptTeamName, SetupDemo, SetupStart, DrawTeamLogo, DrawLogoBox, rtsSetup).
-;written from the retail bytes: unreferenced code as dc.b ($F7666-$F76BD and the rts at $F76C6 in GameSetUp
 ;SetFrameRectUnused) or unlabeled (CheckNOPUnused); LoadSetupTiles (and code); the five DecompressGraphicsWithCallback remap
 ;tables; the printz Strings ( some with a word dropped) and the instructions in them; the menu text as String
 ;tables; TeamLogoBitmaps as dc.l. PlayerCardScreen continues past 's end of function.
@@ -26,12 +24,12 @@
 ;	5 C pressed, 6 / 7 home / visitors logo shown. Pad bits: ubut 0, dbut 1, lbut 2, rbut 3, cbut 5, sbut 7.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $BF map 1 + priority).
 
-GameSetUp	;94 game setup screen, called from PeriodOver (93 PeriodOver called setoptions). Builds the screen (setoptions), then runs
+GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs
 	;the menu: up / down move the frame (MoveMenuFrame), left / right change the option (GameSetUp_3) and redraw (FixModeOptions), start begins the game
-	;(SetupStart), and $5460 frames without a press start a demo (SetupDemo). 93 setoptions from .keep on
+	;(SetupStart), and $5460 frames without a press start a demo (SetupDemo). the 93 version from .keep on
 	jsr	(ReadLineData).l
 	movea.l	#pwddatabuffer,a3	;saved playoff state
-	jsr	(ReadPassBits).l	;(93 ReadPassBits)
+	jsr	(ReadPassBits).l
 	move.w	(TmpOptLine2).w,(OptLine).w	;undo the start changes of SetupStart (Auto line changes, Shootout)
 	move.w	(TempOptPlayMode).w,(OptPlayMode).w
 	bclr	#1,(sflags7).w
@@ -57,11 +55,11 @@ GameSetUp	;94 game setup screen, called from PeriodOver (93 PeriodOver called se
 .newplay
 	cmpi.w	#2,(OptPlayMode).w	;check if new playoffs
 	blt.w	.contplay	;branch if cont. playoffs or reg season
-	bsr.w	j_NewPO	;new playoffs: random tree (93 SelectRandomPlayoffTree)
+	bsr.w	j_NewPO	;new playoffs: random tree
 .contplay
 	cmpi.w	#1,(OptPlayMode).w	;check if cont playoffs
 	bne.w	.reggame	;branch if not
-	bsr.w	GoContinuePlayoffs	;continue playoffs (93 NewPO)
+	bsr.w	GoContinuePlayoffs	;continue playoffs
 .reggame
 	clr.w	d7	;menu line 0 (d7 = line * 2 = offset in OptPlayMode ... OptLine)
 	clr.w	d0
@@ -246,11 +244,11 @@ GameSetUp	;94 game setup screen, called from PeriodOver (93 PeriodOver called se
 	bsr.w	FixModeOptions
 	bra.w	.loop
 	rts	;no xref
-j_NewPO	;New playoffs: jmp NewPO (93 SelectRandomPlayoffTree). Called from GameSetUp and GameSetUp_3
+j_NewPO	;New playoffs: jmp NewPO. Called from GameSetUp and GameSetUp_3
 	jmp	NewPO
-GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs (93 NewPO). Called from GameSetUp
+GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs. Called from GameSetUp
 	jmp	ContinuePlayoffs
-MoveMenuFrame	;93 setoptions .nms: move the menu frame by d0 (+2 / -2 lines). 94 shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
+MoveMenuFrame	;nms: move the menu frame by d0 (+2 / -2 lines). 94 shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
 	;(0-3), setupprevline = the one before (sflags5 bit 2 set on a scroll; FixModeOptions reprints the names when they differ). Continue playoffs
 	;skips lines 1-3, new playoffs line 3 (Team 2). The old frame is erased by redrawing the SetupMenuMap background under it. Called from GameSetUp
 	move.w	d7,d3
@@ -372,7 +370,7 @@ SetFrameRectUnused	;no xref. An unused copy of SetFrameRect without its printz t
 	bne.w	rtsSetup
 	moveq	#5,d1
 	rts
-SetFrameRect	;93 setoptions .setrect: frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs (93 22 x 3 / 5). Called from
+SetFrameRect	;setrect: frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs (93 22 x 3 / 5).
 	;MoveMenuFrame
 	jsr	(printz).l
 	String	-TXMAP1,$10,$E	;(and dropped a word)
@@ -424,7 +422,7 @@ FixModeOptions	;Fix the options a mode does not allow, then print them: Shootout
 	bclr	#3,(sflags6).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-OptionLimits	;Number of values of each option (93 setoptions .pslim)
+OptionLimits	;Number of values of each option
 	dc.w	5,8,$1C,$1C,3,2,2,3,3
 OptionLimits4Way	;The same with FourWayPlay (12 player choices)
 	dc.w	5,$C,$1C,$1C,3,2,2,3,3
@@ -553,7 +551,7 @@ GameSetUp_3	;93 setoptions.IncItem: add d2 to option d7 (d2 = 0: only limit it) 
 	bne.w	.16
 	tst.w	d7
 	bne.w	.16
-	jsr	(ContinuePlayoffs).l	;continue playoffs (93 NewPO)
+	jsr	(ContinuePlayoffs).l	;continue playoffs
 	move.w	(gamelevel).w,d0
 	or.w	(bosgames).w,d0
 	beq.s	.loop
@@ -568,7 +566,7 @@ GameSetUp_3	;93 setoptions.IncItem: add d2 to option d7 (d2 = 0: only limit it) 
 	cmp.w	#4,d7
 	beq.w	j_NewPO
 	rts
-WrapOption	;93 setoptions .iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from GameSetUp_3
+WrapOption	;iilimit: d3 + d2, wrapped into d5 ... d4-1. Called from GameSetUp_3
 	add.w	d2,d3
 	cmp.w	d5,d3
 	bge.w	.0
@@ -579,7 +577,7 @@ WrapOption	;93 setoptions .iilimit: d3 + d2, wrapped into d5 ... d4-1. Called fr
 	blt.w	rtsSetup
 	move.w	d5,d3
 	rts
-PrintOptions	;93 setoptions .ps: limit each option (GameSetUp_3 with d2 = 0) and print the lines shown (GameSetUp_4), the scroll marks (PrintScrollMarks),
+PrintOptions	;ps: limit each option (GameSetUp_3 with d2 = 0) and print the lines shown (GameSetUp_4), the scroll marks (PrintScrollMarks)
 	;the team bitmaps (DrawMatchupBitmaps) and, unless a player card is up, reset the card timer (ResetCardTimer). Called from FixModeOptions
 	move.w	d7,d6
 	moveq	#-2,d7
@@ -663,7 +661,7 @@ PrintScrollMarks	;Print the scroll marks at x 2: '}' at row $19 when more lines 
 ScrollUpTxt	String	'{'	;Scroll marks for PrintScrollMarks
 ScrollDownTxt	String	'}'
 ScrollClearTxt	String	' '
-PrintOptTeamName	;93 setoptions .psdtp: print team name d3 of option d7 (TeamList city; 'New York Islanders' / 'New York Rangers' for teams $D / $E). Branched to from
+PrintOptTeamName	;psdtp: print team name d3 of option d7 (TeamList city; 'New York Islanders' / 'New York Rangers' for teams $D / $E).
 	;GameSetUp_4
 	move.w	(printx).w,-(sp)
 	movea.l	#BlankValueTxt,a1
@@ -690,7 +688,7 @@ IslandersTxt	String	'New York Islanders'	;Full names for the two New York teams 
 RangersTxt	String	'New York Rangers'
 BlankValueTxt	String	'                    '	;A blank value
 NATxt	String	'N/A                 '	;Per. Length in Shootout
-OptionValueOffsets	;Offsets of each option's value Strings (93 setoptions .pl). Team 1 / 2 are not read (PrintOptTeamName); User Records uses the On / Off list
+OptionValueOffsets	;Offsets of each option's value Strings. Team 1 / 2 are not read (PrintOptTeamName); User Records uses the On / Off list
 	dc.w	PlayModeValues-OptionValueOffsets,PlayersValues-OptionValueOffsets,UserRecValues-OptionValueOffsets,UserRecValues-OptionValueOffsets,PerLengthValues-OptionValueOffsets
 	dc.w	GoaliesValues-OptionValueOffsets,UserRecValues-OptionValueOffsets,PenaltiesValues-OptionValueOffsets,LineChangeValues-OptionValueOffsets
 PlayModeValues	;Play Mode: OptPlayMode 0-4
@@ -769,7 +767,7 @@ PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart f
 	bclr	#3,(sflags6).w
 	movem.l	(sp)+,d0-d1
 	rts
-OptionNames	;Option names (93 setoptions .text, which had positions); the last entry is 93 dc.w 4,0 (92 String 0)
+OptionNames	;Option names; the last entry is 93 dc.w 4,0 (92 String 0)
 	String	'Play Mode    '
 	String	'Players      '
 	String	'Team 1       '
@@ -780,7 +778,7 @@ OptionNames	;Option names (93 setoptions .text, which had positions); the last e
 	String	'Penalties    '
 	String	'Line Changes '
 	dc.w	4,0
-setoptions	;options screen display and input. 94: build the game setup screen only (93 setoptions up to the random teams): vblank
+setoptions	;options screen display and input. 94: build the game setup screen only: vblank
 	;vram maps, the TeamBitmaps+8 tiles (LoadSetupTiles), framer, small font and setup font tiles, the screen and menu bitmaps, the logo box tiles and
 	;defaultsprites2. Called from GameSetUp
 	move.l	#VBlank_SetOptions,(vbint).w
@@ -801,11 +799,11 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	jsr	(orjoy).l
 	jsr	(LoadSetupTiles).l	;TeamBitmaps+8 tiles (where 93 called AddTeamBlock)
 	move.w	d4,(framercset).w
-	movea.l	#SetupFramerMap+8,a2	;framer tiles (93 FramerMap+8)
+	movea.l	#SetupFramerMap+8,a2	;framer tiles
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$03567564,$89ABCDEF	;remap table (/ or.l, a word dropped)
 	move.w	d4,(smallfontchars).w
-	movea.l	#SmallFontMap+8,a2	;small font (93 SmallFontMap+8)
+	movea.l	#SmallFontMap+8,a2	;small font
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$0FC04567,$89ABCDEF	;remap table (/ or.l)
 	move.w	d4,(setupfontchars).w
@@ -872,7 +870,7 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	jsr	(defaultsprites2).l
 	move.w	#$28,(SortCords+OldXpos).w	;as 93
 	move.w	#$28,(SortCords+(6*SCstruct)+OldXpos).w
-	st	(tmstruct).w	;(93 hmtmstruct / awtmstruct)
+	st	(tmstruct).w
 	st	(AwShots).w
 	rts
 GameSetUp_2	;93 setoptions.top /.wait: wait up to $5460 frames (6 minutes) for a press on any pad (4 with FourWayPlay); return d1 =
@@ -949,7 +947,7 @@ GameSetUp_2	;93 setoptions.top /.wait: wait up to $5460 frames (6 minutes) for a
 	dbf	d6,.loop
 .x
 	rts
-SetupDemo	;93 setoptions .demo: no press for $5460 frames. Clear demoflag, seed RNGseed, Regular Season, Demo, line changes On,
+SetupDemo	;demo: no press for $5460 frames. Clear demoflag, seed RNGseed, Regular Season, Demo, line changes On
 	;penalties On. Falls into SetupStart. Branched to from GameSetUp
 	clr.w	(demoflag).w
 	move.w	(VDP_CNTR).l,(seed).w
@@ -958,7 +956,7 @@ SetupDemo	;93 setoptions .demo: no press for $5460 frames. Clear demoflag, seed 
 	clr.w	(OptNOP).w	;Demo
 	clr.w	(OptLine).w
 	move.w	#1,(OptPen).w	;On
-SetupStart	;93 setoptions .ex: start. Copy Goalies to both teams, set pojoy (SetPojoyMode), seed RNGseed, and keep OptLine / OptPlayMode
+SetupStart	;ex: start. Copy Goalies to both teams, set pojoy (SetPojoyMode), seed RNGseed, and keep OptLine / OptPlayMode
 	;in TmpOptLine2 / TempOptPlayMode: Auto line changes play as On with sflags7 bit 4, Shootout as Regular Season with gmode2 bit 0
 	;(ClearShootout). Then jmp MakeTree. Branched to from GameSetUp
 	move.w	(OptGoalie).w,-(sp)
@@ -993,7 +991,7 @@ CheckNOPUnused	;no xref. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effe
 	cmpi.w	#$A,(OptNOP).w
 .x
 	rts
-LoadSetupTiles	;and code. load the TeamBitmaps+8 tiles from char 2 (where 93 setoptions called AddTeamBlock), then again remapped at
+LoadSetupTiles	;and code. load the TeamBitmaps+8 tiles from char 2, then again remapped
 	;teambitmapchars.
 	;Called
 	;from setoptions

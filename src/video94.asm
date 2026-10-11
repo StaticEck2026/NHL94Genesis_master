@@ -1,9 +1,7 @@
-; $010EE0  Adapted from video93.asm: display helpers
-;	NHL 94 (retail) segment $10EE0-$11699
-;	92 Middle.Asm part 1, as 93 middle93_1.asm: remap, forceblack / forceblack2, forcefade, cramfade,
+;	NHL 94 (retail) segment
 ;	CopyPaletteToCRAM, randomd0s / randomd0, sroot, sfx, song, waitx, IntermissionLoop, waitjoy, orjoy, nodiag,
-;	ProcessInputWithRepeat, ReadJoy1-4 (94: pads 3 and 4), ReadJoy, jdtab, DoDMApro, DoDMA, DoDMA_nd2, DoFill,
-;	WaitDMA, setvram, Vmaddr. dobitmap follows at $1169A.
+;	ProcessInputWithRepeat, ReadJoy1-4, ReadJoy, jdtab, DoDMApro, DoDMA, DoDMA_nd2, DoFill
+;	WaitDMA, setvram, Vmaddr. dobitmap follows.
 ;Transcribed from lst/nhl94.bin.lst lines 44006-44864. Global names are the except CopyPaletteToCRAM
 ;ProcessInputWithRepeat, DoDMA_nd2 and IntermissionLoop (92 and), the 93 names.
 ;/ nd (inside DoDMA) are the locals.dd /.nd. ? is dmaram (? stripped).
@@ -353,7 +351,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	moveq	#$FFFFFF88,d0
 .2
 	movem.w	d0,-(sp)
-	jsr	(HandleMenuInput).w		;4EB8: target below $8000 (93 HandleMenuInput)
+	jsr	(HandleMenuInput).w		;4EB8: target below $8000
 	bne.w	.3
 	addq.w	#2,sp
 	bset	#7,d1
@@ -663,7 +661,7 @@ setvram
 	dbf	d1,.0
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
-setVram_0	;second half of 92 setVram (no fade): clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
+setVram_0	;second half of the 92 version (no fade): clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
 	;Falls in from setvram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
@@ -731,13 +729,11 @@ Vmaddr
 	andi.w	#3,d0
 	move.l	d0,Vctrl-Vdata(a0)
 	rts
-;	NHL 94 (retail) segment $1169A-$11F2B
-;	92 Middle.Asm part 2, as 93 middle93_2.asm: dobitmap, the graphics decompressor (DecompressGraphicsWithCallback,
+;	NHL 94 (retail) segment
 ;	DoDMA_clearCallbackPointer, DecompressGraphics, DecompressBytecode, jump_table, the Opcode_* handlers,
 ;	FlushOutputBuffer), xyVmMap, eraser, Framer, printz2 / printsmall and the control codes, printz / print,
 ;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber, PushNumberWidth, appendz / appstring, printbigz /
-;	printbig, the 94 PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. AddPenalty follows
-;	at $11F2C.
+;	printbig, the PrintBigChar / PutBigTile, AddSmallFont, AddFramer, AddTeamBlock. AddPenalty follows
 ;	Transcribed from lst/nhl94.bin.lst lines 44878-45933. Global names are the 93 names where 93 has the routine
 ;( unless generic, in an); printz2 keeps the that the earlier segments call (93
 ;	printsmallz). The decompressor handler and four control code labels are
@@ -824,7 +820,7 @@ DecompressGraphics	;a2 = graphics data, d4 = start char
 .done
 	movem.l	(sp)+,d0-d1/a0-a6
 	rts
-DecompressBytecode	;Unpack a0 into the 256 byte ring buffer at ThreeStars (93 DispAttribCtr)
+DecompressBytecode	;Unpack a0 into the 256 byte ring buffer at ThreeStars
 	movea.w	#(ThreeStars-M68K_RAM),a1
 	movea.w	#(ThreeStars-M68K_RAM),a3
 	movea.w	#(callbackPtr-M68K_RAM),a4
@@ -1188,7 +1184,7 @@ ControlCodeJumpTable	;printsmall control codes, indexed by -byte
 	dc.l	ControlCode_AddY		;-6: y offset
 	dc.l	ControlCode_SetFont		;-7: char set
 	dc.l	ControlCode_SetMapAndPosition		;-8: attribute, map, x, y
-ControlCode_SetMapAndPosition	;93: printsmall control code -8, next 4 bytes = attribute, map, x, y
+ControlCode_SetMapAndPosition	;the 93 version control code -8, next 4 bytes = attribute, map, x, y
 	bsr.w	ControlCode_SetAttribute
 	bsr.w	ControlCode_SetMap
 	bsr.w	ControlCode_SetX
