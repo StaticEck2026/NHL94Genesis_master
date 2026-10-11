@@ -24,7 +24,7 @@ HandleMenuInput = $7E88			;jsr (x).w
 RunArenaAnim = $FE2C8		;jsr / jmp (x).l
 updatecrowdf = $7A9E		;jsr (x).w
 
-framermap = $55B7E		;#x
+FramerMap = $55B7E		;#x
 PrintStringFromList = $13508		;bsr.w / Bcc.w
 bfasciicon = $1916A		;#x
 BigFontMap = $A9A10		;#x

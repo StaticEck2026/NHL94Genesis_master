@@ -2439,15 +2439,15 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	move.w	#$E000,(VmMap1).w
 	move.w	#6,(Map1col1).w
 	move.w	#0,d0
-	jsr	(setvram).l
+	jsr	(setVram).l
 	move	#$2500,sr
 	jsr	(orjoy).l
 	move.w	d4,(framercset).w
-	movea.l	#framermap+8,a2
+	movea.l	#FramerMap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$91234567,$89ABCDEF	;remap table
 	move.w	d4,(nameframechars).w
-	movea.l	#framermap+8,a2
+	movea.l	#FramerMap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$91234560,$89ABCDEF	;remap table
 	move.w	d4,(smallfontchars).w

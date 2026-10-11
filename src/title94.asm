@@ -777,7 +777,7 @@ newTitleScreen	;the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, Title
 	move.w	#$F800,(VSPRITES).w
 	move.w	#$FC00,(VSCRLPM).w
 	move.w	#0,d0
-	jsr	(setvram).l
+	jsr	(setVram).l
 	movea.l	#VDP_DATA,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)
 	move.w	#VDPR_WINY+$17,Vctrl-Vdata(a0)

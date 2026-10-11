@@ -1,7 +1,7 @@
 ;	Skater and goalie assignments: asswingo, asscenterd, asscentero, the
 ;	goalie code (assgoaliectrl, assgoaliecpu, ClampYPosition,
 ;	AdjustFacingDirection, goaliesave, assgoalietopuck), the breakaway code,
-;	asspuckc, chk4lc, chkpk / chkpk2, chk4shot, compshoot, chk4pass and
+;	asspuckc, chk4lc, chkpk / chkpk2, chk4shot, CompShoot, chk4pass and
 ;	EvadePC.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
@@ -1202,7 +1202,7 @@ asspuckc	;player a3 is puck handler
 .12
 	jsr	(ShootoutShootCheck).l
 	bne.w	.nodec
-	jsr	(compshoot).l
+	jsr	(CompShoot).l
 .13
 	bsr.w	chk4pass
 .nodec
@@ -1338,7 +1338,7 @@ chk4lc	;see if computer should call line change
 	bsr.w	CompLine
 	bsr.w	setpersonel
 	bsr.w	printscores1
-	bra.w	compshoot
+	bra.w	CompShoot
 ; return z flag set if killing penalty
 ; return z flag clr if not
 chkpk
@@ -1370,11 +1370,11 @@ chk4shot
 	beq.w	.cmphome
 	move.w	#$FFA8,d0	;bottom blue line Y pos
 	cmp.w	Ypos(a3),d0
-	blt.w	compshoot	;clear puck
+	blt.w	CompShoot	;clear puck
 	bra.w	.0
 .cmphome
 	cmp.w	Ypos(a3),d0
-	bgt.w	compshoot	;clear puck
+	bgt.w	CompShoot	;clear puck
 .0
 	bset	#3,(sflags5).w
 	jmp	dopass
@@ -1399,7 +1399,7 @@ chk4shot
 	add.w	facedir(a3),d0
 	andi.w	#7,d0
 	move.w	d0,facedir(a3)
-	bra.w	compshoot
+	bra.w	CompShoot
 .npk
 	moveq	#$20,d4
 	clr.w	d1
@@ -1474,7 +1474,7 @@ chk4shot
 	bmi.w	rtss2
 	btst	#sf2offsig,(sflags2).w
 	bne.w	rtss2
-compshoot	;computer shot: drop the return address and aim from the puck's distance to the goal line
+CompShoot	;computer shot: drop the return address and aim from the puck's distance to the goal line
 	addq.w	#4,sp
 	move.w	(pucky).w,d0
 	btst	#7,pflags(a3)
@@ -4086,7 +4086,7 @@ GetHot
 	clr.w	d1	;clear d1
 	tst.w	frame(a0)	;$6 = frame
 	ble.w	.ex	;branch if <= 0
-	movea.l	#Hotlist,a1	;move Hotlist address into a1
+	movea.l	#HotList,a1	;move HotList address into a1
 	move.w	frame(a0),d0	;move frame into d0
 	add.w	d0,d0	;double d0
 	move.b	1(a1,d0.w),d1	;SprStrHot Y byte

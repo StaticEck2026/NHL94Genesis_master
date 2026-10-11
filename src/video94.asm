@@ -1,7 +1,7 @@
 ;	remap, forceblack, forcefade, cramfade, CopyPaletteToCRAM, randomd0s /
 ;	randomd0, sroot, sfx, song, waitx, waitxsr, waitjoy, orjoy, nodiag,
 ;	ProcessInputWithRepeat, ReadJoy1-4, ReadJoy, jdtab, DoDMApro, DoDMA,
-;	DoDMA_nd2, DoFill, WaitDMA, setvram and Vmaddr.
+;	DoDMA_nd2, DoFill, WaitDMA, setVram and Vmaddr.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 
@@ -649,7 +649,7 @@ WaitDMA	;wait for dma completion
 	bne.s	WaitDMA
 	rts
 ; d0 = color to fade to
-setvram
+setVram
 	movea.w	#(palfadenew-M68K_RAM),a0
 	moveq	#$3F,d1
 .0
@@ -658,7 +658,7 @@ setvram
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
 setVram_0	;second half of setVram without the fade: clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
-	;Falls in from setvram, called from EASportsScreen and HiScoreScreen
+	;Falls in from setVram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
 	move.w	#VDPR_AUTOINC+$02,(VDP_CTRL).l
@@ -1058,7 +1058,7 @@ Framer
 	movem.w	d0-d1,-(sp)
 	move.w	(printa).w,d2
 	add.w	(framercset).w,d2
-	movea.l	#framermap,a1
+	movea.l	#FramerMap,a1
 	adda.l	4(a1),a1
 	addq.w	#4,a1
 	clr.w	d4
@@ -1584,7 +1584,7 @@ AddSmallFont	;transfer smallfont.map tiles to vram. d4 = char to start tiles at,
 	movea.l	#SmallFontMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
 AddFramer	;transfer framer.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
-	movea.l	#framermap+8,a2
+	movea.l	#FramerMap+8,a2
 	move.w	d4,(framercset).w
 	bra.w	DoDMA_clearCallbackPointer
 AddTeamBlock	;transfer TeamBlocks.map tiles to vram at char 2. Return d4 = end of tiles + 1. Goes through DecompressGraphics

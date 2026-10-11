@@ -1860,7 +1860,7 @@ SetupScreen	;Common start of the stats screens: blank, 40 cell mode, the framer 
 	move.w	(sp)+,(disflags).w
 	bclr	#1,(disflags).w
 	move.w	(framercset).w,d4
-	movea.l	#framermap+8,a2
+	movea.l	#FramerMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
 	dc.l	$91234567,$89ABCDEF	;remap table
 	move.w	(smallfontchars).w,d4

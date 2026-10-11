@@ -789,7 +789,7 @@ setoptions	;options screen display: build the game setup screen only: vblank
 	move.w	#$E000,(VmMap1).w
 	move.w	#6,(Map1col1).w
 	move.w	#0,d0	;fade to color
-	jsr	(setvram).l
+	jsr	(setVram).l
 	jsr	(orjoy).l
 	jsr	(LoadSetupTiles).l	;TeamBitmaps+8 tiles 
 	move.w	d4,(framercset).w

@@ -84,7 +84,7 @@ RefsMap = $5C408		;#x at $EFC6
 FaceOffSprites = $A78AE		;#x at $FB2C
 
 AddPenalty = $11F2C		;bsr.w / Bcc.w
-Hotlist = $A44C8			;#x
+HotList = $A44C8			;#x
 Sweepcheck = $C0AE		;bsr.w / Bcc.w
 getpde = $1575A			;bsr.w / Bcc.w
 setpde = $1577A			;bsr.w / Bcc.w

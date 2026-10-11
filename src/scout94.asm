@@ -97,7 +97,7 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	move.w	#6,(Map1col1).w
 	move.w	#6,(Map2col1).w
 	move.w	#0,d0	;fade to color
-	jsr	(setvram).l
+	jsr	(setVram).l
 	move.w	#2,d4	;vram chars from 2
 	move.w	d4,(homepicchars).w	;home picture chars (6 x 6)
 	addi.w	#$24,d4
@@ -112,7 +112,7 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	movea.l	#SmallFontMap+8,a2	;small font tiles (as AddSmallFont), remapped
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$0A234567,$89ABCDEF	;remap table
-	movea.l	#framermap+8,a2	;framer tiles (as AddFramer), remapped
+	movea.l	#FramerMap+8,a2	;framer tiles (as AddFramer), remapped
 	move.w	d4,(framercset).w
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$05422561,$89ABCDEF	;remap table

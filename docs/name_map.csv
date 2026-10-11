@@ -31,3 +31,7 @@ TXS_ALL,CC_SetMapAndPosition,93G
 .bad,VDPErrorSetup,earlier rename (source comment)
 .fill,VRAMWriteLoop,earlier rename (source comment)
 .halt,Halt,earlier rename (source comment)
+compshoot,CompShoot,92G
+Hotlist,HotList,92G/93G spelling
+setvram,setVram,92G
+framermap,FramerMap,92G

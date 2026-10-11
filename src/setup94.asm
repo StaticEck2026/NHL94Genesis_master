@@ -24,7 +24,7 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	move.w	#5,(Map3col1).w
 	move.w	#$FC00,(VSCRLPM).w
 	moveq	#0,d0
-	bsr.w	setvram
+	bsr.w	setVram
 	bclr	#sfpz,(sflags).w	;sfpz
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;dfng
@@ -807,7 +807,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.w	#$E000,(VmMap1).w
 	move.w	#7,(Map1col1).w
 	move.w	#0,d0
-	bsr.w	setvram
+	bsr.w	setVram
 	bsr.w	printz
 	String	-TXMAP1,0,0
 	move.l	#$80,d0

@@ -29,10 +29,10 @@ TitleImg		;the title on newTitleScreen
 ScoutMap		;the ScoutingReport and PlayoffScreen background
 	incbin	..\Extracted\NHL94\Graphics\Scouting94.map.jim
 	even
-framermap		;Framer
+FramerMap		;Framer
 	incbin	..\Extracted\NHL94\Graphics\Framer.map.jim
 	even
-;framermap+8: the framer tiles (AddFramer, ScoutingReport)
+;FramerMap+8: the framer tiles (AddFramer, ScoutingReport)
 FaceOffMap		;: puckfaceoff2
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.map.jim
 	even
@@ -59,8 +59,8 @@ Spritetiles		;the sprite tiles (+$A; addframe2 adds the frame tile offset
 frameSprData
 	incbin	..\Extracted\NHL94\Graphics\frameSprData.bin
 	even
-Hotlist		;the hot spot byte pair of each frame
-	incbin	..\Extracted\NHL94\Graphics\Hotlist.bin
+HotList		;the hot spot byte pair of each frame
+	incbin	..\Extracted\NHL94\Graphics\HotList.bin
 	even
 CrowdFrameList		;showcrowd
 	incbin	..\Extracted\NHL94\Graphics\Crowd.anim
