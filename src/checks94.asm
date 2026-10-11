@@ -363,7 +363,7 @@ assgoaliectrl
 assgoaliecpu
 	btst	#3,pflags(a3)	;is goalie joystick controlled?
 	bne.w	assgoaliectrl	;branch if so
-checkanim	;a local of assgoaliecpu. Global here: assgoaliectrl branches to it
+checkanim	;Goalie animation check; assgoaliectrl branches here too
 	move.w	(puckx).w,(TmpPuckX).w
 	btst	#0,(sflags4).w	;test bit 0
 	beq.w	.assstart
@@ -1029,7 +1029,7 @@ breakaway	;puck carrier a3 on a breakaway: beep on a new assignment and check th
 .yvel0
 	move.w	#$FFFF,d1
 	bra.s	.exit
-BreakawayOffsidesFlagSet	;on a new assignment clear the offsides and breakaway bits of a3, then test a3's Ypos against the goal line
+BreakawayOffsidesFlagSet	;On a new assignment clear the offsides and breakaway bits of a3. Behind the goal line or not yet in the attack zone set pf3oside, else end the assignment
 	btst	#1,pflags(a3)	;check for new assignment
 	beq.w	.loadYpos	;branch if no new assignment
 	bclr	#pf3oside,pflags3(a3)	;clear player offsides flag

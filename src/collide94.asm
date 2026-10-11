@@ -1618,7 +1618,7 @@ wallcoll	;d0 = cosine, d1 = sine of angle of incidence with wall, a3 = object. B
 	addq.w	#4,sp
 	movem.l	(sp)+,d2-d3
 	rts
-checkpuckcoll_sfx	;(a local of wallcoll in, entered from checkpuckcoll; a global so it does not clash with sfx). Puck in the air: sfx 5 once when sflags4 bit 2 is set
+checkpuckcoll_sfx	;Entered from checkpuckcoll. Puck in the air: sfx 5 once when sflags4 bit 2 is set
 	bclr	#2,(sflags4).w
 	beq.w	rtss2
 	move.w	#5,-(sp)

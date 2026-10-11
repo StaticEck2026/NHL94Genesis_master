@@ -263,7 +263,7 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	addi.w	#$96,(crowdlevel).w
 rtss15
 	rts
-doinput_cbut	;Global: doinput branches here across the global rtss15
+doinput_cbut	;C button (bit 5): hold / release handling for a3, then doinput_chkanim
 	btst	#5,d1
 	bne.w	.2
 	btst	#5,d3
@@ -386,7 +386,7 @@ ClampTargetY	;clamp the target y d1 for player a3 (d0 cleared when a3 has the pu
 	;10 SPA offsets, unreferenced: SPAgglover, SPAgglovel, SPAgstackr, SPAgstackl
 	;SPAgstickr, SPAgstickl, then the newer tables SPAghighr, SPAghighl, SPAgstick2r, SPAgstick2l
 	dc.w	$0146,$0178,$0250,$02A2,$01EC,$021E,$148E,$14C0,$14F2,$1544
-doinput_chkanim	;Global: doinput branches here across ClampTargetY
+doinput_chkanim	;Nothing while a3's animation runs (pflags2 bit 1); else skate a3 (doplayeracc)
 	btst	#1,pflags2(a3)
 	beq.w	.0
 	rts
@@ -430,7 +430,7 @@ doinput_chkanim	;Global: doinput branches here across ClampTargetY
 	bne.w	rtss15
 	move.w	(TempWord1).w,d0
 	bra.w	doplayeracc
-doinput_onetimer	;Global: doinput branches here across doinput_chkanim
+doinput_onetimer	;a3 is set for a one-timer: C (bit 5) starts the one-timer shot, else skate
 	move.w	(TempWord1).w,d0
 	btst	#pf3onetimer,pflags3(a3)
 	bne.w	rtss7
@@ -460,7 +460,7 @@ doinput_onetimer	;Global: doinput branches here across doinput_chkanim
 	jsr	(assreplace).l
 	move.w	(sp)+,d0
 	rts
-doinput_ispc	;Global: doinput branches here across doinput_onetimer
+doinput_ispc	;a3 has the puck: pass mode, shot mode, or start a pass / shot by the buttons
 	bsr.w	checkob
 	tst.w	position(a3)
 	bne.w	.0
@@ -524,7 +524,7 @@ doinput_ispc	;Global: doinput branches here across doinput_onetimer
 	beq.w	doplayeracc
 	jsr	(CountButtonPress).l
 	bra.w	SetShotMode
-doinput_islocked	;Global: doinput branches here across doinput_ispc
+doinput_islocked	;a3 is locked in an animation: B (bit 4) changes the controlled player
 	move.w	(puckc).w,d5
 	cmp.w	SCnum(a3),d5
 	beq.w	rtss15
@@ -551,7 +551,7 @@ rtss7
 	rts
 ; Find goalie SCnum, store in d0
 ; If no goalie, store FFFF in d0
-getGoalieSCnum
+getGoalieSCnum	;d0 = SCnum of the goalie in the 6 sort objects up to object d0, -1 if none
 	movem.l	d1/a0,-(sp)
 	movea.l	#SortCords,a0
 	asl.w	#7,d0

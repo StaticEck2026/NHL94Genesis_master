@@ -269,7 +269,7 @@ assepen
 	bra.w	assexit
 ; moves the goalie not being used during shootout/pen shot off the screen
 ; a3 = goalie who is to be taken off ice
-assgoaliebreakwait	;(asstab entry)
+assgoaliebreakwait	;asstab entry. In a shootout or penalty shot park the idle goalie off the ice, else exit
 	btst	#5,pflags(a3)	;check if animation locked
 	bne.w	.exit	;exit if so
 	btst	#2,(BA_PS_flags).w	;check if pen shot
