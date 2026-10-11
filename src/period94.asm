@@ -48,7 +48,7 @@ EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skater
 	dbf	d2,.loop
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ClampPositionBox	;nothing calls it (it as data). Clamp $44 / $46(a3) to the box for position $34(a3) in PositionBoxes (PositionBoxesTop when bit 7 of
+ClampPositionBox	;Unreferenced. Clamp $44 / $46(a3) to the box for position $34(a3) in PositionBoxes (PositionBoxesTop when bit 7 of
 	;$62(a3), the top net)
 	movem.l	d0-d7/a0,-(sp)
 	move.w	position(a3),d7
@@ -230,7 +230,7 @@ PrintPlayerNameRight	;Print the name of player d0 of team a2 (FormatPlayerName),
 	jsr	(HotColdIcon).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-SkipNameNumber	;nothing calls it (it as data). a1 = the FormatPlayerNameWithAttrib String without its first 2 characters (the length word moved up 2)
+SkipNameNumber	;Unreferenced. A1 = the FormatPlayerNameWithAttrib String without its first 2 characters (the length word moved up 2)
 	movem.l	d0-d7/a0/a2-a3,-(sp)
 	jsr	(FormatPlayerNameWithAttrib).l
 	move.w	(a1),d0
@@ -737,7 +737,7 @@ TeamStatTextTblNoPen	;The rows without the power play ones, used when penalties 
 	dc.w	$14,$12
 rtsStatTables	;rts after the stat tables (GameStatisticsScreen scroll step)
 	rts
-updatePPTeamTime	;(and comments). one more second of power play time ($352 of the team struct) for the team on the power play
+updatePPTeamTime	;One more second of power play time ($352 of the team struct) for the team on the power play
 	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime
 	btst	#5,(sflags2).w	;check if PP
 	beq.w	.x	;branch if not

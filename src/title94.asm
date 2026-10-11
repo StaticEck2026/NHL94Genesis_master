@@ -97,7 +97,7 @@ ClearWinRecords	;Clear bytes 8-$B of the 8 ThreeStars records and write the $80 
 	jsr	(MakeSRAMChecksum).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PSandSOpassdir	;(and comments). penalty shot / shootout: passdir = sopathdir (the end of the skate path, NextPathPoint), turned by
+PSandSOpassdir	;Penalty shot / shootout: passdir = sopathdir (the end of the skate path, NextPathPoint), turned by
 	;passdirlist for the bottom net. Called from shotdiradj
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(sopathdir).w,d0
@@ -495,7 +495,7 @@ GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8
 	dbf	d1,.loop
 	movem.l	(sp)+,d1-d7/a0-a6
 	rts
-getFgtbyte	;(and comments). Called from setInjuryType
+getFgtbyte	;d0 = fighting byte of a2 / 4. Called from setInjuryType
 	clr.w	d0	;clear d0
 	move.b	fighting(a2),d0	;move H/F bit into d0 (this is always even)
 	lsr.w	#2,d0	;shift 2 right (divide by 4)
@@ -641,7 +641,7 @@ CountButtonPress	;Not in gmode bit 0: add 1 to homepresses (awaypresses for d4),
 .x
 	movem.l	(sp)+,d1-d7/a0
 	rts
-TerminateLogName	;nothing calls it (it as data). The GetLogName String at lognametext, ended with 0 at namelength and its length word made even
+TerminateLogName	;Unreferenced. The GetLogName String at lognametext, ended with 0 at namelength and its length word made even
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#lognametext,a1
 	bsr.w	GetLogName
@@ -701,7 +701,7 @@ SetSflags8Bit1	;Always sets sflags8 bit 1 (the bclr is skipped). Called from upd
 	bset	#1,(sflags8).w	;set bit 1 of sflags8
 .ex
 	rts
-AttribAdjust	;(and comments). an attribute under $32 becomes d0 / 2 + $19. Called from AttribRating, PrintOverallRating and PrintMatchupRatings
+AttribAdjust	;An attribute under $32 becomes d0 / 2 + $19. Called from AttribRating, PrintOverallRating and PrintMatchupRatings
 	cmp.w	#$32,d0	;'2'   ; compare $32 to d0
 	bge.w	.exit	;branch if greater than
 	asr.w	#1,d0	;divide by 2
@@ -728,7 +728,7 @@ PuckComingToward	;nothing calls it. Z clear when the puck is within $1E of playe
 .x
 	movem.w	(sp)+,d0-d1
 	rts
-ReadGoaliePulled	;(and comments). Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
+ReadGoaliePulled	;Z clear when the team of a3 pulled its goalie ($26 of the team struct). Called from doshot
 	;assdefo, asspuckc and assnearest
 	movem.l	a1,-(sp)
 	movea.l	#tmstruct,a1
@@ -1130,9 +1130,9 @@ ClearPenalties	;Clear the penalties: PBnum, Penaltytimer, Pencntdwn, PenBuf and 
 	bsr.w	clrTmPdst
 	movem.l	(sp)+,d0/a0
 	rts
-clrTmPdst	;(and comments).
+clrTmPdst	;Put all 26 players of team struct a0 on the bench (tmpdst -2), then the end word -1
 	move.w	#$19,d0	;19 = 25 decimal (max roster size)
-	adda.w	#$66,a0	;'f'   ; Starting at (C734-home, CA98-away) and decrementing
+	adda.w	#$66,a0	;tmpdst
 .loop
 	move.w	#$FFFE,(a0)+	;-2 = bench
 	dbf	d0,.loop
@@ -1196,7 +1196,7 @@ HotColdIcon	;The icon by the name of player iconplayer of team a2 at x iconx, y 
 .x
 	movem.l	(sp)+,d0/a0-a1
 	rts
-chgplayer	;(and comments). the pad d4 takes the nearest free skater to where the puck is going (not a goalie, not locked or
+chgplayer	;The pad d4 takes the nearest free skater to where the puck is going (not a goalie, not locked or
 	;unavailable; in a penalty shot / shootout only BA_Sktr_SCnum or BA_Goalie_SCnum), or sweep checks when it is the same one. Called from
 	;changeplayer
 	btst	#6,(sflags5).w	;Check bit 6. This is never set anywhere

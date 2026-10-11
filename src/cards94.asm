@@ -27,7 +27,7 @@ wallcollduringcheck	;during a check, a skater a2 (not a goalie) near the wall: t
 	movem.l	(sp)+,d0-d7
 .end
 	rts
-setSlotBit	;(and comments). sflags6 bit 5 (the slot) = the puck carrier is in the slot in front of the goal. Called from DoGameFrame
+setSlotBit	;Sflags6 bit 5 (the slot) = the puck carrier is in the slot in front of the goal. Called from DoGameFrame
 	bclr	#5,(sflags6).w	;clears Slot Bit
 	tst.w	(puckc).w
 	bmi.w	.ex	;exit if no puckc
@@ -1939,7 +1939,7 @@ LinePosNames	;Position names; an empty String ends the list
 	String	'C   '
 	String	'RW  '
 	dc.w	2
-CalcAttrib	;(and comments). the overall rating of player d0: his attributes weighted by OvrPlayerWgtList (skaters) or
+CalcAttrib	;The overall rating of player d0: his attributes weighted by OvrPlayerWgtList (skaters) or
 	;OvrGoalWgtList (goalies), and by AttribWgtList. Called from getNameandAttrib and PrintOverallRating
 	move.l	a6,-(sp)	;push a6 to stack
 	clr.w	(OvrDivisor).w

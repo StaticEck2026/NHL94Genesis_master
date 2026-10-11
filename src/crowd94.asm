@@ -14,7 +14,7 @@ LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (clrCrowd
 	move.w	d0,(CrowdRecord).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-Crowd_Noise	;(Crowd_Noise?). the crowd meter each frame: crowd noise on / off (sflags5 bit 7) from CwdExciteLvl against
+Crowd_Noise	;The crowd meter each frame: crowd noise on / off (sflags5 bit 7) from CwdExciteLvl against
 	;CrowdRecord / CrowdAvg, and every $14 ticks CurCrowdMeter (sqrt(level * 4) + 65 dB) and CrowdPeak. Called from setvideo
 	btst	#7,(sflags).w	;screen is in horizontal mode
 	bne.w	.ex1
@@ -75,7 +75,7 @@ Crowd_Noise	;(Crowd_Noise?). the crowd meter each frame: crowd noise on / off (s
 	movem.l	(sp)+,d0-d7/a0-a6
 .ex1
 	rts
-stopna2	; Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goalieacc
+stopna2	;Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goalieacc
 	tst.w	Xvel(a3)
 	bpl.w	.xp
 	addi.w	#$7D0,Xvel(a3)
@@ -97,7 +97,7 @@ stopna2	; Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goa
 	clr.w	Yvel(a3)
 .ex
 	rts
-checkcornercoll94	;(and). 210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
+checkcornercoll94	;210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
 	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to Called from
 	;wallcollduringcheck.
 	bclr	#pf3wall,pflags3(a3)	;clear the wall collision bit
@@ -173,7 +173,7 @@ checkcornercoll94	;(and). 210 = blue line to the end of the rink, corner radius 
 	rts
 cornercollb94	;Thunk: jmp wallcollb
 	jmp	wallcollb
-Create_HotCold_Table	;(and comments). fill the hot / cold table at $1A2 of team struct a0 with 416 random values (-9 ... 8
+Create_HotCold_Table	;Fill the hot / cold table at $1A2 of team struct a0 with 416 random values (-9 ... 8
 	;randomd0s). Called from StartGame and ScoutingReport
 	movem.l	d0-d7,-(sp)
 	move.w	#$19F,d1	;$19F = 415. Loop will run 416 times.
@@ -199,7 +199,7 @@ Clamp0to100	;unused: clamp d3 to 0 ... 100
 	move.w	#$64,d3
 .x
 	rts
-AttributeCalc	;(and comments). attribute d3 of player a3 * 5 plus his hot / cold value / 3, limited to 0 ... $1E. Called from setplayer
+AttributeCalc	;Attribute d3 of player a3 * 5 plus his hot / cold value / 3, limited to 0 ... $1E. Called from setplayer
 	movem.l	d0-d2/a1,-(sp)
 	move.w	(TempWord2).w,d1	;BF14 goes to d1
 	movea.l	#tmstruct,a1	;Start of Home Team struct

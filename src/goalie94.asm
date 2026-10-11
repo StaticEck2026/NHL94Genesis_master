@@ -158,7 +158,7 @@ ArenaFrames7	;ArenaAnims frame list: (frame, time) byte pairs, $FF loops, $FE en
 ArenaFrames8	;ArenaAnims frame list: (frame, time) byte pairs, $FF loops, $FE ends
 	dc.b	1,$A,2,$A,3,$A,4,$A,5,$A,6,$A,7,$A,8,$A
 	dc.b	9,$A,$A,$A,$B,$A,$C,$A,$D,$A,$E,$A,$F,$7F,$FE,0
-SetCameraTop	;nothing calls it (it as data). sflags bit 6, xc1 = 0, yc1 = $160
+SetCameraTop	;Unreferenced. Sflags bit 6, xc1 = 0, yc1 = $160
 	bset	#6,(sflags).w
 	move.w	#0,(xc1).w
 	move.w	#$160,(yc1).w

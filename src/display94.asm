@@ -109,7 +109,7 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 	jsr	(AddArenaAnimSprite).l
 	bsr.w	showcrowd
 	bsr.w	showref
-	jsr	(Crowd_Noise).l	;(?)
+	jsr	(Crowd_Noise).l
 	cmpa.w	#(Satt-M68K_RAM),a6	;no sprites: one blank sprite
 	bne.w	.n
 	clr.l	(a6)+

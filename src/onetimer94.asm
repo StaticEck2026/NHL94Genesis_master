@@ -175,7 +175,7 @@ OneTimerFarTbl	;OneTimerTarget target offsets (x, y) by facing, receiver far fro
 OneTimerGoalieTbl	;OneTimerTarget target offsets (x, y) by facing, goalie
 	dc.w	$FFFB,$FFF7,$32,$FFF7,$32,$FFF7,$32,$FFF7
 	dc.w	$FFFB,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7
-assonetimer	;(and comments). assignment $23 (asstab), player a3 shooting a one-timer: take control of him
+assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take control of him
 	;(setc1player / setc2player, also for pads 3 and 4), start the animation (setonetimeranim), then shoot when the puck arrives (EndOneTimer)
 	bclr	#1,pflags(a3)	;pfna - clear new assignment
 	beq.w	.checkxpos	;branch if not new assignment
@@ -434,7 +434,7 @@ PuckOnAttackHalf	;d0 = 1 when the puck is on the half of the goal player a3 shoo
 .ex
 	movem.w	(sp)+,d0-d1
 	rts
-onetimershot	;(and comments). do the one-timer shot (doshot), credit the last two passers as the assists, add to crowdlevel /
+onetimershot	;Do the one-timer shot (doshot), credit the last two passers as the assists, add to crowdlevel /
 	;CwdExciteLvl and to the one-timer attempts ($35C of the team struct). Called from puckstick
 	move.w	#4,(passdir).w
 	jsr	(doshot).l
