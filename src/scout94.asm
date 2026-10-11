@@ -88,7 +88,7 @@ ScoutingReport	;93 name. 94 pregame MATCHUPS screen, called from Opening2. Draws
 	jsr	(ReadNameLog).l	;read the $80 byte SRAM name list at $DA0 to $FFD45A
 	jsr	(BuildHotColdLists).l	;hot / cold players for the text (not matched yet)
 	clr.w	(advframe).w	;advantage mark frame
-	move.w	#SONG_SCOUTING,-(sp)	;song $7A (93 $37)
+	move.w	#SngScout,-(sp)	;song $7A (93 $37)
 	jsr	(song).l
 	move.l	#vb2,(vbint).w
 	jsr	(clearTeamStats).l

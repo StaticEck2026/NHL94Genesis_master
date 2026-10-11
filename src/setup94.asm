@@ -755,7 +755,7 @@ IntermissionStart	;93 name; 93 IDA _sp. PeriodOver tail: reset the clock, song $
 	cmp.w	(vcount).w,d0
 	beq.s	.loop2
 	move.w	(sp)+,d0
-	move.w	#SONG_EOG,-(sp)
+	move.w	#SngEOG,-(sp)
 	bsr.w	song
 	bsr.w	UpdateScores
 	cmpi.w	#4,(gsp).w
@@ -775,7 +775,7 @@ GameOver	;IDA name (92 name). EncodePW (save the password), then in playoff mode
 .po
 	bsr.w	PlayoffScreen
 ExitToOpening	;93 name. Song $78, then restart at Opening2. Also jumped to from demoread (hockey94_01) and NextShooter
-	move.w	#SONG_TITLE,-(sp)
+	move.w	#SngTitle,-(sp)
 	bsr.w	song
 	bra.w	Opening2
 Opening	;title screen (newTitleScreen), then into Opening2. Jumped to from Begin (hockey94_01)
@@ -917,7 +917,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;IDA decoded the text as code
 .nopage
 	move.w	#$18,(palcount).w	;IDA hid this after the string (bcs.w / ori.b)
-	move.w	#SONG_EOG,-(sp)
+	move.w	#SngEOG,-(sp)
 	bsr.w	song
 	clr.w	d0
 	clr.w	d4

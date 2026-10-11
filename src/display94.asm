@@ -42,7 +42,7 @@ VBlank	;93 name; 93 IDA VBlank_org. Main vblank code for game play (vbint target
 	bgt.w	.c
 	cmpi.w	#$3C,(gameclock).w	;60
 	blt.w	.c
-	move.w	#SFX_BEEP2,-(sp)	;SFXbeep2, played when gameclock reaches 60
+	move.w	#SFXbeep2,-(sp)	;SFXbeep2, played when gameclock reaches 60
 	bsr.w	sfx
 .c
 	addq.w	#1,(vcount).w	;92 Vcount
@@ -94,7 +94,7 @@ SetScroll2	;93 name; 93 IDA DoScroller. Write Hscroll / Vscroll to the vdp. Call
 	addq.w	#2,d0
 	bsr.w	Vmaddr
 	move.w	(Hscroll).w,(a0)
-	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)	;vsram write, address 2
+	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)	;vsram write, address 2
 	move.w	(Vscroll).w,(a0)
 	rts
 setvideo	;this is not vblank code but sets up ram for vblank transfers. Called once per game frame (DoGameFrame, PauseMode, ...). 94 adds AddArenaAnimSprite and Crowd_Noise

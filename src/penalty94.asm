@@ -495,7 +495,7 @@ Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot fro
 	clr.w	(Pencntdwn).w
 	bset	#gmpen,(gmode).w	;gmpen
 	jsr	(play_new_song).l	;94 only
-	move.w	#SFX_WHISTLE,-(sp)	;whistle (92 SFXwhistle = 10)
+	move.w	#SFXwhistle,-(sp)	;whistle (92 SFXwhistle = 10)
 	bsr.w	sfx
 	move.w	#$A,d0	;whistle (92 PenWhistle = $26)
 	bra.w	SetPA
@@ -1776,8 +1776,8 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	bsr.w	setupice_highlight	;93 setupice_highlight
 	bsr.w	ClrHor
 	movea.l	#VDP_DATA,a0
-	move.w	#VDPR_WINX,vdpctrl(a0)	;window H position 0
-	move.w	#VDPR_WINY,vdpctrl(a0)	;window V position 0
+	move.w	#VDPR_WINX,Vctrl-Vdata(a0)	;window H position 0
+	move.w	#VDPR_WINY,Vctrl-Vdata(a0)	;window V position 0
 	move.w	(ExtraChars).w,d4	;ref cam chars
 	movea.l	#RefsMap+8,a2	;93 RefsMap+8
 	bsr.w	DoDMA_clearCallbackPointer
@@ -1853,7 +1853,7 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	jsr	(SetupPauseScreen).w	;pause menu screen
 	jsr	(DrawMenuScreen).w	;93 DrawMenuScreen
 	move.w	#$18,(palcount).w
-	move.w	#SONG_EOG,-(sp)	;song $79 (93 $36)
+	move.w	#SngEOG,-(sp)	;song $79 (93 $36)
 	bsr.w	song
 	movem.l	(sp),d0-d7/a0-a6
 	move.w	#4,8(a0)	;gsper: OT

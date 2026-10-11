@@ -378,10 +378,11 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 
 ## Readability equates and macros (audit 2026-10)
 
-- Player struct fields: `stubinc/equals.inc` adds `pflags3` ($64) with bit names `pf3offs`/`pf3break`/`pf3gctrl`/`pf3onetimer`/`pf3wall`/`pf3fall`, and `aggress` ($73), `fighting` ($74), `checking` ($75). Write player struct offsets on a2/a3 as these names (`pflags3(a3)`, `nopuck+1(a3)`) rather than `$64(a3)`.
-- VDP: `stubinc/ports.inc` adds `vdpctrl` (= VDP_CTRL-VDP_DATA, 4) for `4(a0)` with a0 = VDP_DATA, and `VDPR_MODE1` ... `VDPR_DMASRCH` ($8000-$9700) register write words: `move.w #VDPR_WINY+$1C,vdpctrl(a0)`. SNASM: use `+`, not `|`.
+- Player struct fields: `stubinc/equals.inc` adds `pflags3` ($64) with bit names `pf3oside`/`pf3break`/`pf3gctrl`/`pf3onetimer`/`pf3wall`/`pf3fall`, and `aggress` ($73), `fighting` ($74), `checking` ($75). Write player struct offsets on a2/a3 as these names (`pflags3(a3)`, `nopuck+1(a3)`) rather than `$64(a3)`.
+- VDP: `stubinc/ports.inc` adds `Vctrl-Vdata` (= VDP_CTRL-VDP_DATA, 4) for `4(a0)` with a0 = VDP_DATA, and `VDPR_MODE1` ... `VDPR_DMASRCH` ($8000-$9700) register write words: `move.w #VDPR_WINY+$1C,Vctrl-Vdata(a0)`. SNASM: use `+`, not `|`.
 - Text codes: `stubinc/equals.inc` adds `TXMAP1-3`, `TXHF`, `TXVF`, `TXPAL1-3`, `TXPRI` for the print/printz/printbigz position byte (`String -(TXPRI+TXMAP1),x,y,...`) and `TXS_MAP` ... `TXS_ALL` ($FF-$F8) for printsmall/printz2 control codes (`String TXS_X,4,TXS_Y,2,...`). Inline Strings after jsr printz/printz2/printbigz use them; tables read by other routines keep raw bytes.
 - Sound: `stubinc/equals.inc` adds `SFX_*` game sound numbers (0-$2F, 92/93 names; +0-3 variants for pass/shot/check/puckwall/puckice) used at the sfx / song call sites.
-  94 also has `SONG_TITLE` ($78), `SONG_EOG` ($79), `SONG_SCOUTING` ($7A).
+  94 also has `SngTitle` ($78), `SngEOG` ($79), `SngScout` ($7A).
 - Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
-- VDP commands: `ports.inc` adds `VRAM_W`, `CRAM_W`, `VSRAM_W` (long control words; add `(addr&$3FFF)<<16 + addr>>14`): `move.l #VSRAM_W+(2<<16),vdpctrl(a0)`.
+- VDP commands: `ports.inc` adds `VRAM_W`, `CRAM_W`, `VSRAM_W` (long control words; add `(addr&$3FFF)<<16 + addr>>14`): `move.l #VSRAM_W+(2<<16),Vctrl-Vdata(a0)`.
+- Original names: where NHL92Genesis `src/ram.asm` (EA original source) has a name it is used: `pflags3`, `pf3oside`, `aggress`, `SFXsiren` ... `SFXoooh` (92 names, 94 values), `SngTitle`, `SngEOG`, `Vdata` / `Vctrl` (`Vctrl-Vdata(a0)`). Names 92 lacks follow its style (`SFXhomewin`, `SFX0D`, `SngScout`).

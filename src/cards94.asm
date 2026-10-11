@@ -1265,9 +1265,9 @@ PlayerCards	;93 has no counterpart. "Player Cards" menu item (hockey94_11 menu l
 	move.w	(VSPRITES).w,d0
 	jsr	(Vmaddr).l
 	move.l	#0,(a0)
-	move.w	#VDPR_MODE4+$81,vdpctrl(a0)
+	move.w	#VDPR_MODE4+$81,Vctrl-Vdata(a0)
 	move.w	#6,(Map3col1).w
-	move.w	#VDPR_HSCROLL,vdpctrl(a0)
+	move.w	#VDPR_HSCROLL,Vctrl-Vdata(a0)
 	clr.w	d0
 	jsr	(Vmaddr).l
 	move.l	#0,(a0)

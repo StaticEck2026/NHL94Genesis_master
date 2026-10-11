@@ -934,7 +934,7 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 	bset	#2,pflags2(a2)	;set player unavailable
 	addi.w	#$12C,(crowdlevel).w
 	addi.w	#$1E,(CwdExciteLvl).w
-	move.w	#SFX_0D,-(sp)	;sound effect
+	move.w	#SFX0D,-(sp)	;sound effect
 	bsr.w	sfx
 	move.w	(a2),(xc1).w	;move Xpos to scroll center
 	move.w	Ypos(a2),(yc1).w	;move Ypos to scroll center
@@ -1234,7 +1234,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	cmp.w	(vcount).w,d0	;wait for the next vblank
 	beq.s	.loop
 	move.w	(sp)+,d0
-	move.w	#SFX_SIREN,-(sp)	;SFXsiren (92 same, 0)
+	move.w	#SFXsiren,-(sp)	;SFXsiren (92 same, 0)
 	bsr.w	sfx
 	jsr	(freezewindow).l
 	addi.w	#$1F4,(crowdlevel).w	;add 500 (92 800)
@@ -1516,7 +1516,7 @@ wallcollb	;IDA: wallcollb2. 93 name. Check for puck over wall. a3 = object, d0/d
 	move.w	#$1078,d1
 	bsr.w	SetSPA
 	movea.l	(sp)+,a3
-	move.w	#SFX_0E,-(sp)
+	move.w	#SFX0E,-(sp)
 	bsr.w	sfx
 	addi.w	#$258,(crowdlevel).w
 	addi.w	#$F,(CwdExciteLvl).w
@@ -1600,7 +1600,7 @@ wallcoll	;d0 = cosine, d1 = sine of angle of incidence with wall, a3 = object. B
 	bgt.w	.nosfx
 	cmpi.w	#$A,impact(a3)	;impact(a3)
 	blt.w	.nosfx
-	move.w	#SFX_PLAYERWALL,-(sp)	;#SFXplayerwall
+	move.w	#SFXplayerwall,-(sp)	;#SFXplayerwall
 	bsr.w	sfx
 .nosfx
 	asr.w	#2,d2
@@ -1900,7 +1900,7 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	move.w	(puckc).w,d0	;move puckc into d0
 	cmp.w	SCnum(a2),d0	;compare SCnum to d0
 	beq.w	.exit	;branch if equal
-	move.w	#SFX_SHOTWIFF,-(sp)	;sound
+	move.w	#SFXshotwiff,-(sp)	;sound
 	bsr.w	sfx
 	bra.w	.exit
 ;	NHL 94 (retail) segment $150E4-$15D99
@@ -1996,7 +1996,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	bclr	#sfspdir,(sflags).w	;clear pass dir mode
 	bclr	#sfssdir,(sflags).w	;clear shot dir mode
 .stdef
-	move.w	#SFX_STDEF,-(sp)	;#SFXstdef
+	move.w	#SFXstdef,-(sp)	;#SFXstdef
 	bsr.w	sfx
 	bsr.w	a2touchpuck	;deflect (93 .stdef falls into deflect)
 	bra.w	deflect
@@ -2149,7 +2149,7 @@ puckbody	;puck hits player a2. a3 = puck, d0 = distance^2 (from checkpuckcoll .c
 	bne.w	rtss2
 .hit
 	bsr.w	a2touchpuck
-	move.w	#SFX_PUCKBODY,-(sp)	;SFXpuckbody
+	move.w	#SFXpuckbody,-(sp)	;SFXpuckbody
 	bsr.w	sfx
 	clr.w	Zvel(a3)
 	move.b	#8,nopuck(a2)
@@ -2249,7 +2249,7 @@ puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save 
 .song
 	bsr.w	song
 .nosong
-	move.w	#SFX_PUCKBODY,-(sp)	;#SFXpuckbody
+	move.w	#SFXpuckbody,-(sp)	;#SFXpuckbody
 	bsr.w	sfx
 	move.w	(puckc).w,d2	;move puckc into d2
 	bmi.w	.chkanim	;branch if no puckc

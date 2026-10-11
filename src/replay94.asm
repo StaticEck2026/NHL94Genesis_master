@@ -853,7 +853,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	cmp.w	(puckc).w,d0	;check if player has puck
 	beq.w	.top3	;branch if puck carrier
 	bclr	#pf3break,pflags3(a3)	;clear breakaway bit
-	bclr	#pf3offs,pflags3(a3)	;clear offsides bit
+	bclr	#pf3oside,pflags3(a3)	;clear offsides bit
 .top3
 	bsr.w	updateanim
 	sub.b	d7,nopuck(a3)	;no puck control

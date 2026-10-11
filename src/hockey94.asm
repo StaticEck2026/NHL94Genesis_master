@@ -312,7 +312,7 @@ clockcont	;monitor period clock and initiate various clock activated events
 	bne.w	rtss8
 	bset	#3,(disflags).w		;dfclock: clock needs update
 	jsr	(play_new_song).l
-	move.w	#SFX_HORN,-(sp)		;horn
+	move.w	#SFXhorn,-(sp)		;horn
 	jsr	(sfx).l
 	bsr.w	freezewindow
 clockcont_0	;End of period. Also entered from puckfaceoff+B2
@@ -462,8 +462,8 @@ Pausemode	;IDA: PauseMode. Game is in pause mode now
 	bra.w	.hor
 .clr	jsr	(ClrHor).l
 .hor	movea.l	#VDP_DATA,a0
-	move.w	#VDPR_WINX,vdpctrl(a0)
-	move.w	#VDPR_WINY,vdpctrl(a0)
+	move.w	#VDPR_WINX,Vctrl-Vdata(a0)
+	move.w	#VDPR_WINY,Vctrl-Vdata(a0)
 	bset	#dfclock,(disflags).w		;dfclock: clock needs update
 	bclr	#sfpz,(sflags).w		;sfpz
 	jsr	(PrintScores1).l
@@ -477,8 +477,8 @@ Pausemode	;IDA: PauseMode. Game is in pause mode now
 SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
 	;also called from $13780
 	movea.l	#VDP_DATA,a0
-	move.w	#VDPR_WINX,vdpctrl(a0)		;playfield 3 width
-	move.w	#VDPR_WINY+$1C,vdpctrl(a0)		;playfield 3 height
+	move.w	#VDPR_WINX,Vctrl-Vdata(a0)		;playfield 3 width
+	move.w	#VDPR_WINY+$1C,Vctrl-Vdata(a0)		;playfield 3 height
 	jsr	(SetHor).l
 	jsr	(setvideo).l
 	jsr	(KillCrowd).l

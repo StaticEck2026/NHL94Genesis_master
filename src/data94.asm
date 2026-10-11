@@ -818,7 +818,7 @@ DisplayPeriodOver	;93 name. End of game Stars of the Game box. Called from Updat
 .1
 	sub.w	(AwGoals).w,d0
 	ble.w	.nosong
-	move.w	#SFX_HOMEWIN,-(sp)	;song $F: home team won
+	move.w	#SFXhomewin,-(sp)	;song $F: home team won
 	jsr	(song).l
 .nosong
 	movem.l	(sp)+,d0-d5/a0-a4
@@ -1323,10 +1323,10 @@ crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs fr
 	movea.w	#(mesarea-M68K_RAM),a1
 	bsr.w	printbig
 	movea.l	#VDP_DATA,a0
-	move.w	#VDPR_WINX,vdpctrl(a0)
-	move.w	#VDPR_WINY+$06,vdpctrl(a0)
-	move.w	#VDPR_AUTOINC+$02,vdpctrl(a0)
-	move.l	#CRAM_W+($20<<16),vdpctrl(a0)	;cram write $20 (92 $C0060000)
+	move.w	#VDPR_WINX,Vctrl-Vdata(a0)
+	move.w	#VDPR_WINY+$06,Vctrl-Vdata(a0)
+	move.w	#VDPR_AUTOINC+$02,Vctrl-Vdata(a0)
+	move.l	#CRAM_W+($20<<16),Vctrl-Vdata(a0)	;cram write $20 (92 $C0060000)
 	movea.l	#Rinktilelist,a1
 	adda.l	(a1),a1
 	adda.w	#$20,a1

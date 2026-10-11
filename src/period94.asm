@@ -509,7 +509,7 @@ SetStatScroll	;Plane A vertical scroll (VSRAM 0) = VertLineScrolling - $50, with
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movea.l	#VDP_DATA,a0
-	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)
+	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FFB0,d0
 	add.w	(VertLineScrolling).w,d0
 	move.w	d0,(a0)

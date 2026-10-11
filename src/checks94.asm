@@ -383,7 +383,7 @@ checkanim	;IDA: _checkanim, a local of assgoaliecpu. Global here: assgoaliectrl 
 	cmpi.w	#$2C8,6(a3)	;compare to alice frame number
 	bne.w	.assstart	;branch if not equal
 	bset	#3,(sflags4).w	;set bit 3
-	move.w	#SFX_CHECK,-(sp)	;SFX
+	move.w	#SFXcheck,-(sp)	;SFX
 	bsr.w	sfx
 	bra.w	.assstart	;set bit 3
 .0
@@ -1012,7 +1012,7 @@ breakaway
 	bset	#2,(sflags5).w
 	bclr	#1,pflags(a3)	;pfna - clear new assignment
 	beq.w	.nna	;jump if no new assignment
-	move.w	#SFX_BEEP1,-(sp)	;ding SFX
+	move.w	#SFXbeep1,-(sp)	;ding SFX
 	jsr	(sfx).l
 	movem.l	a2,-(sp)	;push a2 on stack
 	movea.l	#HmShots,a2	;move Home Team Struct into a2
@@ -1039,7 +1039,7 @@ breakaway
 BreakawayOffsidesFlagSet
 	btst	#1,pflags(a3)	;check for new assignment
 	beq.w	.loadYpos	;branch if no new assignment
-	bclr	#pf3offs,pflags3(a3)	;clear player offsides flag
+	bclr	#pf3oside,pflags3(a3)	;clear player offsides flag
 	bclr	#pf3break,pflags3(a3)	;clear player breakaway flag
 .loadYpos
 	movem.w	d0-d1/a0,-(sp)
@@ -1062,10 +1062,10 @@ BreakawayOffsidesFlagSet
 	cmp.w	d1,d0	;compare Ypos to blue line Y
 	blt.w	.offzone	;branch if in offensive zone
 .setoffside
-	bset	#pf3offs,pflags3(a3)	;set offsides flag
+	bset	#pf3oside,pflags3(a3)	;set offsides flag
 	bra.w	.nogood
 .offzone
-	bclr	#pf3offs,pflags3(a3)	;clear offside bit
+	bclr	#pf3oside,pflags3(a3)	;clear offside bit
 	beq.w	.nogood	;branch if on the blue line
 	movea.l	#SortCords+(11*SCstruct),a0	;loads last SCScruct player struct (Away pos #6)
 	move.w	#$B,d0	;B = # of player structs to check (12)
@@ -1146,7 +1146,7 @@ asspuckc
 	beq.w	.7
 	btst	#pf3break,pflags3(a3)
 	beq.w	.4
-	move.w	#SFX_BEEP1,-(sp)
+	move.w	#SFXbeep1,-(sp)
 	jsr	(sfx).l
 .4
 	btst	#pf3break,pflags3(a3)
@@ -1745,7 +1745,7 @@ assnearest
 	beq.w	.nna
 	btst	#pf3break,pflags3(a3)	;check if breakaway
 	beq.w	.chkbreak2	;jump if not
-	move.w	#SFX_BEEP1,-(sp)	;ding SFX
+	move.w	#SFXbeep1,-(sp)	;ding SFX
 	jsr	(sfx).l
 .chkbreak2
 	btst	#pf3break,pflags3(a3)	;check if breakaway
@@ -3368,7 +3368,7 @@ updatefaceoff
 	move.w	#$7FF,d2
 	bra.w	eraser
 Endfaceoff
-	move.w	#SFX_PUCKICE+3,-(sp)
+	move.w	#SFXpuckice+3,-(sp)
 	bsr.w	sfx
 	bclr	#sf2faceoff,(sflags2).w
 	move.w	#$3C,(holdreset).w
