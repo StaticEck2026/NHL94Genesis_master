@@ -31,7 +31,7 @@ SetMenuPrintX	;printx = the left edge of the menu box: 5 in 32 column mode, else
 	addq.w	#4,(printx).w
 	rts
 HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the selection, C runs the item's handler and
-	;redraws the menu (94: not if the handler set sflags5 bit 1). Returns eq to leave the menu (start, or C on item 0), ne to stay. Called
+	;redraws the menu (not if the handler set sflags5 bit 1). Returns eq to leave the menu (start, or C on item 0), ne to stay. Called
 	;from PauseMode, and the stats code
 	btst	#7,d1	;sbut
 	bne.w	.flip	;start: Z clear, flipped to eq
@@ -103,7 +103,7 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 	movea.l	(menulist).w,a1
 	jsr	(printsmall).l	;the menu title
 	jsr	(printsmallz).l	;clear the 4 item rows
-	dc.w	$0026	;String length, 36 bytes: too many for the macro (as 93). / move.l / btst
+	dc.w	$0026	;String length, 36 bytes: too many for the macro
 	dc.b	$FB,$01,$20,$FB,$FF,$FA,$01,$20,$FB,$FF,$FA,$01
 	dc.b	$20,$FB,$FF,$FA,$01,$20,$FB,$12,$20,$FB,$FF,$FA
 	dc.b	$FF,$20,$FB,$FF,$FA,$FF,$20,$FB,$FF,$FA,$FF,$20
@@ -174,8 +174,8 @@ PrintMenuItem	;Print menu item a1 and step a1 past it. An item whose text starts
 	String	'  Manual Goalie   '	;no label
 .auto
 	String	'   Auto Goalie    '	;no label
-PrintTeamData	;Copy 2 rows of 11 map words (93 12) from TeamBlockMap+d0 (93 $FFC210) to printx / printy, then printx += 11
-	;(93 12). Saves d0-d2/a0-a1. Called from PrintTeamLogoAndScore and the stats code
+PrintTeamData	;Copy 2 rows of 11 map words from TeamBlockMap+d0 to printx / printy, then printx += 11.
+	;Saves d0-d2/a0-a1. Called from PrintTeamLogoAndScore and the stats code
 	movem.l	d0-d2/a0-a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;dfng: don't int graphics
@@ -184,7 +184,7 @@ PrintTeamData	;Copy 2 rows of 11 map words (93 12) from TeamBlockMap+d0 (93 $FFC
 	moveq	#1,d2	;2 rows
 .0
 	jsr	(xyVmMap).l
-	move.w	#$A,d1	;11 words (93 moveq #$B)
+	move.w	#$A,d1	;11 words
 .1
 	move.w	(a1)+,(a0)
 	dbf	d1,.1
@@ -195,7 +195,7 @@ PrintTeamData	;Copy 2 rows of 11 map words (93 12) from TeamBlockMap+d0 (93 $FFC
 	move.w	(sp)+,(disflags).w
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-vcountwait	;and comment: waits till vcount changes, then resyncs vcount. Saves d0. 94 reads oldvcount twice. Called from PauseMode, and the stats code
+vcountwait	;wait till vcount changes, then resync vcount. Saves d0. Reads oldvcount twice. Called from PauseMode, and the stats code
 	move.w	d0,-(sp)
 	move.w	(oldvcount).w,d0
 	move.w	(oldvcount).w,d0

@@ -11,7 +11,7 @@
 ;	Bits: disflags 0 dfok, 1 df32c, 2 dfng; sflags 0 sfpz, 1 sfpj, 7 sfhor; gmode 1 gmdir.
 
 setupice	;set all variables, send non purgeable graphics, build sprite frame lists for ice rink. Called from StartGame and StartPer.
-	;Decompresses the tile sets with DoDMA_clearCallbackPointer / DecompressGraphicsWithCallback. 94 loads RevRinkTiles in a reverse angle replay
+	;Decompresses the tile sets with DoDMA_clearCallbackPointer / DecompressGraphicsWithCallback. Loads RevRinkTiles in a reverse angle replay
 	;(sflags4 bit 4) and calls LoadHomeTeamGfx
 	movem.l	d0-d7/a0-a6,-(sp)
 	bset	#df32c,(disflags).w	;df32c
@@ -62,11 +62,11 @@ setupice	;set all variables, send non purgeable graphics, build sprite frame lis
 	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
-	dc.l	$43434567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
+	dc.l	$43434567,$89ABCDEF	;remap table
 	move.w	d4,(BigFontChars).w
 	movea.l	#BigFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
-	dc.l	$71234567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
+	dc.l	$71234567,$89ABCDEF	;remap table
 	bsr.w	setupTeamBlocksMap
 	move.w	d4,(ExtraChars).w
 	btst	#gmdir,(gmode).w	;gmdir: flip pfgoal for the 12 players
@@ -184,7 +184,7 @@ setupEASNmap	;Decompress the easn logo tiles (EASNmap+8) to vram at EASNcset. Ca
 	move.w	(EASNcset).w,d4
 	movea.l	#EASNmap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
-	dc.l	$71234567,$89ABCDEF	;remap table (d4,-$3211(a3); the first long)
+	dc.l	$71234567,$89ABCDEF	;remap table
 	rts
 ReloadEnergyBarTiles	;Reload the energy bar tiles (EnergyBarMap+8) at energybarchars. Called from the replay code and ReloadRinkGraphics
 	move.w	(energybarchars).w,d4
@@ -210,7 +210,7 @@ ReloadFaceOffMap	;Reload the FaceOffMap+8 tiles at ExtraChars. Called from the r
 	move.w	(ExtraChars).w,d4
 	movea.l	#FaceOffMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-setupTeamBlocksMap	;Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C (93 $30) and copy the home and visitor team
+setupTeamBlocksMap	;Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C and copy the home and visitor team
 	;blocks to vram at basetileoffset and basetileoffset+$16. d4 = 1st vram char; return d4 = basetileoffset+$2C. Called from setupice
 	move.w	d4,(basetileoffset).w
 	addi.w	#$2C,d4
@@ -233,7 +233,7 @@ setupTeamBlocksMap	;Load the TeamBlocks map tiles (Teamblocksmap) at d4+$2C (93 
 	move.w	(basetileoffset).w,d4
 	addi.w	#$2C,d4
 	rts
-CopyTeamBlockMapData	;Copy one team's 22 block chars (94; 93 24) from the loaded tile set to vram at d1 by vram dma
+CopyTeamBlockMapData	;Copy one team's 22 block chars from the loaded tile set to vram at d1 by vram dma
 	;(DoDMA_nd2), and store their map words at (a1)+. a0 = map data, d0 = team, d1 = vram address
 	mulu.w	#$2C,d0
 	lea	4(a0,d0.w),a0
@@ -670,7 +670,7 @@ setteams	;Use hometeam/visteam to set team structures (InitTeamSructure for each
 	movem.l	(sp)+,d0/a0-a2
 	rts
 InitTeamSructure	;Set up team struct a2 for team d0: store the team number at $28, the team data address
-	;at $1E (tmdata), and copy the line sets to $16A (94: two layouts by OptLine)
+	;at $1E (tmdata), and copy the line sets to $16A (two layouts by OptLine)
 	move.w	d0,Xvel(a2)
 	movea.w	#$30E,a0	;TeamList
 	asl.w	#2,d0
@@ -810,13 +810,13 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	setvram
 	bsr.w	printz
 	String	-TXMAP1,0,0
-	move.l	#$80,d0		;in the string (ori.b x3)
+	move.l	#$80,d0
 	moveq	#$1C,d1
 	move.w	#$7FF,d2
 	bsr.w	eraser
 	bsr.w	printz
 	String	-TXMAP3,0,0
-	moveq	#$28,d0		;in the string (ori.b x2)
+	moveq	#$28,d0
 	moveq	#2,d1
 	move.w	#$7FF,d2
 	bsr.w	eraser
@@ -827,7 +827,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	DoDMA_clearCallbackPointer
 	bsr.w	printz
 	String	-(TXPAL3+TXMAP2),0,0
-	movea.l	#ScoutMap,a0	;in the string (ori.b x3)
+	movea.l	#ScoutMap,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -864,7 +864,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 .top
 	bsr.w	printz
 	String	-TXMAP1,0,0
-	move.b	(a0)+,(printx+1).w	;these three in the string (ori.b x2, cmp.b x2)
+	move.b	(a0)+,(printx+1).w
 	move.b	(a0)+,(printy+1).w
 	clr.w	d1
 	move.b	(a1)+,d1
@@ -876,14 +876,14 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 .top2
 	bsr.w	printz
 	String	-TXMAP1,0,2
-	move.b	(a0)+,(printx+1).w	;these two in the string (ori.b / andi.b / cmp.b)
+	move.b	(a0)+,(printx+1).w
 	clr.w	d0
 	move.b	(a0)+,d0
 	bsr.w	DrawPlayoffBracket
 	dbf	d4,.top2
 	bsr.w	printz
 	String	-(TXPAL1+TXMAP1),0,0
-	cmpi.w	#7,(bosgames).w	;in the string (ori.b x3). Best of 7
+	cmpi.w	#7,(bosgames).w	;best of 7
 	beq.w	.noscr
 	clr.w	d4
 	move.b	(a0)+,d4
@@ -897,7 +897,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	dbf	d4,.top3
 .noscr
 	bsr.w	printsmallz
-	String	CC_SetMapAndPosition,1,1,$41,$1A	;/ bchg / move.b
+	String	CC_SetMapAndPosition,1,1,$41,$1A
 	lea	PlayoffScreenText(pc),a1
 	move.w	(gamelevel).w,d0
 	bsr.w	AdvanceStringPtr
@@ -910,7 +910,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	printz
 	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;the text as code
 .nopage
-	move.w	#$18,(palcount).w	;after the string (bcs.w / ori.b)
+	move.w	#$18,(palcount).w	;after the string
 	move.w	#SngEOG,-(sp)
 	bsr.w	song
 	clr.w	d0
@@ -1035,7 +1035,7 @@ DrawTeamBlocks	;Draw team block d1 (team*2) from the TeamBlocks map (Teamblocksm
 	bsr.w	dobitmap
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-PlayoffScreenDataTable	;93 it undecoded. The PlayoffScreen vblank handler (vbint): dma the sprite table, write
+PlayoffScreenDataTable	;the PlayoffScreen vblank handler (vbint): dma the sprite table, write
 	;$FEA0+DispAttribCtr to the hscroll, cramfade. Always vcount+1, p_music_vblank, rte
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w

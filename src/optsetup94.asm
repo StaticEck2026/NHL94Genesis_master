@@ -19,7 +19,7 @@
 ;	5 C pressed, 6 / 7 home / visitors logo shown. Pad bits: ubut 0, dbut 1, lbut 2, rbut 3, cbut 5, sbut 7.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $BF map 1 + priority).
 
-GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
+GameSetUp	;game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
 	;right change the option (GameSetUp_3) and redraw (FixModeOptions), start begins the game (SetupStart), and $5460 frames without a
 	;press start a demo (SetupDemo).
 	jsr	(ReadLineData).l
@@ -34,7 +34,7 @@ GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (seto
 	clr.w	(setupfirstline).w	;first menu line shown
 	clr.w	(setupprevline).w
 	bsr.w	PrintOptionNames	;option names
-	tst.w	(demoflag).w	;clear after a demo (93 .keep)
+	tst.w	(demoflag).w	;clear after a demo
 	bne.w	.shootout	;keep the teams
 	moveq	#$1C,d0
 	jsr	(randomd0).l
@@ -214,7 +214,7 @@ GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (seto
 .23
 	tst.w	(sp)+
 	bra.w	.25	;redraw
-	move.w	(sp)+,d0	;no xref: an older copy of the team block update above
+	move.w	(sp)+,d0	;unreferenced: an older copy of the team block update above
 	cmp.w	(VisTeam).w,d0
 	beq.w	.25
 	move.w	(VisTeam).w,(logoteam).w
@@ -238,12 +238,12 @@ GameSetUp	;94 game setup screen, called from PeriodOver. Builds the screen (seto
 .25
 	bsr.w	FixModeOptions
 	bra.w	.loop
-	rts	;no xref
+	rts	;unreferenced
 j_NewPO	;New playoffs: jmp NewPO. Called from GameSetUp and GameSetUp_3
 	jmp	NewPO
 GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs. Called from GameSetUp
 	jmp	ContinuePlayoffs
-MoveMenuFrame	;nms: move the menu frame by d0 (+2 / -2 lines). 94 shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
+MoveMenuFrame	;move the menu frame by d0 (+2 / -2 lines). Shows 6 of the 9 lines and scrolls: setupfirstline = first line shown
 	;(0-3), setupprevline = the one before (sflags5 bit 2 set on a scroll; FixModeOptions reprints the names when they differ). Continue playoffs
 	;skips lines 1-3, new playoffs line 3 (Team 2). The old frame is erased by redrawing the SetupMenuMap background under it. Called from GameSetUp
 	move.w	d7,d3
@@ -346,7 +346,7 @@ SetMenuArea	;Set the menu area for MoveMenuFrame: printx $10, printy $E, d0 = 23
 	move.w	#$17,d0
 	move.w	#$D,d1
 	rts
-SetFrameRectUnused	;no xref. An unused copy of SetFrameRect without its printz that uses setupprevline and stops at row $18
+SetFrameRectUnused	;An unused copy of SetFrameRect without its printz that uses setupprevline and stops at row $18
 	add.w	d3,(printy).w
 	move.w	(setupprevline).w,d0
 	add.w	d0,d0
@@ -365,7 +365,7 @@ SetFrameRectUnused	;no xref. An unused copy of SetFrameRect without its printz t
 	bne.w	rtsSetup
 	moveq	#5,d1
 	rts
-SetFrameRect	;setrect: frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs (93 22 x 3 / 5).
+SetFrameRect	;setrect: frame position for line d3 (row $E + d3 - setupfirstline * 2), 23 x 3, or 23 x 5 for Team 1 in new playoffs.
 	;MoveMenuFrame
 	jsr	(printz).l
 	String	-TXMAP1,$10,$E	;(and dropped a word)
@@ -421,7 +421,7 @@ OptionLimits	;Number of values of each option
 	dc.w	5,8,$1C,$1C,3,2,2,3,3
 OptionLimits4Way	;The same with FourWayPlay (12 player choices)
 	dc.w	5,$C,$1C,$1C,3,2,2,3,3
-GameSetUp_3	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). 94: entering Shootout saves User Records, Penalties and
+GameSetUp_3	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). Entering Shootout saves User Records, Penalties and
 	;Line Changes (TmpOptUserRec ...), leaving restores them; Team 1 in new playoffs has $1A teams; the Players range depends on the mode and
 	;FourWayPlay. A new play mode starts the playoffs (ContinuePlayoffs / j_NewPO). Called from GameSetUp and PrintOptions
 	tst.w	d7
@@ -599,7 +599,7 @@ PrintOptions	;ps: limit each option (GameSetUp_3 with d2 = 0) and print the line
 GameSetUp_4	;print the value of option d7 at x $11 on its line (past row $1B: nothing). Team 1 / 2 go to PrintOptTeamName Per. Length in
 	;Shootout prints 'N/A'; Players with FourWayPlay uses the second list (+$B0). Called from PrintOptions
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),$11,$10	;/ move.b d0,d0
+	String	-(TXPRI+TXMAP1),$11,$10
 	move.w	(setupfirstline).w,d0
 	add.w	d0,d0
 	sub.w	d0,(printy).w
@@ -720,18 +720,18 @@ PerLengthValues	;Per. Length
 GoaliesValues	;Goalies
 	String	'Manual Control      '
 	String	'Auto Control        '
-PenaltiesValues	;Penalties (93 'Off, Except fighting', 'On', 'On, Except Off-sides')
+PenaltiesValues	;Penalties option values
 	String	'Off                 '
 	String	'On                  '
 	String	'On, Except Off-sides'
 UserRecValues	;User Records, and the unread Team 1 / 2 entries
 	String	'On                  '
 	String	'Off                 '
-LineChangeValues	;Line Changes (94 adds Auto)
+LineChangeValues	;Line Changes (Off, On, Auto)
 	String	'On                  '
 	String	'Off                 '
 	String	'Auto                '
-PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart from row $F - setupfirstline * 2, rows $F-$19 only (93 printed setoptions.text once).
+PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart from row $F - setupfirstline * 2, rows $F-$19 only.
 	;from
 	;GameSetUp and FixModeOptions
 	movem.l	d0-d1,-(sp)
@@ -761,7 +761,7 @@ PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart f
 	bclr	#3,(sflags6).w
 	movem.l	(sp)+,d0-d1
 	rts
-OptionNames	;Option names; the last entry is 93 dc.w 4,0 (92 String 0)
+OptionNames	;Option names; the last entry is an empty String (dc.w 4,0)
 	String	'Play Mode    '
 	String	'Players      '
 	String	'Team 1       '
@@ -772,7 +772,7 @@ OptionNames	;Option names; the last entry is 93 dc.w 4,0 (92 String 0)
 	String	'Penalties    '
 	String	'Line Changes '
 	dc.w	4,0
-setoptions	;options screen display and input. 94: build the game setup screen only: vblank
+setoptions	;options screen display: build the game setup screen only: vblank
 	;vram maps, the TeamBitmaps+8 tiles (LoadSetupTiles), framer, small font and setup font tiles, the screen and menu bitmaps, the logo box tiles and
 	;defaultsprites2. Called from GameSetUp
 	move.l	#VBlank_SetOptions,(vbint).w
@@ -791,7 +791,7 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	move.w	#0,d0	;fade to color
 	jsr	(setvram).l
 	jsr	(orjoy).l
-	jsr	(LoadSetupTiles).l	;TeamBitmaps+8 tiles (where 93 called AddTeamBlock)
+	jsr	(LoadSetupTiles).l	;TeamBitmaps+8 tiles 
 	move.w	d4,(framercset).w
 	movea.l	#SetupFramerMap+8,a2	;framer tiles
 	jsr	(DecompressGraphicsWithCallback).l
@@ -806,13 +806,13 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	dc.l	$01234567,$89ABCDEF	;remap table (/ or.l)
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x2
-	moveq	#$28,d0	;in the string
+	moveq	#$28,d0
 	moveq	#$1C,d1	;40 x 28
 	move.w	#$7FF,d2	;blank char
 	jsr	(eraser).l
 	jsr	(printz).l
 	String	-TXMAP2,0,0	;x3
-	movea.l	#GameSetUpMap,a0	;in the string
+	movea.l	#GameSetUpMap,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -827,7 +827,7 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	addi.w	#$24,d4
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3
-	movea.l	#GameSetUpMap2,a0	;in the string
+	movea.l	#GameSetUpMap2,a0
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -862,7 +862,7 @@ setoptions	;options screen display and input. 94: build the game setup screen on
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$03414567,$89ABCDEF	;remap table (/ or.l, a word dropped)
 	jsr	(defaultsprites2).l
-	move.w	#$28,(SortCords+OldXpos).w	;as 93
+	move.w	#$28,(SortCords+OldXpos).w
 	move.w	#$28,(SortCords+(6*SCstruct)+OldXpos).w
 	st	(tmstruct).w
 	st	(AwShots).w
@@ -973,7 +973,7 @@ SetupStart	;ex: start. Copy Goalies to both teams, set pojoy, seed RNGseed, and 
 	jsr	(ClearShootout).l
 .1
 	jmp	maketree
-CheckNOPUnused	;no xref. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effect
+CheckNOPUnused	;unreferenced. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effect
 	tst.w	(OptNOP).w
 	beq.w	.x
 	cmpi.w	#5,(OptNOP).w
@@ -997,7 +997,7 @@ LoadSetupTiles	;and code. load the TeamBitmaps+8 tiles from char 2, then again r
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$03412567,$89ABCDEF	;remap table (/ move.l / dc.b)
 	rts
-UpdateBothTeamDisplays	;An empty routine, called from GameSetUp_2 (93 bsr UpdateBothTeamDisplays). An unused rts follows
+UpdateBothTeamDisplays	;An empty routine, called from GameSetUp_2. An unused rts follows
 	rts
 	rts
 EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear both logo flags (bits 6 / 7) and erase the card: its logo
@@ -1009,7 +1009,7 @@ EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear bo
 	bclr	#7,(setupcardflags).w
 	jsr	(printz).l
 	String	-(TXPAL1+TXMAP1),0,0	;x3
-	move.w	#5,(printy).w	;in the string
+	move.w	#5,(printy).w
 	moveq	#8,d0
 	moveq	#8,d1
 	move.w	#$7FF,d2
@@ -1019,7 +1019,7 @@ EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear bo
 	jsr	(eraser).l
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3
-	move.w	#$B,(printx).w	;in the string
+	move.w	#$B,(printx).w
 	move.w	#5,(printy).w
 	move.w	#$19,d0
 	move.w	#8,d1
@@ -1032,7 +1032,7 @@ EraseCard	;If a player card is up (setupcardflags bit 0, cleared here), clear bo
 	jsr	(eraser).l
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3
-	move.w	#3,(printx).w	;in the string
+	move.w	#3,(printx).w
 	move.w	#5,(printy).w
 	move.w	#$19,d0
 	move.w	#8,d1
@@ -1052,7 +1052,7 @@ DrawHomeBlock	;Draw the home team block: the logo box and the HomeTeam logo (log
 	beq.w	.0
 	jsr	(printz).l
 	String	-(TXPAL1+TXMAP1),0,0	;x3
-	move.w	#8,(printx).w	;in the string
+	move.w	#8,(printx).w
 	move.w	#5,(printy).w
 	moveq	#8,d0
 	moveq	#8,d1
@@ -1060,7 +1060,7 @@ DrawHomeBlock	;Draw the home team block: the logo box and the HomeTeam logo (log
 .0
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3
-	move.w	#$19,(printx).w	;in the string
+	move.w	#$19,(printx).w
 	bra.w	DrawTeamLogo
 DrawVisBlock	;The same for the visitors: logo box, logo at x 9. setupcardflags bit 3, bit 7. Called from GameSetUp and GameSetUp_2
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -1072,7 +1072,7 @@ DrawVisBlock	;The same for the visitors: logo box, logo at x 9. setupcardflags b
 	beq.w	.0
 	jsr	(printz).l
 	String	-(TXPAL1+TXMAP1),0,0	;x3
-	move.w	#$18,(printx).w	;in the string
+	move.w	#$18,(printx).w
 	move.w	#5,(printy).w
 	moveq	#8,d0
 	moveq	#8,d1
@@ -1202,12 +1202,12 @@ PlayerCardTimer	;Player cards, called each frame from GameSetUp_2 in the first m
 	jmp	ResetCardTimer
 PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors on the left, else home on the right): erase the team block, a
 	;logo box, the picture of featured player featuredplayer (0-5, from the FeaturedPictures list of the team; next one after each visitors card), a
-	;framed box with the player's number and name, and with SRAM his user records (PrintRecordValue, PrintRecordHolder, PrintRecordVs; not matched yet). the
-	;routine at the last printz; the rest is with no label. Called from PlayerCardTimer
+	;framed box with the player's number and name, and with SRAM his user records (PrintRecordValue, PrintRecordHolder, PrintRecordVs).
+	;Called from PlayerCardTimer
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3
-	move.w	#$1C,(printx).w	;in the string
+	move.w	#$1C,(printx).w
 	btst	#1,(setupcardflags).w
 	bne.w	.0
 	move.w	#3,(printx).w
@@ -1219,7 +1219,7 @@ PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors
 	jsr	(eraser).l
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3
-	move.w	#3,(printx).w	;in the string
+	move.w	#3,(printx).w
 	btst	#1,(setupcardflags).w
 	bne.w	.1
 	move.w	#$B,(printx).w
@@ -1239,7 +1239,7 @@ PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors
 .3
 	jsr	(printz).l
 	String	-TXMAP1,0,0	;x3 / add.b
-	cmpi.w	#6,(featuredplayer).l	;in the string
+	cmpi.w	#6,(featuredplayer).l
 	blt.w	.4
 	clr.w	(featuredplayer).w
 .4

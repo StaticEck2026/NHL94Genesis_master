@@ -74,7 +74,7 @@ StartGame	;reset game state for a new game, then start the first period
 	jsr	(LoadCrowdRec).l
 	jmp	IntermissionStart		;on to period start
 
-ClearShotData	;Clear $E4 words at $FFD092 (93: 49 words at $FFCB0A)
+ClearShotData	;Clear $E4 words at $FFD092
 	move.w	#$E3,d0
 	movea.w	#(outputbuffer-M68K_RAM),a0
 .0	clr.w	(a0)+
@@ -84,7 +84,7 @@ ClearShotData	;Clear $E4 words at $FFD092 (93: 49 words at $FFCB0A)
 restoreteams	;Put both teams' rosters on the bench
 	movea.w	#(tmstruct-M68K_RAM),a2	;team 1
 	bsr.w	.r
-	adda.w	#tmsize,a2		;team 2 (tmsize, 93: $1A2)
+	adda.w	#tmsize,a2		;team 2
 .r	;reset one team struct (a2), falls in for team 2
 	move.w	#6,tmap(a2)		;tmap: no players in pen. box
 	moveq	#$32,d0			;(maxros-1)*2
@@ -281,7 +281,7 @@ updatecrowdf	;this is called every game loop with d7 = elapsed frames
 	addq.w	#2,(crowdstep).w
 	andi.w	#$1E,(crowdstep).w	;%00011110
 	add.w	(crowdstep).w,d0
-	movea.l	#cd0,a0			;$fftt frame/time table (92.cd0)
+	movea.l	#cd0,a0			;$fftt frame/time table
 	move.b	0(a0,d0.w),(crowdframe+1).w
 	clr.w	d1
 	move.b	1(a0,d0.w),d1
@@ -311,7 +311,7 @@ clockcont	;monitor period clock and initiate various clock activated events
 	move.w	#SFXhorn,-(sp)		;horn
 	jsr	(sfx).l
 	bsr.w	freezewindow
-clockcont_0	;End of period. Also entered from puckfaceoff+B2
+clockcont_0	;End of period. Also entered from puckfaceoff
 	movea.w	#(puckx-M68K_RAM),a3	;puck
 	move.l	#$18,d0			;pucknothing assignment
 	jsr	(assinsert).l
@@ -408,15 +408,15 @@ startpause1	;pause initiated by cont 1
 startpause2	;pause initiated by cont 2
 	clr.w	(pausepad).w
 	bset	#1,(sflags).w		;sfpj
-startpause
+startpause	;set sfpz: pause at the end of this frame
 	bset	#0,(sflags).w		;sfpz
 	rts
 
-startpause3	;pause initiated by cont 3 (4 way play). Also from doinput+A4
+startpause3	;pause initiated by cont 3 (4 way play). Also from doinput
 	move.w	#3,(pausepad).w
 	bclr	#1,(sflags).w		;sfpj
 	bra.s	startpause
-startpause4	;pause initiated by cont 4 (4 way play). Also from doinput+A8
+startpause4	;pause initiated by cont 4 (4 way play). Also from doinput
 	move.w	#4,(pausepad).w
 	bset	#1,(sflags).w		;sfpj
 	bra.s	startpause
@@ -479,7 +479,7 @@ SetupPauseScreen	;Draw routine for the pause menu.
 	jsr	(setvideo).l
 	jsr	(KillCrowd).l
 	jsr	(printsmallz).l		;erase playfield 3
-	String	CC_SetMap,3,CC_SetX,0,CC_SetY,0	;in ori.b #3,a0
+	String	CC_SetMap,3,CC_SetX,0,CC_SetY,0
 	moveq	#$20,d0			;32
 	moveq	#$1C,d1			;28
 	move.w	#$7FF,d2

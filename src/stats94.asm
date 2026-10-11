@@ -146,7 +146,7 @@ DrawScrollArrows	;ShowScores up / down arrows (ScrollArrowTable). Saves d0-d1/a1
 	jsr	(PrintStringFromList).l
 	movem.l	(sp)+,d0-d1/a1
 	rts
-ScrollArrowTable	;DrawScrollArrows Strings: none, up, down (only 3 entries, as 93)
+ScrollArrowTable	;DrawScrollArrows Strings: none, up, down (only 3 entries)
 	String	' ',$FB,$FF,$FA,$13,' ',$F9
 	String	'{',$FB,$FF,$FA,$13,' ',$F9
 	String	' ',$FB,$FF,$FA,$13,'}',$F9
@@ -401,7 +401,7 @@ DrawMenuIcon	;Line editor: draw line d5 (its name from linelist, then its player
 	jsr	(PrintStringFromList).l
 	jsr	(printsmallz).l
 	String	' Line'
-	move.w	(a0),(printx).w	;/ bcs.w / cmp.b (misaligned)
+	move.w	(a0),(printx).w	
 	move.w	d5,d4
 	asl.w	#3,d4
 	addq.w	#1,d4
@@ -442,7 +442,7 @@ ClearAttributeArea	;Line editor: erase the line area and print the position head
 	move.w	(MenuIconPosTable-6).l,(printx).l
 .0
 	jsr	(printsmallz).l
-	dc.w	$0022	;String length: too many arguments for the String macro (as 93)
+	dc.w	$0022	;String length: too many arguments for the String macro
 	dc.b	$FE,4,$FB,$FD,$FA,2,'LD',$FB,$FE,$FA,2,'RD',$FB,$FE,$FA,2,'LW',$FB,$FE,$FA,2,'C ',$FB,$FE,$FA,2,'RW'
 	rts
 DrawTeamScreen	;Line editor background: bitmap (ScoutMap), frame, "Line Editor" title and the team logo map (PrintTeamData)
@@ -484,7 +484,7 @@ ClearMenuFlags	;Clear palfadenew+$5A and palfadenew+$7A
 	clr.w	(palfadenew+$5A).w
 	clr.w	(palfadenew+$7A).w
 	rts
-	;MenuIconPosTable-6 (93 writes MenuIconPosTable-6): the line icon entry used with OptLine set (x, y, slot count - 1)
+	;MenuIconPosTable-6: the line icon entry used with OptLine set (x, y, slot count - 1)
 	dc.w	$10,$C,4
 MenuIconPosTable	;Line icons: x, y, slot count - 1 per line
 	dc.w	4,$C,4
@@ -632,7 +632,7 @@ EncodePlayerAttributes	;Reverse of DecodePlayerAttributes: pack team a2's lines 
 	jsr	(WriteLineData).l
 	movem.l	(sp)+,d0-d4/a0-a3
 	rts
-AttributeOffsetTbl	;#$898A. Line slots saved in databuffer ($FF ends)
+AttributeOffsetTbl	;Line slots saved in databuffer ($FF ends)
 	dc.b	1,2,3,4,5
 	dc.b	9,$A,$B,$C,$D
 	dc.b	$11,$12,$13,$14,$15
@@ -640,8 +640,8 @@ AttributeOffsetTbl	;#$898A. Line slots saved in databuffer ($FF ends)
 	dc.b	$21,$22,$23,$24,$25
 	dc.b	$29,$2A,$2B,$2C,$31
 	dc.b	$32,$33,$34,$FF
-TeamRosterScreen	;"Team Roster" screen for team a2: pages of players (DisplayPlayerList: goalies, then the lines), left
-	;/ right attribute column, A switches teams, start exits. Menu item handler
+TeamRosterScreen	;"Team Roster" screen for team a2: pages of players (DisplayPlayerList: goalies, then the lines),
+	;left / right attribute column, A switches teams, start exits. Menu item handler
 	moveq	#$D,d0
 	moveq	#$17,d1
 	bsr.w	SetupScreen
@@ -665,7 +665,7 @@ TeamRosterScreen	;"Team Roster" screen for team a2: pages of players (DisplayPla
 	bsr.w	PrintTeamData
 .header
 	jsr	(printsmallz).l
-	dc.w	$0034	;String length: too many arguments for the String macro (as 93)
+	dc.w	$0034	;String length: too many arguments for the String macro
 	dc.b	$F8,6,3,2,$C,$F9,1,'Pos.^Player',$FD,$1E,$FC,$C,'Rating',$FD,$C,$FC,$1A,'A^-^Switch^Teams',$F9,0
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),1,8
@@ -855,7 +855,7 @@ DisplayPlayerList	;Draw roster page SelectedPlayerIdx (0 goalies, 1-7 lines): ti
 	addq.w	#2,(printy).w
 	dbf	d1,.5
 	rts
-GoalieRowText	;#$8CAE. Position text for the goalie rows
+GoalieRowText	;Position text for the goalie rows
 	String	'G'
 	String	'G'
 	String	'G'
@@ -1657,7 +1657,7 @@ DisplayAttributeEntry	;Stats screen row d3 of Satt: rank, name, then the 5 colum
 	String	'%'
 .x
 	rts
-CheckAttributeValid	;d2 = stat column d1 for player d0. Goalies only have PIM (94: btst d1,#6 picks the columns kept)
+CheckAttributeValid	;d2 = stat column d1 for player d0. Goalies only have PIM (btst d1,#6 picks the columns kept)
 	move.w	d0,-(sp)
 	bsr.w	ReadAttributeNibble
 	move.w	d0,d2
@@ -1665,7 +1665,7 @@ CheckAttributeValid	;d2 = stat column d1 for player d0. Goalies only have PIM (9
 	cmp.w	d2,d0
 	bge.w	GetAttributeValue2
 	clr.w	d2
-	btst	d1,#6	;/ ori.b / move.b (misdecoded)
+	btst	d1,#6	;written as btst Dn,#imm
 	beq.w	rtss8
 	moveq	#1,d1
 GetAttributeValue2	;d2 = stat column d1 for player d0. d7 = 0: the team struct byte arrays (AttributeOffsetTbl2); d7 = 1: the playoff tables (GetStatsValue)
@@ -1701,7 +1701,7 @@ GetStatsValue	;d2 += word d0 of the RAM table at StatsOffsetTbl2+d1 (0 = none)
 	movea.w	0(a1,d1.w),a1
 	add.w	0(a1,d0.w),d2
 	rts
-StatsOffsetTbl2	;#$98E6. Playoff stat RAM tables per column (G, A, G+A, SOG, PIM)
+StatsOffsetTbl2	;Playoff stat RAM tables per column (G, A, G+A, SOG, PIM)
 	dc.w	$CD96,0,$CDCA,0,$CD96,$CDCA,$CDFE,0,$CE32,0
 AttributeOffsetTbl2	;Team struct byte arrays per column, same order
 	dc.w	$B4,$FFFF,$CE,$FFFF,$B4,$CE,$E8,$FFFF,$102,$FFFF
@@ -1742,8 +1742,8 @@ ScrollArrowTbl2	;None, up, down, both
 	String	'{',$FB,$FF,$FA,$C,' ',$F9
 	String	' ',$FB,$FF,$FA,$C,'}',$F9
 	String	'{',$FB,$FF,$FA,$C,'}',$F9
-CrowdMeterScreen	;"Crowd Meter": current, average and peak level (DisplayGameStats), 94 also the arena and league
-	;records; start exits. Menu item handler. 93 Game Statistics screen is not here
+CrowdMeterScreen	;"Crowd Meter": current, average and peak level (DisplayGameStats), plus the arena and league
+	;records; start exits. Menu item handler
 	moveq	#9,d0
 	moveq	#$1C,d1
 	bsr.w	SetupScreen
@@ -1766,7 +1766,7 @@ CrowdMeterScreen	;"Crowd Meter": current, average and peak level (DisplayGameSta
 	bne.w	ExitAttributeScreen2
 	bra.s	.loop
 DisplayGameStats	;Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteLvl / NumCwdExciteLvl) and MaxCwdExciteLvl
-	;in dB (FormatPercentage). 94: with save RAM (ValidSRAM) the arena record of HomeTeam and the league record, read into the buffer
+	;in dB (FormatPercentage). With save RAM (ValidSRAM) the arena record of HomeTeam and the league record, read into the buffer
 	;at ThreeStars by clrCrowdRAM (high ROM); 0 reads as $50
 	bsr.w	printsmallz
 	String	CC_SetMapAndPosition,4,2,4,$C,'Current Level',CC_SetX,$1C

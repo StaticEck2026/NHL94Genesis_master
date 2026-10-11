@@ -11,8 +11,8 @@
 ;	Replay frames are $62 bytes from M68K_RAM to replayend ($FFFFAF54); recbpr is the record
 ;	pointer. SortCords objects are $80 bytes (SCstruct).
 
-ReplayMode	;$9FD0. Instant replay play-back control and display code. Called from the pause menu.
-	;As 93: a d-pad press picks the nearest object in that direction and the camera follows it
+ReplayMode	;Instant replay play-back control and display code. Called from the pause menu.
+	;Tracking: a d-pad press picks the nearest object in that direction and the camera follows it
 	bclr	#0,(sflags5).w
 	bsr.w	forceblack
 	move.w	(disflags).w,-(sp)
@@ -304,7 +304,7 @@ getpzjoy	;read the joystick of the pad that paused. pads 3 and 4 when FourWayPla
 ShowReplayIcon	;Show the replay icon and start the $F0 frame replayicontimer timer
 	move.w	#$F0,(replayicontimer).w
 	bsr.w	printz
-	String	-(TXPRI+TXMAP3),2,2			;and moveq #$20,d0 in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2
 	moveq	#$20,d0
 	moveq	#$55,d1
 	moveq	#8,d2
@@ -321,7 +321,7 @@ ShowReplayIcon	;Show the replay icon and start the $F0 frame replayicontimer tim
 	bra.w	dobitmap
 EraseReplayIcon	;Erase the 8 x 4 replay icon (replayicontimer timer ran out)
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP3),2,2			;and the three moves in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2
 	move.w	#8,d0			;8 wide
 	move.w	#4,d1			;4 high
 	move.w	#$7FF,d2
@@ -329,7 +329,7 @@ EraseReplayIcon	;Erase the 8 x 4 replay icon (replayicontimer timer ran out)
 ShowReplayBanner	;Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
 	st	(replayicontimer).w
 	bsr.w	printz
-	String	-(TXPRI+TXMAP3),2,0			;and moveq #0,d0 in ori.b
+	String	-(TXPRI+TXMAP3),2,0
 	moveq	#0,d0
 	moveq	#0,d1
 	moveq	#$10,d2
@@ -342,7 +342,7 @@ ShowReplayBanner	;Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer t
 	bra.w	dobitmap
 EraseReplayBanner	;Erase the 16 x 11 area ShowReplayBanner drew
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP3),2,2			;and the three moves in ori.b / andi.b
+	String	-(TXPRI+TXMAP3),2,2
 	move.w	#$10,d0			;16 wide
 	move.w	#$B,d1			;11 high
 	move.w	#$7FF,d2
@@ -363,7 +363,7 @@ suba4	;a4 = current replay frame. Back up 1 frame and set video parameters for d
 	bsr.w	RestoreReplayFrame
 	clr.w	d7
 	rts
-adda4	;Step forward 1 frame. 94 first handles a reverse angle switch (sflags4 bit 6)
+adda4	;Step forward 1 frame. First handles a reverse angle switch (sflags4 bit 6)
 	bclr	#6,(sflags4).w
 	beq.w	.1
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -462,8 +462,8 @@ RevReplayAdj	;Set sflags4 bit 7 for a reverse angle replay, then fall into Resto
 	beq.w	RestoreReplayFrame	;branch if not
 	bset	#7,(sflags4).w	;set bit 7
 ; a4 = current replay frame address to convert into normal coordinates
-RestoreReplayFrame	;a4 = current replay frame address to convert into normal cordinates (92
-	;SetRCords), then the other replay variables. 94 flips x/y and frames for the reverse angle
+RestoreReplayFrame	;a4 = current replay frame address to convert into normal cordinates,
+	;then the other replay variables. Flips x/y and frames for the reverse angle
 	movem.l	d0-d2/a0/a6,-(sp)
 	movea.l	#revframetbl,a6
 	movea.l	a4,a0

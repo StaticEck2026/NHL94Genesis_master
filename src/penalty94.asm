@@ -386,7 +386,7 @@ checkfornewpen	;look for new penalty (entered thru addpenalty(2)). Stops play at
 	;have the puck, otherwise starts a delayed penalty call
 	btst	#sfhor,(sflags).w	;sfhor
 	bne.w	rtss2
-.0	;no xref
+.0	;unreferenced entry
 	movea.w	#(PenBuf-M68K_RAM),a0
 .next
 	tst.w	(a0)+
@@ -544,7 +544,7 @@ UpdatePA	;animate ref in ref window. Runs DisplayPeriodOver for game over, and t
 	move.w	#$7FFF,(penmsgtimer).w
 	bsr.w	PrintPenaltyMessagesString
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$11,$B	;/ btst d5,d0
+	String	-(TXPRI+TXMAP1),$11,$B
 	bsr.w	GetPlayerName
 	move.w	(a1),d0
 	lsr.w	#1,d0
@@ -935,7 +935,7 @@ updatepwrplay	;show graphic and time remaining for power plays. Nothing when gmo
 	movea.w	#(mesarea-M68K_RAM),a3
 	move.w	#2,(a3)
 	bsr.w	appendz
-	String	$BF,1,$19		;/ move.b d0,-(a4)
+	String	$BF,1,$19
 	adda.w	4(a0),a0	;team name
 	adda.w	(a0),a0
 	movea.l	a0,a1
@@ -978,7 +978,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 	bsr.w	SprSort
 	bsr.w	printz
 	String	-TXMAP2,0,0
-	movea.l	#HorRinkMap,a1	;in the string (ori.b x3). ; is HorRinkMap+8
+	movea.l	#HorRinkMap,a1	;tiles start at HorRinkMap+8
 	adda.l	4(a1),a1
 	movea.l	#icerinkmap,a2	;rink tiles
 	clr.w	d0
@@ -1043,16 +1043,16 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	btst	#sf3llcs,(sflags3).w	;sf3llcs: lower line change box is up
 	bne.w	.ex
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$17,$17		;/ move.b d0,-(a3)
+	String	-(TXPRI+TXMAP1),$17,$17
 	moveq	#8,d0
 	moveq	#5,d1
 	bsr.w	Framer
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$18,$1A	;home team on the lower row. / move.b d0,d5
+	String	-(TXPRI+TXMAP1),$18,$1A	;home team on the lower row
 	movea.w	#(tmstruct-M68K_RAM),a2
 	bsr.w	PrintTeamNameAndScore
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$18,$18		;/ move.b d0,d4
+	String	-(TXPRI+TXMAP1),$18,$18
 	adda.w	#tmsize,a2	;tmsize
 	bsr.w	PrintTeamNameAndScore
 .ex
@@ -1061,7 +1061,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 .sbscreen
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),$11,2
-	move.w	(gsp).w,d0	;in the string (ori.b / andi.b / and.w)
+	move.w	(gsp).w,d0
 	btst	#0,(gmode2).w
 	beq.w	.2
 	move.w	#4,d0
@@ -1074,12 +1074,12 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	bsr.w	print
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),$17,2
-	movea.w	#(tmstruct-M68K_RAM),a2	;in the string (ori.b / andi.b / mulu.w)
+	movea.w	#(tmstruct-M68K_RAM),a2
 	clr.w	d0	;home logo data offset
 	bsr.w	PrintTeamLogoAndScore
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),8,2
-	adda.w	#tmsize,a2	;tmsize. in the string (ori.b / andi.b / bchg)
+	adda.w	#tmsize,a2	;tmsize
 	move.w	#$2C,d0	;visitor logo data offset
 	bsr.w	PrintTeamLogoAndScore
 	bra.s	.ex
@@ -1118,7 +1118,7 @@ EASNLogo	;Draw the EASN logo map at x 1, y $19 on the vertical ice rink if no po
 	btst	#sf2pwrplay,(sflags2).w	;sf2pwrplay
 	bne.w	rtss2
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),1,$19		;/ move.b d0,-(a4)
+	String	-(TXPRI+TXMAP1),1,$19
 	movea.l	#EASNmap,a1
 	adda.l	4(a1),a1
 	movea.w	#$30A,a2	;no tiles
@@ -1135,11 +1135,11 @@ USBoard	;Update score board, including the players in the penalty box and their 
 	bsr.w	printscores1
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),$14,8
-	movea.w	#(tmstruct-M68K_RAM),a2	;home team. in the string (ori.b / #$7C / mulu.w)
+	movea.w	#(tmstruct-M68K_RAM),a2	;home team
 	bsr.w	.dispen
 	bsr.w	printz
 	String	-(TXPRI+TXMAP2),5,8
-	movea.w	#(AwShots-M68K_RAM),a2	;visitors., the bsr.w and the movem.l in the string (ori.b / #$7C / and.b / ori.b / d7)
+	movea.w	#(AwShots-M68K_RAM),a2	;visitors
 	bsr.w	.dispen
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
@@ -1370,7 +1370,7 @@ SetupTeamForIntermission	;Reset the bench, then for each team refill energy and 
 	move.w	#5,tmline(a3)	;PK1
 	rts
 RestoreTeamEnergy	;a2 = team: max energy (tmpde $1000) for every player. The skip needs tmpdst to be both -3 and -4, so it never happens.
-	;Called from $9DD0 / $9DDA (the menu code before ReplayMode)
+	;Called from the menu code before ReplayMode
 	moveq	#$32,d0	;(MaxRos-1)*2
 .loop
 	cmpi.w	#$FFFD,$66(a2,d0.w)
@@ -1662,11 +1662,11 @@ ClearTickerArea	;Erase the ticker box. Called from Intermission and StartHL2
 SetTickerAreaPosition	;Set printx/printy/printm for the ticker box (x 3, y $17; the $BD map in pause mode). Return d0 =
 	;$1A wide, d1 = 5 high. Called from NewTicker3pt2 and ClearTickerArea
 	bsr.w	printz
-	String	-(TXPRI+TXMAP3),3,$17		;/ move.b d0,-(a3)
+	String	-(TXPRI+TXMAP3),3,$17
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	.1
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),3,$17		;/ move.b d0,-(a3)
+	String	-(TXPRI+TXMAP1),3,$17
 .1
 	moveq	#$1A,d0
 	moveq	#5,d1

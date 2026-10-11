@@ -34,7 +34,7 @@ defmenuoptions	;default options: Regular Season, One - Home, MTL, LA, 10 Minutes
 	dc.w	1	;Line Changes
 ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue playoffs
 	;read the playoff state back from the saved bits at pwddatabuffer, rebuild the tree and set OptNOP from pojoy (
-	;= 7 - playoffroundoffset; 94 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, GameSetUp_3)
+	;= 7 - playoffroundoffset; 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, GameSetUp_3)
 	movem.l	d0-d7/a0-a3,-(sp)
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	ReadPassBits
@@ -159,7 +159,7 @@ maketree	;Make the playoff tree (potree) from playoffseats and WinBits, clear th
 	move.b	(a0)+,gst1+1(a1)
 	move.b	(a0)+,gst2+1(a1)
 	rts
-FigureJoy	;Set contteams appropriately: cont1team ... cont4team (94 adds 3 and 4 for FourWayPlay). In the playoffs
+FigureJoy	;Set contteams appropriately: cont1team ... cont4team (3 and 4 for FourWayPlay). In the playoffs
 	;(not Shootout, gmode2 bit 0) find this round's game of the po team and set the teams and pads from .pojoylist (.pojoylist2 with
 	;FourWayPlay); otherwise from .noplist by OptNOP. After a demo (demoflag clear), and outside the playoffs, fill gsstruct with random matchups
 	;(InitializeGameStructures). Called from MakeTree and GameSetUp
@@ -395,7 +395,7 @@ ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables;
 	move.w	(sp)+,(a0)+	;put the bits back
 	dbf	d0,.restore
 	rts
-EncodePW	;After a playoff game compute winners and save the bits if needed. 94 returns at once for Demo, Regular
+EncodePW	;After a playoff game compute winners and save the bits if needed. Returns at once for Demo, Regular
 	;Season and Shootout, and sets TempOptPlayMode with OptPlayMode. The bits are pwddatabuffer, saved
 	;through WriteLineData. Called from GameOver
 	tst.w	(OptNOP).w
@@ -755,7 +755,7 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 	addq.w	#1,(gamelevel).w
 	rts
 DisplayPeriodOver	;End of game Stars of the Game box. Called from UpdatePA while RefPen is the game over
-	;penalty. Waits for RefCnt <= $40 and runs once (gmode bit 7); 94 then sets disflags bit 3 and waits a vblank. Frames the box, draws a bitmap
+	;penalty. Waits for RefCnt <= $40 and runs once (gmode bit 7), then sets disflags bit 3 and waits a vblank. Frames the box, draws a bitmap
 	;from Rinktilelist, then the three best star scores (FindMaxAttributeTEam): team abbreviation and getname. Song $F when the
 	;home team won
 	cmpi.w	#$40,(RefCnt).w
@@ -777,7 +777,7 @@ DisplayPeriodOver	;End of game Stars of the Game box. Called from UpdatePA while
 	bsr.w	Framer
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),9,$10,'Stars of the Game',-(TXPRI+TXMAP1),3,$F
-	movea.l	#Rinktilelist,a1	;in the string. map at offset 4
+	movea.l	#Rinktilelist,a1	;map at offset 4
 	movea.w	#$30A,a2	;a zero long: no tiles
 	adda.l	4(a1),a1
 	moveq	#$D,d0
@@ -925,11 +925,11 @@ CalculateTeamAttributeValues	;Star scores of team a2 (a3 = other team) to (a4)+,
 	dbf	d4,.loop
 	rts
 ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset, 'Out for period', or 'Out for game'
-	;when sflags7 bit 5 is set (94), and 'the game' over 'period' when puck_pflags2 bit 0 is set. Jumped to from CheckInjury
+	;when sflags7 bit 5 is set, and 'the game' over 'period' when puck_pflags2 bit 0 is set. Jumped to from CheckInjury
 	;so global
 	movem.l	d0-d2/a0-a4,-(sp)
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$B,3	;/ btst
+	String	-(TXPRI+TXMAP1),$B,3
 	moveq	#$12,d0	;framer size
 	moveq	#5,d1
 	bsr.w	Framer
@@ -947,9 +947,9 @@ ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset, 'Out for period', o
 	btst	#pf2fight,(puck_pflags2).w
 	beq.w	.ex
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$14,6,'the game'	;/ addi.w / bsr.s
+	String	-(TXPRI+TXMAP1),$14,6,'the game'
 .ex
-	movem.l	(sp)+,d0-d2/a0-a4	;/ move.b ( in the string)
+	movem.l	(sp)+,d0-d2/a0-a4
 	rts
 PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in Shootout (bit 0) jumps to PlayoffRoundScreen
 	;instead. Otherwise: printbig 'PENALTY SHOT!', the shooter (BA_Sktr_SCnum, BA_Team), the penalty name (PenaltyList, pspenalty) and ' by' the
@@ -964,8 +964,8 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l	;d0 = -1
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),3,2	;/ andi.b
-	moveq	#$1B,d0	;in the string
+	String	-(TXPRI+TXMAP1),3,2
+	moveq	#$1B,d0
 .2
 	moveq	#8,d1
 	bsr.w	Framer
@@ -988,7 +988,7 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 	bsr.w	FormatPlayerNameWithAttrib
 	bsr.w	print
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),4,7	;/ btst
+	String	-(TXPRI+TXMAP1),4,7
 	movem.l	a1/a3,-(sp)
 	move.w	(pspenalty).w,d0
 	movea.l	#Penaltylist,a1
@@ -997,8 +997,8 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 	bsr.w	print
 	movem.l	(sp)+,a1/a3
 	bsr.w	printz
-	String	' by',-(TXPRI+TXMAP1),4,8	;/ subi.b / add.b
-	move.w	(BA_Checker_Offset).w,d0	;in the string
+	String	' by',-(TXPRI+TXMAP1),4,8
+	move.w	(BA_Checker_Offset).w,d0
 	movea.l	#AwShots,a2
 	tst.w	(BA_Team).w
 	beq.w	.7
@@ -1011,8 +1011,8 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 PenShotBigTxt	String	$BF,4,3,'PENALTY SHOT!',$BF,4,5	;printbig String for PenaltyShotBox
 DisplayPlayerAttributeMenu	;Goal box. Closes both line change boxes, then printbig 'GOAL!' ('PP GOAL!' when DelayedPen
 	;bit 0 is set, cleared here), or 'HAT TRICK!' on the scorer's third goal when the scorer's slot is at least scorergoalies (homegoalies home /
-	;awaygoalies visitors), then the scorer and up to two assists of the last goal entry (FormatPlayerName). 94 calls CountGoalies, StartArenaAnim (home
-	;hat trick), PrintPlayerGoals and PrintPlayerAssists (not matched yet); BA_PS_flags bit 2 sets sflags2 bit 2. Called from SetPA
+	;awaygoalies visitors), then the scorer and up to two assists of the last goal entry (FormatPlayerName). Calls CountGoalies, StartArenaAnim (home
+	;hat trick), PrintPlayerGoals and PrintPlayerAssists; BA_PS_flags bit 2 sets sflags2 bit 2. Called from SetPA
 	movem.l	d0-d2/a0-a4,-(sp)
 	btst	#2,(BA_PS_flags).w
 	beq.w	.0
@@ -1025,8 +1025,8 @@ DisplayPlayerAttributeMenu	;Goal box. Closes both line change boxes, then printb
 	movea.w	#(ChkCnt-M68K_RAM),a4	;+ ScoreSumbytes = last goal entry
 	adda.w	(ScoreSumbytes).w,a4
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$B,2	;/ andi.b
-	moveq	#$13,d0	;in the string
+	String	-(TXPRI+TXMAP1),$B,2
+	moveq	#$13,d0
 	move.w	#5,d1	;5 rows: no assist
 	tst.b	4(a4)
 	bmi.w	.frame
@@ -1093,7 +1093,7 @@ DisplayPlayerAttributeMenu	;Goal box. Closes both line change boxes, then printb
 	bne.w	.6	;sflags4 bit 5 set: no assists
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$E,6,'Assist by:',-(TXPRI+TXMAP1),$C,7
-	move.w	d0,-(sp)	;in the string
+	move.w	d0,-(sp)
 	bsr.w	FormatPlayerName
 	bsr.w	print
 	move.w	(sp)+,d0
@@ -1102,8 +1102,8 @@ DisplayPlayerAttributeMenu	;Goal box. Closes both line change boxes, then printb
 	move.b	5(a4),d0	;second assist
 	bmi.w	.6
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$C,8	;/ #0
-	move.w	d0,-(sp)	;in the string
+	String	-(TXPRI+TXMAP1),$C,8
+	move.w	d0,-(sp)
 	bsr.w	FormatPlayerName
 	bsr.w	print
 	move.w	(sp)+,d0
@@ -1119,7 +1119,7 @@ PPGoalBigTxt	String	$BF,$D,3,'PP GOAL!',$BF,$C,5	;The same after DelayedPen bit 
 box	;Fill a $13 x 8 rectangle at printz position $FF,$B,2 with char $7FF (eraser). Called from SetLCmode2
 	bsr.w	printz
 	String	-TXMAP1,$B,2
-	moveq	#$13,d0	;in the string
+	moveq	#$13,d0
 	moveq	#8,d1
 	move.l	#$7FF,d2
 	bra.w	eraser
@@ -1275,7 +1275,7 @@ ConverByteToDigits	;converts decimal number in d0 to ascii: two ascii digits of 
 	addi.b	#$30,d0	;'0'   ; add $30 (48 dec) to d0
 	move.b	d0,(a1)+	;move d0 into a1 and increment
 	rts
-AddError	; Address error vector; 94 has no BusError, the bus error vector also points here
+AddError	; Address error vector; the bus error vector also points here
 	move	#$2700,sr
 	bsr.w	printbigz
 	String	-(TXPRI+TXMAP3),0,0,'Address Error'
@@ -1366,7 +1366,7 @@ cd0	;$fftt = frame/time for various levels of crowd excitement. Used by updatecr
 	dc.w	$0e03,$0f03,$1003,$1103,$1203,$0b03,$0c03,$0d03
 	dc.w	$1203,$1103,$1003,$0f03,$0e03,$0d03,$0c03,$0b03
 
-asstab	;jump table of all the player logic assignments. Entries $1D-$23 are new in 94. Used by updateplayers
+asstab	;jump table of all the player logic assignments. Entries $1D-$23 are the newer assignments. Used by updateplayers
 	dc.l	rtss2		;0
 	dc.l	assdefo		;1 adefo
 	dc.l	assdefd		;2 adefd
@@ -1404,7 +1404,7 @@ asstab	;jump table of all the player logic assignments. Entries $1D-$23 are new 
 	dc.l	assbreakaway	;$22
 	dc.l	assonetimer	;$23(high ROM)
 
-Penaltylist	;Penalty number = word offset into this table. Entries $2E-$3C are new in 94 (the penalty shot
+Penaltylist	;Penalty number = word offset into this table. Entries $2E-$3C are the penalty shot additions (the penalty shot
 	;versions of 7 penalties, minutes byte $FF, and a second Face Off). Used by AddPenalty, SetPA2, PenaltyShotBox, ...
 	dc.w	$0000
 	dc.w	.eop-Penaltylist	;$2 period over
@@ -1429,14 +1429,14 @@ Penaltylist	;Penalty number = word offset into this table. Entries $2E-$3C are n
 	dc.w	.fight2-Penaltylist	;$28
 	dc.w	.inst-Penaltylist	;$2A
 	dc.w	.delay-Penaltylist	;$2C delay
-	dc.w	.hookps-Penaltylist	;$2E 94: penalty shot
-	dc.w	.tripps-Penaltylist	;$30 94: penalty shot
-	dc.w	.ghold2-Penaltylist	;$32 94: face off, no slow down
-	dc.w	.intps-Penaltylist	;$34 94: penalty shot
-	dc.w	.roughps-Penaltylist	;$36 94: penalty shot
-	dc.w	.chargeps-Penaltylist	;$38 94: penalty shot
-	dc.w	.crossps-Penaltylist	;$3A 94: penalty shot
-	dc.w	.slashps-Penaltylist	;$3C 94: penalty shot
+	dc.w	.hookps-Penaltylist	;$2E penalty shot
+	dc.w	.tripps-Penaltylist	;$30 penalty shot
+	dc.w	.ghold2-Penaltylist	;$32 face off, no slow down
+	dc.w	.intps-Penaltylist	;$34 penalty shot
+	dc.w	.roughps-Penaltylist	;$36 penalty shot
+	dc.w	.chargeps-Penaltylist	;$38 penalty shot
+	dc.w	.crossps-Penaltylist	;$3A penalty shot
+	dc.w	.slashps-Penaltylist	;$3C penalty shot
 
 ;format
 ;	dc.w	$ttmm	;tt=slow dnw time in half secs,mm=penalty min.
@@ -1671,7 +1671,7 @@ PlayoffTreeSetup	;Playoff tree layout by gamelevel, one column per
 
 PAttribColumns	;Skater attribute columns for PrintAttribHeader / the player list. String header
 	;then a long for getNameandAttrib: high word = mask of rating nibbles to average, low word = attribjmp offset (0 status, 2 energy,
-	;4 handed, 6 weight, 8 fighting, $A rating). A negative word ends the list. 94 has no Fighting column. PAttribOverall / PAttribOverallMask (the
+	;4 handed, 6 weight, 8 fighting, $A rating). A negative word ends the list. There is no Fighting column. PAttribOverall / PAttribOverallMask (the
 	;Overall entry) are read by PrintShooterList, PrintOverallRating
 	String	'     Status    ]'
 	dc.w	$0000,$0		;status
@@ -1966,7 +1966,7 @@ ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs
 	dc.l	PeriodStatsScreen
 	String	$FF
 
-AttributeScreenText	;Line editor exit menu (the line editor at $882E)
+AttributeScreenText	;Line editor exit menu 
 	String	$FE,6,$F9,1
 	String	$FE,4,$F9,1
 	String	'       Exit       '
@@ -1979,7 +1979,7 @@ AttributeScreenText	;Line editor exit menu (the line editor at $882E)
 	dc.l	DecodePlayerAttributes
 	String	$FF
 
-ExitAttribText	;Line editor exit menu without Load Team Line ($8844)
+ExitAttribText	;Line editor exit menu without Load Team Line
 	String	$FE,6,$F9,1
 	String	$FE,4,$F9,1
 	String	'       Exit       '

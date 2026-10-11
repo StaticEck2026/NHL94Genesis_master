@@ -240,7 +240,7 @@ SkipNameNumber	;nothing calls it (it as data). a1 = the FormatPlayerNameWithAttr
 	movem.l	(sp)+,d0-d7/a0/a2-a3
 	rts
 	String	' . '
-PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (menu lists): both team logos
+PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	;(TeamLogoBitmaps, TeamLogoPalettes palettes), then the goals (matchup 0) or shots of each team by period ($342 / $34A of the team struct; OT when
 	;sflags7 bit 1) and the total. Left / right switch, start exits (ExitAttributeScreen2)
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -314,18 +314,18 @@ PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (
 	btst	#1,(sflags7).w
 	beq.w	.0
 	jsr	(printz).l
-	dc.w	$001C	;String length: too many arguments for the String macro (as 93)
+	dc.w	$001C	;String length: too many arguments for the String macro
 	dc.b	$BE,$C,9,'1',$BE,$11,9,'2',$BE,$16,9,'3',$BE,$1A,9,'OT',$BE,' ',9,'Total',0
 	jsr	(printz).l
-	dc.w	$001C	;String length: too many arguments for the String macro (as 93)
+	dc.w	$001C	;String length: too many arguments for the String macro
 	dc.b	$BE,$C,$A,'<',$BE,$11,$A,'<',$BE,$16,$A,'<',$BE,$1A,$A,'<<',$BE,' ',$A,'<<<<<',0
 	bra.w	.1
 .0
 	jsr	(printz).l
-	dc.w	$0016	;String length: too many arguments for the String macro (as 93)
+	dc.w	$0016	;String length: too many arguments for the String macro
 	dc.b	$BE,$C,9,'1',$BE,$11,9,'2',$BE,$16,9,'3',$BE,' ',9,'Total'
 	jsr	(printz).l
-	dc.w	$0016	;String length: too many arguments for the String macro (as 93)
+	dc.w	$0016	;String length: too many arguments for the String macro
 	dc.b	$BE,$C,$A,'<',$BE,$11,$A,'<',$BE,$16,$A,'<',$BE,' ',$A,'<<<<<'
 .1
 	bsr.w	.5
@@ -429,7 +429,7 @@ PeriodStatsScreen	;it as data; 93 has no counterpart. "Period Stats" menu item (
 .13
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
-GameStatisticsScreen	;it as data; "Game Statistics" menu item (menu lists): both teams' totals (DisplayTeamStatsScreen). 94 has more rows than the screen:
+GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' totals (DisplayTeamStatsScreen). There are more rows than the screen:
 	;up / down scroll them (matchupvis the most, $70 or $30 without penalties, OptPen), start exits (ExitAttributeScreen2)
 	moveq	#9,d0
 	moveq	#$1A,d1
@@ -586,7 +586,7 @@ DisplayTeamStatsScreen	;Team logos (PrintTeamData), then each TeamStatTextTbl ro
 	dbf	d6,.loop
 	rts
 FormatStatValue	;Print TeamStatTextTbl entry a0 for team a2 centred at printx: the value (offsets $A and $352 are times
-	;PushTime), "/second" if any, " (pct%)" for passing. 94: offset $FFFF is the shooting percentage (goals $C * 100 / shots 0), printed with a
+	;PushTime), "/second" if any, " (pct%)" for passing. Offset $FFFF is the shooting percentage (goals $C * 100 / shots 0), printed with a
 	;"%"
 	movea.w	#(mesarea-M68K_RAM),a3
 	move.w	#2,(a3)

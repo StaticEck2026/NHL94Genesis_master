@@ -91,7 +91,7 @@ SetScroll2	;Write Hscroll / Vscroll to the vdp. Called from DumpSprites
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)	;vsram write, address 2
 	move.w	(Vscroll).w,(a0)
 	rts
-setvideo	;this is not vblank code but sets up ram for vblank transfers. Called once per game frame (DoGameFrame, PauseMode, ...). 94 adds AddArenaAnimSprite and Crowd_Noise
+setvideo	;this is not vblank code but sets up ram for vblank transfers. Called once per game frame (DoGameFrame, PauseMode, ...). Also runs AddArenaAnimSprite and Crowd_Noise
 	movem.l	d0-d7/a0-a6,-(sp)
 .p
 	btst	#dfok,(disflags).w	;dfok: wait for vblank to take the last frame
@@ -125,7 +125,7 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 updatescroll	; Using hpos and vpos set scroll cords; queue rink map rows on the dma list (a5) when vertical
-	;scrolling needs new rows. Called from setvideo. 94 takes the rows from Rinktilelist, or RevRinkTilelist in a reverse angle replay
+	;scrolling needs new rows. Called from setvideo. Takes the rows from Rinktilelist, or RevRinkTilelist in a reverse angle replay
 	;(sflags4 bit 4)
 	btst	#7,(sflags).w	;sfhor
 	bne.w	rtss2
@@ -309,7 +309,7 @@ showzam	;zamboni. a5 = dma list, a6 = sprite table, d6 = link counter. Draws fra
 	bra.w	SetSframe
 .ftab	dc.w	5,6,7,8,7,8,7,8,7,8,7,6,5	;frame by (x-$DA)/4
 SetSframe	;draw one sprite frame. a0 = framelist, d0/d1 = x/y cords, d2 = frame to setup (from 0), d3 = start char in vram, a6 = sprite table,
-	;d6 = link counter. Called from showzam and from code outside this segment
+	;d6 = link counter. Called from showzam and the screen code
 	cmp.w	#$40,d6	;MaxSprites
 	bge.w	rtss2
 	movem.l	d0-d5/a0,-(sp)
@@ -341,7 +341,7 @@ SetSframe	;draw one sprite frame. a0 = framelist, d0/d1 = x/y cords, d2 = frame 
 	movem.l	(sp)+,d0-d5/a0
 	rts
 showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two crowdframe frames. a5 = dma list, a6 = sprite table, d6 = link
-	;counter. 94: no crowd in a reverse angle replay. Called from setvideo
+	;counter. No crowd in a reverse angle replay. Called from setvideo
 	btst	#4,(sflags4).w	;check if reverse angle replay
 	bne.w	.x	;branch if so
 	movea.l	#CrowdFrameList,a1
@@ -451,7 +451,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 ;	Object offsets: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
 ;	ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
 
-showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94: on the horizontal rink the clock is printed (printz / print
+showclock	;put the game clock on screen. Called from setvideo and PauseMode. On the horizontal rink the clock is printed (printz / print
 	;with .digits; not in a shootout, gmode2 bit 0). On the vertical rink (.3) it goes in the dma list, only when
 	;dfclock is set; with gmode2 bit 1 (penalty shot / shootout) shootoutclock is shown instead of gameclock. a5 = dma list
 	btst	#7,(sflags).w	;sfhor
@@ -460,7 +460,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	bne.w	.x
 	move.l	a1,-(sp)
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP2),$D,5		;/ btst d2,d0
+	String	-(TXPRI+TXMAP2),$D,5
 	move.w	(gameclock).w,d0
 	ext.l	d0
 	divu.w	#$258,d0	;tens of minutes (600 seconds)
@@ -491,7 +491,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	jsr	(.digit).l
 	movea.l	(sp)+,a1
 	jsr	(printz).l
-	String	-(TXPRI+TXMAP3),$D,5		;/ btst d2,d0
+	String	-(TXPRI+TXMAP3),$D,5
 .x
 	rts
 .digit	;Print digit d0 from .digits
@@ -550,7 +550,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	movea.w	#(VmMap1-M68K_RAM),a1
 	moveq	#$18,d0	;.clocky = 24
 	moveq	#3,d2	;.clockx = 3
-	btst	#sfhor,(sflags).w	;sfhor (always clear here in 94: the horizontal rink prints the clock above)
+	btst	#sfhor,(sflags).w	;sfhor (always clear here: the horizontal rink prints the clock above)
 	beq.w	.cv
 	movea.w	#(VmMap2-M68K_RAM),a1
 	moveq	#5,d0	;clock y (93 used 4)
@@ -574,7 +574,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	ext.l	d0
 	rts
 checksso	;do graphics for sso structure: arrows for the players when they are off screen. Called from setvideo. a5 = dma list, a6 = sprite
-	;table, d6 = link counter. Returns on the horizontal rink. 94 adds the pads 3 and 4 (Joy3Struct / Joy4Struct when cont3team / cont4team).
+	;table, d6 = link counter. Returns on the horizontal rink. Includes the pads 3 and 4 (Joy3Struct / Joy4Struct when cont3team / cont4team).
 	;Falls into .ca for the last one
 	btst	#sfhor,(sflags).w
 	bne.w	rtss2
@@ -763,7 +763,7 @@ uppads	;update the gloves object and the 6 pad objects, and queue new pad labels
 	dbf	d4,.top
 	rts
 FormatControllerDisplay	;Queue the 3 character label of a pad object. d1 = label code: bits 7-4 and 3-0 are digits ($F =
-	;blank), bits 10-8 index ButtonLabelCharTable (94: none while sflags7 bit 7 is set). a0 = pad object, a5 = dma list. Falls into
+	;blank), bits 10-8 index ButtonLabelCharTable (none while sflags7 bit 7 is set). a0 = pad object, a5 = dma list. Falls into
 	;RenderSmallFontChar for the last char
 	lea	ButtonLabelCharTable(pc),a4
 	clr.w	2(a0)	;x offset (setffo adds it to the sprites)

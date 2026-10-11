@@ -31,7 +31,7 @@ ScoutCrowdRecord	;The text player's '@' (ScoutTextPlayer): return a1 = the home 
 	movea.l	(sp)+,a1
 	movem.l	(sp)+,d0-d7/a0/a2-a6
 	rts
-ScoutCrowdRecordBy	;no xref. unused: return a1 = 'by <name> ' for the home team's crowd record (SRAM record byte 9 =
+ScoutCrowdRecordBy	;unused: return a1 = 'by <name> ' for the home team's crowd record (SRAM record byte 9 =
 	;name number, AppendUserName reads that 12 char name from namelog), or an empty String if byte 9 is 0
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	move.w	(HomeTeam).w,d1
@@ -65,7 +65,7 @@ ScoutCrowdRecordBy	;no xref. unused: return a1 = 'by <name> ' for the home team'
 ScoutEmptyTxt	String	''
 ScoutByTxt	String	'by '
 ScoutSpaceTxt	String	' '
-GetTeamCity	;no xref. unused: return a1 = the city String of team byte $A(a0) (TeamList, Teamname offset)
+GetTeamCity	;unused: return a1 = the city String of team byte $A(a0) (TeamList, Teamname offset)
 	movem.l	d0-d7/a0/a2-a6,-(sp)
 	clr.w	d2
 	move.b	$A(a0),d2
@@ -75,14 +75,14 @@ GetTeamCity	;no xref. unused: return a1 = the city String of team byte $A(a0) (T
 	adda.w	4(a1),a1
 	movem.l	(sp)+,d0-d7/a0/a2-a6
 	rts
-ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron Barr picture, the text box and the matchup
+ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Barr picture, the text box and the matchup
 	;matchup 0 is both team logos with the team ratings, 1-6 the two players at center, left forward, right forward, left defense, right defense
-	;and goalie with their ratings, with marks toward the side that has the advantage. The text player (ScoutTextPlayer, 93
-	;UpdateScoutingDisplay) types the paragraph list. A / C page the matchups (the page also turns by itself about every $10E frames), down types fast, start leaves
+	;and goalie with their ratings, with marks toward the side that has the advantage. The text player (ScoutTextPlayer)
+	;types the paragraph list. A / C page the matchups (the page also turns by itself about every $10E frames), down types fast, start leaves
 	jsr	(ReadNameLog).l	;read the $80 byte SRAM name list at $DA0 to $FFD45A
-	jsr	(BuildHotColdLists).l	;hot / cold players for the text (not matched yet)
+	jsr	(BuildHotColdLists).l	;hot / cold players for the text
 	clr.w	(advframe).w	;advantage mark frame
-	move.w	#SngScout,-(sp)	;song $7A (93 $37)
+	move.w	#SngScout,-(sp)	;song $7A
 	jsr	(song).l
 	move.l	#vb2,(vbint).w
 	jsr	(clearTeamStats).l
@@ -106,16 +106,16 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	move.w	d4,(BigFontChars).w
 	movea.l	#BigFontMap+8,a2	;big font tiles
 	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$05431567,$79ABCDEF	;remap table (/ move.b / muls.w / ori.b)
+	dc.l	$05431567,$79ABCDEF	;remap table
 	jsr	(AddSmallFont).l	;in the table
-	move.w	d4,(smallfont2chars).w	;1st vram char of the 2nd small font set (93)
+	move.w	d4,(smallfont2chars).w	;1st vram char of the 2nd small font set
 	movea.l	#SmallFontMap+8,a2	;small font tiles (as AddSmallFont), remapped
 	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$0A234567,$89ABCDEF	;remap table (/ or.l)
+	dc.l	$0A234567,$89ABCDEF	;remap table
 	movea.l	#framermap+8,a2	;framer tiles (as AddFramer), remapped
 	move.w	d4,(framercset).w
 	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$05422561,$89ABCDEF	;remap table (/ move.l / muls.w / ori.b)
+	dc.l	$05422561,$89ABCDEF	;remap table
 	jsr	(printz).l
 	String	-TXMAP2,0,0
 	movea.l	#ScoutMap,a0	;the jsr, the string and this (ori.b x4)
@@ -130,12 +130,12 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	moveq	#3,d5	;color fam 1-2
 	jsr	(dobitmap).l
 	jsr	(printbigz).l
-	String	-(TXPAL2+TXMAP1),$C,$D,'MATCHUPS'	;/ movep.l / subq x2 (and dropped a word)
+	String	-(TXPAL2+TXMAP1),$C,$D,'MATCHUPS'
 	move.w	#0,(printfontset).w	;char set 0
 	jsr	(printz).l
-	String	-TXMAP1,$10,$11,'ADVANTAGE:'	;/ move.b / addq / move.w (and dropped a word)
+	String	-TXMAP1,$10,$11,'ADVANTAGE:'
 	jsr	(printz).l
-	String	-(TXPAL2+TXMAP2),6,3		;/ btst d1,d0
+	String	-(TXPAL2+TXMAP2),6,3
 	moveq	#$21,d0	;33 x 9 text box frame
 	moveq	#9,d1
 	jsr	(Framer).l
@@ -150,7 +150,7 @@ ScoutingReport	;94 pregame MATCHUPS screen, called from Opening2. Draws the Ron 
 	move.w	#8,d1
 	jsr	(Framer).l
 	jsr	(printz).l
-	String	-TXMAP1,1,1		;/ btst d0,d0
+	String	-TXMAP1,1,1
 	movea.l	#RonBarrMap,a0	;Ron Barr picture: palette offset, then map header offset
 	movea.l	a0,a1
 	movea.l	a0,a2
@@ -293,7 +293,7 @@ PrintTwoSpaces	;Print 2 spaces at printx / printy and keep printx
 	rts
 TwoSpacesTxt	;A two space String (printsmall by PrintTwoSpaces)
 	String	'  '
-StatsText	;The 93 rating names. 94 prints only ' Overall ' (PrintMatchupRatings, matchup 0); -1 ends the list
+StatsText	;rating names; only ' Overall ' is printed (PrintMatchupRatings, matchup 0); -1 ends the list
 	String	'Shooting'
 	String	'Skating'
 	String	'Passing'
@@ -352,7 +352,7 @@ DrawMatchupPictures	;Draw the matchup's 6 x 6 pictures, visitors at x 2, home at
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 DrawMatchupPicture	;Draw player picture a0 at printx / printy with the PicturePalette palette. A picture with no map (offset 0) uses the PicturePalette
-	;map. UnpackPicture (not matched yet) then the $FFDA1E tiles. Falls into DrawMatchupBitmap
+	;map. UnpackPicture, then the $FFDA1E tiles. Falls into DrawMatchupBitmap
 	movea.l	a0,a1
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
@@ -416,8 +416,8 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	tst.w	(matchup).w
 	bne.w	.2
 	jsr	(printsmallz).l
-	String	CC_SetMapAndPosition,0,1,$16,$16,CC_SetFont,1	;/ btst / move.b
-	lea	StatsText(pc),a1	;in the string (and dropped its displacement)
+	String	CC_SetMapAndPosition,0,1,$16,$16,CC_SetFont,1
+	lea	StatsText(pc),a1
 	move.w	#0,d7
 .loop
 	move.w	(a1),d0
@@ -441,16 +441,16 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	bpl.s	.loop
 	move.w	#2,(printfontset).w
 	jsr	(printz).l
-	String	-TXMAP1,0,$17,'                                        '	;40 spaces. / move.l x20
+	String	-TXMAP1,0,$17,'                                        '	;40 spaces
 	jsr	(printz).l
-	String	-TXMAP1,$22,$16	;/ move.b d0,d3
+	String	-TXMAP1,$22,$16
 	movea.l	#tmstruct,a0
 	movea.l	#AwShots,a2
 	bsr.w	PrintMatchupRating	;home
 	move.w	d0,(homerating).w
 	move.w	#2,(printfontset).w
 	jsr	(printz).l
-	String	-TXMAP1,4,$16	;/ move.b d0,d3
+	String	-TXMAP1,4,$16
 	exg	a0,a2
 	bsr.w	PrintMatchupRating	;visitors
 	move.w	d0,(visrating).w
@@ -465,7 +465,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 .3
 	dbf	d0,.loop2
 	jsr	(printsmallz).l
-	String	CC_SetMapAndPosition,0,1,$D,$13,CC_SetFont,1	;/ movep.w / btst
+	String	CC_SetMapAndPosition,0,1,$D,$13,CC_SetFont,1
 	jsr	(printsmall).l
 	move.w	#$16,(printy).w
 	move.w	#2,(printfontset).w
@@ -477,9 +477,9 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 .4
 	move.w	(matchuphome).w,d0	;home player
 	jsr	(printz).l
-	String	-TXMAP1,0,$17,'                                        '	;40 spaces. / move.l x20
+	String	-TXMAP1,0,$17,'                                        '	;40 spaces
 	jsr	(printz).l
-	String	-TXMAP1,$23,$17	;/ move.b d0,-(a3)
+	String	-TXMAP1,$23,$17
 	bsr.w	PrintPlayerNameRight	;print the name, moved left to fit the line
 	bsr.w	CalcAttrib
 	mulu.w	#$64,d0	;* 100
@@ -489,7 +489,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	move.w	d0,(homerating).w
 	jsr	(PushNumberWidth).l
 	jsr	(printz).l
-	String	-TXMAP1,$22,$16	;/ move.b d0,d3
+	String	-TXMAP1,$22,$16
 	bsr.w	PrintTwoSpaces
 	jsr	(printsmall).l
 	movea.l	#AwShots,a2
@@ -500,7 +500,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 .5
 	move.w	(matchupvis).w,d0	;visitors player
 	jsr	(printz).l
-	String	-TXMAP1,0,$17	;/ move.b d0,-(a3)
+	String	-TXMAP1,0,$17
 	bsr.w	PrintPlayerNameRight
 	bsr.w	CalcAttrib
 	mulu.w	#$64,d0	;* 100
@@ -510,7 +510,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	move.w	#2,d1
 	jsr	(PushNumberWidth).l
 	jsr	(printz).l
-	String	-TXMAP1,4,$16	;/ move.b d0,d3
+	String	-TXMAP1,4,$16
 	bsr.w	PrintTwoSpaces
 	jsr	(printsmall).l
 .x
@@ -580,7 +580,7 @@ PrintAdvantageMarks	;Called every frame by ScoutingReport. Print the advantage m
 .3
 	move.w	#2,(printfontset).w
 	jsr	(printz).l
-	String	-TXMAP1,$13,$16	;/ move.b d0,d3
+	String	-TXMAP1,$13,$16
 	jsr	(printsmall).l
 	move.w	#0,(printfontset).w
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -626,7 +626,7 @@ GetTeamArena	;The text player's '^' (a2 = HmShots) and ';' (AwShots): return a1 
 	adda.w	(a1),a1	;arena
 	movem.l	(sp)+,d0/a0/a2
 	rts
-ScoutStub	;no xref. An empty routine
+ScoutStub	;An empty routine
 	movem.l	d0-d7/a0-a6,-(sp)
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts

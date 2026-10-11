@@ -15,7 +15,7 @@ ValidationLoop	cmpa.w	#$18C,a0		;header long $18C-$18F holds the checksum word $
 SkipIncrement	add.l	(a0)+,d0
 ContinueValidation	subq.l	#1,d1
 	bgt.s	ValidationLoop
-	cmpi.l	#$8AB9F121,d0		;94 retail sum (93 46). Real CMPI (0C80), not EA cmp
+	cmpi.l	#$8AB9F121,d0		;retail sum. Real CMPI (0C80), not EA cmp
 	bne.s	VDPErrorSetup			;wrong sum: red screen
 	rts
 VDPErrorSetup	movea.l	#VDP_CTRL,a4

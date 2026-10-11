@@ -367,7 +367,7 @@ doinput_cbut	;Global: doinput branches here across the global rtss15
 	jsr	(goaliesave).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ClampTargetY
+ClampTargetY	;clamp the target y d1 for player a3 (d0 cleared when a3 has the puck)
 	move.w	(puckc).w,d2
 	cmp.w	SCnum(a3),d2
 	bne.w	.0
@@ -383,8 +383,8 @@ ClampTargetY
 .2
 	sub.w	d3,d1
 	rts
-	;$B602: 10 SPA offsets, no reference in the listing: SPAgglover, SPAgglovel, SPAgstackr, SPAgstackl
-	;SPAgstickr, SPAgstickl (93 goalie saves), then the 94 tables SPAghighr, SPAghighl, SPAgstick2r, SPAgstick2l
+	;10 SPA offsets, unreferenced: SPAgglover, SPAgglovel, SPAgstackr, SPAgstackl
+	;SPAgstickr, SPAgstickl, then the newer tables SPAghighr, SPAghighl, SPAgstick2r, SPAgstick2l
 	dc.w	$0146,$0178,$0250,$02A2,$01EC,$021E,$148E,$14C0,$14F2,$1544
 doinput_chkanim	;Global: doinput branches here across ClampTargetY
 	btst	#1,pflags2(a3)
@@ -569,7 +569,7 @@ getGoalieSCnum
 .end
 	movem.l	(sp)+,d1/a0
 	rts
-faceoffinput
+faceoffinput	;controller processing for faceoff
 	btst	#6,(sflags5).w
 	beq.w	.0
 	rts
@@ -613,7 +613,7 @@ SetLCmode
 .0
 	bclr	#3,(sflags).w
 	bset	#3,pflags2(a3)
-SetLCmode2	;93 a2 = team struct. Draw the line change box
+SetLCmode2	;a2 = team struct. Draw the line change box
 	bsr.w	setlccords
 	cmpi.w	#$F,(printy).w
 	blt.w	.box
@@ -658,7 +658,7 @@ SetLCmode2	;93 a2 = team struct. Draw the line change box
 	adda.w	(a1),a1
 	addq.w	#2,(printx).w
 	bra.w	print
-setlccords
+setlccords	;set printx/y to cords for lc box on team a2
 	clr.w	d0
 	cmpa.w	#$C6CE,a2
 	bne.w	.0
@@ -669,7 +669,7 @@ setlccords
 	eori.w	#$16,d0
 .noflip
 	bsr.w	printz
-	String	-(TXPRI+TXMAP1),$16,0,0		;add.w and moveq in ori.b / ori.b / cmp.b
+	String	-(TXPRI+TXMAP1),$16,0,0
 	add.w	d0,(printy).w
 	moveq	#2,d0
 	bsr.w	getlchoice
@@ -681,13 +681,13 @@ setlccords
 .ex
 	moveq	#9,d0
 	rts
-getlchoice
+getlchoice	;d0 = 0-2 (a2 = team)
 	movem.l	d1-d2,-(sp)
 	move.w	tmsize+tmap(a2),d2
 	cmpa.w	#$C6CE,a2
 	beq.w	getlchoice2
 	move.w	tmap-tmsize(a2),d2
-getlchoice2
+getlchoice2	;add $15 to d0 for each player more or fewer than the other team has on the ice
 	sub.w	$24(a2),d2
 	beq.w	.0
 	addi.w	#$15,d0
@@ -760,7 +760,7 @@ lcfound
 	bclr	#1,tmflags(a2)
 	move.w	d0,tmline(a2)
 	jsr	(setpersonel).l
-lcfound2
+lcfound2	;close lc box
 	btst	#7,(sflags).w
 	bne.w	rtss
 	bsr.w	setlccords
@@ -810,7 +810,7 @@ holdplayer
 	move.w	impactp(a3),d0	;move last impact player into d0
 	asl.w	#7,d0	;calc offset
 	adda.w	d0,a0	;add offset to a0
-Acheck
+Acheck	;start hold (or hook if a0 is ahead, $CB0) on player a0
 	bset	#pfalock,pflags(a3)	;lock animation
 	move.w	#$1122,d1	;move anim into d1 - normal hold check
 	tst.w	impact(a3)	;check if impact = 0
@@ -851,7 +851,7 @@ passmode
 	andi.w	#7,d0	;pass first 3 bits of d0
 	move.w	d0,(passdir).w	;new pass dir
 	bset	#3,d0
-dopass
+dopass	;pass the puck in passdir, to the best teammate there if any
 	movem.l	d0-d5/a0-a1,-(sp)
 	bclr	#sfspdir,(sflags).w	;#sfspdir
 	st	(puckc).w	;player is not puck handler anymore
@@ -1025,7 +1025,7 @@ passto
 	jsr	(setc2player).l
 .stack
 	movem.l	(sp)+,d0-d1
-passtoa0
+passtoa0	;pass puck to player a0
 	bsr.w	loadTeamStruct
 	addq.w	#1,$12(a2)	;add 1 to total pass attempts
 	move.w	SCnum(a0),(passplayer).w	;Moves index number for a0 player
@@ -1194,7 +1194,7 @@ changeplayer
 	movem.l	(sp)+,d0-d6/a0-a1
 .x
 	rts
-Sweepcheck
+Sweepcheck	;start sweep check on player a3
 	bset	#pfalock,pflags(a3)
 	move.w	#$B24,d1
 	bra.w	SetSPA
@@ -1675,7 +1675,7 @@ setpads	;Put SCnum of a3 in the d4 nibble of PadControlBits ; d4 = -2 puck
 	movem.l	(sp)+,d0-d1
 rtss3
 	rts
-check4bench
+check4bench	;check if player a3 should go to bench
 	btst	#2,(BA_PS_flags).w
 	bne.s	rtss3
 	btst	#3,pflags(a3)

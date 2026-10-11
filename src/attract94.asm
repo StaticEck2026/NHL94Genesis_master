@@ -25,7 +25,7 @@ EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or 
 	bsr.w	setVram_0
 	bsr.w	printz
 	String	-TXMAP2,0,0,0
-	movea.l	#EASportsMap,a2		;screen map. in the string (ori.b #$7C,d0 / ori.b #$5A,a3)
+	movea.l	#EASportsMap,a2		;screen map
 	movea.l	a2,a0
 	movea.l	a2,a1
 	adda.l	(a2)+,a0
@@ -109,7 +109,7 @@ DrawTeamBitmap	;dobitmap entry d1 of TeamBitmaps (d4 from the caller)
 	moveq	#0,d5
 	bra.w	dobitmap
 
-dotb	;no xref. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
+dotb	;unreferenced. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
 	clr.w	d0
 	asl.w	#1,d1
 	movea.l	#Teamblocksmap,a0
@@ -123,7 +123,7 @@ dotb	;no xref. Like DrawTeamBitmap with Teamblocksmap, d4 = 2, d5 = 2
 	moveq	#2,d5
 	bra.w	dobitmap
 
-ClearOptionDisplay	;no xref. Set the print position, then erase 12 x 2 at it
+ClearOptionDisplay	;unreferenced. Set the print position, then erase 12 x 2 at it
 	bsr.w	setoptions_printpos2
 	moveq	#$C,d0			;12
 	moveq	#2,d1			;2
@@ -138,7 +138,7 @@ setoptions_printpos2	;printz position string, then printx = $1A when a2 is the h
 	move.w	#$1A,(printx).w
 	rts
 
-SetGoalieMode	;no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
+SetGoalieMode	;unreferenced. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, line changes on)
 	;a value from the team's .sodds
 	movem.l	d0/a0,-(sp)
 	clr.w	$26(a2)
@@ -168,7 +168,7 @@ SetGoalieMode	;no xref. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2, 
 .x	movem.l	(sp)+,d0/a0
 	rts
 
-VBlank_SetOptions	;vbint handler stored by setoptions. the 92 routine (cramfade unless
+VBlank_SetOptions	;vbint handler stored by setoptions: cramfade unless
 	;dfng), plus DumpSprites2 when dfok is set
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w		;dfng

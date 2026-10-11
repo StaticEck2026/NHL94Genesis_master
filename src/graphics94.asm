@@ -8,7 +8,7 @@
 ScoutTextScript		;the script ScoutTextPlayer types out word by word on the ScoutingReport (MATCHUPS) screen
 	incbin	..\Extracted\NHL94\Text\ScoutTextScript.bin
 	even
-GameSetUpMap	;the game setup screen bitmap, 40 x 28 (93 GameSetUp.map.jim)
+GameSetUpMap	;the game setup screen bitmap, 40 x 28
 	incbin	..\Extracted\NHL94\Graphics\GameSetUp94-1.map.jim
 	even
 GameSetUpMap2	;the second game setup bitmap
@@ -106,7 +106,7 @@ RonBarrMap		;same size: the Ron Barr picture (ScoutingReport). The old
 	;RonBarrCompressed.map.jim ran 4 bytes into ScoresMap
 	incbin	..\Extracted\NHL94\Graphics\RonBarr.map.jim
 	even
-ScoresMap		;same size: read by 93 code (from $80D4; not matched yet)
+ScoresMap		;same size
 	incbin	..\Extracted\NHL94\Graphics\Scores.map.jim
 	even
 EASportsMap	;the EA Sports screen map
@@ -226,13 +226,13 @@ logoASW		;the ASW logo, team 27 in TeamLogoBitmaps (DrawTeamLogo, GetTeamLogo)
 PicturePalette		;the player picture palette, and the picture of a player with none (DrawMatchupPicture, PlayerCardScreen)
 	incbin	..\Extracted\NHL94\Graphics\PicturePalette.bin
 	even
-NoPicSkater1		;read by DrawPlayerPicture (high ROM, not matched yet)
+NoPicSkater1		;read by DrawPlayerPicture (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\NoPicSkater1.bin
 	even
-NoPicSkater2		;read by DrawPlayerPicture (high ROM, not matched yet)
+NoPicSkater2		;read by DrawPlayerPicture (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\NoPicSkater2.bin
 	even
-NoPicGoalie1		;read by DrawPlayerPicture (high ROM, not matched yet)
+NoPicGoalie1		;read by DrawPlayerPicture (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\NoPicGoalie1.bin
 	even
 NoPicGoalie2		;the generic goalie card: DrawPlayerPicture uses it for a goalie with no card whose hand rating (h) bit 0 is clear (NoPicGoalie1 when set). Also listed for ANH 0 and FLA 0
@@ -673,10 +673,10 @@ CardAlexeiZhamnov		;Alexei Zhamnov player card (FeaturedPictures WPG 2)
 PlayerCardsScreenPic		;the Player Cards screen picture, 40 x 28 tiles with its own palette and layout (PlayerCards)
 	incbin	..\Extracted\NHL94\Graphics\PlayerCardsScreenPic.bin
 	even
-CornerLogoMap		;read in the high ROM near NoNameTxt and by SkipOtherUserName (not matched yet)
+CornerLogoMap		;read in the high ROM near NoNameTxt and by SkipOtherUserName
 	incbin	..\Extracted\NHL94\Graphics\CornerLogoMap.bin
 	even
-ArenaGfxBank		;read in the high ROM near NoNameTxt and by SkipOtherUserName (not matched yet)
+ArenaGfxBank		;read in the high ROM near NoNameTxt and by SkipOtherUserName
 	incbin	..\Extracted\NHL94\Graphics\ArenaGfxBank.bin
 	even
 PlayoffSprite		;PlayoffScreen and DrawPlayoffSprite
@@ -685,11 +685,11 @@ PlayoffSprite		;PlayoffScreen and DrawPlayoffSprite
 HiScoreImg		;HiScoreScreen (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\HiScoreImg.bin
 	even
-HotIconMap		;read by HotColdIcon (high ROM, not matched yet)
+HotIconMap		;read by HotColdIcon (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\HotIconMap.bin
 	even
 ;HotIconMap+8: the tiles (ScoutingReport)
-ColdIconMap		;read by HotColdIcon (high ROM, not matched yet)
+ColdIconMap		;read by HotColdIcon (high ROM)
 	incbin	..\Extracted\NHL94\Graphics\ColdIconMap.bin
 	even
 ;ColdIconMap+8: the tiles (ScoutingReport)

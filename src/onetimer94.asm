@@ -57,8 +57,8 @@ puckvzadj	;set puckvz for a top shelf shot from the distance to the goal line ($
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-OneTimerPass	;One-timer pass: puckvz = sqrt(12 * onetimerheight), then puckvx / puckvy toward the target onetimertargetx / onetimertargety in puckvz
-	;/ 3 frames; flip the puck (puckflip, a3 = the puck at puckx). Called from passmode
+OneTimerPass	;One-timer pass: puckvz = sqrt(12 * onetimerheight), then puckvx / puckvy toward the target onetimertargetx / onetimertargety in
+	;puckvz / 3 frames; flip the puck (puckflip, a3 = the puck at puckx). Called from passmode
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$C,d0
 	move.w	(onetimerheight).w,d1

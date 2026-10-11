@@ -1248,7 +1248,7 @@ AppendUserName	;Append user name d2 (12 bytes of the name log at namelog, spaces
 	rts
 NoNameTxt	dc.b	0	;AppendUserName data
 	dc.b	2
-PlayerCards	;93 has no counterpart. "Player Cards" menu item (menu lists), with save RAM only: the player card screens
+PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the player card screens
 	;(DrawPlayerCard), A / C to page, start exits (ExitAttributeScreen2)
 	tst.w	(ValidSRAM).w
 	bpl.w	.0

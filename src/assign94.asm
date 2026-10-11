@@ -6,7 +6,7 @@
 ;	SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44, temp4 $46
 ;	SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
 
-assbench
+assbench	;player a3 should goto bench
 	btst	#pfalock,pflags(a3)
 	bne.w	rtss3
 	cmpi.w	#$64,temp1(a3)
@@ -346,9 +346,9 @@ assfaceoffpl	;Face off player
 	bra.w	assexit
 .exit2
 	rts
-assfight	;rts only (93 has the fight code here)
+assfight	;rts only: there is no fighting
 	rts	;assfight - possible location where fighting logic used to be
-assfwatch	;rts only (93 watches the fight)
+assfwatch	;rts only: there is no fighting
 	rts	;assfwatch - possible location where players watching fight
 ; player should do nothing
 donothing
@@ -401,7 +401,7 @@ assscore
 	movea.l	#rtss2,a0
 	move.w	temp3(a3),d0
 	move.w	temp4(a3),d1
-	btst	#0,(gmode2).w	;start of code not in 92
+	btst	#0,(gmode2).w	;start of new code
 	beq.w	.4
 	tst.w	(shootoutdelay).w
 	beq.w	.2
@@ -414,7 +414,7 @@ assscore
 	cmpi.w	#$FF78,(a3)
 	bgt.w	.4
 .3
-	clr.w	d1	;end of code not in 92
+	clr.w	d1	;end of new code
 .4
 	sub.w	d7,temp1(a3)
 	bpl.w	.ckcon

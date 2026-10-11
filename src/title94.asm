@@ -390,9 +390,8 @@ PrintParenNumber	;PrintPlayerAssists / PrintPlayerGoals: the number (1 to 3 digi
 	move.w	#$E,(printx).w
 	movem.l	(sp)+,d0/a2
 	rts
-PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl). For frames $1776 / $185A (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and $17E8
-	;/ $1A00 / $18CC / $193E (x to +-$82 /
-	;$88 by bit 3 of 4(a3)) of $58(a3): move player a3 half way there. Called from updateplayers
+PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl). For frames $1776 / $185A (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and
+	;$17E8 / $1A00 / $18CC / $193E (x to +-$82 / $88 by bit 3 of 4(a3)) of $58(a3): move player a3 half way there. Called from updateplayers
 	cmpi.w	#$193E,SPA(a3)
 	beq.w	.12
 	cmpi.w	#$1A00,SPA(a3)
@@ -1275,11 +1274,11 @@ chgplayer	;(and comments). the pad d4 takes the nearest free skater to where the
 	bra.w	j_setc2player
 .ex
 	movem.l	(sp)+,d0-d6/a0-a1
-exit
+exit	;shared rts
 	rts
 swpchk	;Sweepcheck
 	jmp	Sweepcheck
-j_setc1player	;(a thunk its target's name)
+j_setc1player	;jump to the routine of the same name
 	jmp	setc1player
-j_setc2player	;(a thunk its target's name)
+j_setc2player	;jump to the routine of the same name
 	jmp	setc2player

@@ -53,7 +53,7 @@ forceblack
 	dbf	d0,.1
 	movem.l	(sp)+,d0/a0
 	rts
-forceblack2
+forceblack2	;fade to black, keeping palfadenew (saved on the stack and restored)
 	movem.l	d0/a0,-(sp)
 	movea.w	#(palfadenew-M68K_RAM),a0
 	moveq	#$1F,d0
@@ -69,7 +69,7 @@ forceblack2
 	dbf	d0,.loop2
 	movem.l	(sp)+,d0/a0
 	rts
-forcefade
+forcefade	;regardless of interupts/disflags fade in new palettes, don't upset anything else
 	move	sr,-(sp)
 	move.l	(vbint).w,-(sp)
 	move.w	(disflags).w,-(sp)
@@ -455,7 +455,7 @@ ReadJoy2
 	eor.w	d1,d2
 	and.w	d2,d1
 	rts
-ReadJoy3
+ReadJoy3	;read 4 way play pad 3 (pad4way3). Same returns as ReadJoy1
 	move.b	(pad4way3).w,d0
 	bsr.w	ReadJoy
 	move.w	(lj3).w,d2
@@ -464,7 +464,7 @@ ReadJoy3
 	eor.w	d1,d2
 	and.w	d2,d1
 	rts
-ReadJoy4
+ReadJoy4	;read 4 way play pad 4 (pad4way4). Same returns as ReadJoy1
 	move.b	(pad4way4).w,d0
 	bsr.w	ReadJoy
 	move.w	(lj4).w,d2
@@ -473,7 +473,7 @@ ReadJoy4
 	eor.w	d1,d2
 	and.w	d2,d1
 	rts
-ReadJoy
+ReadJoy	;read controller a0. Return d0 = direction (bit 0-3) and new button (bit 4-7) presses, d1 = buttons down (all 8 bits)
 	not.b	d0
 	clr.w	d1
 	move.b	d0,d1
@@ -642,7 +642,7 @@ DoFill
 	dbf	d0,.0
 	movem.l	(sp)+,d3/a1
 	rts
-WaitDMA
+WaitDMA	;wait for dma completion
 	move.w	(VDP_CTRL).l,-(sp)
 	btst	#1,1(sp)
 	addq.w	#2,sp
@@ -737,7 +737,7 @@ Vmaddr
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
-dobitmap
+dobitmap	;transfer palette data/map data/tiles data to vram. a0 = palette, a1 = map, a2 = tiles (DecompressGraphics data), d0 = start x, d1 = start y, d2 = width x, d3 = width y, d4 = start char, d5 = pal used bits (0-3) for color fam 1-4. printy is restored and the tiles go last through DecompressGraphics (returns d4 = end char)
 	move.w	(printy).w,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
@@ -933,7 +933,7 @@ Opcode_CopyBackwardExtended1	;opcode A
 	andi.w	#$3F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardExtended2	;opcode B. this handler as dc.b; written from the retail bytes
+Opcode_CopyBackwardExtended2	;opcode B
 	move.b	-1(a0),d0
 	asl.w	#8,d0
 	move.b	(a0),d0
@@ -1114,7 +1114,7 @@ printsmallz	;String macro follows the call
 ; b = color/priority (0-3 = color fam,prio off), (4-7 = color fam, prio on)
 ; xx = x coord to print at
 ; yy = y coord to print at
-printsmall	;Print string macro a1 at printx/y/m with printa; 94 uses the setup font (setupfontchars) when sflags6 bit 3 is set
+printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font (setupfontchars) when sflags6 bit 3 is set
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movem.l	d0-d3/a0/a2-a3,-(sp)
@@ -1378,7 +1378,7 @@ PushTime
 	move.w	d0,-(a1)
 	move.l	(sp)+,d0
 	rts
-PushNumber
+PushNumber	;convert d0 into string format of base 10 number, no leading zeros. Return a1 = string
 	movea.w	#(PushNumberBuf-M68K_RAM),a1
 	move.l	d0,-(sp)
 	move.l	a1,-(sp)
@@ -1402,7 +1402,7 @@ PushNumber
 	move.w	d0,-(a1)
 	move.l	(sp)+,d0
 	rts
-PushNumberWidth	;?. Right-justified number
+PushNumberWidth	;right-justified number
 	movem.l	d0-d3,-(sp)	;push to stack
 	movea.w	#(PushWidthBuf+2-M68K_RAM),a1	;move address FFC00A into a1
 	moveq	#1,d2	;move 1 into d2
@@ -1441,7 +1441,7 @@ PushNumberWidth	;?. Right-justified number
 	move.w	d0,(a1)	;move d0 into a1 address location
 	movem.l	(sp)+,d0-d3	;push from stack
 	rts
-appendz
+appendz	;see appstring. String macro should follow the bsr/jsr to this routine
 	movea.l	(sp)+,a1
 	bsr.w	appstring
 	jmp	(a1)
@@ -1536,7 +1536,7 @@ printbig
 	movem.l	(sp)+,d0-d7/a0/a2
 	move.w	(sp)+,(disflags).w
 	rts
-PrintBigChar
+PrintBigChar	;print big font char d0 (ascii) through bfasciicon
 	subi.w	#$20,d0
 	movea.l	#bfasciicon,a0
 	moveq	#1,d2
@@ -1564,7 +1564,7 @@ PrintBigChar
 	addq.w	#2,d1
 	dbf	d2,.loop
 	rts
-PutBigTile
+PutBigTile	;write one big font tile to the map at printx / printy
 	add.w	d6,d3
 	movem.l	d1/a0,-(sp)
 	move.w	d5,d0
@@ -1579,15 +1579,15 @@ PutBigTile
 	move.w	d3,(a0)
 	movem.l	(sp)+,d1/a0
 	rts
-AddSmallFont
+AddSmallFont	;transfer smallfont.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
 	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
 	bra.w	DoDMA_clearCallbackPointer
-AddFramer
+AddFramer	;transfer framer.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
 	movea.l	#framermap+8,a2
 	move.w	d4,(framercset).w
 	bra.w	DoDMA_clearCallbackPointer
-AddTeamBlock
+AddTeamBlock	;transfer TeamBlocks.map tiles to vram at char 2. Return d4 = end of tiles + 1. Goes through DecompressGraphics
 	moveq	#2,d4
 	movea.l	#Teamblocksmap+8,a2
 	bra.w	DoDMA_clearCallbackPointer

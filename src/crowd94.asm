@@ -100,7 +100,7 @@ stopna2	; Slow the velocity at $28 / $2A of a3 toward 0 by $7D0. Called from goa
 checkcornercoll94	;(and). 210 = blue line to the end of the rink, corner radius 64. Corner circles and side walls
 	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to Called from
 	;wallcollduringcheck.
-	bclr	#pf3wall,pflags3(a3)	;clears bit 4 in pflags3 (not used in 92)
+	bclr	#pf3wall,pflags3(a3)	;clear the wall collision bit
 	move.w	#$88,d4	;sideline
 	sub.w	(wcradiusx).w,d4	;BD22 = wcradiusx
 	move.w	#$12A,d5	;ywall
@@ -188,7 +188,7 @@ HotColdLoop	;The Create_HotCold_Table loop
 	dbf	d1,HotColdLoop
 	movem.l	(sp)+,d0-d7
 	rts
-Clamp0to100	;no xref. unused: clamp d3 to 0 ... 100
+Clamp0to100	;unused: clamp d3 to 0 ... 100
 	tst.w	d3
 	bpl.w	.chkmax
 	clr.w	d3
@@ -263,7 +263,7 @@ NextAwayHotPlayer	;The same for the away team (awayhotplayer, awayhotidx), a1 = 
 	movem.l	(sp)+,d0/a0
 	movea.l	#AwShots,a1
 	rts
-	rts	;no xref
+	rts	;unreferenced
 BuildHotColdLists	;Build the hot / cold player lists of both teams (SortHotColdStarters, CopyHottestPlayer, CopyColdestPlayer). Called from ScoutingReport
 	clr.w	(awayhotidx).w
 	clr.w	(homehotidx).w
@@ -359,7 +359,7 @@ NextAwayColdPlayer	;The same for the away team (awaycoldidx, awaycoldplayer), a1
 	movem.l	(sp)+,d0/a0
 	movea.l	#AwShots,a1
 	rts
-	rts	;no xref
+	rts	;unreferenced
 CopyHottestPlayer	;Copy the hottest player of TempBuffer to the list at a0
 	movem.l	d0-d1/a0-a1,-(sp)
 	movea.l	#TempBuffer,a1

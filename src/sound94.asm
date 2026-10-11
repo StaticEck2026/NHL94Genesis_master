@@ -32,9 +32,9 @@ p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute ev
 	movem.l	(sp)+,d0-d7/a0-a2
 rtsfx	;The shared rts; play_sfx_or_music_track and ProcessOneMusicTrack branch to it
 	rts
-play_sfx_or_music_track	;Start sound d0 (0-$7A; 93 0-$37) in the track slot with the lowest pointer. $30 and up are
-	;songs: the song already playing is stopped first (play_new_song). 94 takes the event stream from the long pointer table MusicTrackPointerTable (93 word
-	;offsets) and also sets each voice volume (+4) to $7F. Called from sfx and song
+play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowest pointer. $30 and up are
+	;songs: the song already playing is stopped first (play_new_song). Takes the event stream from the long pointer table
+	;MusicTrackPointerTable and also sets each voice volume (+4) to $7F. Called from sfx and song
 	cmp.w	#$7A,d0
 	bhi.s	rtsfx	;out of range
 	movem.l	d0-d3/a0-a2,-(sp)
@@ -92,7 +92,7 @@ play_new_song	;Stop the song in progress: free the first slot whose pointer is a
 	clr.b	(Z80_command_buffer+4).w
 	move.l	#-1,-6(a1)	;free the slot
 	moveq	#5,d1
-	lea	(fm_channel_structs).w,a2	;6 x 8 bytes in 94
+	lea	(fm_channel_structs).w,a2	;6 x 8 bytes
 .kill
 	move.b	(a2),d2
 	andi.w	#7,d2
@@ -228,8 +228,8 @@ ResetZ80Bus	;Reset the Z80 and wait for its bus
 	btst	#0,(IO_Z80BUS).l
 	bne.s	.loop
 	rts
-p_music_vblank	;(vblank handler). Read the pads (ReadJoyData, 94), clear the change bits, run the 8 track slots (d7 = track
-	;7-0), send the buffer if anything changed and age the channels. 94 keeps the Rev A 93 50 Hz block: with PALflag bit 0 set the slots run
+p_music_vblank	;(vblank handler). Read the pads (ReadJoyData), clear the change bits, run the 8 track slots (d7 = track
+	;7-0), send the buffer if anything changed and age the channels. 50 Hz block: with PALflag bit 0 set the slots run
 	;again every 6th frame. Called from the vblank handlers
 	bsr.w	ReadJoyData
 	clr.b	(music_needs_z80_update).w
@@ -315,7 +315,7 @@ ProcessOneMusicTrack	;Count down track slot a5 (track d7) and run every event th
 	adda.w	0(a2,d0.w),a2
 	jsr	(a2)
 	bra.s	ProcessOneMusicTrack
-command_jump_table	;Event handlers by status bits 6-4, as offsets from the table. 94 adds handle_command_30
+command_jump_table	;Event handlers by status bits 6-4, as offsets from the table, including handle_command_30
 	dc.w	handle_command_00-command_jump_table
 	dc.w	handle_command_10-command_jump_table
 	dc.w	handle_command_skip-command_jump_table
@@ -722,16 +722,16 @@ ClearAllTrackAndSFXSlots	;Free the 8 track slots and reset the 6 channel structs
 	dbf	d0,.chan
 	rts
 
-;	The Z80 driver, the PCM samples and the FM patches are the 93 files (same bytes); the pointer
+;	The Z80 driver, the PCM samples and the FM patches are unchanged from 93; the pointer
 ;	tables are written with the labels; each sound and song event stream is its own file (loop pointers written as dc.l).
-Z80_Program_Code	;First byte of the Z80 program (movea.l in p_initialZ80); the rest of the Z80 blob from and the data
-	;after it are the incbins below. p_initialZ80 copies $295 bytes from here (through, into pcm_sample_table, as 93 does)
+Z80_Program_Code	;First byte of the Z80 program (movea.l in p_initialZ80); the rest of the Z80 blob and the data
+	;after it are the incbins below. p_initialZ80 copies $295 bytes from here into pcm_sample_table
 	dc.b	$18
-	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93.bin	;the 93 Z80 driver after its first byte, up to the ld bc of the FM patch bank address
+	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93.bin	;the Z80 driver after its first byte, up to the ld bc of the FM patch bank address
 	dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80	;Z80 ld bc,$8000+(fm_instrument_patches&$7FFF): bank window address of the FM patches
 	dc.b	$09,$3E,fm_instrument_patches>>15	;Z80 add hl,bc / ld a,bank (32K bank) of the FM patches
 	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93_end.bin	;rest of the Z80 driver
-	dc.b	$FF			;pad: retail leftover byte (93 $83)
+	dc.b	$FF			;pad: retail leftover byte
 pcm_sample_table	;(sample address, 0) for PCM patches $60-$6E (lea in handle_command_10)
 	dc.l	sfx_puckget_pcm,0		;patch $60
 	dc.l	sfx_pass_pcm,0		;patch $61
@@ -787,7 +787,7 @@ sfx_puckget_pcm
 fm_instrument_patches	;32 FM patches x 32 bytes, byte $1E = pitch bend scale (UpdateChannelFrequencyAndVolume)
 	incbin	..\Extracted\NHL94\Sound\fm_instrument_patches.bin	;32 FM patches x 32 bytes (byte $1E = pitch bend scale)
 	even
-MusicTrackPointerTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_music_track; 93 word offsets from the table, sounds 0-$37)
+MusicTrackPointerTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_music_track)
 	dc.l	sfx_siren_cmdstream	;sound $0
 	dc.l	sfx_beep1_cmdstream	;sound $1
 	dc.l	sfx_beep2_cmdstream	;sound $2
@@ -978,7 +978,7 @@ sfx_puckwall4_cmdstream
 sfx_whistle_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_whistle_cmdstream.bin	;sound $3
 	even
-	dc.b	$FF,$FF			;pad: retail leftover bytes (93 has none here)
+	dc.b	$FF,$FF			;pad: retail leftover bytes
 sfx_shotwiff_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_shotwiff_cmdstream.bin	;sound $5
 	even
@@ -1271,14 +1271,14 @@ fmtune_id_77_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_77_cmdstream.bin	;song $77: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
 	even
 fmtune_title_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_title_cmdstream94.bin	;song $78 (93 $35): ExitToOpening, newTitleScreen. 94: one stream that loops to its start (93: intro, loop body)
+	incbin	..\Extracted\NHL94\Sound\fmtune_title_cmdstream94.bin	;song $78: ExitToOpening, newTitleScreen. One stream that loops to its start
 	even
 	dc.l	fmtune_title_cmdstream	;loop pointer
 fmtune_eog_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_eog_cmdstream94.bin	;song $79 (93 $36): IntermissionStart, StartHL2 (differs from 93)
+	incbin	..\Extracted\NHL94\Sound\fmtune_eog_cmdstream94.bin	;song $79: IntermissionStart, StartHL2
 	even
 	dc.l	fmtune_eog_cmdstream+4	;loop pointer (past the first event)
 fmtune_scouting_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_scouting_cmdstream94.bin	;song $7A (93 $37): ScoutingReport (differs from 93)
+	incbin	..\Extracted\NHL94\Sound\fmtune_scouting_cmdstream94.bin	;song $7A: ScoutingReport
 	even
 	dc.l	fmtune_scouting_cmdstream+4	;loop pointer (past the first event)
