@@ -1191,13 +1191,13 @@ UpdatePlayerRecords	;After a game: for the 26 players of team a2, keep each new 
 	addq.w	#1,d0
 	dbf	d2,.loop
 	rts
-CountGoalies	;homegoalies / awaygoalies = goalies of the home / away team (ReadAttributeNibble). Called and PlayerCards
+CountGoalies	;homegoalies / awaygoalies = goalies of the home / away team (GetGoalieCount). Called and PlayerCards
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#tmstruct,a2
-	jsr	(ReadAttributeNibble).l
+	jsr	(GetGoalieCount).l
 	move.w	d0,(homegoalies).w
 	movea.l	#AwShots,a2
-	jsr	(ReadAttributeNibble).l
+	jsr	(GetGoalieCount).l
 	move.w	d0,(awaygoalies).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
@@ -2052,7 +2052,7 @@ OvrGoalWgtList	dc.b	2	;CalcAttrib goalie weights
 	dc.b	2,2,2,2,2,2,2,9,9,2,2,9,2,2,2
 AttribWgtList	dc.b	2	;CalcAttrib attribute weights
 	dc.b	2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
-PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the roster index: ReadAttributeNibble, GetDefenseStart)
+PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the roster index: GetGoalieCount, GetDefenseStart)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#mesarea,a1
 	bsr.w	GetJerseyString
@@ -2069,7 +2069,7 @@ PrintCardPosition	;Player card position: Goalie, Forward or Defenseman (from the
 	cmp.w	(sp),d0
 	ble.w	.2
 	move.w	(sp),d0
-	jsr	(ReadAttributeNibble).l
+	jsr	(GetGoalieCount).l
 	cmp.w	(sp),d0
 	ble.w	.1
 	jsr	(printsmallz).l

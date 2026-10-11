@@ -90,3 +90,20 @@ Read4WayPad1,ReadJoySwapPad1,behavior
 Read4WayPad2,ReadJoySwapPad2,behavior
 Read4WayPad3,ReadJoySwapPad3,behavior
 Read4WayPad4,ReadJoySwapPad4,behavior
+DisplayAttributeScreen,PlayerStatsList,behavior (stats-screen columns, not attributes)
+UpdateAttributeScroll,UpdateStatsListScroll,behavior (stats-screen columns, not attributes)
+SetAttribScrollReg,SetStatsListScrollReg,behavior (stats-screen columns, not attributes)
+DisplayAttributeLineUp,DrawStatsRowUp,behavior (stats-screen columns, not attributes)
+DisplayAttributeLineDown,DrawStatsRowDown,behavior (stats-screen columns, not attributes)
+DisplayAttributeMenu,DrawStatsList,behavior (stats-screen columns, not attributes)
+DisplayAttributeEntry,DrawStatsRow,behavior (stats-screen columns, not attributes)
+CheckAttributeValid,GetStatColumn,behavior (stats-screen columns, not attributes)
+GetAttributeValue2,ReadStatColumn,behavior (stats-screen columns, not attributes)
+AttributeOffsetTbl2,StatColumnOffsets,behavior (stats-screen columns, not attributes)
+DrawScrollArrowsAttribute,DrawStatsListArrows,behavior (stats-screen columns, not attributes)
+AttributeMenuTxt,StatColumnHeaders,behavior (stats-screen columns, not attributes)
+AttributeTitleTxt,StatSortTitles,behavior (stats-screen columns, not attributes)
+ReadAttributeNibble,GetGoalieCount,behavior (stats-screen columns, not attributes)
+ProcessNibble,GetForwardCount,behavior (stats-screen columns, not attributes)
+FormatPlayerNameWithAttrib,FormatPlayerNumInitial,behavior (stats-screen columns, not attributes)
+GetPlayerNameWithAttrib,GetPlayerNumInitial,behavior (stats-screen columns, not attributes)

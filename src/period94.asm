@@ -230,9 +230,9 @@ PrintPlayerNameRight	;Print the name of player d0 of team a2 (FormatPlayerName),
 	jsr	(HotColdIcon).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-SkipNameNumber	;Unreferenced. A1 = the FormatPlayerNameWithAttrib String without its first 2 characters (the length word moved up 2)
+SkipNameNumber	;Unreferenced. A1 = the FormatPlayerNumInitial String without its first 2 characters (the length word moved up 2)
 	movem.l	d0-d7/a0/a2-a3,-(sp)
-	jsr	(FormatPlayerNameWithAttrib).l
+	jsr	(FormatPlayerNumInitial).l
 	move.w	(a1),d0
 	subq.w	#2,d0
 	move.w	d0,2(a1)

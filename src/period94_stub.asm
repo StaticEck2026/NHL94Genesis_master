@@ -18,7 +18,7 @@
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 ExitStatsScreen = $9CD8	;jsr / jmp (x).l
 FormatPlayerName = $18B26	;jsr / jmp (x).l
-FormatPlayerNameWithAttrib = $18AE8	;jsr / jmp (x).l
+FormatPlayerNumInitial = $18AE8	;jsr / jmp (x).l
 Framer = $119B8			;jsr / jmp (x).l
 PrintTeamData = $8078		;jsr / jmp (x).l
 PushNumber = $11D06		;jsr / jmp (x).l

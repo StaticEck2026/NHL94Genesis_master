@@ -875,7 +875,7 @@ CalcTeamStarScores	;Star scores of team a2 (a3 = other team) to (a4)+, one long 
 	sub.w	tmscore(a3),d3	;goal difference (HmGoals / AwGoals)
 	ext.l	d3
 	moveq	#$19,d4	;26 slots
-	jsr	(ReadAttributeNibble).l	;d0 = goalies on the team
+	jsr	(GetGoalieCount).l	;d0 = goalies on the team
 	neg.w	d0
 	add.w	d4,d0
 .loop
@@ -942,7 +942,7 @@ ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset, 'Out for period', o
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),$C,4,'Injury to:',-(TXPRI+TXMAP1),$C,6,'Out for game',-(TXPRI+TXMAP1),$C,5
 .1
-	bsr.w	GetPlayerNameWithAttrib
+	bsr.w	GetPlayerNumInitial
 	bsr.w	print
 	btst	#pf2fight,(puck_pflags2).w
 	beq.w	.ex
@@ -985,7 +985,7 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 .5
 	movea.l	#AwShots,a2
 .6
-	bsr.w	FormatPlayerNameWithAttrib
+	bsr.w	FormatPlayerNumInitial
 	bsr.w	print
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),4,7
@@ -1004,7 +1004,7 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 	beq.w	.7
 	movea.l	#tmstruct,a2
 .7
-	jsr	(FormatPlayerNameWithAttrib).l
+	jsr	(FormatPlayerNumInitial).l
 	jsr	(print).l
 	movem.l	(sp)+,d0-d2/a0-a4
 	rts
@@ -1152,7 +1152,7 @@ getname	;gets player number and name, appends to string: a1 = mesarea "NN First 
 	movea.w	#(mesarea-M68K_RAM),a1	;move mesarea address into a1
 	movem.l	(sp)+,d0-d3/a0/a2-a3	;pop from stack
 	rts
-GetPlayerNameWithAttrib	;a1 = mesarea "NN F. Last" (FormatPlayerNameWithAttrib) for player TempPlOffset (bit 15 set: away team). Called from ShowInjuryBox
+GetPlayerNumInitial	;a1 = mesarea "NN F. Last" (FormatPlayerNumInitial) for player TempPlOffset (bit 15 set: away team). Called from ShowInjuryBox
 	movem.l	d0/a2,-(sp)
 	movea.w	#(tmstruct-M68K_RAM),a2
 	move.w	(TempPlOffset).w,d0
@@ -1160,10 +1160,10 @@ GetPlayerNameWithAttrib	;a1 = mesarea "NN F. Last" (FormatPlayerNameWithAttrib) 
 	andi.w	#$FF,d0
 	adda.w	#tmsize,a2
 .get
-	bsr.w	FormatPlayerNameWithAttrib
+	bsr.w	FormatPlayerNumInitial
 	movem.l	(sp)+,d0/a2
 	rts
-FormatPlayerNameWithAttrib	;a1 = mesarea string "NN F. Last" for player d0 of team a2, built in TextBuffer. Called from PenaltyShotBox and others
+FormatPlayerNumInitial	;a1 = mesarea string "NN F. Last" for player d0 of team a2, built in TextBuffer. Called from PenaltyShotBox and others
 	movem.l	d0-d3/a0/a2,-(sp)
 	bsr.w	GetPlayerNamePointer
 	move.l	a0,-(sp)

@@ -648,7 +648,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	beq.w	.0
 	movea.l	#AwShots,a2
 .0
-	jsr	(FormatPlayerNameWithAttrib).l
+	jsr	(FormatPlayerNumInitial).l
 	move.w	(printx).w,-(sp)
 	jsr	(print).l
 	move.w	(sp)+,(printx).w
@@ -667,7 +667,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	beq.w	.1
 	movea.l	#tmstruct,a2
 .1
-	jsr	(FormatPlayerNameWithAttrib).l
+	jsr	(FormatPlayerNumInitial).l
 	jsr	(print).l
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),4,9

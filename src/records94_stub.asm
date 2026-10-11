@@ -17,7 +17,7 @@
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 ExitStatsScreen = $9CD8	;jsr / jmp (x).l
-FormatPlayerNameWithAttrib = $18AE8	;jsr / jmp (x).l
+FormatPlayerNumInitial = $18AE8	;jsr / jmp (x).l
 Framer = $119B8			;jsr / jmp (x).l
 ProcessInputWithRepeat = $11318	;jsr / jmp (x).l
 PushNumberWidth = $11D3A		;jsr / jmp (x).l

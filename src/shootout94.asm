@@ -160,7 +160,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	move.w	(TestList).w,d0
 	asl.w	#1,d0
 	move.w	0(a0,d0.w),d6
-	jsr	(ReadAttributeNibble).l
+	jsr	(GetGoalieCount).l
 	move.w	d0,d1
 	jsr	(GetPlayerCount).l
 	sub.w	d1,d0
