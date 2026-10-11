@@ -1,9 +1,7 @@
-;	NHL 94 (retail) segment
-;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and the 94 helpers after it, then the
-;	93 vblank handler. 94 put this code just) follows. HiScoreScreen is not next to this code and is not in
-;	this segment.
-;It is code with no xref and is written as instructions (DrawTeamBlockBitmap, ClearTextBox, SetTeamPrintPos,
-;	SetGoalieMode).
+;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and
+;	the helpers after it (SetPojoyMode, DrawMatchupBitmaps, DrawTeamBitmap,
+;	dotb, ClearOptionDisplay, setoptions_printpos2, SetGoalieMode), then the
+;	options screen vblank handler (VBlank_SetOptions).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
 ;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz use the String macro (length word includes itself).

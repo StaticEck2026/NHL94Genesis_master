@@ -1,15 +1,14 @@
-;	NHL 94 (retail) segment
-;	94 code in the high ROM, between and: wallcollduringcheck, setSlotBit, the team palettes (TeamPalettes)
-;	featured player pictures (FeaturedPictures), the save RAM records (team, player, crowd and user records), the Player Cards screens and
-;	CalcAttrib, the user record NAME ENTRY screen, Record Holders, the playoff round screen (PlayoffRoundScreen) and the shootout (shooters
-;	menu, next shooter, "SHOOTOUT WON BY"). New in 94; 93 has no code here.
-;There are no 93 counterparts: the names are kept, and the names and the entries no label for are named for what
-;they do.
-;Written from the retail bytes: the inline Strings after the print calls and the remap tables ( code), the
-;code behind them, and the picture lists as code. The palettes as code (TeamPalettes) are.pal incbins. The
-;inside Strings are not labels.
+;	New in 94: code in the high ROM: wallcollduringcheck, setSlotBit, the
+;	team palettes (TeamPalettes), the featured player pictures
+;	(FeaturedPictures), the save RAM records (team, player, crowd and user
+;	records), the Player Cards screens and CalcAttrib, the user record NAME
+;	ENTRY screen, Record Holders, the playoff round screen
+;	(PlayoffRoundScreen) and the shootout (shooters menu, next shooter,
+;	"SHOOTOUT WON BY").
+;	Inline Strings follow the print calls; labels inside Strings are not
+;	separate labels. The team palettes are .pal incbins.
 
-wallcollduringcheck	;(and comments). during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
+wallcollduringcheck	;during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
 	;with his size + $17. Called from CCStart
 	tst.w	$34(a2)	;check if goalie
 	beq.w	.end

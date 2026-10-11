@@ -1,9 +1,11 @@
-;	NHL 94 (retail) segment
-;	assgoaliecpu, ClampYPosition, AdjustFacingDirection, goaliesave), assgoalietopuck, the breakaway code
-;	asspuckc, chkpk / chkpk2, chk4pass and EvadePC. checkob follows at $E62E.
+;	Skater and goalie assignments: asswingo, asscenterd, asscentero, the
+;	goalie code (assgoaliectrl, assgoaliecpu, ClampYPosition,
+;	AdjustFacingDirection, goaliesave, assgoalietopuck), the breakaway code,
+;	asspuckc, chk4lc, chkpk / chkpk2, chk4shot, compshoot, chk4pass and
+;	EvadePC.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36
+;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36,
 ;	temp1 $40, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
 
 asswingo
@@ -1634,13 +1636,16 @@ EvadePC
 	moveq	#6,d0
 .ex
 	rts
-;	NHL 94 (retail) segment
-;	penalty shot code (puckshootout, puckpenshot), puckfaceoff, ChkGoalies, ReturnGoalies, CPgoalie, CompLine,
-;	puckfaceoff2, ResetAndSelectPlayers, updatefaceoff, Endfaceoff, pucknorm. ChkOffsides follows at $FFEA.
+;	checkob, assbreakaway, assnearest, check4check, asspassrec, assshoot, the
+;	penalty shot code (puckshootout ... PenaltyShotEndReturn), the faceoff code
+;	(puckfaceoff ... Endfaceoff), ChkGoalies, ReturnGoalies, CPgoalie,
+;	CompLine, pucknorm, then ChkOffsides, the puck state routines, skateto,
+;	avdgoal, skatetopuck, the assignment list helpers, GetHot, SetSPA, the
+;	acceleration code (doplayeracc ... stopna) and dirtab.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 ;	Inline print strings after printz / printz2 use the String macro (length word includes itself).
-;SortCords offsets: Xpos 0, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36, temp1 $40
+;	SortCords offsets: Xpos 0, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36, temp1 $40,
 ;	temp3 $44, temp4 $46, SCnum $52, facedir $54, SPA $58, pflags $62, pflags2 $63.
 
 checkob

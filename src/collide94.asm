@@ -1,8 +1,6 @@
-;	NHL 94 (retail) segment
-;ci), checkcheck and CCStart, checkinglist, checkagr, holdcheck, Bcheck, FallDown, setInjuryType. checkfight
-;	(an rts in 94) follows (bsr.w displacement).
-;That would split a routine are locals:.ci in checkint (93.ci),.PlayerControlled and.CheckingCalc in CCStart,.CmpPlayerStk
-;AddChktoPlayerStats and.FallList in FallDown.
+;	checkcoll, checkplcoll, checkcx, newcheck, checkint, checkcheck and
+;	CCStart, checkinglist, checkagr, holdcheck, Bcheck, FallDown and
+;	setInjuryType.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20 OldYpos, $28 Xvel, $2A Yvel,
@@ -89,7 +87,7 @@ checkcoll	;d2 = new x coord, d3 = new y coord, a3 = struct of object. Check wall
 	rts
 checkplcoll	;check collision with other players. d2/d3 = x/y cords, a3 = struct. Walk up and down the OOlist from a3 and call checkcx for each
 	;object within $10 in y. Called from checkcoll
-	btst	#5,pflags2(a3)	;pflags2 bit 5 (93: no player coll bit, 92 used 7; line change mode)
+	btst	#5,pflags2(a3)	;pflags2 bit 5 (line change mode)
 	bne.w	.ex
 	cmpi.w	#$B,SCnum(a3)	;#11, SCnum
 	bgt.w	.ex
@@ -282,7 +280,7 @@ checkint	;check for interference penalty. player a2 interferes with a3 or vice-v
 	exg	a2,a3
 	move.l	(sp)+,d0
 	rts
-.ci	;93 checkint.ci. a2 = goalie, a3 = player interfering with goalie. a3 falls. 94: the interference penalty ($22) needs a3
+.ci	;a2 = goalie, a3 = player interfering with goalie. a3 falls. The interference penalty ($22) needs a3
 	;in the crease area (y $EF-$10A toward a2's goal, x within $14), a CPU player or a pad player's joystick player, and randomd0($28 - aggres) <=
 	;4 (($14 - byte $73) <= 2)
 	tst.w	$34(a2)	;test for goalie
@@ -349,7 +347,7 @@ checkcheck	;player is in contact: look for various contact events. Runs CCStart 
 	bsr.w	CCStart
 	movem.l	(sp)+,d0-d4/a0-a3
 	rts
-CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdcheck, SPAsweepchk to Bcheck; otherwise
+CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdcheck, SPAsweepchk to Bcheck; otherwise
 	;only a3 in SPAburst checks. Sets a3's check anim from checkinglist; a big enough hit on a skater makes a2 fall, with a charging ($16 / $18)
 	;or roughing ($1A / $1C) roll from checkagr. 94: the hit uses wallcollduringcheck and half the Chk rating, and each penalty goes through
 	;PenShotChk
@@ -436,7 +434,7 @@ CCStart	;(93 checkcheck.cc). Player a3 is checking player a2. Holds (SPAHold, SP
 	bsr.w	AddPenalty
 .dn2
 	bra.w	FallDown
-checkinglist	;(93 checkcheck.list). Check anim by direction from a3 to a2, SPA offsets
+checkinglist	;Check anim by direction from a3 to a2, SPA offsets
 	dc.w	$B96	;SPAshoulderchkl
 	dc.w	$BC8	;SPAshoulderchkr
 	dc.w	$C2C	;SPAhipchkr
@@ -567,7 +565,7 @@ holdcheck	;player a2 is in hold animation looking to hold opponent a3. Entered f
 	st	(collflag).w
 	rts
 Bcheck	;a2 = player that is B checking, a3 = player being checked. Entered from CCStart. If OptPen is 0 and a2 is joystick controlled
-	;a2 needs randomd0($20 + a2 Chk - a3 Agl, 2 less when sflags8 bit 1 or sflags7 bit 6 is set) >= $18 (93: $10 + Chk - legstr, >= $C).
+	;a2 needs randomd0($20 + a2 Chk - a3 Agl, 2 less when sflags8 bit 1 or sflags7 bit 6 is set) >= $18 (93 used $10 + Chk - legstr, >= $C).
 	;If a3 is within 1 direction of where a2 faces, a3 falls and checkagr may call penalty $20 (tripping) on a2. Sets collflag
 	btst	#pfalock,pflags(a3)	;check if locked in animation
 	bne.w	rtss2	;exit if locked
@@ -966,24 +964,24 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 .exit
 	move.w	(sp)+,d0
 	rts
-;	NHL 94 (retail) segment
-;	checkgoal, GetPeriodTimeRemaining, checkgoalp, CheckBump, wallcollb, wallcoll
-;	checkpuckcoll_sfx and checkpuckcoll. puckstick follows (bsr.w displacement).
-;(before checkpuckcoll, entered from it) is the global checkpuckcoll_sfx. The source has the real cmp / cmpi;
-;fixopcodes.js patches the cmp encoding after assembly.
+;	checkfight (an rts), checkwallcoll, checkgoal, GetPeriodTimeRemaining,
+;	checkgoalp, CheckBump, wallcollb, wallcoll, checkpuckcoll_sfx (entered
+;	from checkpuckcoll) and checkpuckcoll.
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
+;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $1C OldXpos, $20 OldYpos,
 ;	$24 OldZpos, $28 Xvel, $2A Yvel, $2C Zvel, $32 impact, $34 position, $4E wallcos, $50 wallsin, $52 SCnum, $58 SPA,
 ;	$5E nopuck (byte), $62 pflags, $63 pflags2, $64 bit 3 one-timer, bit 4 wall collision, $68 Agl, $76 handedness.
 ;	94 team struct from HmShots / AwShots (tmsize $364): $C tmscore, $18-$1C scorer and assists, $22 tmsort, $24 tmap,
 ;	$26 tmgoalie, $B4 / $CE goal / assist bytes per player, $342 goals by period, $356 PP goals, $35A BA goals, $362 SH goals.
 
-checkfight	;an rts. 93 looked for the start of a fight between players a2 and a3 (94 has no fight code). Called from checkcx
+checkfight	;an rts: there is no fighting (93 looked for the start of a fight between a2 and a3 here). Called from checkcx
 	rts
 checkwallcoll	;d2/d3 = x/y to test, a3 = object, wcradiusx/wcradiusy = radius. Check the corner circles, the goals
 	;(checkgoal with a2 = SortCords+(13*SCstruct) top, SortCords+(12*SCstruct) bottom) and then the side and end boards. Calls wallcollb on a hit, with d0/d1 = cos/sin of
 	;the wall. Called from checkcoll
 	bclr	#pf3wall,pflags3(a3)	;wall collision bit
-	move.w	#$88,d4	;92 used a RAM word; 94 uses 136
+	move.w	#$88,d4	;136
 	sub.w	(wcradiusx).w,d4
 	move.w	#$12A,d5	;298: end boards
 	sub.w	(wcradiusy).w,d5
@@ -1225,7 +1223,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	cmp.w	(vcount).w,d0	;wait for the next vblank
 	beq.s	.loop
 	move.w	(sp)+,d0
-	move.w	#SFXsiren,-(sp)	;SFXsiren (92 same, 0)
+	move.w	#SFXsiren,-(sp)	;SFXsiren (0)
 	bsr.w	sfx
 	jsr	(freezewindow).l
 	addi.w	#$1F4,(crowdlevel).w	;add 500 (92 800)
@@ -1282,7 +1280,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	move.w	(SongNum).w,-(sp)
 	move.w	(sp)+,(delayedsong).w
 .16
-	cmpi.w	#$168,(ScoreSumbytes).w	;60 entries of 6 bytes full? (93 $B4, 30)
+	cmpi.w	#$168,(ScoreSumbytes).w	;60 entries of 6 bytes full? (93 kept 30)
 	bne.w	.17
 	subq.w	#6,(ScoreSumbytes).w	;overwrite the last entry
 .17
@@ -1369,12 +1367,12 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	bsr.w	AddPenalty2
 	movea.l	(sp)+,a3
 	rts
-.setass	;93 Goal.setass (93 ). d0 = assignment, a2 = team. Give each skater of team a2 that is not fighting
-	;assignment d0, clear pfnc. 94 also clears $64 bit 3 (one-timer) and then calls EndOneTimer. Called from checkgoal (.goal)
+.setass	;d0 = assignment, a2 = team. Give each skater of team a2 that is not fighting
+	;assignment d0, clear pfnc. Also clears $64 bit 3 (one-timer) and then calls EndOneTimer. Called from checkgoal (.goal)
 	move.l	a3,-(sp)
 	movea.w	$22(a2),a3	;tmsort
 	moveq	#5,d3
-.loop3	;93 .loop
+.loop3	;next skater
 	tst.w	position(a3)	;position
 	ble.w	.nl
 	btst	#0,pflags2(a3)	;pf2fight
@@ -1894,13 +1892,12 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	move.w	#SFXshotwiff,-(sp)	;sound
 	bsr.w	sfx
 	bra.w	.exit
-;	NHL 94 (retail) segment
-;	rtss2 (the shared rts), puckgoalie, deflect, makepde, getpde, setpde, SetPersonel, SetPlList, TryAddPlayerToList, the
-;	SetupPenaltyShot, forcepldata, ResetBench, Setplass, setplayer, ClampNibble. The vblank handler (93 VBlank,
-;	) follows.
-;(puckstick, also entered from puckgoalie) ; labels that would split a routine are locals .CheckStkForContactWithSkater
-;and .PlayerPassOrLoosePuckStkLoad in puckstick, .AwayTeam in setplayer. The source has the real cmp / cmpi; fixopcodes.js patches the cmp
-;encoding after assembly.
+;	puckstick, puckglue, puckbody, rtss2 (the shared rts), puckgoalie,
+;	deflect, makepde, getpde, setpde, setpersonel, SetPlList,
+;	TryAddPlayerToList, SetupPenaltyShot, forcepldata, ResetBench, Setplass,
+;	setplayer and ClampNibble.
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
+;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $28 Xvel, $2A Yvel, $2C Zvel,
 ;	$34 position, $46 temp4, $48 temp5, $52 SCnum, $54 facedir, $58 SPA, $5A, $5E nopuck (byte), $60 newpos, $61 newpnum,
 ;	$62 pflags, $63 pflags2, $64 bit 3 one-timer, $66 pnum, then the attributes setplayer writes: $67 Wgt, $68 Agl,
@@ -1985,7 +1982,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 .stdef
 	move.w	#SFXstdef,-(sp)	;#SFXstdef
 	bsr.w	sfx
-	bsr.w	a2touchpuck	;deflect (93 .stdef falls into deflect)
+	bsr.w	a2touchpuck	;deflect
 	bra.w	deflect
 .nosteal
 	tst.w	position(a2)	;check if goalie
@@ -2035,7 +2032,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	move.w	#$18,SPAnum(a2)
 .ex2
 	rts
-puckglue	;a local of puckstick that puckgoalie also branches to. Player a2 takes the puck (92 puckstick.glue): faceoff
+puckglue	;part of puckstick that puckgoalie also branches to. Player a2 takes the puck: faceoff
 	;and pass stats, crowd song, goalie hold time (temp5), then .setd0player
 	move.w	#7,-(sp)	;SFXpuckget
 	move.w	SCnum(a2),d0	;move SCnum into d0
@@ -2173,7 +2170,7 @@ puckbody	;puck hits player a2. a3 = puck, d0 = distance^2 (from checkpuckcoll .c
 rtss2	;shared rts, branched to from many segments
 	rts
 puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save odds come from the goalie's glove / stick attributes (.list) and
-	;the frame tables .list2 (93 goalie frames) and .list3 (94 frames from $292); a save bounces the puck off (.bounceoff), a slow puck near the
+	;the frame tables .list2 (older goalie frames) and .list3 (frames from $292); a save bounces the puck off (.bounceoff), a slow puck near the
 	;crease is held (puckglue)
 	btst	#gmhl,(gmode).w	;check if highlight
 	bne.s	rtss2	;exit if highlight
@@ -2821,7 +2818,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	lsr.w	#1,d3	;shift d3 back to its original value
 	movea.l	tmdata(a0),a0	;Offset 1E from Team Struct = The address where the team's data is stored (roster, etc)
 	move.l	a0,-(sp)	;pushes starting position onto the stack
-	adda.w	8(a0),a0	;moves to offset where Off/Def byte is. From here 94 differs from 92
+	adda.w	8(a0),a0	;moves to offset where Off/Def byte is
 	clr.l	(PPBonus).w	;Clears all bonuses
 	tst.w	position(a3)	;check if goalie
 	beq.w	.playdatamove
@@ -2985,7 +2982,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	move.b	d3,aggress(a3)	;Agr gets no bonus
 	andi.b	#$F,aggress(a3)	;mask Agr byte with F, so max is 15 decimal
 	rts
-ClampNibble	;Clamp byte d3 to 0-$1E (93 0-15). Called by setplayer
+ClampNibble	;Clamp byte d3 to 0-$1E (93 clamped to 0-15). Called by setplayer
 	tst.b	d3	;test if d3 is zero or higher
 	bpl.w	.pos
 	clr.w	d3	;if negative, clear

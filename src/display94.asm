@@ -1,9 +1,8 @@
-;	NHL 94 (retail) segment
-;	first half, as 93: VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAlist, SetScroll2
-;	setvideo and the sprite builders it calls (updatescroll, showref, checkfo, showzam, SetSframe, showcrowd). showclock
-;	follows.
-;The source has the real cmp / cmpi; fixopcodes.js patches
-;the cmp encoding after assembly.
+;	VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAList, SetScroll2,
+;	setvideo and the sprite builders it calls (updatescroll, showref,
+;	checkfo, showzam, SetSframe, showcrowd).
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
+;	fixopcodes.js patches the cmp encoding after assembly.
 ;	Bits: disflags 0 dfok, 2 dfng, 3 dfclock, 4 face off; sflags 0 sfpz, 7 sfhor; sflags2 1 sf2refref.
 
 VBlank	;Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
@@ -308,7 +307,7 @@ showzam	;zamboni. a5 = dma list, a6 = sprite table, d6 = link counter. Draws fra
 	movea.l	#.ftab,a1
 	move.w	0(a1,d2.w),d2
 	bra.w	SetSframe
-.ftab	dc.w	5,6,7,8,7,8,7,8,7,8,7,6,5	;93 .ftab. Frame by (x-$DA)/4
+.ftab	dc.w	5,6,7,8,7,8,7,8,7,8,7,6,5	;frame by (x-$DA)/4
 SetSframe	;draw one sprite frame. a0 = framelist, d0/d1 = x/y cords, d2 = frame to setup (from 0), d3 = start char in vram, a6 = sprite table,
 	;d6 = link counter. Called from showzam and from code outside this segment
 	cmp.w	#$40,d6	;MaxSprites
@@ -366,7 +365,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	bsr.w	.sc
 	move.b	(crowdframe+1).w,d0
 	bra.w	.sc
-.pb	;93.pb, d2 = count, d3 = first frame
+.pb	;d2 = count, d3 = first frame
 	andi.w	#$F,d2
 	cmp.w	#3,d2
 	bls.w	.pb0
@@ -380,7 +379,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 .nextpb
 	dbf	d2,.pbt
 	rts
-.sc	;93.sc, d0 = frame, 0 = none
+.sc	;d0 = frame, 0 = none
 	ext.w	d0
 	beq.w	rtss2
 	btst	#sfhor,(sflags).w
@@ -443,16 +442,14 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	movem.l	(sp)+,d0-d5
 .x
 	rts
-;	NHL 94 (retail) segment
-;	RenderSmallFontChar, ButtonLabelCharTable, addframe, addframe2, find3d, updatesound and KillCrowd. setupice
-;	follows.
-;The 94 horizontal clock code's .digit and .digits sit
-;inside showclock, so the original body stays the local .3. The tables left as dc.b (.digits, .tab, ButtonLabelCharTable) are String
-;/ dc.w / dc.b.
+;	showclock, checksso, setsortcords, setffo, uppads, the pad label code
+;	(FormatControllerDisplay, RenderSmallFontChar, ButtonLabelCharTable),
+;	addframe, addframe2, find3d, updatesound and KillCrowd.
+;	The horizontal clock's .digit and .digits tables sit inside showclock.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
-;	Object offsets, as 92 / 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
-;	92 used $1C, ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
+;	Object offsets: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
+;	ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
 
 showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94: on the horizontal rink the clock is printed (printz / print
 	;with .digits; not in a shootout, gmode2 bit 0). On the vertical rink (.3) it goes in the dma list, only when
@@ -556,7 +553,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	btst	#sfhor,(sflags).w	;sfhor (always clear here in 94: the horizontal rink prints the clock above)
 	beq.w	.cv
 	movea.w	#(VmMap2-M68K_RAM),a1
-	moveq	#5,d0	;.clocky2 (93 4)
+	moveq	#5,d0	;clock y (93 used 4)
 	moveq	#$D,d2	;.clockx2 = 13
 .cv
 	move.w	2(a1),d1
@@ -566,7 +563,7 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. 94:
 	add.w	(a1),d0
 	move.w	d0,(a5)+	;vram destination
 	rts
-.char	;93.char, d0 high word = digit, write its tile to -(a0)
+.char	;d0 high word = digit, write its tile to -(a0)
 	swap	d0
 	asl.w	#1,d0
 	move.w	$64(a1,d0.w),d0	;4+('0'*2)
@@ -600,7 +597,7 @@ checksso	;do graphics for sso structure: arrows for the players when they are of
 	movea.w	#(Joy4Struct-M68K_RAM),a0
 	adda.w	#$14,a3
 	move.w	#$349,d3
-.ca	;93.ca, a0 = object, a3 = sso, d3 = first arrow frame. 94: in a shootout, with sflags2 bit 3 or in a penalty shot, no arrow for a player beyond x $A6
+.ca	;a0 = object, a3 = sso, d3 = first arrow frame. In a shootout, with sflags2 bit 3 or in a penalty shot, no arrow for a player beyond x $A6
 	tst.w	Zpos(a0)
 	bmi.w	rtss2	;not on the ice
 	st	frame(a3)
@@ -675,7 +672,7 @@ checksso	;do graphics for sso structure: arrows for the players when they are of
 	move.w	d3,frame(a3)
 	move.w	6(a1,d2.w),attribute(a3)
 	bra.w	addframe2
-.tab	;93 .tab. x spot, y spot, frame add, attribute per direction
+.tab	;x spot, y spot, frame add, attribute per direction
 	dc.w	0,$64,0,$0000
 	dc.w	$74,$64,1,$0000
 	dc.w	$74,0,2,$0000
@@ -817,7 +814,7 @@ RenderSmallFontChar	;Dma one small font tile (SmallFontMap) to the object's char
 	move.w	d0,(a5)+
 	rts
 ButtonLabelCharTable	;Third label character by bits 10-8 of the label code
-	dc.b	' DDLCRX',$FF	;94 pad byte $FF (93 retail $10)
+	dc.b	' DDLCRX',$FF	;pad byte (93 used $10)
 addframe	;a3 = sort cord object. Project it with find3d, then addframe2. a5 = dma trans, a6 = sprite attribute table. Called from setsortcords and setffo
 	movem.l	d0-d2,-(sp)
 	move.w	(a3),d0	;Xpos into d0
