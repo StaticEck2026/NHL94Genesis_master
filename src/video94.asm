@@ -149,7 +149,7 @@ CopyPaletteToCRAM	;93 name. Copy all 64 palfadenew colours to colour ram, protec
 	bset	#dfng,(disflags).w
 	movea.w	#(palfadenew-M68K_RAM),a1
 	movea.l	#VDP_DATA,a0
-	move.l	#$C0000000,vdpctrl(a0)
+	move.l	#CRAM_W,vdpctrl(a0)
 	moveq	#$1F,d0
 .0
 	move.l	(a1)+,(a0)
@@ -680,42 +680,42 @@ setVram_0	;93 name: second half of 92 setVram (no fade): clear vram and set the 
 	bne.w	.i32
 	ori.w	#$81,d0
 .i32
-	move.w	d0,4(a0)	;40 col mode, no interlace, normal brightness
-	move.w	#$8004,4(a0)	;512 color palette enable
-	move.w	#$8164,4(a0)
+	move.w	d0,vdpctrl(a0)	;40 col mode, no interlace, normal brightness
+	move.w	#VDPR_MODE1+$04,vdpctrl(a0)	;512 color palette enable
+	move.w	#VDPR_MODE2+$64,vdpctrl(a0)
 	move.w	#$9001,d0	;playfield is 64x32
 	cmpi.w	#6,(Map1col1).w
 	beq.w	.i64
 	move.w	#$9003,d0
 .i64
-	move.w	d0,4(a0)
+	move.w	d0,vdpctrl(a0)
 	move.w	#$8200,d0
 	move.b	(VmMap1).w,d0
 	lsr.b	#2,d0
 	andi.b	#$38,d0
-	move.w	d0,4(a0)
+	move.w	d0,vdpctrl(a0)
 	move.w	#$8400,d0
 	move.b	(VmMap2).w,d0
 	lsr.b	#5,d0
-	move.w	d0,4(a0)
+	move.w	d0,vdpctrl(a0)
 	move.w	#$8300,d0
 	move.b	(VmMap3).w,d0
 	lsr.b	#2,d0
 	andi.b	#$3E,d0
-	move.w	d0,4(a0)
+	move.w	d0,vdpctrl(a0)
 	move.w	#$8500,d0
 	move.b	(VSPRITES).w,d0
 	lsr.b	#1,d0
-	move.w	d0,4(a0)
+	move.w	d0,vdpctrl(a0)
 	move.w	#$8D00,d0
 	move.b	(VSCRLPM).w,d0
 	lsr.b	#2,d0
-	move.w	d0,4(a0)
-	move.w	#$9100,4(a0)	;disable plane 3 graphics
-	move.w	#$9200,4(a0)	;disable plane 3 graphics
-	move.w	#$8700,4(a0)	;Palette # 0 is border/transparent
-	move.w	#$8B00,4(a0)	;Scroll mode (entire scroll)
-	move.l	#$40000010,4(a0)	;vsram
+	move.w	d0,vdpctrl(a0)
+	move.w	#VDPR_WINX,vdpctrl(a0)	;disable plane 3 graphics
+	move.w	#VDPR_WINY,vdpctrl(a0)	;disable plane 3 graphics
+	move.w	#VDPR_BGCOL,vdpctrl(a0)	;Palette # 0 is border/transparent
+	move.w	#VDPR_MODE3,vdpctrl(a0)	;Scroll mode (entire scroll)
+	move.l	#VSRAM_W,vdpctrl(a0)	;vsram
 	move.l	#0,(a0)	;playfield 1/2
 	move.w	(sp)+,(disflags).w
 	rts

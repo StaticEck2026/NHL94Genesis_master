@@ -384,3 +384,4 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 - Sound: `stubinc/equals.inc` adds `SFX_*` game sound numbers (0-$2F, 92/93 names; +0-3 variants for pass/shot/check/puckwall/puckice) used at the sfx / song call sites.
   94 also has `SONG_TITLE` ($78), `SONG_EOG` ($79), `SONG_SCOUTING` ($7A).
 - Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
+- VDP commands: `ports.inc` adds `VRAM_W`, `CRAM_W`, `VSRAM_W` (long control words; add `(addr&$3FFF)<<16 + addr>>14`): `move.l #VSRAM_W+(2<<16),vdpctrl(a0)`.

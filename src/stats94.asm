@@ -90,7 +90,7 @@ UpdateVertScrollReg	;93 name. VSRAM word 1 = VertLineScrolling - $30
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
 	movea.l	#VDP_DATA,a0
-	move.l	#$40020010,vdpctrl(a0)
+	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)
 	move.w	#$FFD0,d0
 	add.w	(VertLineScrolling).w,d0
 	move.w	d0,(a0)
@@ -766,7 +766,7 @@ UpdatePlayerListScroll	;93 name. Set VertLineScrolling = d0. Stop on a page boun
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movea.l	#VDP_DATA,a0
-	move.l	#$40020010,vdpctrl(a0)
+	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)
 	move.w	#$FF90,d0
 	add.w	(VertLineScrolling).w,d0
 	move.w	d0,(a0)
@@ -1061,7 +1061,7 @@ UpdateGameStatScroll	;93 name. Set VertLineScrolling = d0. Stop on an entry boun
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movea.l	#VDP_DATA,a0
-	move.l	#$40020010,vdpctrl(a0)
+	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)
 	moveq	#$FFFFFFB0,d0
 	add.w	(VertLineScrolling).w,d0
 	move.w	d0,(a0)
@@ -1237,7 +1237,7 @@ UpdatePenaltyScroll	;93 name; IDA dc.b. Set VertLineScrolling = d0. Stop on an e
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movea.l	#VDP_DATA,a0
-	move.l	#$40020010,vdpctrl(a0)
+	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)
 	move.w	#$FFB0,d0
 	add.w	(VertLineScrolling).w,d0
 	move.w	d0,(a0)
@@ -1461,7 +1461,7 @@ SetAttribScrollReg	;93 name. VSRAM = VertLineScrolling - $68
 	move.w	(disflags).w,-(sp)
 	bset	#2,(disflags).w
 	movea.l	#VDP_DATA,a0
-	move.l	#$40020010,vdpctrl(a0)
+	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)
 	move.w	#$FF98,d0
 	add.w	(VertLineScrolling).w,d0
 	move.w	d0,(a0)
@@ -1857,9 +1857,9 @@ SetupScreen	;93 name. Common start of the stats screens: blank, 40 cell mode, th
 	bsr.w	Vmaddr
 	move.l	#0,(a0)
 .vdpregs
-	move.w	#$8C81,4(a0)
+	move.w	#VDPR_MODE4+$81,vdpctrl(a0)
 	move.w	#6,(Map3col1).w
-	move.w	#$8D00,4(a0)
+	move.w	#VDPR_HSCROLL,vdpctrl(a0)
 	clr.w	d0
 	bsr.w	Vmaddr
 	move.l	#0,(a0)
@@ -1925,8 +1925,8 @@ ReloadRinkGraphics	;93 ExitAttributeScreen2 after its forceblack (no 93 label): 
 	move.w	#$8D00,d0
 	move.b	(VSCRLPM).w,d0
 	lsr.b	#2,d0
-	move.w	d0,4(a0)
-	move.w	#$8C00,4(a0)
+	move.w	d0,vdpctrl(a0)
+	move.w	#VDPR_MODE4,vdpctrl(a0)
 	move.w	#5,(Map3col1).w
 	move.w	(sp)+,(disflags).w
 	bset	#1,(disflags).w

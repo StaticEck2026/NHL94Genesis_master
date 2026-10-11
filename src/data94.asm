@@ -1326,7 +1326,7 @@ crash	;92 / 93 name. printbig d1 then d0 as hex, set the vdp up, copy 8 longs fr
 	move.w	#VDPR_WINX,vdpctrl(a0)
 	move.w	#VDPR_WINY+$06,vdpctrl(a0)
 	move.w	#VDPR_AUTOINC+$02,vdpctrl(a0)
-	move.l	#$C0200000,vdpctrl(a0)	;cram write $20 (92 $C0060000)
+	move.l	#CRAM_W+($20<<16),vdpctrl(a0)	;cram write $20 (92 $C0060000)
 	movea.l	#Rinktilelist,a1
 	adda.l	(a1),a1
 	adda.w	#$20,a1

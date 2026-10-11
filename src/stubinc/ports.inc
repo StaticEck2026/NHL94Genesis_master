@@ -53,6 +53,10 @@ VDPR_DMALENH equ $9400
 VDPR_DMASRCL equ $9500
 VDPR_DMASRCM equ $9600
 VDPR_DMASRCH equ $9700
+;VDP control port access commands (long): add (addr&$3FFF)<<16 + addr>>14 for the address
+VRAM_W equ $40000000
+CRAM_W equ $C0000000
+VSRAM_W equ $40000010
 ; ports
 
 

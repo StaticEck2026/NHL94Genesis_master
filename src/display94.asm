@@ -94,7 +94,7 @@ SetScroll2	;93 name; 93 IDA DoScroller. Write Hscroll / Vscroll to the vdp. Call
 	addq.w	#2,d0
 	bsr.w	Vmaddr
 	move.w	(Hscroll).w,(a0)
-	move.l	#$40020010,4(a0)	;vsram write, address 2
+	move.l	#VSRAM_W+(2<<16),vdpctrl(a0)	;vsram write, address 2
 	move.w	(Vscroll).w,(a0)
 	rts
 setvideo	;this is not vblank code but sets up ram for vblank transfers. Called once per game frame (DoGameFrame, PauseMode, ...). 94 adds AddArenaAnimSprite and Crowd_Noise
