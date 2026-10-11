@@ -462,8 +462,8 @@ Pausemode	;IDA: PauseMode. Game is in pause mode now
 	bra.w	.hor
 .clr	jsr	(ClrHor).l
 .hor	movea.l	#VDP_DATA,a0
-	move.w	#$9100,4(a0)
-	move.w	#$9200,4(a0)
+	move.w	#VDPR_WINX,vdpctrl(a0)
+	move.w	#VDPR_WINY,vdpctrl(a0)
 	bset	#dfclock,(disflags).w		;dfclock: clock needs update
 	bclr	#sfpz,(sflags).w		;sfpz
 	jsr	(PrintScores1).l
@@ -477,8 +477,8 @@ Pausemode	;IDA: PauseMode. Game is in pause mode now
 SetupPauseScreen	;Draw routine for the pause menu (92 Pausemode .pall / .top).
 	;also called from $13780
 	movea.l	#VDP_DATA,a0
-	move.w	#$9100,4(a0)		;playfield 3 width
-	move.w	#$921C,4(a0)		;playfield 3 height
+	move.w	#VDPR_WINX,vdpctrl(a0)		;playfield 3 width
+	move.w	#VDPR_WINY+$1C,vdpctrl(a0)		;playfield 3 height
 	jsr	(SetHor).l
 	jsr	(setvideo).l
 	jsr	(KillCrowd).l

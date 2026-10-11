@@ -379,3 +379,4 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 ## Readability equates and macros (audit 2026-10)
 
 - Player struct fields: `stubinc/equals.inc` adds `pflags3` ($64) with bit names `pf3offs`/`pf3break`/`pf3gctrl`/`pf3onetimer`/`pf3wall`/`pf3fall`, and `aggress` ($73), `fighting` ($74), `checking` ($75). Write player struct offsets on a2/a3 as these names (`pflags3(a3)`, `nopuck+1(a3)`) rather than `$64(a3)`.
+- VDP: `stubinc/ports.inc` adds `vdpctrl` (= VDP_CTRL-VDP_DATA, 4) for `4(a0)` with a0 = VDP_DATA, and `VDPR_MODE1` ... `VDPR_DMASRCH` ($8000-$9700) register write words: `move.w #VDPR_WINY+$1C,vdpctrl(a0)`. SNASM: use `+`, not `|`.

@@ -119,7 +119,7 @@ cramfade
 	move.w	d6,d0
 	swap	d0
 	move.w	#$20,d0
-	move.l	d0,4(a0)
+	move.l	d0,vdpctrl(a0)
 	move.w	(a0),d7
 	move.w	d7,d0
 	and.w	d5,d0
@@ -136,7 +136,7 @@ cramfade
 	move.l	#$C000,d0
 	move.b	d6,d0
 	swap	d0
-	move.l	d0,4(a0)
+	move.l	d0,vdpctrl(a0)
 	move.w	d7,(a0)
 .next
 	addq.w	#2,d6
@@ -149,7 +149,7 @@ CopyPaletteToCRAM	;93 name. Copy all 64 palfadenew colours to colour ram, protec
 	bset	#dfng,(disflags).w
 	movea.w	#(palfadenew-M68K_RAM),a1
 	movea.l	#VDP_DATA,a0
-	move.l	#$C0000000,4(a0)
+	move.l	#$C0000000,vdpctrl(a0)
 	moveq	#$1F,d0
 .0
 	move.l	(a1)+,(a0)
@@ -529,8 +529,8 @@ DoDMA
 	movem.l	d2-d3/a1,-(sp)
 .nd	;IDA: nd
 	lea	(VDP_CTRL).l,a1
-	move.w	#$8154,(a1)
-	move.w	#$8F02,(a1)
+	move.w	#VDPR_MODE2+$54,(a1)
+	move.w	#VDPR_AUTOINC+$02,(a1)
 	move.w	#$9300,d2
 	move.b	d0,d2
 	move.w	d2,(a1)
@@ -568,7 +568,7 @@ DoDMA
 	move.w	(dmaram+2).w,(a1)
 	move.w	(dmaram).w,(a1)
 	bsr.w	WaitDMA
-	move.w	#$8164,(a1)
+	move.w	#VDPR_MODE2+$64,(a1)
 	clr.w	(IO_Z80BUS).l
 	cmpa.w	#0,a0
 	bge.w	.0
@@ -586,8 +586,8 @@ DoDMA_nd2	;93 name. vram to vram copy by dma, protected from vblank
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
 	lea	(VDP_CTRL).l,a1
-	move.w	#$8154,(a1)
-	move.w	#$8F01,(a1)
+	move.w	#VDPR_MODE2+$54,(a1)
+	move.w	#VDPR_AUTOINC+$01,(a1)
 	move.w	#$9300,d3
 	move.b	d0,d3
 	move.w	d3,(a1)
@@ -602,7 +602,7 @@ DoDMA_nd2	;93 name. vram to vram copy by dma, protected from vblank
 	lsr.w	#8,d2
 	move.b	d2,d3
 	move.w	d3,(a1)
-	move.w	#$97C0,(a1)
+	move.w	#VDPR_DMASRCH+$C0,(a1)
 	clr.l	d0
 	move.w	d1,d0
 	asl.l	#2,d0
@@ -617,8 +617,8 @@ DoDMA_nd2	;93 name. vram to vram copy by dma, protected from vblank
 	move.w	(dmaram).w,(a1)
 	move.w	(dmaram+2).w,(a1)
 	bsr.w	WaitDMA
-	move.w	#$8164,(a1)
-	move.w	#$8F02,(a1)
+	move.w	#VDPR_MODE2+$64,(a1)
+	move.w	#VDPR_AUTOINC+$02,(a1)
 	clr.w	(IO_Z80BUS).l
 	move.w	(sp)+,(disflags).w
 	movem.l	(sp)+,d0-d3/a1
@@ -635,7 +635,7 @@ DoFill
 	lsr.w	#2,d1
 	ori.w	#$4000,d1
 	swap	d1
-	move.l	d1,4(a1)
+	move.l	d1,vdpctrl(a1)
 	move.w	d2,d3
 	swap	d3
 	move.w	d2,d3
@@ -667,7 +667,7 @@ setVram_0	;93 name: second half of 92 setVram (no fade): clear vram and set the 
 	;Falls in from setvram, called from EASportsScreen (attract94) and HiScoreScreen (high94_3)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
-	move.w	#$8F02,(VDP_CTRL).l
+	move.w	#VDPR_AUTOINC+$02,(VDP_CTRL).l
 	clr.w	d0
 	bsr.w	Vmaddr
 	move.w	#$3FFF,d0
@@ -729,7 +729,7 @@ Vmaddr
 	ori.w	#$4000,d0
 	swap	d0
 	andi.w	#3,d0
-	move.l	d0,4(a0)
+	move.l	d0,vdpctrl(a0)
 	rts
 ;	NHL 94 (retail) segment $1169A-$11F2B
 ;	92 Middle.Asm part 2, as 93 middle93_2.asm: dobitmap, the graphics decompressor (DecompressGraphicsWithCallback,

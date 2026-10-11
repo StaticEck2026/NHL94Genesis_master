@@ -21,10 +21,10 @@ ValidationRoutine	;IDA: Calc_Checksum (92 / 93 name, which main94 calls). Called
 	bne.s	.bad			;wrong sum: red screen
 	rts
 .bad	movea.l	#VDP_CTRL,a4		;92 VDPErrorSetup
-	move.w	#$8F02,(a4)		;auto increment 2
-	move.w	#$8004,(a4)		;mode 1: h interrupt off
-	move.w	#$8700,(a4)		;backdrop = colour 0
-	move.w	#$8144,(a4)		;mode 2: display on, v interrupt off, dma off
+	move.w	#VDPR_AUTOINC+$02,(a4)		;auto increment 2
+	move.w	#VDPR_MODE1+$04,(a4)		;mode 1: h interrupt off
+	move.w	#VDPR_BGCOL,(a4)		;backdrop = colour 0
+	move.w	#VDPR_MODE2+$44,(a4)		;mode 2: display on, v interrupt off, dma off
 	move.w	#$C000,(a4)		;cram write, colour 0 (first command word only)
 	move.w	#$3F,d1			;64 colours
 .fill	move.w	#$E,(VDP_DATA).l	;92 VRAMWriteLoop. colour = $00E, full red

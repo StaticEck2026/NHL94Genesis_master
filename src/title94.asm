@@ -785,9 +785,9 @@ newTitleScreen	;IDA name. 94 only: the title screen (TitleScreenImg, NHLShieldIm
 	move.w	#0,d0
 	jsr	(setvram).l
 	movea.l	#VDP_DATA,a0
-	move.w	#$9100,4(a0)
-	move.w	#$9217,4(a0)
-	move.w	#$8B03,4(a0)
+	move.w	#VDPR_WINX,vdpctrl(a0)
+	move.w	#VDPR_WINY+$17,vdpctrl(a0)
+	move.w	#VDPR_MODE3+$03,vdpctrl(a0)
 	clr.w	(Vscroll).w
 	jsr	(printz).l
 	String	$FF,0,0
@@ -973,7 +973,7 @@ TitleVBlank	;newTitleScreen vblank: line scroll table (SortCords) and Vscroll, s
 	move.w	#$1C0,d0
 	jsr	(DoDMA).l
 	movea.l	#VDP_DATA,a0
-	move.l	#$40000010,4(a0)
+	move.l	#$40000010,vdpctrl(a0)
 	move.w	(Vscroll).w,(a0)
 	movea.w	#(Satt-M68K_RAM),a0
 	move.w	(Sattsize).w,d0

@@ -859,7 +859,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.w	#$104,(clampcounter).w
 	move.w	#$A0,(playoffspritey).w
 	movea.l	#VDP_CTRL,a0
-	move.w	#$9202,(a0)
+	move.w	#VDPR_WINY+$02,(a0)
 	movea.w	#(potree-M68K_RAM),a1
 	movea.l	#PlayoffTreeSetup,a0	;playoff tree layout by gamelevel
 	move.w	(gamelevel).w,d0

@@ -1776,8 +1776,8 @@ StartHL2	;93 name. Play hilite for game a0. Start skips it with a random result.
 	bsr.w	setupice_highlight	;93 setupice_highlight
 	bsr.w	ClrHor
 	movea.l	#VDP_DATA,a0
-	move.w	#$9100,4(a0)	;window H position 0
-	move.w	#$9200,4(a0)	;window V position 0
+	move.w	#VDPR_WINX,vdpctrl(a0)	;window H position 0
+	move.w	#VDPR_WINY,vdpctrl(a0)	;window V position 0
 	move.w	(ExtraChars).w,d4	;ref cam chars
 	movea.l	#RefsMap+8,a2	;93 RefsMap+8
 	bsr.w	DoDMA_clearCallbackPointer
