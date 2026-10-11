@@ -21,25 +21,25 @@ Detect4WayPlay	;detect the 4 way play adaptor (EA 4 Way Play) on port 2: FourWay
 .x
 	move.w	#$100,(IO_Z80RES).l
 	rts
-Read4WayPad1	;unused: read 4 way play pad 1 (ReadJoy1 with the pad word swapped in)
+ReadJoySwapPad1	;unused: read 4 way play pad 1 (ReadJoy1 with the pad word swapped in)
 	move.b	#0,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave1).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave1).w
 	rts
-Read4WayPad2	;unused: the same for pad 2
+ReadJoySwapPad2	;unused: the same for pad 2
 	move.b	#$10,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave2).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave2).w
 	rts
-Read4WayPad3	;unused: the same for pad 3
+ReadJoySwapPad3	;unused: the same for pad 3
 	move.b	#$20,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave3).w,(pad4wayword).w
 	jsr	(ReadJoy1).l
 	move.w	(pad4wayword).w,(pad4waysave3).w
 	rts
-Read4WayPad4	;unused: the same for pad 4
+ReadJoySwapPad4	;unused: the same for pad 4
 	move.b	#$30,(IO_CT2_DATA+1).l	;4 way play: select pad
 	move.w	(pad4waysave4).w,(pad4wayword).w
 	jsr	(ReadJoy1).l

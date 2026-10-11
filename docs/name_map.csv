@@ -86,3 +86,7 @@ TitleData2,TitlePalettes,behavior (inaccurate 93 name)
 DisplayPlayerStats,PrintScoutRatings,behavior (inaccurate 93 name)
 DisplayCombinedStats,PrintScoutLineRatings,behavior (inaccurate 93 name)
 playoffround,shootoutround,behavior (shootout round counter)
+Read4WayPad1,ReadJoySwapPad1,behavior
+Read4WayPad2,ReadJoySwapPad2,behavior
+Read4WayPad3,ReadJoySwapPad3,behavior
+Read4WayPad4,ReadJoySwapPad4,behavior
