@@ -59,5 +59,5 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
 - Local label pass (locals + header register notes + finishing routine names by body; checklist "Local labels"
   in docs/name_review_94.md): 93G local names propagated to matching 94 routines (stats94, menu94, hockey94
   Pausemode, period94 DisplayTeamStatsScreen); assign94, goalie94, hockey94, menu94, onetimer94, sram94, stats94,
-  display94, video94 done. Next: cards, checks, collide, data, input, optsetup, penalty, period, records, replay, scout,
+  display94, video94 done. input94 done. Next: cards, checks, collide, data, optsetup, penalty, period, records, replay, scout,
   setup, shootout, sound, title (list of unnamed new-in-94 numeric locals: tools_ll/newnum.py).

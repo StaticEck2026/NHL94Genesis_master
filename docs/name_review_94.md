@@ -1244,3 +1244,4 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | period94 | DisplayTeamStatsScreen .row from 93 |
 | assign94, goalie94, hockey94, menu94, onetimer94, sram94, stats94 | new-in-94 routines read; locals named (asseben .nna as 92, ManualGoalieMenu, assscore shootout branch, ValidateSRAM .bad ...); routine names ok (ManualGoalieMenu, RunArenaAnim, NextArenaFrame, vcountwait, puckvzadj, PuckOnAttackHalf, ValidateSRAM, assgoaliebreakwait) |
 | display94, video94 | read; parent local names applied (waitxsr from 93, printsmall/printbig from print, checkfo .next, VBlank .soclock); remaining numbers are trivial |
+| input94 | doinput/doinput_cbut/doinput_ispc/dopass locals named (.nostart, .noot, .bhold, .bpress, .brel, .goalie, .noswitch, .press, .far/.near, .save, .ahold, .arel, .shot); ClampTargetY duplicates ClampYPosition (checks94), kept (clash rule); rest trivial |

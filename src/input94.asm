@@ -45,7 +45,7 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	andi.w	#$F,(TempWord1).w
 	bsr.w	setpads
 	btst	#7,d1	;start button
-	beq.w	.0	;branch if no start button pressed
+	beq.w	.nostart	;branch if no start button pressed
 	tst.w	(joypuckcarrier).w
 	bpl.w	.7
 	tst.w	d4
@@ -53,11 +53,11 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	bra.w	startpause2
 .7
 	btst	#7,d1
-	beq.w	.0
+	beq.w	.nostart
 	tst.w	(joypuckcarrier).w
 	beq.w	startpause3
 	bra.w	startpause4
-.0
+.nostart
 	btst	#sfhor,(sflags).w
 	beq.w	.nhor
 	btst	#3,d0
@@ -74,38 +74,38 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	movem.l	d0-d2/a0/a3,-(sp)
 	move.w	(lastplayer).w,d0
 	cmp.w	SCnum(a3),d0
-	bne.w	.8
+	bne.w	.noot
 	tst.w	(passplayer).w
-	bmi.w	.8
+	bmi.w	.noot
 	tst.w	(onetimerplayer).w
-	bpl.w	.8
+	bpl.w	.noot
 	btst	#5,d1
-	beq.w	.8
+	beq.w	.noot
 	move.w	(passplayer).w,d0
 	asl.w	#7,d0
 	movea.l	#SortCords,a3
 	adda.w	d0,a3
 	tst.w	position(a3)
-	beq.w	.8
+	beq.w	.noot
 	jsr	(PuckOnAttackHalf).l
-	beq.w	.8
+	beq.w	.noot
 	btst	#3,pflags(a3)
-	bne.w	.8
+	bne.w	.noot
 	btst	#pf3onetimer,pflags3(a3)
-	bne.w	.8
+	bne.w	.noot
 	move.w	d4,(inputjoy).w
 	move.w	(joypuckcarrier).w,(TmpJoyPuckCarrier).w
 	move.w	#$23,d0	;'#'   ; assonetimer
 	jsr	(assreplace).l
 	movem.l	(sp)+,d0-d2/a0/a3
 	rts
-.8
+.noot
 	movem.l	(sp)+,d0-d2/a0/a3
 	btst	#pf3onetimer,pflags3(a3)
-	bne.w	.9
+	bne.w	.chkfight
 	btst	#5,pflags(a3)
 	bne.w	doinput_islocked
-.9
+.chkfight
 	btst	#0,pflags2(a3)	;fighting in progress
 	bne.w	fightinput
 	move.w	(puckc).w,d5
@@ -123,11 +123,11 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	tst.w	position(a3)
 	beq.w	.12
 	btst	#2,(BA_PS_flags).w
-	bne.w	.33
-	bra.w	.15
+	bne.w	.noswitch
+	bra.w	.bhold
 .12
 	btst	#6,(sflags5).w
-	bne.w	.15
+	bne.w	.bhold
 	tst.w	d4
 	beq.w	.13
 	tst.w	(goaliemode2).w
@@ -135,28 +135,28 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 .13
 	tst.w	(goaliemode1).w
 .14
-	beq.w	.15
+	beq.w	.bhold
 	movem.w	d0,-(sp)
 	move.w	SCnum(a3),d0
 	cmp.w	(puckc).w,d0
 	movem.w	(sp)+,d0
-	beq.w	.15
+	beq.w	.bhold
 	bra.w	changeplayer
-.15
+.bhold
 	btst	#4,d3
-	beq.w	.23
+	beq.w	.bpress
 	tst.w	(holdreset).w
-	bne.w	.23
+	bne.w	.bpress
 	tst.w	d4
-	beq.w	.19
+	beq.w	.c1
 	tst.b	(bholdtimer+1).w
-	beq.w	.33
+	beq.w	.noswitch
 	subq.b	#1,(bholdtimer+1).w
 	bpl.w	.16
 	move.b	#0,(bholdtimer+1).w
 .16
 	tst.b	(bholdtimer+1).w
-	bne.w	.23
+	bne.w	.bpress
 	tst.w	d4
 	beq.w	.17
 	tst.w	(goaliemode2).w
@@ -164,11 +164,11 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 .17
 	tst.w	(goaliemode1).w
 .18
-	bne.w	.23
-	bra.w	.31
-.19
+	bne.w	.bpress
+	bra.w	.goalie
+.c1
 	tst.b	(bholdtimer).w
-	beq.w	.33
+	beq.w	.noswitch
 	subq.b	#1,(bholdtimer).w
 	bpl.w	.20
 	move.b	#0,(bholdtimer).w
@@ -180,24 +180,24 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 .21
 	tst.w	(goaliemode1).w
 .22
-	bne.w	.23
+	bne.w	.bpress
 	tst.b	(bholdtimer).w
-	beq.w	.31
-.23
+	beq.w	.goalie
+.bpress
 	btst	#4,d1
-	beq.w	.25
+	beq.w	.brel
 	tst.w	d4
 	bne.w	.24
 	move.b	#$11,(bholdtimer).w
-	bra.w	.33
+	bra.w	.noswitch
 .24
 	move.b	#$11,(bholdtimer+1).w
-	bra.w	.33
-.25
+	bra.w	.noswitch
+.brel
 	btst	#4,d2
-	beq.w	.33
+	beq.w	.noswitch
 	btst	#4,d3
-	bne.w	.33
+	bne.w	.noswitch
 	move.w	(bholdtimer).w,d0
 	tst.w	d4
 	beq.w	.28
@@ -212,7 +212,7 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	tst.w	(goaliemode1).w
 .27
 	bne.w	changeplayer
-	bra.w	.31
+	bra.w	.goalie
 .28
 	move.b	#$11,(bholdtimer).w
 	andi.w	#$FF00,d0
@@ -225,7 +225,7 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	tst.w	(goaliemode1).w
 .30
 	bne.w	changeplayer
-.31
+.goalie
 	tst.w	(holdreset).w
 	bne.w	changeplayer
 	move.w	#5,d0
@@ -246,7 +246,7 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	tst.w	d4
 	beq.w	setc1player
 	bra.w	setc2player
-.33
+.noswitch
 	tst.w	position(a3)
 	bne.w	doinput_onetimer
 	btst	#6,d1
@@ -265,12 +265,12 @@ rtss15
 	rts
 doinput_cbut	;C button (bit 5): hold / release handling for a3, then doinput_chkanim
 	btst	#5,d1
-	bne.w	.2
+	bne.w	.press
 	btst	#5,d3
-	bne.w	.0
+	bne.w	.held
 	bclr	#7,pflags2(a3)
 	bra.w	doinput_chkanim
-.0
+.held
 	btst	#7,pflags2(a3)
 	beq.w	doinput_chkanim
 	movem.l	d0-d3/a0-a3,-(sp)
@@ -290,7 +290,7 @@ doinput_cbut	;C button (bit 5): hold / release handling for a3, then doinput_chk
 	bpl.s	rtss15
 	move.w	#$A,SPAcnt(a3)
 	rts
-.2
+.press
 	btst	#5,pflags(a3)
 	bne.w	doinput_chkanim
 	movem.w	d0-d1,-(sp)
@@ -327,10 +327,10 @@ doinput_cbut	;C button (bit 5): hold / release handling for a3, then doinput_chk
 	muls.w	d1,d1
 	add.l	d1,d0
 	cmp.l	#$384,d0
-	bhi.w	.5
+	bhi.w	.far
 	movem.w	(sp)+,d0-d1
-	bra.w	.7
-.5
+	bra.w	.near
+.far
 	bsr.w	sroot
 	moveq	#1,d2
 	add.w	d0,d2
@@ -345,7 +345,7 @@ doinput_cbut	;C button (bit 5): hold / release handling for a3, then doinput_chk
 	muls.w	d4,d0
 	divs.w	d2,d0
 	divs.w	d2,d1
-.7
+.near
 	add.w	d3,d1
 	move.w	d1,d2
 	cmpi.w	#$22,2(a0)
@@ -360,10 +360,10 @@ doinput_cbut	;C button (bit 5): hold / release handling for a3, then doinput_chk
 	movea.l	#puckcross,a0
 	move.w	#$108,d3
 	btst	#7,pflags(a3)	;check which net shooting on
-	beq.w	.8	;branch if bottom net
+	beq.w	.save	;branch if bottom net
 	neg.w	d3	;negate d3 (-108 hex)
 	addq.w	#4,a0	;puckcross+4 (for bottom goalie)
-.8
+.save
 	jsr	(goaliesave).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
@@ -477,38 +477,38 @@ doinput_ispc	;a3 has the puck: pass mode, shot mode, or start a pass / shot by t
 	bra.w	setpassmode
 .1
 	btst	#6,d1
-	beq.w	.3
+	beq.w	.ahold
 	tst.w	d4
 	beq.w	.2
 	move.b	#$F,(aholdtimer+1).w
-	bra.w	.3
+	bra.w	.ahold
 .2
 	move.b	#$F,(aholdtimer).w
-.3
+.ahold
 	btst	#6,d3
-	beq.w	.7
+	beq.w	.arel
 	tst.w	d4
-	beq.w	.5
+	beq.w	.c1
 	subq.b	#1,(aholdtimer+1).w
 	bpl.w	.4
 	move.b	#0,(aholdtimer+1).w
 .4
 	tst.b	(aholdtimer+1).w
-	bne.w	.7
+	bne.w	.arel
 	bset	#3,(sflags5).w
 	jsr	(setpassmode).l
 	bra.w	SetLCmode
-.5
+.c1
 	subq.b	#1,(aholdtimer).w
 	bpl.w	.6
 	move.b	#0,(aholdtimer).w
 .6
 	tst.b	(aholdtimer).w
-	bne.w	.7
+	bne.w	.arel
 	bset	#3,(sflags5).w
 	jsr	(setpassmode).l
 	bra.w	SetLCmode
-.7
+.arel
 	btst	#6,d3
 	bne.w	.8
 	btst	#6,d2
@@ -517,9 +517,9 @@ doinput_ispc	;a3 has the puck: pass mode, shot mode, or start a pass / shot by t
 	bra.w	setpassmode
 .8
 	tst.w	position(a3)
-	bne.w	.9
+	bne.w	.shot
 	bra.w	doplayeracc
-.9
+.shot
 	btst	#5,d1
 	beq.w	doplayeracc
 	jsr	(CountButtonPress).l
@@ -858,7 +858,7 @@ dopass	;pass the puck in passdir, to the best teammate there if any
 	move.b	#$10,nopuck(a3)	;$5E = nopuck
 	move.w	SCnum(a3),(lastplayer).w	;$52 = offset of player on ice
 	bclr	#3,(sflags5).w	;Not in NHL Hockey Source
-	beq.w	.2
+	beq.w	.noot
 	jsr	(OneTimerTarget).l
 	move.w	#$12,(onetimerheight).w
 	btst	#2,(sflags6).w
@@ -867,7 +867,7 @@ dopass	;pass the puck in passdir, to the best teammate there if any
 .1
 	jsr	(OneTimerPass).l
 	bra.w	.exit
-.2
+.noot
 	moveq	#8,d0	;moves 8 into d0
 	tst.w	position(a3)	;checks if goalie
 	beq.w	.calc	;jump if goalie
