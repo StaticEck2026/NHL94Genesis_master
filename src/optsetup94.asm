@@ -213,10 +213,10 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 	move.w	(HomeTeam).w,(logoteam).w
 .23
 	tst.w	(sp)+
-	bra.w	.25	;redraw
+	bra.w	.fix	;redraw
 	move.w	(sp)+,d0	;unreferenced: an older copy of the team block update above
 	cmp.w	(VisTeam).w,d0
-	beq.w	.25
+	beq.w	.fix
 	move.w	(VisTeam).w,(logoteam).w
 	movem.w	d0,-(sp)
 	move.w	(VisTeam).w,d0
@@ -230,12 +230,12 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 	move.w	(setuphome).w,d0
 	cmp.w	(HomeTeam).w,d0
 	movem.w	(sp)+,d0
-	beq.w	.25
+	beq.w	.fix
 	move.w	(HomeTeam).w,(setuphome).w
 	move.w	(HomeTeam).w,(logoteam).w
 	bsr.w	DrawHomeBlock
 	move.w	(VisTeam).w,(logoteam).w
-.25
+.fix
 	bsr.w	FixModeOptions
 	bra.w	.loop
 	rts	;unreferenced
@@ -469,7 +469,7 @@ ChangeOption	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its ran
 	moveq	#$1A,d4	;26 teams in new playoffs
 .4
 	cmp.w	#2,d7
-	bne.w	.12
+	bne.w	.wrap
 	cmpi.w	#4,(OptPlayMode).w
 	bne.w	.9
 	movem.w	d2,-(sp)
@@ -515,29 +515,29 @@ ChangeOption	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its ran
 	moveq	#5,d4
 .loop
 	tst.w	(FourWayPlay).w
-	beq.w	.12
+	beq.w	.wrap
 	addq.w	#2,d4
-.12
+.wrap
 	bsr.w	WrapOption	;wrap d3
 	tst.w	(FourWayPlay).w
-	beq.w	.15
+	beq.w	.set
 	cmp.w	#2,d7
-	bne.w	.15
+	bne.w	.set
 	tst.w	d2
 	bmi.w	.13
 	cmp.w	#9,d3
 	beq.w	.14
 	cmp.w	#$A,d3
 	beq.w	.14
-	bra.w	.15
+	bra.w	.set
 .13
 	cmp.w	#$A,d3
-	bne.w	.15
+	bne.w	.set
 	move.w	#8,d3
-	bra.w	.15
+	bra.w	.set
 .14
 	move.w	#$B,d3
-.15
+.set
 	move.w	d3,0(a2,d7.w)
 	tst.w	d2
 	beq.w	rtsSetup
@@ -749,7 +749,7 @@ PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart f
 	bra.w	.1
 .0
 	cmpi.w	#$19,(printy).w
-	bgt.w	.2
+	bgt.w	.done
 	move.w	#3,(printx).w
 	move.w	#0,(printa).w
 	move.w	#0,(printm).w
@@ -757,7 +757,7 @@ PrintOptionNames	;Print the option names from OptionNames at x 3, 2 rows apart f
 .1
 	addq.w	#2,(printy).w
 	bra.s	.loop
-.2
+.done
 	bclr	#3,(sflags6).w
 	movem.l	(sp)+,d0-d1
 	rts
@@ -930,12 +930,12 @@ ReadSetupPads	;wait up to $5460 frames (6 minutes) for a press on any pad (4 wit
 	bsr.w	DrawHomeBlock
 .6
 	cmp.w	#$4650,d6	;the first $E10 frames (a minute)?
-	bgt.w	.7
+	bgt.w	.timer
 	btst	#0,(setupcardflags).w
-	bne.w	.7
+	bne.w	.timer
 	jsr	(ResetCardTimer).l
 	bra.w	.8
-.7
+.timer
 	jsr	(PlayerCardTimer).l	;player cards
 .8
 	dbf	d6,.loop
@@ -1116,9 +1116,9 @@ DrawTeamLogo	;Draw the logo of team logoteam at printx, y 6, 6 x 6, palette Team
 	move.l	(palfadenew+$26).w,-(sp)
 	move.w	#4,d5
 	btst	#2,(setupcardflags).w
-	beq.w	.3
+	beq.w	.draw
 	move.w	#2,d5
-.3
+.draw
 	jsr	(dobitmap).l
 	move.l	(sp)+,(palfadenew+$26).w
 	move.l	(sp)+,(palfadenew+$22).w
@@ -1346,10 +1346,10 @@ PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors
 	move.w	(cardteamnum).w,d0
 	move.w	(cardroster).w,d1
 	tst.w	(ValidSRAM).w	;no SRAM: no records
-	bmi.w	.12
+	bmi.w	.fade
 	jsr	(PrintRecordValue).l
 	cmpi.w	#2,(a1)
-	beq.w	.12
+	beq.w	.fade
 	move.w	(cardprintx).w,(printx).w
 	addq.w	#2,(printy).w
 	bset	#3,(sflags6).w
@@ -1378,7 +1378,7 @@ PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors
 	bset	#3,(sflags6).w
 	jsr	(printsmall).l
 	bclr	#3,(sflags6).w
-.12
+.fade
 	move.w	#$64,(palcount).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts

@@ -1253,3 +1253,4 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | replay94 | routine names ok (ShowReplayIcon, ClampReplayView); ReplayMode .exit; position clamps and 92 loops numeric |
 | sound94 | routine names ok (ReadJoyData, ReadPad4Way1-4, SetChannelVolume, handle_command_30); channel loops .next |
 | title94 | routine names ok; SkatePath .nextpt, ShootoutShootCheck .no/.yes, HotColdIcon .hot/.cold/.draw, GetLeagueCrowdRecord .next; others are short skips |
+| optsetup94 | routine names ok; ChangeOption .wrap/.set, ReadSetupPads .timer, PlayerCardScreen .fade, DrawTeamLogo .draw, PrintOptionNames .done, GameSetUp .fix; menu-key dispatch skips numeric |
