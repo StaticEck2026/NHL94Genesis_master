@@ -3,12 +3,6 @@
 
 	include	macros\genesis.mac	;String, Player
 
-;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-;
-;	Segment stub.
-;
-;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
 ; External addresses outside: none. TeamList and the team block offsets point inside the segment.
 ; .region code
 	org	$30A
