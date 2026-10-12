@@ -658,10 +658,10 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	muls.w	d1,d1
 	add.l	d1,d0
 	cmp.l	#$384,d0
-	bhi.w	.14
+	bhi.w	.far
 	movem.w	(sp)+,d0-d1
-	bra.w	.16
-.14
+	bra.w	.near
+.far
 	bsr.w	sroot
 	moveq	#1,d2
 	add.w	d0,d2
@@ -676,7 +676,7 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	muls.w	d4,d0
 	divs.w	d2,d0
 	divs.w	d2,d1
-.16
+.near
 	add.w	d3,d1
 	move.w	d1,d2
 	btst	#0,(gmode2).w
@@ -697,7 +697,7 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	blt.w	.18
 	btst	#1,(gameclock+1).w
 	bne.w	.18
-	bra.w	.19
+	bra.w	.save
 .18
 	cmpi.w	#$22,2(a0)
 	bhi.w	.de5
@@ -707,7 +707,7 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	blt.w	.22
 	cmpi.w	#$C,2(a0)
 	bhi.w	.20
-.19
+.save
 	cmpi.w	#$108,(pucky).w
 	bgt.w	.20
 	cmpi.w	#$FEF8,(pucky).w
@@ -859,7 +859,7 @@ goaliesave
 	bgt.w	.1
 	cmpi.w	#$800,(puckvz).w
 	bgt.w	.1
-	bra.w	.3
+	bra.w	.low
 .1
 	movem.l	d0,-(sp)
 	move.w	(a3),d0
@@ -870,20 +870,20 @@ goaliesave
 	blt.w	.2
 	movem.l	(sp)+,d0
 	addq.w	#6,d0
-	bra.w	.12
+	bra.w	.done
 .2
 	movem.l	(sp)+,d0
-	bra.w	.12
-.3
+	bra.w	.done
+.low
 	addq.w	#4,d0
 	cmpi.w	#8,2(a0)
 	bls.w	.9
 	cmpi.w	#2,facedir(a3)
-	beq.w	.12
+	beq.w	.done
 	cmpi.w	#6,facedir(a3)
-	beq.w	.12
+	beq.w	.done
 	tst.w	(puckc).w
-	bmi.w	.12
+	bmi.w	.done
 	subq.w	#2,d0
 	move.w	d1,-(sp)
 	move.w	#$1000,d1
@@ -913,7 +913,7 @@ goaliesave
 	eori.w	#1,d0
 .8
 	move.w	(sp)+,d1
-	bra.w	.12
+	bra.w	.done
 .9
 	movem.l	d0,-(sp)
 	move.w	(a3),d0
@@ -925,10 +925,10 @@ goaliesave
 .10
 	cmp.w	#$FFF0,d0
 	movem.l	(sp)+,d0
-	bgt.w	.12
+	bgt.w	.done
 .11
 	addq.w	#4,d0
-.12
+.done
 	add.w	d0,d0
 	lea	.saveanim(pc),a1
 	move.w	0(a1,d0.w),d1
@@ -1174,36 +1174,36 @@ asspuckc	;player a3 is puck handler
 	subq.b	#1,temp1(a3)
 .9
 	btst	#2,(BA_PS_flags).w
-	bne.w	.12
+	bne.w	.soshot
 	btst	#0,(gmode2).w
-	bne.w	.12
+	bne.w	.soshot
 	bsr.w	checkob
 	bsr.w	chk4lc
 	btst	#0,(gmode2).w
-	bne.w	.12
+	bne.w	.soshot
 	btst	#2,(BA_PS_flags).w
-	bne.w	.12
+	bne.w	.soshot
 	btst	#pf3break,pflags3(a3)
-	bne.w	.11
+	bne.w	.shot
 	move.w	#1,d0
 	btst	#6,pflags(a3)
 	beq.w	.10
 	move.w	#2,d0
 .10
 	cmp.w	(cont1team).w,d0
-	beq.w	.11
+	beq.w	.shot
 	cmp.w	(cont2team).w,d0
-	beq.w	.11
+	beq.w	.shot
 	btst	#1,(vcount+1).w
-	bne.w	.13
-.11
+	bne.w	.pass
+.shot
 	bsr.w	chk4shot
-	bra.w	.13
-.12
+	bra.w	.pass
+.soshot
 	jsr	(ShootoutShootCheck).l
 	bne.w	.nodec
 	jsr	(CompShoot).l
-.13
+.pass
 	bsr.w	chk4pass
 .nodec
 	moveq	#6,d0
@@ -1217,10 +1217,10 @@ asspuckc	;player a3 is puck handler
 	move.w	2(a0,d0.w),d1
 	move.w	0(a0,d0.w),d0
 	btst	#2,(BA_PS_flags).w
-	bne.w	.14
+	bne.w	.path
 	btst	#0,(gmode2).w
 	beq.w	.15
-.14
+.path
 	jsr	(SkatePath).l
 	cmpi.b	#$80,(sopathx).w
 	beq.w	.x
