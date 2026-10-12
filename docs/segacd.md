@@ -49,7 +49,7 @@ movem.l (sp)+,d0-d1
 rts
 ```
 
-Same order, same registers, same `#3` and `#2`. `addq` became `addi` and `bra.b` became `bra.w` because that is what the long addresses force. The EA Hockey Night ticker is the same kind of pair: `$B028` became `$18D58`, and the `bsr.w $11BA4` / `bsr.w $11D3A` calls became `bsr.w $1DF80` / `bsr.w $1E19A`.
+Same order, same registers, same `#3` and `#2`. `addq` became `addi` and `bra.b` became `bra.w` because that is what the long addresses force. The EA Hockey Night ticker is the same kind of pair: `$B028` became `$18D58`.
 
 | Cartridge | Disc | What |
 | --- | --- | --- |
@@ -57,13 +57,19 @@ Same order, same registers, same `#3` and `#2`. `addq` became `addi` and `bra.b`
 | `$FFB02A` | `$18D5A` | print y |
 | `$FFB02E` | `$18D5E` | print attribute |
 | `$FFC2F8` (`$C2F8.w`) | `$17F76` | the flag byte `sflags6` |
-| `$11A48` printsmall | `$38D9E` | now an absolute call out of `HOCKEY.BIN` |
-| `$11BA4` | `$1DF80` | still inside `HOCKEY.BIN` |
-| `$11D3A` PushNumberWidth | `$1E19A` | still inside `HOCKEY.BIN` |
+| `$11086` random | `$37050` | absolute call |
+| `$11340` ReadJoy1 | `$374F0` | absolute call |
+| `$119B8` Framer | `$38CA0` | absolute call, 87 sites |
+| `$11A48` printsmall | `$38D9E` | absolute call, 32 sites |
+| `$11B92` printz | `$38F6E` | absolute call, 216 sites |
+| `$11D3A` PushNumberWidth | `$3919A` | absolute call |
+| `$11DE2` printbigz | `$39258` | absolute call, 36 sites |
 
-`$38D9E` and `$39258` are above the end of `HOCKEY.BIN` (`$2D20A`). They are linked addresses in the sub CPU's program RAM, not offsets in that file.
+`tools/segacd_relocs.py` finds these by matching six-instruction windows and keeping an absolute operand only when the cartridge address always becomes the same disc address. The full list is `docs/segacd_pairs.txt`.
 
-One path really changed. The address-error hex dump is byte for byte the same (`move.w (sp)+,d0` / `andi.w #$F,d0` / `addi.b #$30,d0`). The handler under it is not: the cartridge does `move #$2700,sr` and `bsr.w $11DE2` (printbigz); the disc does `bclr.b #5,$FF800F` and `jsr $39258`. That is the sub CPU comm flag, which the cartridge does not have.
+Those `$37xxx`–`$39xxx` targets are above the end of `HOCKEY.BIN` (`$2D20A`). None of the six disc files, loaded flat, contains the reassembled bytes at that address. The same routines also exist inside `HOCKEY.BIN` (printsmall's register save is at `$1DDAC`) and are reached with `bsr`. A call site uses one or the other. The `$37xxx` image is the open question: it is linked, and it is not a raw slice of these files.
+
+One path really changed. The address-error hex dump is byte for byte the same (`move.w (sp)+,d0` / `andi.w #$F,d0` / `addi.b #$30,d0`). The handler under it is not: the cartridge does `move #$2700,sr` and `bsr.w $11DE2` (printbigz); the disc does `bclr.b #5,$FF800F` and `jsr $39258`. `$39258` is that same printbigz. The new instruction is the sub CPU comm flag, which the cartridge does not have.
 
 The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal's colors through the start of the roster (733 bytes, cart `$37E`, disc `$7C`) and then splits. The cartridge continues into "Madison Square Garden"; the disc has "Eastern division" there.
 
@@ -77,7 +83,8 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 | --- | --- | --- |
 | `src/segacd/maincd.asm` | `cdbin/MAIN.BIN` | `$FF0000`-`$FF0271` (626) |
 | `src/segacd/subboot.asm` | `cdbin/STARTER.BIN` | first `$90` bytes (144) |
+| `src/segacd/subheap.asm` | `cdbin/STARTER.BIN` `$4FA8` | `EngineIdle` and `GetData` (192) |
 
-`maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. Past the handshake it clears the eight command words, waits on memory-mode bit 2, and hands word RAM back and forth (DMNA / RET in `$A12003`). Two commands add `$180000` to a sub CPU pointer so the main CPU sees the same word RAM (`$080000` there, `$200000` here). `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`.
+`maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. Past the handshake it clears the eight command words, waits on memory-mode bit 2, and hands word RAM back and forth (DMNA / RET in `$A12003`). Two commands add `$180000` to a sub CPU pointer so the main CPU sees the same word RAM (`$080000` there, `$200000` here). `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`. `subheap.asm` is the Sierra C `EngineIdle` and `GetData` at `$262A8` (the `link a6` the boot jumps to). The function name is the bytes after each `rts`.
 
 `tools/segacd_relocs.py` prints more address pairs by lining up the instructions in front of a shared string. Pairs from a blind zip of those instructions are only a lead; the table above is the ones read against the bytes.

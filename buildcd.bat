@@ -18,5 +18,10 @@ if errorlevel 1 (
     echo subboot assembly failed
     exit /b 1
 )
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o ow+ /o op- /o os+ /o oz+ /o omq- /o oaq+ /o osq+ "segacd\subheap.asm,%WORKSPACE%output\subheap.bin,%WORKSPACE%output\subheap,%WORKSPACE%output\subheap" > "%WORKSPACE%output\Build_subheap.log"
+if errorlevel 1 (
+    echo subheap assembly failed
+    exit /b 1
+)
 
 endlocal

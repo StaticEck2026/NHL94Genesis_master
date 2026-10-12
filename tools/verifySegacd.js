@@ -41,5 +41,31 @@ function compare(builtRel, discRel, length) {
   console.log(path.basename(discRel) + ' MATCH  ' + n + ' bytes');
 }
 
+function compareAt(builtRel, discRel, discOff, length) {
+  const built = read(builtRel);
+  const disc = read(discRel);
+  const n = length;
+  if (built.length < n) {
+    console.error(builtRel + ' is ' + built.length + ' bytes, wanted ' + n);
+    process.exit(1);
+  }
+  let bad = 0;
+  let first = -1;
+  for (let i = 0; i < n; i++) {
+    if (built[i] !== disc[discOff + i]) {
+      if (first < 0) first = i;
+      bad++;
+    }
+  }
+  const name = path.basename(discRel) + ' +$' + discOff.toString(16);
+  if (bad) {
+    console.error(name + ' MISMATCH  first +$' + first.toString(16) + '  ' + bad + ' of ' + n);
+    console.error('  built ' + built[first].toString(16) + '  disc ' + disc[discOff + first].toString(16));
+    process.exit(1);
+  }
+  console.log(name + ' MATCH  ' + n + ' bytes');
+}
+
 compare('output/maincd.bin', 'cdbin/MAIN.BIN', 0x272);
 compare('output/subboot.bin', 'cdbin/STARTER.BIN', 0x90);
+compareAt('output/subheap.bin', 'cdbin/STARTER.BIN', 0x4FA8, 0xC0);
