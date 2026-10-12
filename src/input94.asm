@@ -251,7 +251,7 @@ doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed but
 	beq.w	doinput_cbut
 	move.w	d0,facedir(a3)
 	move.b	#8,nopuck(a3)
-	move.w	#$2F4,d1	;goalie dive animation
+	move.w	#SPAgdive,d1	;goalie dive animation
 	bsr.w	SetSPA
 	bset	#1,pflags2(a3)
 	bset	#5,pflags(a3)
@@ -380,7 +380,7 @@ ClampTargetY	;clamp the target y d1 for player a3 (d0 cleared when a3 has the pu
 	rts
 	;10 SPA offsets, unreferenced: SPAgglover, SPAgglovel, SPAgstackr, SPAgstackl
 	;SPAgstickr, SPAgstickl, then the newer tables SPAghighr, SPAghighl, SPAgstick2r, SPAgstick2l
-	dc.w	$0146,$0178,$0250,$02A2,$01EC,$021E,$148E,$14C0,$14F2,$1544
+	dc.w	SPAgglover,SPAgglovel,SPAgstackr,SPAgstackl,SPAgstickr,SPAgstickl,SPAghighr,SPAghighl,SPAgstick2r,SPAgstick2l
 doinput_chkanim	;Nothing while a3's animation runs (pflags2 bit 1); else skate a3 (doplayeracc)
 	btst	#1,pflags2(a3)
 	beq.w	.0
@@ -584,12 +584,12 @@ faceoffinput	;controller processing for faceoff
 	bne.s	rtss7	;exit if anim in progress
 	btst	#4,d1	;test for b button press
 	beq.w	.1	;branch if pressed
-	move.w	#$FEA,d1	;SPAfaceoff anim
+	move.w	#SPAfaceoff,d1
 	bset	#1,pflags2(a3)	;set anim in progress
 	bra.w	SetSPA
 .1
 	;#SPAfaceoffr anim
-	move.w	#$1014,d1
+	move.w	#SPAfaceoffr,d1
 	bra.w	SetSPA
 fightinput
 	rts	;controller processing for fighting
@@ -789,7 +789,7 @@ burst
 	add.w	d0,Xvel(a3)	;add to X Vel
 	add.w	d1,Yvel(a3)	;add to Y Vel
 	bset	#pfalock,pflags(a3)	;lock in this animation
-	move.w	#$C5E,d1	;#SPAburst
+	move.w	#SPAburst,d1
 	bra.w	SetSPA
 ; A button press hold
 ; CPU hold jumps in at Acheck
@@ -798,16 +798,16 @@ burst
 ; a0 = player being held
 holdplayer
 	bset	#5,pflags(a3)	;lock animation
-	move.w	#$1122,d1	;move anim into d1 - normal hold check
+	move.w	#SPAhook,d1	;move anim into d1 - normal hold check
 	tst.w	impact(a3)	;check if impact = 0
 	beq.w	SetSPA	;set anim if 0
 	movea.w	#(SortCords-M68K_RAM),a0	;move SortCord into a0
 	move.w	impactp(a3),d0	;move last impact player into d0
 	asl.w	#7,d0	;calc offset
 	adda.w	d0,a0	;add offset to a0
-Acheck	;start hold (or hook if a0 is ahead, $CB0) on player a0
+Acheck	;start SPAhook, or SPAHold if a0 is ahead
 	bset	#pfalock,pflags(a3)	;lock animation
-	move.w	#$1122,d1	;move anim into d1 - normal hold check
+	move.w	#SPAhook,d1	;move anim into d1 - normal hold check
 	tst.w	impact(a3)	;check if impact = 0
 	beq.w	.ex	;branch if 0
 	move.w	Ypos(a3),d0	;move Ypos checker into d0
@@ -817,7 +817,7 @@ Acheck	;start hold (or hook if a0 is ahead, $CB0) on player a0
 	neg.w	d0	;make d0 negative
 .air
 	bmi.w	.ex
-	move.w	#$C90,d1	;set anim - hold check stick in air
+	move.w	#SPAHold,d1	;set anim - hold check stick in air
 .ex
 	bra.w	SetSPA
 ; initialize pass mode
@@ -962,13 +962,13 @@ dopass	;pass the puck in passdir, to the best teammate there if any
 	move.w	(puckvx).w,d0
 	move.w	(puckvy).w,d1
 	bsr.w	vtoa
-	move.w	#$366,d1	;#SPAgswing Note: SPA = Sprite Animation
+	move.w	#SPAgswing,d1	;SPA = Sprite Animation
 	tst.w	position(a3)	;$34 = position
 	beq.w	.e1	;goalie anim.
-	move.w	#$718,d1	;#SPApassf
+	move.w	#SPApassf,d1
 	bsr.w	Findhittype
 	beq.w	.e1
-	move.w	#$78A,d1	;#SPApassb
+	move.w	#SPApassb,d1
 .e1
 	bsr.w	SetSPA
 	bset	#pfalock,pflags(a3)	;#pfalock, $62 = pflags
@@ -1191,7 +1191,7 @@ changeplayer
 	rts
 Sweepcheck	;start sweep check on player a3
 	bset	#pfalock,pflags(a3)
-	move.w	#$B24,d1
+	move.w	#SPAsweepchk,d1
 	bra.w	SetSPA
 ; restore old player and switch to new d0 player on cont. 1
 setc1player
@@ -1299,10 +1299,10 @@ SetShotMode
 	sub.w	Ypos(a3),d1	;Sub Ypos of player from Y boards
 	bsr.w	vtoa
 	move.w	#$F,(passspeed).w
-	move.w	#$7FC,d1	;#SPAshotf
+	move.w	#SPAshotf,d1
 	bsr.s	Findhittype
 	beq.w	.ck1
-	move.w	#$92E,d1	;#SPAshotb
+	move.w	#SPAshotb,d1
 	move.w	#$F,(passspeed).w	;minimum shot speed
 .ck1
 	bra.w	SetSPA
@@ -1344,9 +1344,9 @@ prepshot
 	movem.l	a0,-(sp)
 	asl.w	#7,d0
 	movea.l	#SortCords,a0
-	cmpi.w	#$250,$58(a0,d0.w)	;Checking goalie animations - pad stack right
+	cmpi.w	#SPAgstackr,$58(a0,d0.w)	;Checking goalie animations - pad stack right
 	beq.w	.svgoalie
-	cmpi.w	#$2A2,$58(a0,d0.w)	;Checking another goalie animation - pad stack left
+	cmpi.w	#SPAgstackl,$58(a0,d0.w)	;Checking another goalie animation - pad stack left
 .svgoalie
 	movem.l	(sp)+,a0	;pop stack value into a0
 	bne.w	.cont
@@ -1388,7 +1388,7 @@ doshot
 .shottype
 	move.w	#$18,(sp)	;#SFXshotfh
 	bset	#sf2shot,(sflags2).w	;#sf2shot - shot was taken
-	cmpi.w	#$92E,SPA(a3)	;#SPAshotb
+	cmpi.w	#SPAshotb,SPA(a3)
 	bne.w	.nbh	;no backhand
 	move.w	#$14,(sp)	;#SFXshotbh
 	move.w	(passspeed).w,d0

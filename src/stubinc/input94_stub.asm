@@ -59,5 +59,29 @@ vtoa = $10676			;jsr (x).l at $B4EC
 
 SPAlist = $5B1C		;#x at $B498
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPAgdive	=	$2F4
+SPAgglover	=	$146
+SPAgglovel	=	$178
+SPAgstackr	=	$250
+SPAgstackl	=	$2A2
+SPAgstickr	=	$1EC
+SPAgstickl	=	$21E
+SPAghighr	=	$148E
+SPAghighl	=	$14C0
+SPAgstick2r	=	$14F2
+SPAgstick2l	=	$1544
+SPAfaceoff	=	$FEA
+SPAfaceoffr	=	$1014
+SPAburst	=	$C5E
+SPAhook	=	$1122
+SPAHold	=	$C90
+SPAgswing	=	$366
+SPApassf	=	$718
+SPApassb	=	$78A
+SPAsweepchk	=	$B24
+SPAshotf	=	$7FC
+SPAshotb	=	$92E
+
 ; Main segment code
 	include	input94.asm
