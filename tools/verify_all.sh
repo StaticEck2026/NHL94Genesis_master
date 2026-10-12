@@ -3,7 +3,9 @@
 set -- "$(cd "$(dirname "$0")/.." && pwd)" build94.bat nhl94 lst/nhl94.bin
 export WINEDEBUG=-all
 cd "$1"; bat=$2; top=$3; ref=$4
-rm -rf Extracted; node tools/extractAssets94.js $ref >/tmp/x94.log 2>&1 || { echo "EXTRACT FAIL"; tail -5 /tmp/x94.log; }
+# tools/prebuild.js runs here with Linux node (fresh extract, ROM check); the .bat files skip it (no node under wine).
+export NHL_PREBUILD_DONE=1
+rm -rf Extracted; node tools/prebuild.js retail >/tmp/x94.log 2>&1 || { echo "PREBUILD FAIL"; cat /tmp/x94.log; exit 1; }
 rm -f output/$top.bin output/modified_$top.bin
 wine cmd /c "set rev=0&& set checksum=1&& $bat" >/tmp/top.log 2>&1
 log=$(ls -t output/Build*.log | head -1)
@@ -17,6 +19,7 @@ for s in $(node -e 'for(const k in require("./package.json").scripts) if(/^seg:/
   rm -f output/$seg.bin
   ok=1
   IFS=$'\n'; for part in $(echo "$cmd" | sed 's/ && /\n/g'); do
+    part=$(echo "$part" | sed -E 's/^(set [A-Za-z_]+=[^&]*&& )+//')
     case "$part" in
       npm*) ;;
       buildseg*) wine cmd /c "$part" >/tmp/seg.log 2>&1; [ -s output/$seg.bin ] || { echo "$s: NO BIN"; ok=0; } ;;

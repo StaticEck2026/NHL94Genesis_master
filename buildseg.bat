@@ -13,6 +13,14 @@ if "%~1"=="" (
 set "ROM_NAME=%~1"
 set "WORKSPACE=%~dp0"
 
+REM Pre-step: tools\prebuild.js checks the ROM and Extracted/ and extracts the assets if they are missing
+REM or incomplete; it stops the build with the ROM path, SHA-1 and size if the ROM is missing. The npm
+REM scripts run it first and set NHL_PREBUILD_DONE; tools/verify_all.sh does the same under wine.
+set "prebuildTarget=retail"
+if not defined NHL_PREBUILD_DONE (
+    node "%WORKSPACE%tools\prebuild.js" %prebuildTarget% || exit /b 1
+)
+
 if not exist "%WORKSPACE%output" mkdir "%WORKSPACE%output"
 if not defined checksum set "checksum=1"
 set "CHECKSUM_FLAG=/e CHECKSUM=1"
