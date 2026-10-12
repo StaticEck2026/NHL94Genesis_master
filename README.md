@@ -53,3 +53,7 @@ Full ROM builds assemble `src/nhl94.asm`. The listing is `output/nhl94 .lst`. Th
 | `npm run build:dev` | `rev=0`, `checksum=0` | No validation and no retail verify. Use this while editing. |
 
 `build:dev` (`checksum=0`): `Start` skips `jsr ValidationRoutine` (3 `nop`s instead) and the header checksum at `$18E` is 0, so changed code still boots. With `checksum=1` the validation routine sums the ROM, and any change turns the screen red. `ValidationRoutine` stays in the ROM but is never called.
+
+## Sega CD
+
+`npm run build:segacd` assembles the transcribed CD fragments in `src/segacd/` and compares them to the disc files in `cdbin/` (not in the repo). It does not change the cartridge build. What the disc changed, and how far the disassembly goes, is `docs/segacd.md`.
