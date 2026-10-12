@@ -41,5 +41,5 @@ function compare(builtRel, discRel, length) {
   console.log(path.basename(discRel) + ' MATCH  ' + n + ' bytes');
 }
 
-compare('output/maincd.bin', 'cdbin/MAIN.BIN', 0x130);
+compare('output/maincd.bin', 'cdbin/MAIN.BIN', 0x272);
 compare('output/subboot.bin', 'cdbin/STARTER.BIN', 0x90);

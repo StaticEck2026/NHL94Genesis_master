@@ -75,9 +75,9 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 
 | Source | Compared to | Bytes |
 | --- | --- | --- |
-| `src/segacd/maincd.asm` | `cdbin/MAIN.BIN` | `$FF0000`-`$FF012F` (304) |
+| `src/segacd/maincd.asm` | `cdbin/MAIN.BIN` | `$FF0000`-`$FF0271` (626) |
 | `src/segacd/subboot.asm` | `cdbin/STARTER.BIN` | first `$90` bytes (144) |
 
-`maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`.
+`maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. Past the handshake it clears the eight command words, waits on memory-mode bit 2, and hands word RAM back and forth (DMNA / RET in `$A12003`). Two commands add `$180000` to a sub CPU pointer so the main CPU sees the same word RAM (`$080000` there, `$200000` here). `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`.
 
 `tools/segacd_relocs.py` prints more address pairs by lining up the instructions in front of a shared string. Pairs from a blind zip of those instructions are only a lead; the table above is the ones read against the bytes.
