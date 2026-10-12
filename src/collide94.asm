@@ -353,9 +353,9 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	;PenShotChk
 	cmpi.w	#SPAHold,SPA(a2)
 	beq.w	holdcheck
-	cmpi.w	#SPAhook,SPA(a2)
+	cmpi.w	#SPAhook,SPA(a2)	;this anim also holds
 	beq.w	holdcheck
-	cmpi.w	#SPAsweepchk,SPA(a2)	;B check animation
+	cmpi.w	#SPAsweepchk,SPA(a2)	;this anim goes to Bcheck
 	beq.w	Bcheck
 	cmpi.w	#SPAburst,SPA(a3)
 	bne.w	rtss2
@@ -545,7 +545,7 @@ holdcheck	;player a2 is in hold animation looking to hold opponent a3. Entered f
 	move.w	#SPAHold2,d1
 	cmpi.w	#SPAHold,SPA(a3)
 	beq.w	.setanimation
-	move.w	#SPAhook2,d1
+	move.w	#SPAhook2,d1	;holding anim after SPAhook
 .setanimation
 	bsr.w	SetSPA
 	bsr.w	checkagr
@@ -858,7 +858,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	bgt.w	.hitter	;branch if not
 	btst	#pf3fall,pflags3(a2)	;check if falldown bit is set for player
 	bne.w	.hitter	;branch if set
-	move.w	#SPAflip,d1	;move anim into d1
+	move.w	#SPAflip,d1	;third fall anim
 .hitter
 	exg	a2,a3	;swap a2 and a3
 	bset	#pfalock,pflags(a3)	;set animation lock
@@ -878,7 +878,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	st	(puckc).w	;clear out puck carrier
 	btst	#gmhl,(gmode).w	;check if highlight
 	bne.w	.22	;jump if highlight
-	cmpi.w	#SPAfallback,SPA(a2)	;check animation (player who is checked)
+	cmpi.w	#SPAfallback,SPA(a2)	;injury: only from a fall back
 	bne.w	.22	;jump if not equal
 	move.w	facedir(a2),d0	;facedir into d0
 	andi.w	#3,d0	;pass first 2 bits of d0
@@ -2163,7 +2163,7 @@ puckbody	;puck hits player a2. a3 = puck, d0 = distance^2 (from checkpuckcoll .c
 .1
 	bset	#pfalock,pflags(a2)
 	bne.w	rtss2
-	move.w	#SPAcatch,d1
+	move.w	#SPAcatch,d1	;on a2
 	exg	a2,a3
 	bsr.w	SetSPA
 	exg	a2,a3
