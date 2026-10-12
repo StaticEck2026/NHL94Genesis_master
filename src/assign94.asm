@@ -83,10 +83,10 @@ assbench	;player a3 should goto bench
 	sub.w	temp3(a3),d0
 	cmp.w	#$20,d0
 	bgt.w	.nodec
-	move.w	#$50C,d1
+	move.w	#SPAglide,d1
 	tst.w	position(a3)
 	bne.w	.gli
-	move.w	#2,d1
+	move.w	#SPAgready,d1
 .gli
 	bsr.w	SetSPA
 	bset	#pfnc,pflags(a3)
@@ -104,7 +104,7 @@ assbench	;player a3 should goto bench
 	bne.w	.x
 	move.w	#$F800,Xvel(a3)
 	move.w	#2,facedir(a3)
-	move.w	#$FAC,d1
+	move.w	#SPAwallleft,d1
 	bsr.w	SetSPA
 	bset	#pfalock,pflags(a3)
 	move.w	#$64,temp1(a3)
@@ -161,7 +161,7 @@ asseben	;Player a3 should exit the bench area
 	neg.w	(a3)
 	move.w	#2,facedir(a3)
 	bset	#5,pflags(a3)
-	move.w	#$F6E,d1
+	move.w	#SPAwallright,d1
 	bra.w	SetSPA
 .nna
 	move.w	#4,facedir(a3)
@@ -218,7 +218,7 @@ asspenalty
 	bpl.w	rtss4
 	addq.w	#8,temp1(a3)
 	bset	#pfnc,pflags(a3)
-	move.w	#$50C,d1
+	move.w	#SPAglide,d1
 	bsr.w	SetSPA
 	moveq	#6,d2
 	tst.b	handed(a3)
@@ -239,7 +239,7 @@ asspenalty
 	bne.w	rtss4
 	bset	#5,pflags(a3)
 	move.w	#2,facedir(a3)
-	move.w	#$F6E,d1
+	move.w	#SPAwallright,d1
 	bsr.w	SetSPA
 	bclr	#4,pflags2(a3)
 	move.l	#$D,d0	;assdopen
@@ -293,7 +293,7 @@ assepen
 	move.w	#$86,(a3)
 	move.w	#2,facedir(a3)
 	bset	#5,pflags(a3)
-	move.w	#$FAC,d1
+	move.w	#SPAwallleft,d1
 	bsr.w	SetSPA
 	jmp	SprSort
 .nna
@@ -369,14 +369,14 @@ assfaceoffpl	;Face off player
 	bne.w	.exit2
 	bset	#pf2aip,pflags2(a3)
 	bne.w	.exit2
-	move.w	#$FEA,d1
+	move.w	#SPAfaceoff,d1
 	cmpi.w	#$10,(SortCords+(puckscnum*SCstruct)+temp1).w
 	bls.w	.d
 	moveq	#8,d0
 	bsr.w	randomd0
 	tst.w	d0
 	beq.w	.d
-	move.w	#$1014,d1
+	move.w	#SPAfaceoffr,d1
 .d
 	bset	#1,pflags2(a3)
 	bra.w	SetSPA
@@ -409,7 +409,7 @@ assstanley
 	neg.w	temp3(a3)
 .0
 	move.w	(Vpos).w,temp4(a3)
-	move.w	#$109E,d1
+	move.w	#SPAstanley,d1
 	bsr.w	SetSPA
 .nna
 	move.w	temp3(a3),d0
@@ -458,11 +458,11 @@ assscore
 	sub.w	d7,temp1(a3)
 	bpl.w	.ckcon
 	bset	#5,pflags(a3)
-	move.w	#$E8A,d1
+	move.w	#SPAcelebrate,d1
 	move.w	(shotplayer).w,d0
 	cmp.w	SCnum(a3),d0
 	bne.w	.nopump
-	move.w	#$EFC,d1
+	move.w	#SPApump,d1
 .nopump
 	bsr.w	SetSPA
 .1
