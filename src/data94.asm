@@ -32,7 +32,7 @@ defmenuoptions	;default options: Regular Season, One - Home, MTL, LA, 10 Minutes
 	dc.w	1	;User Records
 	dc.w	0	;Penalties
 	dc.w	1	;Line Changes
-ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue playoffs
+ContinuePlayoffs	;Continue playoffs:
 	;read the playoff state back from the saved bits at pwddatabuffer, rebuild the tree and set OptNOP from pojoy (
 	;= 7 - OptNOP; 7 or $B with FourWayPlay, pojoy adjusted to the pad set-ups). Called (GoContinuePlayoffs, ChangeOption)
 	movem.l	d0-d7/a0-a3,-(sp)
@@ -50,19 +50,19 @@ ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue p
 	tst.w	(FourWayPlay).w
 	bne.w	.1
 	cmpi.w	#2,(pojoy).w
-	blt.w	.3
+	blt.w	.set
 	subq.w	#2,(pojoy).w
-	bra.w	.3
+	bra.w	.set
 .1
 	cmpi.w	#1,(pojoy).w
 	bne.w	.2
 	move.w	#3,(pojoy).w
-	bra.w	.3
+	bra.w	.set
 .2
 	cmpi.w	#2,(pojoy).w
-	bne.w	.3
+	bne.w	.set
 	move.w	#4,(pojoy).w
-.3
+.set
 	sub.w	(pojoy).w,d0
 	move.w	d0,(OptNOP).w
 .x
@@ -660,9 +660,9 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 .0
 	move.w	gss1(a0),d0
 	sub.w	gss2(a0),d0
-	bpl.w	.1
+	bpl.w	.win
 	eori.w	#gspobwins-gspotwins,d3
-.1
+.win
 	addq.w	#1,gspotwins(a0,d3.w)	;one more win
 .b1
 	suba.w	#gssize,a0
@@ -957,9 +957,9 @@ PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in
 	bset	#7,(gmode2).w
 	btst	#0,(gmode2).w
 .0
-	beq.w	.1
+	beq.w	.box
 	jmp	ShootoutModeBox
-.1
+.box
 	movem.l	d0-d2/a0-a4,-(sp)
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l	;d0 = -1
@@ -1053,13 +1053,13 @@ ShowGoalBox	;Goal box. Closes both line change boxes, then printbig 'GOAL!' ('PP
 	move.b	3(a4),d0	;scorer
 	addi.w	#$B4,d0
 	cmpi.b	#3,0(a2,d0.w)	;goals
-	bne.w	.4
+	bne.w	.print
 	movem.w	d1,-(sp)
 	clr.w	d1
 	move.b	3(a4),d1
 	cmp.w	(scorergoalies).w,d1
 	movem.w	(sp)+,d1
-	blt.w	.4
+	blt.w	.print
 	adda.w	(a1),a1	;HAT TRICK!
 	move.w	d0,-(sp)
 	move.w	Xvel(a2),d0
@@ -1069,7 +1069,7 @@ ShowGoalBox	;Goal box. Closes both line change boxes, then printbig 'GOAL!' ('PP
 	jsr	(StartArenaAnim).l
 .3
 	move.w	(sp)+,d0
-.4
+.print
 	bsr.w	printbig
 	clr.w	d0
 	move.b	3(a4),d0
@@ -1228,13 +1228,13 @@ FormatLastName	;Skip the first name, copy the last name, pad; branched to from F
 .loop2
 	move.b	(a0)+,(a1)+
 	cmpa.l	a0,a2
-	beq.w	.0
+	beq.w	.pad
 	tst.b	(a0)
 	bne.s	.loop2
-	bra.w	.0
+	bra.w	.pad
 .loop3
 	move.b	#$20,(a1)+
-.0
+.pad
 	cmpa.w	#$BFB2,a1	;TextBuffer+12
 	blt.s	.loop3
 	bsr.w	FinalizeTextBuffer
