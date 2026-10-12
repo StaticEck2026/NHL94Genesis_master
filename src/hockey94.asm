@@ -57,14 +57,14 @@ StartGame	;reset game state for a new game, then start the first period
 	bsr.w	ClearShotData
 .1	jsr	(clearTeamStats).l
 	btst	#0,(gmode2).w
-	beq.w	.2
+	beq.w	.noso
 	move.l	a0,-(sp)
 	movea.l	#tmstruct,a0
 	jsr	(Create_HotCold_Table).l
 	movea.l	#AwShots,a0
 	jsr	(Create_HotCold_Table).l
 	movea.l	(sp)+,a0
-.2	clr.w	(ScoreSumbytes).w
+.noso	clr.w	(ScoreSumbytes).w
 	clr.w	(PenSumLength).w
 	clr.w	(gsp).w			;first period
 	clr.w	(ChkCnt).w

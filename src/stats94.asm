@@ -2076,10 +2076,10 @@ GetGoalieCount	;d0 = goalies on team a2 (nibbles in the team data word at +$A)
 	adda.w	$A(a0),a0
 	move.w	(a0),d1
 	clr.w	d0
-.0
+.count
 	addq.w	#1,d0
 	asl.w	#4,d1
-	bne.s	.0
+	bne.s	.count
 	movem.l	(sp)+,d1/a0
 	rts
 GetDefenseStart	;d0 = goalies + forwards of team a2 (GetGoalieCount + GetForwardCount), the roster index of the

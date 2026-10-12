@@ -403,8 +403,8 @@ PuckOnAttackHalf	;d0 = 1 when the puck is on the half of the goal player a3 shoo
 .cont
 	tst.w	d0	;check if d0 is 0
 	bpl.w	.plus	;branch if higher
-	bra.w	.0
-	move.w	(passdir).w,d0	;code never used from here up to _0
+	bra.w	.minus
+	move.w	(passdir).w,d0	;code never used from here up to .minus
 	addq.w	#4,d0
 	andi.w	#7,d0
 	move.w	facedir(a3),d1
@@ -426,7 +426,7 @@ PuckOnAttackHalf	;d0 = 1 when the puck is on the half of the goal player a3 shoo
 	subq.w	#1,d1
 	andi.w	#7,d1
 	beq.w	.plus
-.0
+.minus
 	move.w	#0,d0
 	bra.w	.ex
 .plus

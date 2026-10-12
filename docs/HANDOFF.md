@@ -58,4 +58,6 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   - Phase C (95): DONE (all modules, ram95, graphics95, frames95, sound95; docs/name_review_95.md).
 - Local label pass (locals + header register notes + finishing routine names by body; checklist "Local labels"
   in docs/name_review_94.md): 93G local names propagated to matching 94 routines (stats94, menu94, hockey94
-  Pausemode, period94 DisplayTeamStatsScreen). Next: per-module body read of the remaining 94 modules.
+  Pausemode, period94 DisplayTeamStatsScreen); assign94, goalie94, hockey94, menu94, onetimer94, sram94, stats94
+  done. Next: cards, checks, collide, data, display, input, optsetup, penalty, period, records, replay, scout,
+  setup, shootout, sound, title, video (list of unnamed new-in-94 numeric locals: tools_ll/newnum.py).

@@ -1242,3 +1242,4 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | stats94, menu94 | 93G local names propagated (same routine structure) |
 | hockey94 | Pausemode .loop from 93 |
 | period94 | DisplayTeamStatsScreen .row from 93 |
+| assign94, goalie94, hockey94, menu94, onetimer94, sram94, stats94 | new-in-94 routines read; locals named (asseben .nna as 92, ManualGoalieMenu, assscore shootout branch, ValidateSRAM .bad ...); routine names ok (ManualGoalieMenu, RunArenaAnim, NextArenaFrame, vcountwait, puckvzadj, PuckOnAttackHalf, ValidateSRAM, assgoaliebreakwait) |

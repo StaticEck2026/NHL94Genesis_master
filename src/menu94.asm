@@ -199,9 +199,9 @@ vcountwait	;wait till vcount changes, then resync vcount. Saves d0. Reads oldvco
 	move.w	d0,-(sp)
 	move.w	(oldvcount).w,d0
 	move.w	(oldvcount).w,d0
-.0
+.wait
 	cmp.w	(vcount).w,d0
-	beq.s	.0
+	beq.s	.wait
 	move.w	(oldvcount).w,(vcount).w
 	move.w	(sp)+,d0
 	rts

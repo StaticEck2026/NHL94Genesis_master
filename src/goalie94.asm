@@ -4,27 +4,27 @@ ManualGoalieMenu	;"x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	;takes player 0 / 6 or 5 / $B by its mode, when BA_Sktr_SCnum is on its side (setc1player / setc2player)
 	movem.l	d0-d7/a0-a6,-(sp)
 	tst.w	(OptNOP).w
-	beq.w	.2
+	beq.w	.chkso
 	move.w	(cont1team).w,d0
 	cmp.w	(cont2team).w,d0
 	bne.w	.0
 	eori.w	#1,(goaliemode2).w
-	bra.w	.1
+	bra.w	.g1
 .0
 	btst	#1,(sflags).w
-	beq.w	.1
+	beq.w	.g1
 	eori.w	#1,(goaliemode2).w
-	bra.w	.2
-.1
+	bra.w	.chkso
+.g1
 	eori.w	#1,(goaliemode1).w
-.2
+.chkso
 	btst	#0,(gmode2).w
-	bne.w	.3
+	bne.w	.so
 	btst	#2,(BA_PS_flags).w
 	beq.w	.x
-.3
+.so
 	btst	#1,(sflags).w
-	bne.w	.8
+	bne.w	.p2
 	cmpi.w	#2,(OptNOP).w
 	bne.w	.4
 	cmpi.w	#5,(BA_Sktr_SCnum).w
@@ -40,15 +40,15 @@ ManualGoalieMenu	;"x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	move.w	#6,d0
 .6
 	tst.w	(goaliemode1).w
-	bne.w	.7
+	bne.w	.set1
 	move.w	#5,d0
 	cmpi.w	#2,(OptNOP).w
-	bne.w	.7
+	bne.w	.set1
 	move.w	#$B,d0
-.7
+.set1
 	jsr	(setc1player).l
 	bra.w	.x
-.8
+.p2
 	cmpi.w	#2,(OptNOP).w
 	bne.w	.9
 	cmpi.w	#5,(BA_Sktr_SCnum).w
@@ -60,9 +60,9 @@ ManualGoalieMenu	;"x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 .10
 	move.w	#6,d0
 	tst.w	(goaliemode2).w
-	bne.w	.11
+	bne.w	.set2
 	move.w	#$B,d0
-.11
+.set2
 	jsr	(setc2player).l
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -74,7 +74,7 @@ RunArenaAnim	;Run the arena animation arenaanim (negative: none): the first time
 	bmi.w	.x2
 	movem.l	d0-d7/a0-a6,-(sp)
 	tst.l	(arenaspritelist).w
-	bne.w	.0
+	bne.w	.run
 	move.w	(arenaanim).w,d0
 	asl.w	#3,d0
 	movea.l	#ArenaAnims,a0
@@ -87,7 +87,7 @@ RunArenaAnim	;Run the arena animation arenaanim (negative: none): the first time
 	clr.w	(arenaframeidx).w
 	bsr.w	NextArenaFrame
 	bra.w	.x
-.0
+.run
 	sub.w	d7,(arenaframetime).w
 	bpl.w	.x
 	addq.w	#1,(arenaframeidx).w
