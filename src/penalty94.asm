@@ -166,10 +166,10 @@ PenShotChk	;a3 = checker, a2 = player hit, d0 = penalty. If a2 is on a breakaway
 	move.w	d2,d0
 	jsr	(getBAplayerInfo).l
 	movem.w	(sp)+,d0-d1
-	bpl.w	.1	;N clear: penalty shot set up
+	bpl.w	.found	;N clear: penalty shot set up
 	bclr	#3,(BA_PS_flags).w
 	bra.s	.loop
-.1
+.found
 	move.w	d1,(pspenalty).w
 	move.w	d1,d0	;return the penalty shot penalty
 .end
@@ -1409,10 +1409,10 @@ Intermission	;end of period junk (zamboni/stats). Opens the pause menu screen (i
 	bsr.w	SetupTeamForIntermission
 	moveq	#$F,d0
 	movea.w	#(SortCords-M68K_RAM),a0
-.0
+.clr
 	clr.w	(a0)	;Xpos
 	adda.w	#SCstruct,a0	;SCstruct
-	dbf	d0,.0
+	dbf	d0,.clr
 	move.w	(ExtraChars).w,d4
 	movea.l	#ZamFrameList+8,a2	;+8
 	bsr.w	DecompressGraphicsPlain

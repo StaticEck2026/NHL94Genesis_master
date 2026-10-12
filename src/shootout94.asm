@@ -41,16 +41,16 @@ NextShooter	;Shootout: the next shooter (BA_Team, BA_Goalie_SCnum, StartShootout
 CountShootoutGoals	;Shootout: count the goals and end it when one team cannot catch up (EndShootout, high ROM). Called from EndPenaltyShotPlay
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#0,(shootoutteam+1).w
-	beq.w	.0
+	beq.w	.switch
 	cmpi.w	#5,(shootoutround).w
-	blt.w	.0
+	blt.w	.switch
 	move.w	(homeshootgoals).w,d0
 	cmp.w	(awayshootgoals).w,d0
-	beq.w	.0
+	beq.w	.switch
 	bset	#3,(gmode2).w
 	jsr	(EndShootout).l
 	bra.w	.x
-.0
+.switch
 	eori.w	#1,(shootoutteam).w
 	bne.w	.x
 	addq.w	#1,(homeshootnum).w
@@ -199,7 +199,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	jsr	(printsmallz).l
 	String	CC_SetMapAndPosition,4,2,2,1,'{Select Player}'
 	clr.w	d0
-	bra.w	.6
+	bra.w	.scroll
 .loop2
 	jsr	(vcountwait).l
 	jsr	(getpzjoy).l
@@ -207,19 +207,19 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	btst	#7,d1
 	bne.w	ShootersRedraw
 	btst	#5,d1
-	bne.w	.10
+	bne.w	.pick
 	moveq	#1,d0
 	btst	#1,d1
-	bne.w	.6
+	bne.w	.scroll
 	btst	#3,d1
-	bne.w	.3
+	bne.w	.page
 	moveq	#-1,d0
 	btst	#0,d1
-	bne.w	.6
+	bne.w	.scroll
 	btst	#2,d1
-	bne.w	.3
+	bne.w	.page
 	bra.s	.loop2
-.3
+.page
 	add.w	(DispAttribCtr).w,d0
 	bmi.s	.loop2
 	move.w	d0,(DispAttribCtr).w
@@ -227,7 +227,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	bsr.w	PrintShooterList
 .5
 	bra.s	.loop2
-.6
+.scroll
 	add.w	(VertLineScrolling).w,d0
 	bmi.s	.loop2
 	cmp.w	(screentimer).w,d0
@@ -245,7 +245,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 .9
 	bsr.w	PrintShooterList
 	bra.w	.loop2
-.10
+.pick
 	movea.w	#(Satt-M68K_RAM),a3
 	adda.w	(VertLineScrolling).w,a3
 	clr.w	d0
@@ -276,10 +276,10 @@ PrintShooterList	;Shootout shooters: the player list rows (getNameandAttrib)
 .1
 	tst.w	(a1)
 	dbmi	d0,.loop2
-	bpl.w	.2
+	bpl.w	.found
 	subq.w	#1,(DispAttribCtr).w
 	bra.s	.loop
-.2
+.found
 	cmpa.l	#PAttribOverall,a1
 	bne.w	.3
 	movea.l	#ShooterOverallTxt,a1

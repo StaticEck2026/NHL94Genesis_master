@@ -129,7 +129,7 @@ AddArenaAnimSprite	;Add the frame arenaframe of the arena animation (sprite list
 	move.w	(Hpos).w,d4
 	move.w	(Vpos).w,d5
 	move.w	(arenaframe).w,d0
-	bra.w	.2
+	bra.w	.spr
 	andi.w	#$F,d2	;nothing branches here: draw d2 + 1 (4 at most) frames from d3 (.2)
 	cmp.w	#3,d2
 	bls.w	.0
@@ -139,11 +139,11 @@ AddArenaAnimSprite	;Add the frame arenaframe of the arena animation (sprite list
 .loop
 	move.w	d3,d0
 	add.w	d2,d0
-	bsr.w	.2
+	bsr.w	.spr
 .1
 	dbf	d2,.loop
 	rts
-.2
+.spr
 	ext.w	d0
 	beq.w	.x2
 	cmp.w	#$40,d6
@@ -170,13 +170,13 @@ AddArenaAnimSprite	;Add the frame arenaframe of the arena animation (sprite list
 	move.w	(sp)+,d4
 .loop2
 	cmp.w	2(a0),d2
-	bgt.w	.3
+	bgt.w	.next
 	cmp.w	2(a0),d3
-	blt.w	.3
+	blt.w	.next
 	cmp.w	(a0),d0
-	bgt.w	.3
+	bgt.w	.next
 	cmp.w	(a0),d1
-	blt.w	.3
+	blt.w	.next
 	move.w	2(a0),d5
 	addi.w	#$70,d5
 	sub.w	d2,d5
@@ -195,7 +195,7 @@ AddArenaAnimSprite	;Add the frame arenaframe of the arena animation (sprite list
 	addq.w	#1,d6
 	cmp.w	#$40,d6
 	beq.w	.x
-.3
+.next
 	addq.w	#8,a0
 	dbf	d4,.loop2
 .x
@@ -328,13 +328,13 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	dc.w	$0016	;String length: too many arguments for the String macro
 	dc.b	$BE,$C,$A,'<',$BE,$11,$A,'<',$BE,$16,$A,'<',$BE,' ',$A,'<<<<<'
 .1
-	bsr.w	.5
-	bsr.w	.7
+	bsr.w	.title
+	bsr.w	.lines
 	move.w	#$18,(palcount).w
 .loop2
 	jsr	(WaitVSyncAndReadInput).l	;left (bit 2) goals, right (bit 3) shots, start exits
 	btst	#7,d1
-	bne.w	.4
+	bne.w	.exit
 	btst	#2,d1
 	bne.w	.3
 	btst	#3,d1
@@ -344,20 +344,20 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	tst.w	(matchup).w
 	bne.s	.loop2
 	st	(matchup).w
-	bsr.w	.5
-	bsr.w	.7
+	bsr.w	.title
+	bsr.w	.lines
 	bra.s	.loop2
 .3
 	tst.w	(matchup).w
 	beq.s	.loop2
 	clr.w	(matchup).w
-	bsr.w	.5
-	bsr.w	.7
+	bsr.w	.title
+	bsr.w	.lines
 	bra.s	.loop2
-.4
+.exit
 	movem.l	(sp)+,d0-d7/a0-a6
 	jmp	(ExitStatsScreen).l
-.5
+.title
 	tst.w	(matchup).w
 	beq.w	.6
 	jsr	(printz).l
@@ -367,19 +367,19 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),$12,7,'Goals',-(TXPRI+TXMAP2),$F,$1A,'For Shots ]'
 	rts
-.7
+.lines
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
 	movea.l	#AwShots,a2
 	move.w	#$E,(printy).w
-	bsr.w	.8
+	bsr.w	.team
 	movea.l	#tmstruct,a2
 	move.w	#$16,(printy).w
-	bsr.w	.8
+	bsr.w	.team
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-.8
+.team
 	lea	$342(a2),a0
 	tst.w	(matchup).w
 	beq.w	.9
@@ -387,21 +387,21 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 .9
 	clr.w	(matchuptimer).w
 	move.w	#$B,(printx).w
-	bsr.w	.12
+	bsr.w	.num
 	cmpi.w	#1,(gsp).w
 	blt.w	.10
 	move.w	#$10,(printx).w
-	bsr.w	.12
+	bsr.w	.num
 	cmpi.w	#2,(gsp).w
 	blt.w	.10
 	move.w	#$15,(printx).w
-	bsr.w	.12
+	bsr.w	.num
 	cmpi.w	#3,(gsp).w
 	blt.w	.10
 	btst	#1,(sflags7).w
 	beq.w	.10
 	move.w	#$1A,(printx).w
-	bsr.w	.12
+	bsr.w	.num
 .10
 	move.w	#$21,(printx).w
 	jsr	(printz).l
@@ -416,7 +416,7 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 	jsr	(PushNumberWidth).l
 	jsr	(print).l
 	rts
-.12
+.num
 	move.w	(a0)+,d0
 	add.w	d0,(matchuptimer).w
 	jsr	(printz).l
@@ -473,10 +473,10 @@ GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' tota
 .2
 	move.w	d0,(PlayerScrollCtr).w
 .3
-	bsr.w	.4
+	bsr.w	.scroll
 	bsr.w	PrintStatScrollArrows
 	bra.s	.loop
-.4
+.scroll
 	move.w	(PlayerScrollCtr).w,d0
 	beq.w	rtsStatTables
 	add.w	(VertLineScrolling).w,d0

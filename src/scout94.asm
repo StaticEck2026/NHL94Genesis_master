@@ -212,7 +212,7 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 .2
 	bsr.w	PrintAdvantageMarks	;advantage marks
 	btst	#7,d1	;sbut
-	bne.w	.7	;start leaves
+	bne.w	.exit	;start leaves
 	cmpi.w	#$10E,(matchuptimer).w
 	beq.w	.3	;timer ran out: next matchup
 	btst	#5,d1	;cbut
@@ -247,11 +247,11 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	subq.w	#1,(screentimer).w
 	bpl.w	.top
 	tst.w	(OptNOP).w
-	beq.w	.7	;OptNOP 0: leave when the text is done
+	beq.w	.exit	;OptNOP 0: leave when the text is done
 	move.w	#$FFFF,(screentimer).w	;else wait for start, up to scoutwait frames
 	subq.l	#1,(scoutwait).w
 	bpl.w	.top
-.7
+.exit
 	move.w	#0,(printfontset).w	;char set 0
 	rts
 PageMatchup	;Page the matchup by d0 (+1 / -1, 0-6 wrapping), restart the page timer and redraw. Called from ScoutingReport
@@ -414,7 +414,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	;$16: CalcAttrib with the PAttribOverallMask (skater) or GAttribOverallMask (goalie) long in d4, * 100 / d1, AttribAdjust. The ratings go to homerating
 	;(home) / visrating (visitors) for PrintAdvantageMarks. Called from ScoutingReport and PageMatchup
 	tst.w	(matchup).w
-	bne.w	.2
+	bne.w	.matchup
 	jsr	(printsmallz).l
 	String	CC_SetMapAndPosition,0,1,$16,$16,CC_SetFont,1
 	lea	ScoutRatingText(pc),a1
@@ -455,7 +455,7 @@ PrintMatchupRatings	;Print the matchup ratings. Matchup 0: 'Overall' at y $13, t
 	bsr.w	PrintMatchupRating	;visitors
 	move.w	d0,(visrating).w
 	bra.w	.x
-.2
+.matchup
 	move.w	(matchup).w,d0
 	subq.w	#1,d0
 	movea.l	#MatchupPosNames,a1	;position name of matchup - 1

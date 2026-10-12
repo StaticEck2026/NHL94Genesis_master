@@ -1150,7 +1150,7 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 	clr.w	d1
 .loop2
 	cmpi.b	#$D,(a2)
-	beq.w	.6
+	beq.w	.print
 	addq.w	#1,d0
 .loop3
 	move.b	(a2),(a0)+
@@ -1169,7 +1169,7 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 	subq.w	#1,d0
 	suba.w	a1,a2
 	move.w	a2,(PlayerScrollCtr).w
-.6
+.print
 	move.w	d1,(mesarea).w
 	addq.w	#2,(mesarea).w
 	btst	#0,d1
@@ -1194,49 +1194,49 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 	rts
 .9
 	jsr	(ScoutCrowdRecord).l
-	bra.w	.31
+	bra.w	.append
 .10
 	jsr	(PlayedByHome).l
-	bra.w	.31
+	bra.w	.append
 .11
 	jsr	(PlayedByAway).l
-	bra.w	.31
+	bra.w	.append
 .12
 	move.l	a2,-(sp)
 	movea.l	#tmstruct,a2
 	jsr	(GetTeamNickname).l
 	movea.l	(sp)+,a2
-	bra.w	.31
+	bra.w	.append
 .13
 	move.l	a2,-(sp)
 	movea.l	#AwShots,a2
 	jsr	(GetTeamNickname).l
 	movea.l	(sp)+,a2
-	bra.w	.31
+	bra.w	.append
 .14
 	move.l	a2,-(sp)
 	movea.l	#tmstruct,a2
 	jsr	(GetTeamArena).l
 	movea.l	(sp)+,a2
-	bra.w	.31
+	bra.w	.append
 .15
 	move.l	a2,-(sp)
 	movea.l	#AwShots,a2
 	jsr	(GetTeamArena).l
 	movea.l	(sp)+,a2
-	bra.w	.31
+	bra.w	.append
 .16
 	jsr	(NextHomeHotPlayer).l
-	bra.w	.25
+	bra.w	.roster
 .17
 	jsr	(NextAwayHotPlayer).l
-	bra.w	.25
+	bra.w	.roster
 .18
 	jsr	(NextHomeColdPlayer).l
-	bra.w	.25
+	bra.w	.roster
 .19
 	jsr	(NextAwayColdPlayer).l
-	bra.w	.25
+	bra.w	.roster
 .20
 	movea.l	#tmstruct,a1
 	tst.w	(awayhotter).w
@@ -1245,7 +1245,7 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 .21
 	movea.l	$1E(a1),a1
 	adda.w	4(a1),a1
-	bra.w	.31
+	bra.w	.append
 .22
 	movea.w	#(AwShots-M68K_RAM),a1
 	bra.w	.24
@@ -1253,7 +1253,7 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 	movea.w	#(tmstruct-M68K_RAM),a1
 .24
 	move.w	$26(a1),d1
-.25
+.roster
 	movea.l	$1E(a1),a1
 	adda.w	(a1),a1
 	bra.w	.26
@@ -1262,11 +1262,11 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 	addq.w	#8,a1
 .26
 	dbf	d1,.loop5
-	bra.w	.31
+	bra.w	.append
 .27
 	movea.l	(AwayTeamRosterPtr).w,a1
 	adda.w	4(a1),a1
-	bra.w	.31
+	bra.w	.append
 .28
 	movea.l	(AwayTeamRosterPtr).w,a1
 	bra.w	.30
@@ -1274,7 +1274,7 @@ UpdateScoutingDisplay	;Text player for ScoutingReport: prints the ScoutTextScrip
 	movea.l	(HomeTeamRosterPtr).w,a1
 .30
 	adda.w	4(a1),a1
-.31
+.append
 	addq.w	#1,(PlayerScrollCtr).w
 	add.w	(a1),d0
 	subq.w	#1,d0

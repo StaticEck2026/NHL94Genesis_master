@@ -99,20 +99,20 @@ RecordHoldersScreen	;"Record Holders" menu item (menu lists): the save RAM recor
 .1
 	tst.w	(TempWord1).w
 .2
-	bne.w	.5
+	bne.w	.right
 	btst	#6,d3
-	beq.w	.5
+	beq.w	.right
 .3
 	btst	#5,d3
-	beq.w	.5
+	beq.w	.right
 	bsr.w	ClearWinRecords
 	bsr.w	CalcWinPercents
-.4
+.show
 	bsr.w	PrintWinRecords
 	bra.s	.loop
-.5
+.right
 	btst	#3,d1
-	beq.w	.6
+	beq.w	.left
 	cmpi.w	#2,(TempWord1).w
 	beq.s	.loop
 	bsr.w	ClearRecordArea
@@ -120,7 +120,7 @@ RecordHoldersScreen	;"Record Holders" menu item (menu lists): the save RAM recor
 	bsr.w	PrintRecordTitles
 	bsr.w	PrintRecordPage
 	bra.s	.loop
-.6
+.left
 	btst	#2,d1
 	beq.s	.loop
 	tst.w	(TempWord1).w
@@ -406,7 +406,7 @@ PrintPlayerRecords	;Record Holders: the rows of the other page (PrintRecordName)
 	move.b	4(a2,d0.w),d5
 .1
 	tst.b	d5
-	beq.w	.8
+	beq.w	.none
 	bsr.w	PrintRecordName
 	move.w	#$12,(printx).w
 	move.w	d0,-(sp)
@@ -451,10 +451,10 @@ PrintPlayerRecords	;Record Holders: the rows of the other page (PrintRecordName)
 .7
 	andi.w	#$FF,d0
 	bsr.w	AppendTeamName
-	bra.w	.9
-.8
+	bra.w	.print
+.none
 	movea.l	#RecParenTxt,a1
-.9
+.print
 	jsr	(printsmall).l
 	addq.w	#2,(printy).w
 	dbf	d7,.loop
@@ -547,8 +547,8 @@ CalcWinPercents	;Record Holders: for the 8 user record blocks at ThreeStars, the
 	move.b	0(a0,d1.w),d0
 	move.b	0(a0,d2.w),d3
 	cmp.b	d3,d0
-	bgt.w	.3
-	blt.w	.2
+	bgt.w	.next
+	blt.w	.swap
 	movem.l	d1-d3,-(sp)
 	add.w	d1,d1
 	add.w	d2,d2
@@ -556,8 +556,8 @@ CalcWinPercents	;Record Holders: for the 8 user record blocks at ThreeStars, the
 	move.w	0(a6,d2.w),d3
 	cmp.w	d3,d0
 	movem.l	(sp)+,d1-d3
-	bgt.w	.3
-	blt.w	.2
+	bgt.w	.next
+	blt.w	.swap
 	movem.l	d1-d3,-(sp)
 	add.w	d1,d1
 	add.w	d2,d2
@@ -565,14 +565,14 @@ CalcWinPercents	;Record Holders: for the 8 user record blocks at ThreeStars, the
 	move.w	0(a5,d2.w),d3
 	cmp.w	d3,d0
 	movem.l	(sp)+,d1-d3
-	bge.w	.3
-.2
+	bge.w	.next
+.swap
 	move.b	(a1),d0
 	move.b	-1(a1),d1
 	move.b	d0,-1(a1)
 	move.b	d1,(a1)
 	st	d6
-.3
+.next
 	dbf	d7,.loop4
 	tst.w	d6
 	bne.s	.loop3
@@ -618,13 +618,13 @@ ReadTeamRecords	;Record Holders: read the records (ReadSRAM)
 	move.b	4(a0,d2.w),d3
 .1
 	cmp.b	d3,d0
-	bge.w	.2
+	bge.w	.next
 	move.b	(a1),d0
 	move.b	-1(a1),d1
 	move.b	d0,-1(a1)
 	move.b	d1,(a1)
 	st	d6
-.2
+.next
 	dbf	d7,.loop3
 	tst.w	d6
 	bne.s	.loop2
