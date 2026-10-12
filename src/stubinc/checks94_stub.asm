@@ -87,5 +87,36 @@ getpde = $1575A			;bsr.w / Bcc.w
 setpde = $1577A			;bsr.w / Bcc.w
 stopna2 = $F6F8C			;jsr / jmp (x).l
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPFslamtop	=	708
+SPFslambot	=	712
+SPFpuck	=	394
+SPAgready	=	$2
+SPAgdive	=	$2F4
+SPAgglovel	=	$178
+SPAgglovel2	=	$1AA
+SPAgglover	=	$146
+SPAgstackr	=	$250
+SPAgstackl	=	$2A2
+SPAgstickr	=	$1EC
+SPAgstickl	=	$21E
+SPAghighr	=	$148E
+SPAghighl	=	$14C0
+SPAgstick2r	=	$14F2
+SPAgstick2l	=	$1544
+SPAgslamtop	=	$1596
+SPAgslambot	=	$1684
+SPAglide	=	$50C
+SPApflip	=	$46A
+SPAglideback	=	$A60
+SPAturnl	=	$662
+SPAturnr	=	$694
+SPAgskate	=	$3D8
+SPAskateback	=	$A92
+SPAskate	=	$5D0
+SPAstumble	=	$11E6
+SPAskatewp	=	$53E
+SPAstop	=	$6C6
+
 ; Main segment code
 	include	checks94.asm
