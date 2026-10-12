@@ -85,5 +85,13 @@ EASNmap = $B3530		;#x
 Arrowsmap = $B3640		;#x
 PlayoffSprite = $F3098		;#x
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPFpad	=	390
+SPFreplay	=	393
+SPFgloves	=	353
+SPFgoal	=	405
+SPFpuck	=	394
+SPAglide	=	$50C
+
 ; Main segment code
 	include	setup94.asm
