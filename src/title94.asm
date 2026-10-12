@@ -218,11 +218,11 @@ SkatePath	;Shootout skate path: d0 / d1 = the point (mirrored for the bottom net
 	tst.w	Yvel(a3)
 	bne.w	.5
 	cmp.w	#$12,d1
-	ble.w	.6
+	ble.w	.nextpt
 .5
 	cmp.w	#$A,d1
 	bgt.w	.7
-.6
+.nextpt
 	bsr.w	NextPathPoint
 .7
 	move.w	(sopathx).w,d0
@@ -234,23 +234,23 @@ ShootoutShootCheck	;Shootout, skater a3 has the puck (gmode2 bit 1): Z set (d0 i
 	;end, within sopathend of its last point, or with the puck stopped before $F. Called from asspuckc
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#1,(gmode2).w
-	beq.w	.5
+	beq.w	.yes
 	move.w	SCnum(a3),d0
 	cmp.w	(puckc).w,d0
-	bne.w	.5
+	bne.w	.yes
 	cmpi.w	#3,(shootoutclock).w
-	ble.w	.4
+	ble.w	.no
 	cmpi.b	#$80,(sopathx).w
-	beq.w	.4
+	beq.w	.no
 	btst	#3,(sflags7).w
 	bne.w	.0
 	tst.w	(puckvx).w
-	bne.w	.5
+	bne.w	.yes
 	tst.w	(puckvy).w
-	bne.w	.5
+	bne.w	.yes
 	cmpi.w	#$F,(shootoutclock).w
-	blt.w	.4
-	bra.w	.5
+	blt.w	.no
+	bra.w	.yes
 .0
 	move.w	(sopathx).w,d0
 	move.w	(sopathy).w,d1
@@ -268,13 +268,13 @@ ShootoutShootCheck	;Shootout, skater a3 has the puck (gmode2 bit 1): Z set (d0 i
 	neg.w	d1
 .3
 	cmp.w	(sopathend).w,d0
-	bgt.w	.5
+	bgt.w	.yes
 	cmp.w	(sopathend).w,d1
-	bgt.w	.5
-.4
+	bgt.w	.yes
+.no
 	clr.w	d0
 	bra.w	.x
-.5
+.yes
 	move.w	#1,d0
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -488,10 +488,10 @@ GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8
 	move.w	#$50,d2
 .0
 	cmp.w	d7,d2
-	ble.w	.1
+	ble.w	.next
 	move.w	d2,d7
 	move.w	d1,d0
-.1
+.next
 	dbf	d1,.loop
 	movem.l	(sp)+,d1-d7/a0-a6
 	rts
@@ -1152,7 +1152,7 @@ HotColdIcon	;The icon by the name of player iconplayer of team a2 at x iconx, y 
 .loop
 	move.w	(a0)+,d1
 	cmp.w	(iconplayer).w,d1
-	beq.w	.2
+	beq.w	.hot
 	dbf	d0,.loop
 	movea.l	#awaycoldplayer,a0
 	cmpa.l	#tmstruct,a2
@@ -1163,7 +1163,7 @@ HotColdIcon	;The icon by the name of player iconplayer of team a2 at x iconx, y 
 .loop2
 	move.w	(a0)+,d1
 	cmp.w	(iconplayer).w,d1
-	beq.w	.3
+	beq.w	.cold
 	dbf	d0,.loop2
 	move.w	(iconx).w,(printx).w
 	move.w	#$19,(printy).w
@@ -1172,14 +1172,14 @@ HotColdIcon	;The icon by the name of player iconplayer of team a2 at x iconx, y 
 	move.w	#$7FF,d2
 	jsr	(eraser).l
 	bra.w	.x
-.2
+.hot
 	move.w	(hoticonchars).w,d4
 	movea.l	#HotIconMap,a0
-	bra.w	.4
-.3
+	bra.w	.draw
+.cold
 	move.w	(coldiconchars).w,d4
 	movea.l	#ColdIconMap,a0
-.4
+.draw
 	move.w	(iconx).w,(printx).w
 	move.w	#$19,(printy).w
 	movea.l	a0,a1
