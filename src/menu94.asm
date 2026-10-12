@@ -1,5 +1,5 @@
-;	Menu engine: the scrolling menu of the pause screen, the Manual / Auto Goalie item,
-;	PutTeamBlock and vcountwait. A handler can keep its own screen (sflags5 bit 1).
+;	Menu engine. This file runs the scrolling menu of the pause screen, including the Manual and
+;	Auto Goalie item, and holds a few helpers for drawing team blocks and waiting for the screen.
 
 InitMenuState	;Start a menu: a0 = item list, a1 = screen draw routine; selection and first shown item 0. Falls into
 	;DrawMenuScreen. Called from PauseMode, and the stats code

@@ -1,11 +1,6 @@
-;	Sound driver, 68000 side: sound and song start and stop, the pad readers run from
-;	p_music_vblank, the music track player and its event handlers, channel volume and
-;	frequency, and Z80 setup; followed by the Z80 program and sound data.
-;	Sounds go through a long pointer table.
-;	RAM: fm_track_slots (8 x 6 bytes), fm_channel_structs (6 x 8 bytes: +0 key, +1 note,
-;	+2 volume, +3 patch, +4 output channel, +5 age, +6 bit 0 on), fm_voice_usage_table (8
-;	bytes per key: word +0 pitch bend, +3 patch, word +4 volume), Z80_command_buffer (33
-;	bytes, copied to Z80 RAM $02), per_channel_attenuation_table, music_needs_z80_update.
+;	Sound driver, 68000 side. It starts and stops sounds and songs, plays the music tracks event
+;	by event, sets each channel's volume and pitch, and sets up the Z80. The pad readers run from
+;	its vertical blank routine. The Z80 program and the sound data follow it.
 
 p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute every output channel, send the buffer
 	;and stop the PCM channel. Called from Begin and the game screens

@@ -1,5 +1,6 @@
-;	Game play display: VBlank, vb2, IRQ7, sprite list building and DMA, scrolling, and
-;	the sprite builders for the rink, referee, faceoff, zamboni and crowd.
+;	Game play display. Every frame the vertical blank code builds the sprite list, sends it and
+;	other graphics to video memory and scrolls the rink. This file also draws the sprites for the
+;	rink, the referee, faceoffs, the zamboni and the crowd.
 
 VBlank	;Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
 	;dfok is set, cramfade, then the game clock. gmode2 bit 2 keeps the clock running after the whistle, and with gmode2 bit 1

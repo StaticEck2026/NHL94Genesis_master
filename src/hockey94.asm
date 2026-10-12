@@ -1,6 +1,6 @@
-;	Main game code: startup, the game loop (StartGame, StartPer, Gameloop, DoGameFrame),
-;	the periodic events, the clock, Pausemode and the pause screen.
-;	Inline print strings after printz2 use the String macro.
+;	Main game code. This file starts the game, runs the game loop from the opening faceoff to the
+;	end of each period, handles the events that happen every so often and keeps the clock. It
+;	also runs the pause mode and its screen. Print strings follow the calls that print them.
 
 VBjsr	;Vertical blank interrupt (vector $78), jumps through the vbint RAM vector
 	move.l	(vbint).w,-(sp)		;push handler address

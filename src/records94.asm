@@ -1,5 +1,5 @@
-;	New in 94: user name entry and the Record Holders screen (win, goal and save records
-;	from save RAM), and the shootout mode box.
+;	New in 94: user records. This file lets players enter their names, shows the Record Holders
+;	screen with the win, goal and save records kept in save RAM, and draws the shootout mode box.
 
 UserNameEntry	;With user records on (OptUserRec 0): the name entry (NameEntryScreen) for the pads in use. Called from PeriodOver
 	tst.w	(OptUserRec).w

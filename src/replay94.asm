@@ -1,7 +1,6 @@
-;	Instant replay (ReplayMode, the replay icon and banner, camera and frame restore),
-;	then the per-frame player and animation update and the scroll window.
-;	New in 94: the reverse angle replay.
-;	Replay frames are $62 bytes from M68K_RAM to replayend; recbpr is the record pointer.
+;	Instant replay. This file records each frame of play, plays it back with the replay icon and
+;	banner, moves the camera and restores the frames. It then updates every player and animation
+;	each frame and keeps the scroll window on the play. New in 94: the reverse angle replay.
 
 ReplayMode	;Instant replay play-back control and display code. Called from the pause menu.
 	;Tracking: a d-pad press picks the nearest object in that direction and the camera follows it

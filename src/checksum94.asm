@@ -1,4 +1,5 @@
-;	ROM checksum check (ValidationRoutine), followed by the $FF fill to the end of the ROM.
+;	ROM security check. This routine adds up the ROM and stops the game if the sum is wrong. The
+;	fill that pads the ROM out to its full size follows it.
 
 ValidationRoutine	; Called once at power on from Start. Adds
 	;every ROM long from 0 up to this routine, skipping the header long at $18C. Returns if the sum is right, else turns the screen red and

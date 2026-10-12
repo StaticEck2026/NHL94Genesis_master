@@ -1,7 +1,6 @@
-;	Team data: TeamList and the offsets into each team record, one record per team plus
-;	the two All-Star teams (players, palettes, name, line sets, scouting report, scoring
-;	odds), the playoff seeds and the credits. The records are not in TeamList order (the
-;	All-Star teams first, Florida and Anaheim last). New in 94: Anaheim and Florida.
+;	Team data. TeamList points to one record per team, the two All-Star teams included. A record
+;	holds the players, colors, name, lines, scouting report and scoring odds. The playoff seeds and
+;	the credits come after the teams.
 
 	dc.l	0	;not part of TeamList
 

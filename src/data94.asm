@@ -1,6 +1,6 @@
-;	Menu and playoff data: the default menu options, playoff tree setup, pad assignment,
-;	game structure setup, the playoff password code and the playoff stat packing.
-;	The playoff bits are kept in pwddatabuffer and saved through WriteLineData.
+;	Menu and playoff data. This file sets the default menu options, builds the playoff tree,
+;	assigns the pads and sets up each game. It also packs the playoff results into the password
+;	and the saved line data.
 
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.

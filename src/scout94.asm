@@ -1,7 +1,5 @@
-;	Scouting report: the pregame MATCHUPS screen with its pager, team text, rating,
-;	picture and position helpers, and the advantage marks.
-;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa. printz2
-;	codes: $F8 attribute,map,x,y; $F9 char set.
+;	Scouting report. This file shows the pregame matchups screen with its pages of team text,
+;	ratings, pictures and positions, and marks which team has the advantage.
 
 ScoutCrowdRecord	;The text player's '@' (ScoutTextPlayer): return a1 = the home team's crowd record in dB as a String at TempBuffer (SRAM team record
 	;byte 8, 80 if 0). ReadCrowdRecord reads the 16 byte SRAM record of team d1 ($B60 + d1 * 16) to a0

@@ -62,3 +62,4 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   prop.py, then new-in-95 routines, then data labels/equates).
 - Header rewrite (file header comments, 92 style): 94G nhl94, main, teamdata, frames, ram, macros, sega, stubinc, hockey, menu, stats, replay, input, assign, checks, video, penalty, collide, display, setup, all modules and stubs done (94G complete).
 - Restructure: root .js tools (extractAssets94, fixopcodes, verifyRom, verifySegment, sync) moved to tools/; run from repo root as node tools/<name>.js (default Extracted/output paths resolve from the repo root). Fresh extract + ROM + all segments MATCH.
+- Header rewrite 2 (story-style file headers, model 93G hockey93/main93/menu93): all 94G modules done. MATCH.

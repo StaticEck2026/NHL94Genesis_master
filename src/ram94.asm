@@ -1,5 +1,5 @@
-;	Old RAM equate list, kept commented out for reference; the RAM names in use are in
-;	stubinc\ram_addrs.inc. No ROM bytes.
+;	Old RAM equate list. It is kept here, commented out, for reference only; the RAM names the
+;	game uses are in the RAM map of the stubinc folder, and this file adds nothing to the ROM.
 ; ;Variables
 ; Vctrl	=	Vdata+4
 

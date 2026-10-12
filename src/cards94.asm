@@ -1,7 +1,7 @@
-;	New in 94: team palettes, featured player pictures, the save RAM records (team,
-;	player, crowd and user), the Player Cards screens and CalcAttrib, the user name entry
-;	screen, Record Holders, the playoff round box and the shootout screens.
-;	Inline Strings follow the print calls; labels inside Strings are not separate labels.
+;	New in 94: player cards and saved records. This file loads team colors and featured player
+;	pictures, keeps the team, player, crowd and user records in save RAM, and runs the Player
+;	Cards screens, the user name entry, Record Holders, the playoff round box and the shootout
+;	screens. Print strings follow the calls that print them.
 
 wallcollduringcheck	;during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
 	;with his size + $17. Called from CCStart

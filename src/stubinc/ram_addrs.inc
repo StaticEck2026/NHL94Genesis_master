@@ -1,4 +1,4 @@
-;	RAM map: the names and addresses of all game variables.
+;	RAM map. These equates give the name and address of every game variable.
 
 M68K_RAM equ $FFFF0000
 sramcleared equ $FFFF1FFE

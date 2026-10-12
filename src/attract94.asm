@@ -1,5 +1,5 @@
-;	New in 94: the EA Sports screen shown at startup, the playoff matchup bitmaps and the
-;	related option screen helpers, then the options screen vblank handler.
+;	New in 94: the EA Sports screen shown at startup. This file also draws the playoff matchup
+;	pictures, holds some helpers for the option screens and runs the options screen's vertical blank.
 
 EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or $50 x 4 frames (about 5 s)
 	move.l	#vb2,(vbint).w	;vblank handler

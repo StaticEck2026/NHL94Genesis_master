@@ -1,9 +1,6 @@
-;	Skater and goalie assignments: the wing and center positions, goalie control (player
-;	and computer), saves, breakaways, the puck carrier, and the computer's line change,
-;	shot and pass decisions.
-;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34,
-;	assnum $36, temp1 $40, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62,
-;	pflags2 $63.
+;	Skater and goalie assignments. This file plays the wing and center positions and the goalie,
+;	whether a player or the computer controls him, with his saves and breakaways. It also handles
+;	the puck carrier and the computer's choices of when to change lines, shoot and pass.
 
 asswingo	;player a3 is winger on offense
 	btst	#pfalock,pflags(a3)	;check if locked in animation

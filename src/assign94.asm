@@ -1,7 +1,6 @@
-;	Player assignments: bench and penalty box trips, faceoffs, celebrations and the
-;	defense and wing positions. There is no fight code: assfight and assfwatch only return.
-;	SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44,
-;	temp4 $46, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
+;	Player assignments. Each computer player is given a job for the moment: skating to the bench
+;	or the penalty box and back, lining up for a faceoff, celebrating a goal, or playing his spot
+;	as a defenseman or a wing. There is no fighting in this game, so the fight assignments do nothing.
 
 assbench	;player a3 should goto bench
 	btst	#pfalock,pflags(a3)

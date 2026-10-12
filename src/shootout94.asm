@@ -1,5 +1,5 @@
-;	New in 94: the shootout: shooter order and goal count, the winner message, and the
-;	shooters selection screen.
+;	New in 94: the shootout. This file sets the shooting order, counts the goals, shows the
+;	winner and runs the screen where the shooters are chosen.
 
 ClearShootout	;Clear the player structs (SortCords) and the shootout state.
 	movea.l	#SortCords,a0

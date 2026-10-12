@@ -1,5 +1,6 @@
-;	The crowd meter (arena record and crowd noise), the corner wall check, and the hot /
-;	cold player tables and lists used by AttributeCalc and the MATCHUPS text.
+;	The crowd and hot players. This file runs the crowd meter, with the arena record and the
+;	crowd noise, checks the corners of the wall, and keeps the tables of which players are hot or
+;	cold that the player ratings and the matchups screen use.
 
 LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (ReadCrowdRecord into the buffer at ThreeStars), $50 when none. Called from StartGame
 	movem.l	d0-d7/a0-a6,-(sp)

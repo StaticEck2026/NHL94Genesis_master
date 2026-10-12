@@ -1,8 +1,6 @@
-;	Controller input for skaters: moving, passing, shooting and checking, the faceoff and
-;	line change input, and check4bench.
-;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, impact $32,
-;	position $34, assnum $36, asslist $38, SCnum $52, facedir $54, SPA $58, SPAnum $5A,
-;	nopuck $5E, pflags $62, pflags2 $63.
+;	Controller input for skaters. This file moves the player under control and lets him pass,
+;	shoot and check. It also reads the pads at faceoffs and line changes and decides when a
+;	player should head to the bench.
 
 
 doinput	;process controller input: d0 = dpad, d1 = new buttons, d2 = changed buttons, d3 = held buttons,

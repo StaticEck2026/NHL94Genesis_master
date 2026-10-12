@@ -1,8 +1,6 @@
-;	Stats screens, run as pause menu item handlers: Scores, Line Editor, Team Roster,
-;	Scoring and Penalty Summaries, Player and Playoff Stats, Crowd Meter (arena and league
-;	records from save RAM), Timeout and goalie select, with their helpers.
-;	With OptLine set the line icon entries come from LineIconPosTable-6 (the bytes before
-;	LineIconGroups).
+;	Stats screens. Each one runs as an item of the pause menu: scores, the line editor, team
+;	roster, scoring and penalty summaries, player and playoff stats, the crowd meter with the
+;	arena and league records, the timeout and goalie selection.
 
 ShowScores	;"Scores" screen: the other games of the night in gsstruct over the Scores bitmap
 	;(ScoresMap); up / down scroll, start exits (ExitStatsScreen). Menu item handler (menu lists)

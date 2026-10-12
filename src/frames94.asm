@@ -1,7 +1,6 @@
-;	Sprite animation tables. SPAlist is a word, then one table per animation. A table is
-;	8 direction offsets (from .t), a flag word, then frame,time word pairs per direction; a
-;	negative time ends the direction. SPA<name> is the table offset from SPAlist, which the
-;	code uses.
+;	Sprite animation tables. For every animation there is a table that gives the frames to show
+;	in each direction and how long to show each one. The code refers to an animation by the
+;	offset of its table in the list.
 
 ; Sprite Frame (SPF) base indices. gready has 3 frames per direction (93 had 2),
 ; so every base from SPFSiren up is 8 higher than in 93. Frames 658 and up have no name.

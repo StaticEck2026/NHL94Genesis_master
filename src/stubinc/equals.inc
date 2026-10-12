@@ -1,4 +1,5 @@
-;	Equates: VDP status bits, hardware constants and game values shared by all modules.
+;	Shared equates. These name the video chip status bits, hardware constants and game values
+;	that every module uses.
 
 PAL_MODE equ 0
 DMA_IN_PROGRESS equ 1

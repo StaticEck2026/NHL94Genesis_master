@@ -1,5 +1,6 @@
-;	Collisions: wall and player collisions, checking (body check, hold, hook), falls
-;	and injuries.
+;	Collisions. This file bounces players off the walls and each other, runs body checks, holds
+;	and hooks, and decides when a player falls or is hurt.
+
 ;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20
 ;	OldYpos, $28 Xvel, $2A Yvel, $2E impactp, $32 impact, $34 position, $40 temp1, $4A / $4C
 ;	wall radius x / y, $4E wallcos, $50 wallsin, $52 SCnum, $54 facedir, $58 SPA, $5E / $5F

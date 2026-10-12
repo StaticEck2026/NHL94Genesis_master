@@ -1,5 +1,6 @@
-;	Shared helpers: palette fades, random numbers, square root, sound calls, joystick
-;	reading (four pads) and waits, VRAM DMA and fill, and video setup.
+;	Shared helpers used all over the game. They fade palettes, make random numbers and square
+;	roots, start sounds, read up to four joysticks and wait for buttons, move and fill video
+;	memory and set up the screen.
 
 remap
 	move.w	(disflags).w,-(sp)

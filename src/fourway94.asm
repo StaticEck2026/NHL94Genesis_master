@@ -1,4 +1,5 @@
-;	New in 94: EA 4 Way Play adaptor detection and its pad helpers.
+;	New in 94: support for the EA 4 Way Play adaptor. It finds out whether the adaptor is plugged
+;	in and reads the pads through it.
 
 Detect4WayPlay	;detect the 4 way play adaptor (EA 4 Way Play) on port 2: FourWayPlay = 1 when found. Called from Begin
 	move.w	#0,(IO_Z80RES).l

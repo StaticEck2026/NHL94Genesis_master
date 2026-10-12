@@ -1,6 +1,6 @@
-;	Rink and team setup: ice and tile setup, sprites and sort lists, team structures and
-;	colors, then the period, intermission and game end flow, the opening and playoff
-;	screens, and the text player used by the scouting report.
+;	Rink and team setup. This file lays down the ice, sets up the sprites and the teams with
+;	their structures and colors, and then runs the flow between periods and at the end of a game,
+;	the opening and playoff screens, and the text player of the scouting report.
 
 setupice	;set all variables, send non purgeable graphics, build sprite frame lists for ice rink. Called from StartGame and StartPer.
 	;Decompresses the tile sets with DecompressGraphicsPlain / DecompressGraphicsWithCallback. Loads RevRinkTiles in a reverse angle replay

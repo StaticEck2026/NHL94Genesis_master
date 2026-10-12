@@ -1,10 +1,6 @@
-;	Penalty logic: penalties and stoppages, penalty shots on breakaways, the penalty box
-;	and power plays, referee messages, and the horizontal/vertical rink switch.
-;	Penalty numbers are Penaltylist word offsets: EOG 4, OOP 6, whistle $A, icing $C,
-;	goal $E, offsides $10, delay $2C. Team struct from HmShots: 2 tmPwrGoals, 4 tmPwrPlays,
-;	6 tmPenalties, 8 tmPenmin, $A attack time, $1E tmdata, $22 tmsort, $24 tmap, $26
-;	tmgoalie, $30 tmflags, $66 tmpdst, $9A penalty box list (bytes, -1 end), $102
-;	per-player penalty minutes.
+;	Penalty logic. This file calls penalties and the other stoppages of play, awards penalty
+;	shots on breakaways, sends players to the penalty box, runs power plays, shows the referee's
+;	messages and switches the rink between its horizontal and vertical views.
 
 AddPenalty	;add penalty d0 (Penaltylist offset) for player a3. Ignored while the clock is stopped, when penalties are off, for a player with
 	;pflags2 bit 2 set, or offsides when offsides are off. Falls into AddPenalty2

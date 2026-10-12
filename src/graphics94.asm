@@ -1,6 +1,5 @@
-;	Graphics and text data, all incbins from Extracted\Graphics and Extracted\Text. The
-;	player cards are one file per card (Graphics\PlayerCards) in roster order. A map's tiles
-;	start past its 8-byte header, so code refers to them as label+8.
+;	Graphics and text data, all loaded from the extracted files: the rink, sprites, fonts, screen
+;	maps, pictures and one file per player card, in roster order.
 
 ScoutTextScript		;the script ScoutTextPlayer types out word by word on the ScoutingReport (MATCHUPS) screen
 	incbin	..\Extracted\NHL94\Text\ScoutTextScript.bin

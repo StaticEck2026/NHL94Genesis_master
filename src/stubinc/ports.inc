@@ -1,4 +1,5 @@
-;	Hardware ports: controller I/O, Z80 bus and VDP.
+;	Hardware ports. These equates name the controller ports, the Z80 bus control and the video
+;	chip ports.
 
 IO_CT1_CTRL equ $A10008
 IO_CT1_DATA equ $A10002

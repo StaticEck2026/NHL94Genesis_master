@@ -1,6 +1,5 @@
-;	New in 94: battery save RAM. $2000 bytes are kept on the odd bytes, copied to
-;	M68K_RAM at power on (InitSaveRAM) and protected by a sum / complement checksum in the
-;	last two bytes. Routines to validate, clear, read and write it.
+;	New in 94: battery save RAM. At power on the save RAM is copied into work RAM and checked,
+;	and this file holds the routines that check, clear, read and write it.
 
 InitSaveRAM	;Called from Begin. Copy the $2000 byte save RAM (the odd bytes) to M68K_RAM and check its checksum
 	;(ValidateSRAM; ValidSRAM 0 = good, -1 = bad). A bad save RAM is cleared (ClearSRAM) and read again. Two power-on tests that never return:
