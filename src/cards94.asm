@@ -877,10 +877,10 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 	add.l	d1,d0
 	moveq	#4,d1
 	btst	#6,(sflags6).w
-	beq.w	.0
+	beq.w	.read
 	jsr	(WriteSRAM).l
 	bra.w	.x
-.0
+.read
 	jsr	(ReadSRAM).l
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
@@ -898,10 +898,10 @@ CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered fr
 	addi.l	#$B60,d0
 	moveq	#$10,d1
 	btst	#6,(sflags6).w
-	beq.w	.0
+	beq.w	.read
 	jsr	(WriteSRAM).l
 	bra.w	.x
-.0
+.read
 	jsr	(ReadSRAM).l
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
@@ -918,10 +918,10 @@ TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 	addi.l	#$D20,d0
 	moveq	#$10,d1
 	btst	#6,(sflags6).w
-	beq.w	.0
+	beq.w	.read
 	jsr	(WriteSRAM).l
 	bra.w	.x
-.0
+.read
 	jsr	(ReadSRAM).l
 .x
 	movem.l	(sp)+,d0-d1/a0-a1
@@ -940,10 +940,10 @@ NameLogIO	;A user record block: read or write (sflags6 bit 6)
 	move.l	#$DA0,d0
 	movea.l	#namelog,a0
 	btst	#6,(sflags6).w
-	beq.w	.0
+	beq.w	.read
 	jsr	(WriteSRAM).l
 	bra.w	.x
-.0
+.read
 	jsr	(ReadSRAM).l
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -1076,7 +1076,7 @@ UpdateTeamRecord	;After a game: add the game to team record block d1 (games, win
 	move.w	$C(a1),d0
 	cmp.w	$C(a2),d0
 	movem.w	(sp)+,d0
-	ble.w	.3
+	ble.w	.write
 	move.w	$C(a1),d5
 	cmp.b	(a0),d5
 	ble.w	.2
@@ -1090,13 +1090,13 @@ UpdateTeamRecord	;After a game: add the game to team record block d1 (games, win
 	move.w	(a2),d6
 	sub.w	d5,d6
 	cmp.b	4(a0),d6
-	ble.w	.3
+	ble.w	.write
 	st	d7
 	move.b	d6,4(a0)
 	move.b	d3,5(a0)
 	move.b	d4,6(a0)
 	move.b	d2,7(a0)
-.3
+.write
 	bsr.w	WriteTeamRecord
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
@@ -1353,16 +1353,16 @@ PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the play
 	andi.w	#1,d0
 	movea.l	#awaycardidx,a0
 	move.w	d0,(cardvis).w
-	bne.w	.6
+	bne.w	.draw
 	movea.l	#homecardidx,a0
-.6
+.draw
 	bsr.w	DrawPlayerCard
 .loop
 	jsr	(vcountwait).l
 	jsr	(getpzjoy).l
 	jsr	(ProcessInputWithRepeat).l
 	btst	#7,d3
-	bne.w	.10
+	bne.w	.exit
 	btst	#6,d1
 	beq.w	.7
 	eori.w	#1,(cardvis).w
@@ -1392,7 +1392,7 @@ PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the play
 	bsr.w	WrapCardIndex
 	bsr.w	DrawPlayerCard
 	bra.w	.loop
-.10
+.exit
 	movem.l	(sp)+,d0-d7/a0-a6
 	jmp	ExitStatsScreen
 WrapCardIndex	;Wrap the card index (a0) into 0 ... cardcount - 1
@@ -2584,12 +2584,12 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	subq.w	#1,d1
 	cmp.w	(nameentryvis).w,d1
 	movem.w	(sp)+,d1
-	beq.w	.4
+	beq.w	.input
 	jsr	(ReadJoy2).l
 	tst.w	d1
 	beq.s	.loop2
 	bra.w	.5
-.4
+.input
 	jsr	(ReadJoy1).l
 	tst.w	d1
 	beq.s	.loop2
