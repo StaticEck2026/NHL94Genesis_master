@@ -25,7 +25,7 @@ VBlank	;Main vblank code for game play (vbint target, set by setupice and setupi
 	bne.w	.c
 .0
 	btst	#1,(gmode2).w	;penalty shot / shootout clock
-	bne.w	.1
+	bne.w	.soclock
 	tst.w	(gameclock).w
 	beq.w	.c
 	subi.w	#$AAA,(gameclock+2).w	;jiffy. gameclock+2 = gameclock+2
@@ -43,7 +43,7 @@ VBlank	;Main vblank code for game play (vbint target, set by setupice and setupi
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
-.1
+.soclock
 	tst.w	(shootoutclock).w
 	beq.s	.c
 	subi.w	#$AAA,(shootoutjiffy).w
@@ -227,8 +227,8 @@ checkfo	;check for face off sprites. 3 entries of fofdata2: word frame, word fla
 	moveq	#2,d0
 .loop
 	move.w	(a3),d4
-	bmi.w	.1
-	beq.w	.1
+	bmi.w	.next
+	beq.w	.next
 	movea.l	#FaceOffSprites,a2
 	adda.l	4(a2),a2
 	add.w	d4,d4
@@ -270,7 +270,7 @@ checkfo	;check for face off sprites. 3 entries of fofdata2: word frame, word fla
 	addq.w	#8,a2
 	dbf	d5,.loop2
 	addq.w	#4,a3
-.1
+.next
 	dbf	d0,.loop
 	rts
 showzam	;zamboni. a5 = dma list, a6 = sprite table, d6 = link counter. Draws frame 1, frame 2-4 picked by x, then frame 5 (home score not ahead) or a .ftab frame. Called from setvideo

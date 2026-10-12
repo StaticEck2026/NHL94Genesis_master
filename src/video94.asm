@@ -304,11 +304,11 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	movem.l	d4-d7/a0-a3,-(sp)
 	neg.w	d0
 	move.w	d0,(vcount).w
-.loop
+.wait
 	cmpi.w	#$708,(zamx).w
-	bhi.w	.0
+	bhi.w	.nz
 	addq.w	#1,(zamx).w
-.0
+.nz
 	moveq	#1,d7
 	jsr	(updatecrowdf).w		;4EB8: target below $8000
 	jsr	(RunArenaAnim).l
@@ -317,52 +317,52 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	bsr.w	ReadJoy1
 	bsr.w	ProcessInputWithRepeat
 	tst.w	d1
-	bne.w	.1
+	bne.w	.key
 	clr.w	(pausepad).w
 	bset	#1,(sflags).w
 	bsr.w	ReadJoy2
 	bsr.w	ProcessInputWithRepeat
 	tst.w	d1
-	bne.w	.1
+	bne.w	.key
 	tst.w	(FourWayPlay).w
-	beq.w	.4
+	beq.w	.vid
 	bclr	#1,(sflags).w
 	move.w	#3,(pausepad).w
 	bsr.w	ReadJoy3
 	bsr.w	ProcessInputWithRepeat
 	tst.w	d1
-	bne.w	.1
+	bne.w	.key
 	tst.w	(FourWayPlay).w
-	beq.w	.4
+	beq.w	.vid
 	bset	#1,(sflags).w
 	move.w	#4,(pausepad).w
 	bsr.w	ReadJoy4
 	bsr.w	ProcessInputWithRepeat
 	tst.w	d1
-	beq.w	.4
-.1
+	beq.w	.vid
+.key
 	move.w	(vcount).w,d0
 	cmp.w	#$FF88,d0
-	blt.w	.2
+	blt.w	.menu
 	moveq	#$FFFFFF88,d0
-.2
+.menu
 	movem.w	d0,-(sp)
 	jsr	(HandleMenuInput).w		;4EB8: target below $8000
-	bne.w	.3
+	bne.w	.resume
 	addq.w	#2,sp
 	bset	#7,d1
-	bra.w	.x
-.3
+	bra.w	.ex
+.resume
 	move.w	(sp)+,(vcount).w
-.4
+.vid
 	bsr.w	setvideo
 	move.w	(vcount).w,d0
-.loop2
+.0
 	cmp.w	(vcount).w,d0
-	beq.s	.loop2
+	beq.s	.0
 	tst.w	d0
-	bmi.w	.loop
-.x
+	bmi.w	.wait
+.ex
 	movem.l	(sp)+,d4-d7/a0-a3
 	rts
 ; wait for either joystick input
@@ -1131,21 +1131,21 @@ printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font
 .0
 	move.b	(a1)+,d0
 	ext.w	d0
-	bgt.w	.2
+	bgt.w	.nocom
 	neg.w	d0
 	asl.w	#2,d0
 	movea.l	#ControlCodeJumpTable,a2
 	movea.l	0(a2,d0.w),a2
 	jsr	(a2)
 	bra.w	.1
-.2
+.nocom
 	cmp.b	#$40,d0
-	bne.w	.3
+	bne.w	.noblank
 	move.w	#$7FF,d0
-	bra.w	.5
-.3
+	bra.w	.p
+.noblank
 	cmp.b	#$5E,d0
-	beq.w	.6
+	beq.w	.skip
 	asl.w	#1,d0
 	movea.l	#SmallFontMap,a2
 	btst	#3,(sflags6).w
@@ -1156,7 +1156,7 @@ printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font
 	move.w	4(a2,d0.w),d0
 	move.w	(printfontset).w,d1
 	add.w	0(a3,d1.w),d0
-.5
+.p
 	add.w	d2,d0
 	move.w	d0,(a0)
 	addq.w	#1,(printx).w
@@ -1165,7 +1165,7 @@ printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font
 	movem.l	(sp)+,d0-d3/a0/a2-a3
 	move.w	(sp)+,(disflags).w
 	rts
-.6
+.skip
 	addq.w	#1,(printx).w
 	bsr.w	xyVmMap
 	bra.s	.1
@@ -1499,7 +1499,7 @@ printbig
 	move.b	(a1)+,d0
 	beq.w	.1
 	ext.w	d0
-	bpl.w	.3
+	bpl.w	.nocom
 	neg.w	d0
 	move.w	d0,d6
 	asl.w	#8,d6
@@ -1519,7 +1519,7 @@ printbig
 	move.w	d5,(printy).w
 	subq.w	#2,d3
 	bra.w	.1
-.3
+.nocom
 	cmp.b	#$61,d0
 	blt.w	.2
 	cmp.b	#$7A,d0
