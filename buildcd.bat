@@ -35,6 +35,26 @@ if errorlevel 1 (
     echo mainvdp assembly failed
     exit /b 1
 )
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\mainpad.asm,%WORKSPACE%output\mainpad.bin,%WORKSPACE%output\mainpad,%WORKSPACE%output\mainpad" > "%WORKSPACE%output\Build_mainpad.log"
+if errorlevel 1 (
+    echo mainpad assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\maindisp.asm,%WORKSPACE%output\maindisp.bin,%WORKSPACE%output\maindisp,%WORKSPACE%output\maindisp" > "%WORKSPACE%output\Build_maindisp.log"
+if errorlevel 1 (
+    echo maindisp assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\mainfont.asm,%WORKSPACE%output\mainfont.bin,%WORKSPACE%output\mainfont,%WORKSPACE%output\mainfont" > "%WORKSPACE%output\Build_mainfont.log"
+if errorlevel 1 (
+    echo mainfont assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\maintext.asm,%WORKSPACE%output\maintext.bin,%WORKSPACE%output\maintext,%WORKSPACE%output\maintext" > "%WORKSPACE%output\Build_maintext.log"
+if errorlevel 1 (
+    echo maintext assembly failed
+    exit /b 1
+)
 "%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\subboot.asm,%WORKSPACE%output\subboot.bin,%WORKSPACE%output\subboot,%WORKSPACE%output\subboot" > "%WORKSPACE%output\Build_subboot.log"
 if errorlevel 1 (
     echo subboot assembly failed

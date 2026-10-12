@@ -79,7 +79,7 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 
 `npm run build:segacd` assembles the fragments below and compares them to `cdbin/`. The cartridge ROM is not involved. The Sega CD assemble uses `/o oz-` so a written `$0(an)` stays a 16-bit displacement. The cartridge build still uses `/o oz+`.
 
-Verified bytes are 6,544 of the 410,162 bytes in the four code files (1.6%). `MAIN.BIN` is contiguous from the first byte through `$FF183F` (6,208 of 60,416, 10.3%). `STARTER.BIN` is 336 bytes. `HOCKEY.BIN` and `PLAYER.BIN` are not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched.
+Verified bytes are 13,832 of the 410,162 bytes in the four code files (3.4%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416, 22.3%). `STARTER.BIN` is 336 bytes. `HOCKEY.BIN` and `PLAYER.BIN` are not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched.
 
 | Source | Compared to | Bytes |
 | --- | --- | --- |
@@ -88,6 +88,10 @@ Verified bytes are 6,544 of the 410,162 bytes in the four code files (1.6%). `MA
 | `src/segacd/maincont.asm` | `cdbin/MAIN.BIN` `$500` | `$FF0500`-`$FF0CB7` (1,976) |
 | `src/segacd/mainblit.asm` | `cdbin/MAIN.BIN` `$CB8` | `$FF0CB8`-`$FF12BF` (1,544) |
 | `src/segacd/mainvdp.asm` | `cdbin/MAIN.BIN` `$12C0` | `$FF12C0`-`$FF183F` (1,408) |
+| `src/segacd/mainpad.asm` | `cdbin/MAIN.BIN` `$1840` | `$FF1840`-`$FF1E8F` (1,616) |
+| `src/segacd/maindisp.asm` | `cdbin/MAIN.BIN` `$1E90` | `$FF1E90`-`$FF2D29` (3,738) |
+| `src/segacd/mainfont.asm` | `cdbin/MAIN.BIN` `$2D2A` | `$FF2D2A`-`$FF3029` (768) |
+| `src/segacd/maintext.asm` | `cdbin/MAIN.BIN` `$302A` | `$FF302A`-`$FF34B7` (1,166) |
 | `src/segacd/subboot.asm` | `cdbin/STARTER.BIN` | first `$90` bytes (144) |
 | `src/segacd/subheap.asm` | `cdbin/STARTER.BIN` `$4FA8` | `EngineIdle` and `GetData` (192) |
 
@@ -95,7 +99,11 @@ Verified bytes are 6,544 of the 410,162 bytes in the four code files (1.6%). `MA
 
 `maindma.asm` is the word-RAM blit that command path calls. It expands nibbles, writes the VDP at `$C00000`, and sets up DMA. A source in `$200000`-`$240000` is adjusted by two when the address is odd. The slice ends on `cmpa.w #0,a0`, and `maincont.asm` is the rest of that routine: the VBlank-status spin at `$FF051C`, a copy of the `$23A450` block into `$FF284E`, VDP fills, and the helpers that add `$180000` to a pointer. A 9-long table sits at `$FF0C94`.
 
-`mainblit.asm` reads a byte stream into `$FF2DB2`-`$FF2DBA` and shakes the gate-array flag bits at `$A12018` / `$A12028`. It ends with the 16-long handler table at `$FF1280`. `mainvdp.asm` is those handlers and the routines next to them: VDP data and register writes, waits on `$A12024`, and copies that add `$180000` before calling the DMA helper at `$FF0418`. The file stops on the `rts` at `$FF183E`. The following bytes are zero through `$FF1DBB`.
+`mainblit.asm` reads a byte stream into `$FF2DB2`-`$FF2DBA` and shakes the gate-array flag bits at `$A12018` / `$A12028`. It ends with the 16-long handler table at `$FF1280`. `mainvdp.asm` is those handlers and the routines next to them: VDP data and register writes, waits on `$A12024`, and copies that add `$180000` before calling the DMA helper at `$FF0418`. The file stops on the `rts` at `$FF183E`.
+
+`mainpad.asm` is the zero fill after that `rts` and the byte table at `$FF1DBC`. `maindisp.asm` saves the VBlank vector at `$FD08`, points it at `$FF1F8C`, and calls `MAINCODE`. When that returns it waits on a flag and puts the old vector back, then programs the VDP and copies tiles. `mainfont.asm` is the font bitmap that follows the `rts` at `$FF2D28`.
+
+`maintext.asm` is the Sierra C handlers those calls land in: `DoDrawTextCommand`, `DoMoviePlayBack`, `MAINCODE`, `ReDraw`, `drawprint`, `NumStr`, `HexStr`, `aprint`, `InitWorld`, `GetCommandFromSub`, and `Set1MFlag`. Each `rts` is followed by the function name (a tag byte, then the ASCII). `InitWorld` prints `MAINCPU is alive`. The same eleven names occur again later in the file, `$2240` bytes on.
 
 `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`. `subheap.asm` is the Sierra C `EngineIdle` and `GetData` at `$262A8` (the `link a6` the boot jumps to). The function name is the bytes after each `rts`.
 

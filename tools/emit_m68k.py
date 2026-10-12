@@ -46,6 +46,14 @@ def target_of(insn):
     return int(m.group(1), 16)
 
 
+def anchor_of(insns, dest):
+    """Instruction start that contains dest, and the byte delta into it."""
+    for insn in insns:
+        if insn.address <= dest < insn.address + insn.size:
+            return insn.address, dest - insn.address
+    return None, None
+
+
 def snasm_op(insn, labels, base):
     op = insn.op_str
     op = op.replace("a7", "sp")
@@ -92,12 +100,20 @@ def main():
         print(f"stopped at file ${stopped:X}, wanted ${end:X}", file=sys.stderr)
         sys.exit(1)
     labels = {}
+    # A (pc) target can land inside an instruction (a data slot capstone
+    # decoded as ori.b #$0). Point the reference at label+delta.
+    refs = {}
     for insn in insns:
         kind = insn.mnemonic.split(".")[0]
         if kind in BRANCH or "(pc)" in insn.op_str:
             dest = target_of(insn)
-            if dest is not None and base + start <= dest < base + end:
-                labels.setdefault(dest, f"L{dest:X}")
+            if dest is None or not (base + start <= dest < base + end):
+                continue
+            home, delta = anchor_of(insns, dest)
+            if home is None:
+                continue
+            labels.setdefault(home, f"L{home:X}")
+            refs[dest] = labels[home] if delta == 0 else f"{labels[home]}+${delta:X}"
     # An instruction address that is fallen into is labeled when something targets it.
     lines = [f"\torg\t${base + start:X}", ""]
     externs = []
@@ -105,7 +121,7 @@ def main():
         kind = insn.mnemonic.split(".")[0]
         if kind in BRANCH or "(pc)" in insn.op_str:
             dest = target_of(insn)
-            if dest is not None and dest not in labels and f"X_{dest:X}" not in externs:
+            if dest is not None and dest not in refs and f"X_{dest:X}" not in externs:
                 externs.append(f"X_{dest:X}")
     for name in externs:
         lines.insert(0, f"{name}\tequ\t${name[2:]}")
@@ -113,11 +129,14 @@ def main():
         lines.insert(len(externs), "")
     for insn in insns:
         label = labels.get(insn.address, "")
-        text = snasm_op(insn, labels, base)
+        text = snasm_op(insn, refs, base)
         mnem = insn.mnemonic
         kind = mnem.split(".")[0]
         if kind in ("btst", "bclr", "bset", "bchg") and re.search(r",d[0-7]$", text.replace(" ", "")):
             mnem = kind
+        # SNASM has no link.w. The size is the displacement, not the opcode.
+        if kind == "link":
+            mnem = "link"
         # SNASM sign-extends moveq #$FF into the wrong byte. Write -128..-1.
         if kind == "moveq":
             m = re.match(r"#\$([0-9A-F]+),(.*)", text)
@@ -126,7 +145,17 @@ def main():
                 if n >= 0x80:
                     text = f"#{n - 256},{m.group(2)}"
         # move sr / (sp)+ uses the source's unsized form; sized move.w sr is the same bytes.
-        line = f"{label}\t{mnem}\t{text}" if text else f"{label}\t{mnem}"
+        # Capstone calls a data long 0000E000 "ori.b #$0,d0". That is not the encoding.
+        raw = bytes(insn.bytes)
+        if (
+            kind == "ori"
+            and mnem.startswith("ori.b")
+            and text.endswith(",d0")
+            and not (len(raw) == 4 and raw[0] == 0 and raw[1] == 0 and raw[2] == 0)
+        ):
+            line = f"{label}\tdc.l\t${int.from_bytes(raw, 'big'):X}"
+        else:
+            line = f"{label}\t{mnem}\t{text}" if text else f"{label}\t{mnem}"
         lines.append(line.rstrip())
     open(out_path, "w").write("\n".join(lines) + "\n")
     print(f"wrote {out_path}  {len(insns)} insns  ${start:X}-${stopped:X}")
