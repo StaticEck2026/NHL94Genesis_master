@@ -496,7 +496,7 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	move.w	0(a6,d2.w),d2	;look up table to adjust d2
 	cmpi.w	#$F,SCnum(a3)	;check if puck shadow
 	bne.w	.0	;branch if not
-	cmp.w	#$18A,d2
+	cmp.w	#SPFpuck,d2
 	beq.w	.0
 	move.w	#$FC00,Ypos(a3)	;update Ypos of puck shadow
 .0
@@ -511,9 +511,9 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	andi.w	#$3FF,d2
 .2
 	move.w	d2,6(a3)
-	cmp.w	#$28D,d2	;check if frame is before glass shatter frames
+	cmp.w	#SPFbglass,d2	;check if frame is before glass shatter frames
 	blt.w	.3	;branch if so
-	cmp.w	#$292,d2	;check if frame is after glass shatter frames
+	cmp.w	#SPFbglass+5,d2	;check if frame is after glass shatter frames
 	bge.w	.3	;branch if so
 	btst	#4,(sflags4).w
 	beq.w	.3
@@ -527,9 +527,9 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	btst	#4,(sflags4).w	;check if reverse angle replay
 	beq.w	.4	;branch if not
 	move.w	6(a3),d2	;move frame into d2
-	cmp.w	#$162,d2	;check if frame is before old fight frames
+	cmp.w	#SPFfight,d2	;check if frame is before old fight frames
 	blt.w	.4	;branch if so
-	cmp.w	#$179,d2	;check if frame is after old fight frames
+	cmp.w	#SPFPen,d2	;check if frame is after old fight frames
 	bge.w	.4	;branch if so
 	bchg	#3,4(a3)	;change X flip attribute for object
 .4
@@ -777,17 +777,17 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	jsr	(PlaceBoardFall).l
 	bra.w	.top2
 .0
-	cmpi.w	#$193E,SPA(a3)	;SPAboardmidl. check animation
+	cmpi.w	#SPAboardmidl,SPA(a3)	;check animation
 	beq.w	.10
-	cmpi.w	#$1A00,SPA(a3)	;SPAboardmidr
+	cmpi.w	#SPAboardmidr,SPA(a3)
 	beq.w	.8
-	cmpi.w	#$18CC,SPA(a3)	;SPAboardleft
+	cmpi.w	#SPAboardleft,SPA(a3)
 	beq.w	.9
-	cmpi.w	#$17E8,SPA(a3)	;SPAboardright
+	cmpi.w	#SPAboardright,SPA(a3)
 	beq.w	.7
-	cmpi.w	#$1776,SPA(a3)	;SPAboardtop
+	cmpi.w	#SPAboardtop,SPA(a3)
 	beq.w	.1
-	cmpi.w	#$185A,SPA(a3)	;SPAboardbot
+	cmpi.w	#SPAboardbot,SPA(a3)
 	beq.w	.4
 	bra.w	.top2
 .1
@@ -863,9 +863,9 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	jsr	(loadTeamStruct).l
 	addq.w	#1,0(a2,d0.w)	;add 1 to TOI for player
 .11
-	cmpi.w	#$145C,SPA(a3)	;SPAinjuryfall. check animation
+	cmpi.w	#SPAinjuryfall,SPA(a3)	;check animation
 	beq.w	.done
-	cmpi.w	#$1AF4,SPA(a3)	;SPAinjury1. check animation
+	cmpi.w	#SPAinjury1,SPA(a3)	;check animation
 	beq.w	.done
 	moveq	#$11,d4
 	tst.w	(PalMode).w
