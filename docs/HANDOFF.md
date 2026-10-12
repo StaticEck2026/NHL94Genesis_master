@@ -60,3 +60,4 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   all 94 modules done (later modules by branch-structure review); 93->94 local name consistency check done
   (tools_ll/consist.py). Next: 95G (MISMATCH routines from
   prop.py, then new-in-95 routines, then data labels/equates).
+- Header rewrite (file header comments, 92 style): 94G nhl94, main, teamdata, frames, ram, macros, sega, stubinc, hockey, menu done.

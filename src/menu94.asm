@@ -1,10 +1,5 @@
-;	The scrolling menu engine of the pause screen (Pausemode): InitMenuState,
-;	DrawMenuScreen, SetMenuPrintX, HandleMenuInput, UpdateMenuSelection,
-;	PrintMenuItem (the Manual / Auto Goalie item), PutTeamBlock and
-;	vcountwait.
-;	Items print with printz2; a handler can keep its own screen (sflags5
-;	bit 1). PutTeamBlock copies 11 words per row from TeamBlockMap (93 used
-;	12); vcountwait reads oldvcount twice.
+;	Menu engine: the scrolling menu of the pause screen, the Manual / Auto Goalie item,
+;	PutTeamBlock and vcountwait. A handler can keep its own screen (sflags5 bit 1).
 
 InitMenuState	;Start a menu: a0 = item list, a1 = screen draw routine; selection and first shown item 0. Falls into
 	;DrawMenuScreen. Called from PauseMode, and the stats code

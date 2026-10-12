@@ -1,9 +1,7 @@
-;	Sprite animation tables. SPAlist is a word, then one table per
-;	animation. A table is 8 direction offsets (from .t), a flag word, then
-;	frame,time word pairs per direction; a negative time ends the direction.
-;	SPA<name> is the table offset from SPAlist, which the code uses. The
-;	fight tables are gone; 14 new tables come after flip, and injury1 is
-;	last.
+;	Sprite animation tables. SPAlist is a word, then one table per animation. A table is
+;	8 direction offsets (from .t), a flag word, then frame,time word pairs per direction; a
+;	negative time ends the direction. SPA<name> is the table offset from SPAlist, which the
+;	code uses.
 
 ; Sprite Frame (SPF) base indices. gready has 3 frames per direction (93 had 2),
 ; so every base from SPFSiren up is 8 higher than in 93. Frames 658 and up have no name.

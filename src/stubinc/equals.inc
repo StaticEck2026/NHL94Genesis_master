@@ -1,4 +1,5 @@
-; ------------- equals -------------
+;	Equates: VDP status bits, hardware constants and game values shared by all modules.
+
 PAL_MODE equ 0
 DMA_IN_PROGRESS equ 1
 HBLANKING equ 2

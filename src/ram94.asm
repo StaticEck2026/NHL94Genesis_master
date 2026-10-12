@@ -1,4 +1,5 @@
-;          equates only
+;	Old RAM equate list, kept commented out for reference; the RAM names in use are in
+;	stubinc\ram_addrs.inc. No ROM bytes.
 ; ;Variables
 ; Vctrl	=	Vdata+4
 

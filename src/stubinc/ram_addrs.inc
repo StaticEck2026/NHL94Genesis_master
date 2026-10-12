@@ -1,4 +1,5 @@
-; ---------- ram names -------------
+;	RAM map: the names and addresses of all game variables.
+
 M68K_RAM equ $FFFF0000
 sramcleared equ $FFFF1FFE
 replayend equ $FFFFAF54	;end of the replay frames ($62 bytes each from M68K_RAM); suba4, adda43 and the record step wrap here

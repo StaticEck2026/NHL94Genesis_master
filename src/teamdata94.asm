@@ -1,8 +1,7 @@
-;	Team data: the team address table, one block per team, playoffseats and
-;	the credits.
-;	26 teams plus the two all star teams (93 had 24 plus two). Minnesota is
-;	now Dallas; Anaheim and Florida are new. Team blocks are not in TeamList
-;	order (ASE and ASW first, FLA and ANH last).
+;	Team data: TeamList and the offsets into each team record, one record per team plus
+;	the two All-Star teams (players, palettes, name, line sets, scouting report, scoring
+;	odds), the playoff seeds and the credits. The records are not in TeamList order (the
+;	All-Star teams first, Florida and Anaheim last). New in 94: Anaheim and Florida.
 
 	dc.l	0	;not part of TeamList
 

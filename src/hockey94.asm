@@ -1,9 +1,6 @@
-;	VBjsr / Begin through seta2: startup, the game loop (StartGame, StartPer,
-;	Gameloop, DoGameFrame), the periodic events, the clock, Pausemode and
-;	the pause screen draw routine. The menu engine Pausemode calls follows.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Inline print strings after printz2 use the String macro (length word includes itself).
+;	Main game code: startup, the game loop (StartGame, StartPer, Gameloop, DoGameFrame),
+;	the periodic events, the clock, Pausemode and the pause screen.
+;	Inline print strings after printz2 use the String macro.
 
 VBjsr	;Vertical blank interrupt (vector $78), jumps through the vbint RAM vector
 	move.l	(vbint).w,-(sp)		;push handler address
