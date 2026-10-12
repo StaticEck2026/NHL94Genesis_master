@@ -1620,7 +1620,7 @@ EvadePC
 	subi.w	#$58,d1	;'X'   ; sub 88 from Ypos (top blue line)
 	cmp.w	#$A,d1	;compare to 10 decimal
 	bgt.w	.ex	;exit if greater
-	cmp.w	#$FFCE,d1	;compare to -50
+	cmp.w	#-50,d1
 	blt.w	.ex	;branch if less than
 	moveq	#2,d0
 	move.w	(a3),d1	;Xpos
@@ -4432,7 +4432,7 @@ noturn0	;doplayeracc when the wanted direction needs no turn (.ftab entry 0). d0
 	btst	#pfrev,pflags(a3)
 	bne.w	.ns
 	move.w	#SPAskate,d1
-	btst	#6,pflags2(a3)
+	btst	#6,pflags2(a3)	;pflags2 bit 6 uses animation SPAstumble
 	beq.w	.nb6
 	move.w	#SPAstumble,d1
 .nb6
