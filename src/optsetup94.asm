@@ -50,7 +50,7 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 .newplay
 	cmpi.w	#2,(OptPlayMode).w	;check if new playoffs
 	blt.w	.contplay	;branch if cont. playoffs or reg season
-	bsr.w	j_NewPO	;new playoffs: random tree
+	bsr.w	GoNewPlayoffs	;new playoffs: random tree
 .contplay
 	cmpi.w	#1,(OptPlayMode).w	;check if cont playoffs
 	bne.w	.reggame	;branch if not
@@ -239,7 +239,7 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 	bsr.w	FixModeOptions
 	bra.w	.loop
 	rts	;unreferenced
-j_NewPO	;New playoffs: jmp NewPO. Called from GameSetUp and ChangeOption
+GoNewPlayoffs	;New playoffs: jmp NewPO. Called from GameSetUp and ChangeOption
 	jmp	NewPO
 GoContinuePlayoffs	;Continue playoffs: jmp ContinuePlayoffs. Called from GameSetUp
 	jmp	ContinuePlayoffs
@@ -423,7 +423,7 @@ OptionLimits4Way	;The same with FourWayPlay (12 player choices)
 	dc.w	5,$C,$1C,$1C,3,2,2,3,3
 ChangeOption	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its range (WrapOption). Entering Shootout saves User Records, Penalties and
 	;Line Changes (TmpOptUserRec ...), leaving restores them; Team 1 in new playoffs has $1A teams; the Players range depends on the mode and
-	;FourWayPlay. A new play mode starts the playoffs (ContinuePlayoffs / j_NewPO). Called from GameSetUp and PrintOptions
+	;FourWayPlay. A new play mode starts the playoffs (ContinuePlayoffs / GoNewPlayoffs). Called from GameSetUp and PrintOptions
 	tst.w	d7
 	bne.w	.2
 	movem.w	d0/d2,-(sp)
@@ -556,9 +556,9 @@ ChangeOption	;add d2 to option d7 (d2 = 0: only limit it) and wrap it in its ran
 	cmpi.w	#4,(OptPlayMode).w
 	beq.w	rtsSetup
 	tst.w	d7
-	beq.w	j_NewPO
+	beq.w	GoNewPlayoffs
 	cmp.w	#4,d7
-	beq.w	j_NewPO
+	beq.w	GoNewPlayoffs
 	rts
 WrapOption	;d3 + d2, wrapped into d5 ... d4-1. Called from ChangeOption
 	add.w	d2,d3

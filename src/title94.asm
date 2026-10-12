@@ -1200,7 +1200,7 @@ chgplayer	;The pad d4 takes the nearest free skater to where the puck is going (
 	;unavailable; in a penalty shot / shootout only BA_Sktr_SCnum or BA_Goalie_SCnum), or sweep checks when it is the same one. Called from
 	;changeplayer
 	btst	#6,(sflags5).w	;Check bit 6. This is never set anywhere
-	bne.w	exit
+	bne.w	rtsChgplayer
 	movem.l	d0-d6/a0-a1,-(sp)
 	move.w	(puckvx).w,d0	;lead puck slightly
 	asr.w	#8,d0
@@ -1274,7 +1274,7 @@ chgplayer	;The pad d4 takes the nearest free skater to where the puck is going (
 	bra.w	j_setc2player
 .ex
 	movem.l	(sp)+,d0-d6/a0-a1
-exit	;shared rts
+rtsChgplayer	;shared rts
 	rts
 swpchk	;Sweepcheck
 	jmp	Sweepcheck

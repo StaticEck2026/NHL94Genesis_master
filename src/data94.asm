@@ -68,7 +68,7 @@ ContinuePlayoffs	;kept: this, but the name NewPO to the next routine. Continue p
 .x
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-NewPO	;New playoff generates tree with same team 1. Called from j_NewPO. Falls into MakeTree
+NewPO	;New playoff generates tree with same team 1. Called from GoNewPlayoffs. Falls into MakeTree
 	moveq	#$20,d0	;' '   ; 20 = 32 decimal
 	bsr.w	randomd0
 .top
