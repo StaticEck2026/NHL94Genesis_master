@@ -371,8 +371,8 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	jsr	(EndOneTimer).l
 .ex
 	rts
-setonetimeranim	;the one-timer animation: d1 = $7FC or $92E from the angle to the goal (vtoa, CheckOneTimerFacing)
-	move.w	#$7FC,d1
+setonetimeranim	;the one-timer animation: d1 = SPAshotf or SPAshotb from the angle to the goal (vtoa, CheckOneTimerFacing)
+	move.w	#SPAshotf,d1
 	movem.w	d0-d1,-(sp)	;push to stack d0 and d1
 	move.w	(a3),d0	;move XPos of a3 into d0
 	neg.w	d0	;negate d0
@@ -386,7 +386,7 @@ setonetimeranim	;the one-timer animation: d1 = $7FC or $92E from the angle to th
 	jsr	(CheckOneTimerFacing).l	;code doesnt save any changes
 	movem.w	(sp)+,d0-d1	;pop from stack d0 and d1
 	beq.w	.ex
-	move.w	#$92E,d1
+	move.w	#SPAshotb,d1
 .ex
 	rts
 PuckOnAttackHalf	;d0 = 1 when the puck is on the half of the goal player a3 shoots at, else 0 (the code after the bra is never used). Called from doinput and

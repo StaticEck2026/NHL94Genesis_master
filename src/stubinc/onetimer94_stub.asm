@@ -23,5 +23,9 @@ sroot = $110BE			;jsr / jmp (x).l
 EndOneTimer = $FEFF0		;jsr / jmp (x).l
 vtoa = $10676			;jsr / jmp (x).l
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPAshotf	=	$7FC
+SPAshotb	=	$92E
+
 ; Main segment code
 	include	onetimer94.asm
