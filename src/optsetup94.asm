@@ -1,6 +1,6 @@
 ;	Game setup screen. This file runs the option menu, starts a game or the demo, and prints each
 ;	option within its limits. New in 94: the goalie and user record options, the shootout, 4 Way
-;	Play, and team logos and player cards on the setup screen.
+;	Play, and team logos on the setup screen.
 
 ;	Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season,
 ;	Continue Playoffs, New Playoffs, New Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1Team,
