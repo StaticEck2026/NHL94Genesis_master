@@ -1,9 +1,5 @@
-;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-;
-;	Segment stub.
-;	includes macros\genesis.mac itself (it is the first file in nhl94.asm), so this stub does not.
-;
-;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+;	Segment build for main94.asm: sets its origin and the outside routines and data it uses,
+;	then includes main94.asm on its own for checking against the ROM.
 
 ; .region code
 	org	0

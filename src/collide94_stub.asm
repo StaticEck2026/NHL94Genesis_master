@@ -1,3 +1,6 @@
+;	Segment build for collide94.asm: sets its origin and the outside routines and data it uses,
+;	then includes collide94.asm on its own for checking against the ROM.
+
 	include	macros\genesis.mac	;String
 
 ;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
