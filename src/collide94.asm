@@ -660,7 +660,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	;d0 will be 10-1F hex (16-31 decimal)
 	ble.w	.cont2	;no toddle if d0 <= impact
 	move.b	#$3C,nopuck+1(a2)	;move 3C (60 decimal) into nopuck
-	bra.w	.2
+	bra.w	.hitter
 .cont2
 	tst.w	position(a3)	;check for goalie
 	beq.w	.chkpos	;jump if goalie
@@ -846,20 +846,20 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	addq.w	#1,d0
 	andi.w	#7,d0
 	cmp.w	#2,d0
-	bls.w	.2
+	bls.w	.hitter
 	move.w	#$D26,d1	;SPAfallfwd
 .8
 	move.w	facedir(a2),d0	;facedir
 	andi.w	#3,d0
-	bne.w	.2	;branch if first 2 bits of d0 arent zero
+	bne.w	.hitter	;branch if first 2 bits of d0 arent zero
 	cmpi.b	#$14,checking(a3)	;compare $14 to checker Chk attribute
-	blt.w	.2	;branch if less than
+	blt.w	.hitter	;branch if less than
 	cmpi.w	#$B,SCnum(a3)	;check if SCNum of checker is a player
-	bgt.w	.2	;branch if not
+	bgt.w	.hitter	;branch if not
 	btst	#pf3fall,pflags3(a2)	;check if falldown bit is set for player
-	bne.w	.2	;branch if set
+	bne.w	.hitter	;branch if set
 	move.w	#$136A,d1	;SPAflip. move anim into d1
-.2
+.hitter
 	exg	a2,a3	;swap a2 and a3
 	bset	#pfalock,pflags(a3)	;set animation lock
 	bsr.w	SetSPA	;set animation with d1 value
@@ -1234,9 +1234,9 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	exg	a2,a1
 .9
 	btst	#1,(gmode).w	;gmdir
-	beq.w	.10
+	beq.w	.addg
 	exg	a2,a1
-.10
+.addg
 	addq.w	#1,$C(a2)	;tmscore: add to Goals
 	btst	#5,(sflags4).w	;goal stats
 	beq.w	.11
@@ -1281,9 +1281,9 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	move.w	(sp)+,(delayedsong).w
 .16
 	cmpi.w	#$168,(ScoreSumbytes).w	;60 entries of 6 bytes full? (93 kept 30)
-	bne.w	.17
+	bne.w	.sum
 	subq.w	#6,(ScoreSumbytes).w	;overwrite the last entry
-.17
+.sum
 	movea.w	#(ScoreSum-M68K_RAM),a0
 	adda.w	(ScoreSumbytes).w,a0
 	addq.w	#6,(ScoreSumbytes).w
@@ -1320,10 +1320,10 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	addq.b	#1,0(a2,d0.w)
 .19
 	move.w	$26(a1),d0	;tmgoalie of the other team
-	bmi.w	.20
+	bmi.w	.stat
 	addi.w	#$B4,d0
 	addq.b	#1,0(a1,d0.w)
-.20
+.stat
 	bsr.w	ChkShotStat
 	bsr.w	PenGoalStuff
 	bclr	#3,(BA_PS_flags).w

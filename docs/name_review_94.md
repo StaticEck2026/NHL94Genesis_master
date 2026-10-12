@@ -1249,3 +1249,4 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | cards94, checks94, collide94, data94, optsetup94, replay94, sound94, title94 | skeleton review (labels, branches, loops): all backward-branch number locals are 92-parent loops; the rest are forward skips, kept numeric. Not a line-by-line read |
 | data94 (full read) | routine names ok; PenaltyShotBox .box, FormatLastName .pad, ContinuePlayoffs .set, ResolveGames .win, ShowGoalBox .print; ContinuePlayoffs header: rename-history text removed |
 | checks94 (full read) | routine names ok; checkanim .far/.near/.save (same flow as doinput_cbut), goaliesave .low/.done, asspuckc .shot/.soshot/.pass/.path; clamps and 92 loops numeric |
+| collide94 (full read) | routine names ok (CCStart, SetupPenaltyShot); checkgoal .addg/.sum/.stat, FallDown .hitter; other locals are short skips or 92-parent loops, numeric |
