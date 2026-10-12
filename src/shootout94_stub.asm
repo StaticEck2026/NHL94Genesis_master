@@ -4,7 +4,10 @@
 	include	macros\genesis.mac	;String
 
 ; .region code
-	org	$FC47C
+FormatPlayerNumInitial = $18AE8
+prefmes = $1277A
+PushNumberWidth = $11D3A
+	org	$FC320
 
 ; includes for stubs to replace removed code
 	include	stubinc\ports.inc	;IO_* / VDP_* ports

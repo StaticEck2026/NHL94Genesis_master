@@ -1,6 +1,91 @@
 ;	New in 94: the shootout. This file sets the shooting order, counts the goals, shows the
 ;	winner and runs the screen where the shooters are chosen.
 
+ShootoutModeBox	;Shootout "SHOOTOUT MODE" box: the shooter " vs." the goalie and both teams' shootout goals. Jumped to from PenaltyShotBox
+	movem.l	d0-d7/a0-a6,-(sp)
+	move.w	#$FFFF,d0
+	jsr	(prefmes).l
+	jsr	(printz).l
+	String	-(TXPRI+TXMAP1),3,2
+	moveq	#$1B,d0
+	moveq	#$C,d1
+	jsr	(Framer).l
+	lea	ShootoutModeBigTxt(pc),a1
+	jsr	(printbig).l
+	move.w	(BA_Skater_Offset).w,d0
+	movea.l	#tmstruct,a2
+	tst.w	(BA_Team).w
+	beq.w	.0
+	movea.l	#AwShots,a2
+.0
+	jsr	(FormatPlayerNumInitial).l
+	move.w	(printx).w,-(sp)
+	jsr	(print).l
+	move.w	(sp)+,(printx).w
+	addq.w	#1,(printy).w
+	addq.w	#6,(printx).w
+	jsr	(printz).l
+	String	' vs.',-(TXPRI+TXMAP1),4,7
+	move.w	(BA_Goalie_SCnum).w,d0
+	asl.w	#7,d0
+	movea.l	#SortCords,a2
+	adda.w	d0,a2
+	clr.w	d0
+	move.b	$66(a2),d0
+	movea.l	#AwShots,a2
+	tst.w	(BA_Team).w
+	beq.w	.1
+	movea.l	#tmstruct,a2
+.1
+	jsr	(FormatPlayerNumInitial).l
+	jsr	(print).l
+	jsr	(printz).l
+	String	-(TXPRI+TXMAP1),4,9
+	movea.l	#tmstruct,a1
+	movea.l	$1E(a1),a1
+	adda.w	4(a1),a1
+	jsr	(print).l
+	move.w	#$15,(printx).w
+	move.w	(homeshootgoals).w,d0
+	move.w	#3,d1
+	jsr	(PushNumberWidth).l
+	jsr	(print).l
+	jsr	(printz).l
+	String	-(TXPRI+TXMAP1),4,$A
+	movea.l	#AwShots,a1
+	movea.l	$1E(a1),a1
+	adda.w	4(a1),a1
+	jsr	(print).l
+	move.w	#$15,(printx).w
+	move.w	(awayshootgoals).w,d0
+	move.w	#3,d1
+	jsr	(PushNumberWidth).l
+	jsr	(print).l
+	jsr	(printz).l
+	String	-(TXPRI+TXMAP1),4,$C,'Round '
+	move.w	(shootoutround).w,d0
+	move.w	#2,d1
+	jsr	(PushNumberWidth).l
+	jsr	(print).l
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+ShootoutModeBigTxt	dc.b	0	;ShootoutModeBox big text
+	dc.b	$16,$BF,4,3
+	dc.b	$53	;S
+	dc.b	$48	;H
+	dc.b	$4F	;O
+	dc.b	$4F	;O
+	dc.b	$54	;T
+	dc.b	$4F	;O
+	dc.b	$55	;U
+	dc.b	$54	;T
+	dc.b	$20
+	dc.b	$4D	;M
+	dc.b	$4F	;O
+	dc.b	$44	;D
+	dc.b	$45	;E
+	dc.b	$BF,4,5,0
+
 ClearShootout	;Clear the player structs (SortCords) and the shootout state.
 	movea.l	#SortCords,a0
 	move.w	#$3FF,d0

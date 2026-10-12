@@ -2,6 +2,49 @@
 ;	or the penalty box and back, lining up for a faceoff, celebrating a goal, or playing his spot
 ;	as a defenseman or a wing. There is no fighting in this game, so the fight assignments do nothing.
 
+check4bench	;check if player a3 should go to bench
+	btst	#2,(BA_PS_flags).w
+	bne.s	rtss3
+	btst	#3,pflags(a3)
+	bne.s	rtss3
+	btst	#4,pflags2(a3)
+	bne.s	rtss3
+	tst.b	newpos(a3)
+	bpl.w	.0
+	tst.b	newpnum(a3)
+	bmi.s	rtss3
+.0
+	move.b	newpnum(a3),d0
+	cmp.b	pnum(a3),d0
+	beq.w	.samepl
+	move.w	assnum(a3),d0
+	cmpi.b	#$B,asslist(a3,d0.w)
+	beq.s	rtss3
+	move.w	SCnum(a3),d0
+	cmp.w	(puckc).w,d0
+	beq.s	rtss3
+	addq.w	#4,sp
+	bset	#2,pflags2(a3)	;set player unavailable (pf2unav)
+	clr.w	temp1(a3)
+	move.l	#$B,d0	;assbench
+	bra.w	assreplace
+.samepl
+	addq.w	#4,sp
+	bclr	#2,pflags2(a3)
+	bclr	#pfnc,pflags(a3)
+	st	newpnum(a3)
+	st	newpos(a3)
+	move.w	position(a3),d0
+	tst.b	newpos(a3)
+	bpl.w	.1
+	jmp	Setplass
+.1
+	move.b	newpos(a3),d0
+	ext.w	d0
+	move.w	d0,position(a3)
+	jmp	Setplass
+; player a3 should go to bench
+
 assbench	;player a3 should goto bench
 	btst	#pfalock,pflags(a3)
 	bne.w	rtss3

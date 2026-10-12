@@ -4,7 +4,7 @@
 	include	macros\genesis.mac	;String
 
 ; .region code
-	org	$10EE0
+	org	$10E88
 
 ; includes for stubs to replace removed code
 	include	stubinc\ports.inc	;IO_* / VDP_* ports

@@ -4,7 +4,25 @@
 	include	macros\genesis.mac	;String
 
 ; .region code
-	org	$FBB88
+AddSmallFont = $11F04
+BigFontMap = $A9A10
+DecompressGraphicsPlain = $11738
+DecompressGraphicsWithCallback = $1172C
+FramerMap = $55B7E
+LogoBoxMap = $BF702
+MakeSRAMChecksum = $1A206
+orjoy = $112BC
+ReadJoy1 = $11340
+ReadJoy2 = $11358
+ScoutMap = $54E24
+setupIceRinkPal = $16C96
+setVram = $11594
+TeamLogoBitmaps = $F86F2
+TeamLogoPalettes = $FF462
+VBlank_SetOptions = $17C42
+WriteNameLog = $F9C5E
+WriteSRAM = $1A1E4
+	org	$FB018
 
 ; includes for stubs to replace removed code
 	include	stubinc\ports.inc	;IO_* / VDP_* ports
@@ -40,7 +58,6 @@ CopyString = $F997A		;bsr.w / bra.w / Bcc.w.
 ReadNameLog = $F9C68		;bsr.w / bra.w / Bcc.w.
 AppendUserName = $FA014		;bsr.w / bra.w / Bcc.w.
 AppendTeamName = $FA880		;bsr.w / bra.w / Bcc.w.
-NameEntryScreen = $FB018	;jsr / jmp (x).l.
 
 ; Main segment code
 	include	records94.asm

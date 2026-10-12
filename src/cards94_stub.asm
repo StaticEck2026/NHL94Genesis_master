@@ -4,7 +4,11 @@
 	include	macros\genesis.mac	;String
 
 ; .region code
-	org	$F8B5A
+ConvertByteToDigits = $18BDC
+LogoBoxLeft = $F877E
+LogoBoxRight = $F8762
+TeamList = $30E
+	org	$F87D2
 
 ; includes for stubs to replace removed code
 	include	stubinc\ports.inc	;IO_* / VDP_* ports

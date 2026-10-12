@@ -4,7 +4,7 @@
 	include	macros\genesis.mac	;String
 
 ; .region code
-	org	$C710
+	org	$C67A
 
 ; includes for stubs to replace removed code
 	include	stubinc\ports.inc	;IO_* / VDP_* ports
@@ -21,7 +21,6 @@ SprSort = $1702E			;jsr / jmp (x).l at $CAAA
 assexit = $10646			;bsr.w / Bcc.w at $C72E
 assreplace = $10662		;bsr.w / Bcc.w at $C9F6
 changeplayer = $BFBC		;bsr.w / Bcc.w at $CA20.
-check4bench = $C67A		;bsr.w / Bcc.w at $C724.
 check4check = $EACE		;bsr.w / Bcc.w at $
 chkpk = $E264			;bsr.w / Bcc.w at $CE76
 doplayeracc = $10750		;bsr.w / Bcc.w at $CBF6

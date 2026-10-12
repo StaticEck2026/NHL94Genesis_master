@@ -14,9 +14,9 @@
 	include	stats94.asm		; $0080D4 scores, line editor, roster, scoring and penalty summaries, player stats, crowd meter, goalie select
 	include	replay94.asm		; $009FD0 replay
 	include	input94.asm		; $00B0E8 controller input and line changes
-	include	assign94.asm		; $00C710 player assignments
+	include	assign94.asm		; $00C67A player assignments
 	include	checks94.asm		; $00D09C checks before the display code
-	include	video94.asm		; $010EE0 display helpers
+	include	video94.asm		; $010E88 display helpers
 	include	penalty94.asm		; $011F2C penalties, scoreboard, highlights
 	include	collide94.asm		; $0138AC puck, players, walls, fights, goals
 	include	display94.asm		; $015D9A vblank, clock, crowd, rink scroll
@@ -30,9 +30,9 @@
 	include	fourway94.asm		; $0F6D5E  NEW in 94: four-player adaptor
 	include	crowd94.asm		; $0F6E8A  NEW in 94: crowd meter and hot / cold players
 	include	optsetup94.asm		; $0F739E expanded: game setup and options
-	include	cards94.asm		; $0F8B5A  NEW in 94: player cards and matchup palettes
-	include	records94.asm		; $0FBB88  NEW in 94: name entry and record holders
-	include	shootout94.asm		; $0FC47C  NEW in 94: shootout
+	include	cards94.asm		; $0F87D2  NEW in 94: player cards and matchup palettes
+	include	records94.asm		; $0FB018  NEW in 94: name entry and record holders
+	include	shootout94.asm		; $0FC320  NEW in 94: shootout
 	include	scout94.asm		; $0FCB9A  NEW in 94: matchups and scouting report
 	include	period94.asm		; $0FD618  NEW in 94: period stats and game statistics
 	include	goalie94.asm		; $0FE1D8  NEW in 94: manual goalie

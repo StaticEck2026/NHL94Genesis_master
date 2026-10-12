@@ -3,6 +3,227 @@
 ;	Cards screens, the user name entry, Record Holders, the playoff round box and the shootout
 ;	screens. Print strings follow the calls that print them.
 
+ResetCardTimer	;Reset the player card timer cardtimer to $AA ($53 if C was pressed). Called from ReadSetupPads, PrintOptions and PlayerCardTimer
+	move.w	#$AA,(cardtimer).w
+	btst	#5,(setupcardflags).w
+	beq.w	.x
+	move.w	#$53,(cardtimer).w
+.x
+	rts
+PlayerCardTimer	;Player cards, called each frame from ReadSetupPads in the first minute of its wait. When carddelay runs out set setupcardflags
+	;bit 0; then count cardtimer down (C skips $50); at $52 switch sides (bit 1), forget the logos and draw the next card (PlayerCardScreen); below 0
+	;restart the timer (ResetCardTimer)
+	subq.w	#1,(carddelay).w
+	bpl.w	.x
+	move.w	#$FFFF,(carddelay).w
+	bset	#0,(setupcardflags).w
+	btst	#0,(setupcardflags).w
+	beq.w	.x
+	btst	#5,(setupcardflags).w
+	beq.w	.0
+	cmpi.w	#$52,(cardtimer).w
+	bge.w	.0
+	subi.w	#$50,(cardtimer).w
+.0
+	subq.w	#1,(cardtimer).w
+	bmi.w	.1
+	cmpi.w	#$52,(cardtimer).w
+	bne.w	.x
+	bclr	#2,(setupcardflags).w
+	bclr	#3,(setupcardflags).w
+	bchg	#1,(setupcardflags).w
+	st	(setuphome).w
+	st	(setupvis).w
+	bclr	#6,(setupcardflags).w
+	bclr	#7,(setupcardflags).w
+	jsr	(PlayerCardScreen).l
+.x
+	rts
+.1
+	jmp	ResetCardTimer
+PlayerCardScreen	;Draw a player card on one side (setupcardflags bit 1: visitors on the left, else home on the right): erase the team block, a
+	;logo box, the picture of featured player featuredplayer (0-5, from the FeaturedPictures list of the team; next one after each visitors card), a
+	;framed box with the player's number and name, and with SRAM his user records (PrintRecordValue, PrintRecordHolder, PrintRecordVs).
+	;Called from PlayerCardTimer
+	movem.l	d0-d7/a0-a6,-(sp)
+	jsr	(printz).l
+	String	-TXMAP1,0,0	;x3
+	move.w	#$1C,(printx).w
+	btst	#1,(setupcardflags).w
+	bne.w	.0
+	move.w	#3,(printx).w
+.0
+	move.w	#5,(printy).w
+	move.w	#8,d0
+	move.w	#8,d1
+	move.w	#$7FF,d2
+	jsr	(eraser).l
+	jsr	(printz).l
+	String	-TXMAP1,0,0	;x3
+	move.w	#3,(printx).w
+	btst	#1,(setupcardflags).w
+	bne.w	.1
+	move.w	#$B,(printx).w
+.1
+	move.w	#5,(printy).w
+	move.w	#$19,d0
+	move.w	#8,d1
+	move.w	#$7FF,d2
+	jsr	(eraser).l
+	btst	#1,(setupcardflags).w
+	bne.w	.2
+	bsr.w	LogoBoxRight
+	bra.w	.3
+.2
+	bsr.w	LogoBoxLeft
+	addq.w	#1,(featuredplayer).w
+.3
+	jsr	(printz).l
+	String	-TXMAP1,0,0	;x3 / add.b
+	cmpi.w	#6,(featuredplayer).l
+	blt.w	.4
+	clr.w	(featuredplayer).w
+.4
+	move.w	(HomeTeam).w,d0
+	move.w	#$1D,(printx).w
+	btst	#1,(setupcardflags).w
+	beq.w	.5
+	move.w	(VisTeam).w,d0
+	move.w	#4,(printx).w
+.5
+	move.w	#6,(printy).w
+	move.w	(homepicchars).w,d4
+	move.w	(featuredplayer).w,d3
+	mulu.w	#6,d3
+	asl.w	#2,d0
+	movea.l	#FeaturedPictures,a0	;pictures of each team: picture.l, roster index.w entries
+	movea.l	0(a0,d0.w),a0
+	move.w	4(a0,d3.w),(cardroster).w	;roster index
+	movea.l	0(a0,d3.w),a0
+	movea.l	a0,a1
+	movea.l	a0,a2
+	adda.l	(a2)+,a0
+	movea.l	#PicturePalette,a0	;palette from PicturePalette
+	adda.l	(a0),a0
+	tst.l	(a2)	;no map: the PicturePalette one
+	bne.w	.6
+	movea.l	#PicturePalette,a1
+	adda.l	4(a1),a1
+	tst.l	(a2)+
+	bra.w	.7
+.6
+	adda.l	(a2)+,a1
+.7
+	bsr.w	UnpackPicture
+	movea.l	#picturebuf,a2	;tiles
+	move.w	(vcount).w,d3
+.loop
+	cmp.w	(vcount).w,d3
+	beq.s	.loop
+	move.w	#6,d3
+	move.w	#6,d2
+	clr.w	d0
+	clr.w	d1
+	move.l	(palfadenew+$22).w,-(sp)
+	move.l	(palfadenew+$26).w,-(sp)
+	move.w	#2,d5
+	jsr	(dobitmap).l
+	move.l	(sp)+,(palfadenew+$26).w
+	move.l	(sp)+,(palfadenew+$22).w
+	jsr	(printz).l
+	String	-(TXPRI+TXMAP1),0,0	;(the routine here)
+	move.w	#$6000,(printa).w
+	move.w	#3,(printx).w
+	move.w	#$19,d0
+	btst	#1,(setupcardflags).w
+	beq.w	.8
+	move.w	#$B,(printx).w
+	move.w	#$19,d0
+.8
+	move.w	#5,(printy).w
+	move.w	#8,d1
+	move.w	(printx).w,(cardprintx).w
+	addq.w	#1,(cardprintx).w
+	move.w	(printy).w,(cardprinty).w
+	addq.w	#1,(cardprinty).w
+	jsr	(Framer).l	;25 x 8 box
+	move.w	(cardprintx).w,(printx).w
+	move.w	(cardprinty).w,(printy).w
+	move.w	#0,(printa).w
+	move.w	#0,(printm).w
+	move.w	(HomeTeam).w,d0
+	btst	#1,(setupcardflags).w
+	beq.w	.9
+	move.w	(VisTeam).w,d0
+.9
+	move.w	d0,(cardteamnum).w
+	movea.l	#TeamList,a2
+	asl.w	#2,d0
+	movea.l	0(a2,d0.w),a2
+	adda.w	(a2),a2
+	move.w	(cardroster).w,d0
+	bra.w	.10
+.loop2
+	adda.w	(a2),a2
+	addq.w	#8,a2
+.10
+	dbf	d0,.loop2
+	movea.l	#mesarea,a3
+	lea	2(a3),a1
+	move.w	#6,(a3)
+	move.l	a2,-(sp)
+	adda.w	(a2),a2
+	move.b	(a2),d0
+	ext.w	d0
+	jsr	(ConvertByteToDigits).l	;uniform number
+	move.w	#$2000,4(a3)
+	movea.l	(sp)+,a1
+	jsr	(appstring).l	;and the name
+	movea.l	a3,a1
+	bset	#3,(sflags6).w
+	jsr	(printsmall).l
+	bclr	#3,(sflags6).w
+	movea.l	#mesarea,a1
+	move.w	(cardteamnum).w,d0
+	move.w	(cardroster).w,d1
+	tst.w	(ValidSRAM).w	;no SRAM: no records
+	bmi.w	.fade
+	jsr	(PrintRecordValue).l
+	cmpi.w	#2,(a1)
+	beq.w	.fade
+	move.w	(cardprintx).w,(printx).w
+	addq.w	#2,(printy).w
+	bset	#3,(sflags6).w
+	jsr	(printsmall).l
+	bclr	#3,(sflags6).w
+	movea.l	#mesarea,a1
+	move.w	(cardteamnum).w,d0
+	move.w	(cardroster).w,d1
+	movea.l	#M68K_RAM,a0
+	jsr	(PrintRecordHolder).l
+	move.w	(cardprintx).w,(printx).w
+	cmpi.w	#2,(a1)
+	beq.w	.11
+	addq.w	#1,(printy).w
+	bset	#3,(sflags6).w
+	jsr	(printsmall).l
+	bclr	#3,(sflags6).w
+.11
+	movea.l	#mesarea,a1
+	move.w	(cardteamnum).w,d0
+	move.w	(cardroster).w,d1
+	movea.l	#M68K_RAM,a0
+	jsr	(PrintRecordVs).l
+	move.w	(cardprintx).w,(printx).w
+	addq.w	#1,(printy).w
+	bset	#3,(sflags6).w
+	jsr	(printsmall).l
+	bclr	#3,(sflags6).w
+.fade
+	move.w	#$64,(palcount).w
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
 wallcollduringcheck	;during a check, a skater a2 (not a goalie) near the wall: test the wall at his position
 	;with his size + $17. Called from CCStart
 	tst.w	$34(a2)	;check if goalie
@@ -2415,808 +2636,4 @@ BuildCardPlayerList	;Player card order of team a0 into a1: the 6 starters (TeamL
 	addq.w	#1,d0
 	cmp.w	#$1A,d0
 	blt.s	.loop
-	rts
-NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_SetOptions): pick a name from the name log or enter a new one (NameLetterGrid ...
-	;SkipOtherUserName). Called from UserNameEntry
-	movem.l	d0-d7/a0-a6,-(sp)
-	move	#$2700,sr
-	move.w	#2,d4
-	move.l	#VBlank_SetOptions,(vbint).w
-	bclr	#0,(disflags).w
-	bset	#2,(disflags).w
-	bclr	#1,(disflags).w
-	move.w	#0,(VSCRLPM).w
-	move.w	#$B400,(VSPRITES).w
-	move.w	#$B800,(VmMap3).w
-	move.w	#5,(Map3col1).w
-	move.w	#$C000,(VmMap2).w
-	move.w	#6,(Map2col1).w
-	move.w	#$E000,(VmMap1).w
-	move.w	#6,(Map1col1).w
-	move.w	#0,d0
-	jsr	(setVram).l
-	move	#$2500,sr
-	jsr	(orjoy).l
-	move.w	d4,(framercset).w
-	movea.l	#FramerMap+8,a2
-	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$91234567,$89ABCDEF	;remap table
-	move.w	d4,(nameframechars).w
-	movea.l	#FramerMap+8,a2
-	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$91234560,$89ABCDEF	;remap table
-	move.w	d4,(smallfontchars).w
-	jsr	(AddSmallFont).l
-	jsr	(printz).l
-	String	-TXMAP1,0,0
-	moveq	#$28,d0
-	moveq	#$1C,d1
-	move.w	#$7FF,d2
-	jsr	(eraser).l
-	jsr	(setupIceRinkPal).l
-	jsr	(printz).l
-	String	-TXMAP2,0,0
-	movea.l	#ScoutMap,a0	;(and printz Strings)
-	movea.l	a0,a1
-	movea.l	a0,a2
-	adda.l	(a2)+,a0
-	adda.l	(a2)+,a1
-	clr.w	d0
-	clr.w	d1
-	moveq	#$28,d2
-	moveq	#$1C,d3
-	moveq	#$D,d5
-	jsr	(dobitmap).l
-	move.w	d4,(homepicchars).w
-	addi.w	#$24,d4
-	move.w	d4,(logobox1chars).w
-	movea.l	#LogoBoxMap+8,a2
-	jsr	(DecompressGraphicsPlain).l
-	move.w	d4,(BigFontChars).w
-	movea.l	#BigFontMap+8,a2
-	jsr	(DecompressGraphicsWithCallback).l
-	dc.l	$71234567,$89ABCDEF	;remap table
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),$1F,6
-	move.w	(HomeTeam).w,d0
-	tst.w	(nameentryvis).w
-	beq.w	.0
-	move.w	(VisTeam).w,d0
-.0
-	movea.l	#$30E,a1	;TeamList
-	asl.w	#2,d0
-	movea.l	0(a1,d0.w),a1
-	adda.w	4(a1),a1
-	move.w	(a1),d0
-	subq.w	#2,d0
-	lsr.w	#1,d0
-	sub.w	d0,(printx).w
-	jsr	(print).l
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),$1B,7
-	move.w	#8,d0
-	move.w	#8,d1
-	jsr	(Framer).l
-	jsr	(printz).l
-	String	-(TXPRI+TXPAL3+TXMAP1),$1C,8
-	move.w	(HomeTeam).w,d3
-	tst.w	(nameentryvis).w
-	beq.w	.1
-	move.w	(VisTeam).w,d3
-.1
-	asl.w	#2,d3
-	movea.l	#TeamLogoBitmaps,a0	;team logo maps
-	movea.l	0(a0,d3.w),a0
-	movea.l	a0,a1
-	movea.l	a0,a2
-	adda.l	(a2)+,a0
-	asl.w	#3,d3
-	movea.l	#TeamLogoPalettes,a0
-	subi.w	#$40,d3
-	adda.w	d3,a0
-	adda.l	(a2)+,a1
-	move.w	#6,d3
-	move.w	#6,d2
-	clr.w	d0
-	clr.w	d1
-	move.w	#4,d5
-	move.w	(homepicchars).w,d4
-	jsr	(dobitmap).l
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),2,0
-	move.w	#$24,d0
-	move.w	#6,d1
-	jsr	(Framer).l
-	jsr	(printbigz).l
-	String	-(TXPRI+TXMAP1),$A,2,'NAME  ENTRY'
-	bsr.w	ReadNameLog
-	clr.w	(namelogarrows).w
-	move.w	#1,(namelogsel).w
-	clr.w	d0
-	bsr.w	SkipOtherUserName
-	movea.l	#nameentrybuf,a1
-	bsr.w	GetLogName
-	bsr.w	PrintNameLog
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),7,6,'Name Log'
-	move.w	#$18,(palcount).w
-	bclr	#2,(disflags).w
-	clr.w	d4
-	bsr.w	SyncLetterCursor
-	bsr.w	PrintNameCursor
-	bsr.w	LetterGridPos
-.2
-	move.w	(printx).w,-(sp)
-	move.w	(printy).w,-(sp)
-	jsr	(NameEntryFramer).l
-	move.w	(sp)+,(printy).w
-	addq.w	#1,(printy).w
-	move.w	(sp)+,(printx).w
-	addq.w	#1,(printx).w
-	bsr.w	PrintCurLetter
-	move.w	#1,(cursoron).w
-	bsr.w	NameLetterGrid
-	clr.w	d0
-	bra.w	.11
-.loop
-	bsr.w	GetNameLength
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),5,$12
-	tst.w	(cursoron).w
-	beq.w	.3
-	movea.l	#nameentrybuf,a1
-	bsr.w	PrintNameField
-	bsr.w	PrintNamePrompt
-.3
-	bsr.w	MoveLogArrows
-.loop2
-	move.w	(vcount).w,d0
-.loop3
-	cmp.w	(vcount).w,d0
-	beq.s	.loop3
-	movem.w	d1,-(sp)
-	move.w	(cont1team).w,d1
-	subq.w	#1,d1
-	cmp.w	(nameentryvis).w,d1
-	movem.w	(sp)+,d1
-	beq.w	.input
-	jsr	(ReadJoy2).l
-	tst.w	d1
-	beq.s	.loop2
-	bra.w	.5
-.input
-	jsr	(ReadJoy1).l
-	tst.w	d1
-	beq.s	.loop2
-.5
-	btst	#7,d1
-	bne.w	.14
-	tst.w	(cursoron).w
-	bne.w	.6
-	move.w	#1,d0
-	btst	#1,d1
-	bne.w	.7
-	move.w	#$FFFF,d0
-	btst	#0,d1
-	bne.w	.7
-	btst	#4,d1
-	beq.w	.loop
-	bsr.w	NameLetterGrid
-	clr.w	d0
-	bra.w	.7
-.6
-	moveq	#-1,d0
-	btst	#6,d1
-	bne.w	.11
-	neg.w	d0
-	btst	#5,d1
-	bne.w	.11
-	btst	#3,d1
-	bne.w	.12
-	neg.w	d0
-	btst	#2,d1
-	bne.w	.12
-	moveq	#6,d0
-	btst	#1,d1
-	bne.w	.12
-	neg.w	d0
-	btst	#0,d1
-	bne.w	.12
-	btst	#4,d1
-	beq.w	.loop
-	bsr.w	NameLetterGrid
-	bra.w	.loop
-.7
-	add.w	d0,(namelogsel).w
-.loop4
-	cmpi.w	#7,(namelogsel).w
-	ble.w	.8
-	move.w	#1,(namelogsel).w
-.8
-	tst.w	(namelogsel).w
-	bne.w	.9
-	move.w	#7,(namelogsel).w
-.9
-	bsr.w	SkipOtherUserName
-	beq.s	.loop4
-	movea.l	#nameentrybuf,a1
-	bsr.w	GetLogName
-	tst.w	(cursoron).w
-	bne.w	.10
-	jsr	(NameEntryHelp).l
-	bra.w	.loop
-.10
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),4,$13
-	add.w	d4,(printx).w
-	jsr	(printz).l
-	String	'   '
-	bsr.w	LetterGridPos
-	moveq	#1,d2
-	move.w	(printx).w,-(sp)
-	move.w	(printy).w,-(sp)
-	jsr	(eraser).l
-	move.w	(sp)+,(printy).w
-	addq.w	#1,(printy).w
-	move.w	(sp)+,(printx).w
-	addq.w	#1,(printx).w
-	bsr.w	PrintCurLetter
-	bsr.w	SyncLetterCursor
-	move.w	d4,d0
-	neg.w	d0
-	bra.w	*+4
-.11
-	add.w	d4,d0
-	cmp.w	#$B,d0
-	bhi.w	.loop
-	move.w	d0,d4
-	bsr.w	PrintNameCursor
-	movea.l	#nameentrybuf,a0
-	clr.w	d0
-	cmpi.b	#$2D,0(a0,d4.w)
-	beq.w	.12
-	move.b	0(a0,d4.w),d0
-	ext.w	d0
-	bsr.w	FindLetter
-	sub.w	d5,d0
-.12
-	add.w	d5,d0
-	cmp.w	#$1D,d0
-	bhi.w	.loop
-	move.w	d0,-(sp)
-	bsr.w	LetterGridPos
-	moveq	#1,d2
-	move.w	(printx).w,-(sp)
-	move.w	(printy).w,-(sp)
-	jsr	(eraser).l
-	move.w	(sp)+,(printy).w
-	addq.w	#1,(printy).w
-	move.w	(sp)+,(printx).w
-	addq.w	#1,(printx).w
-	bsr.w	PrintCurLetter
-	move.w	(sp)+,d5
-	bsr.w	LetterGridPos
-	move.w	(printx).w,-(sp)
-	move.w	(printy).w,-(sp)
-	tst.w	(cursoron).w
-	beq.w	.13
-	jsr	(NameEntryFramer).l
-.13
-	move.w	(sp)+,(printy).w
-	addq.w	#1,(printy).w
-	move.w	(sp)+,(printx).w
-	addq.w	#1,(printx).w
-	bsr.w	PrintCurLetter
-	movea.l	#nameentrybuf,a0
-	movea.l	#LetterGrid,a1
-	move.b	0(a1,d5.w),d0
-	move.b	d0,0(a0,d4.w)
-	bra.w	.loop
-.14
-	bsr.w	StoreUserName
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-NameLetterGrid	;Name entry: the letter grid ("D-Pad to a letter.", "C to select letter.", "A to go back.")
-	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),1,$14
-	move.w	#$16,d0
-	move.w	#7,d1
-	move.w	#$7FF,d2
-	jsr	(eraser).l
-	bchg	#0,(cursoron+1).w
-	bne.w	.1
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),$19,$11
-	movea.l	#LetterGrid,a0
-	moveq	#4,d0
-.loop
-	moveq	#5,d1
-	movea.l	#mesarea,a1
-	move.w	#$E,(a1)+
-.loop2
-	move.b	(a0)+,(a1)+
-	move.b	#$20,(a1)+
-	dbf	d1,.loop2
-	movea.w	#(mesarea-M68K_RAM),a1
-	jsr	(print).l
-	addq.w	#2,(printy).w
-	subi.w	#$C,(printx).w
-	dbf	d0,.loop
-	jsr	(printz).l
-	String	-TXMAP2,1,$14
-	moveq	#$16,d0
-	moveq	#7,d1
-	jsr	(Framer).l
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),2,$15,'D-Pad to a letter.'
-	move.w	#2,(printx).w
-	addq.w	#1,(printy).w
-	move.w	(printx).w,-(sp)
-	jsr	(printz).l
-	String	'C to select letter.'
-	move.w	(sp),(printx).w
-	addq.w	#1,(printy).w
-	jsr	(printz).l
-	String	'A to go back.'
-	move.w	(sp),(printx).w
-	addq.w	#1,(printy).w
-	jsr	(printz).l
-	String	'B to cancel.'
-	move.w	(sp)+,(printx).w
-	addq.w	#1,(printy).w
-.0
-	jsr	(printz).l
-	String	'START when done.'
-.x
-	movem.l	(sp)+,d0-d7/a0-a6
-.x2
-	rts
-.1
-	movea.l	#nameentrybuf,a1
-.2
-	bsr.w	GetLogName
-	move.w	#0,(printx).w
-.3
-	move.w	#$F,(printy).w
-	move.w	#$28,d0
-.4
-	move.w	#$D,d1
-	move.w	#$7FF,d2
-.5
-	jsr	(eraser).l
-.6
-	jsr	(printz).l
-	String	-TXMAP2,1,$14
-	moveq	#$16,d0
-	moveq	#7,d1
-.7
-	jsr	(Framer).l
-	bsr.w	NameEntryHelp
-	bra.s	.x
-NameEntryHelp	;Name entry help text ("D-Pad up/down to move arrows.", "Press START to select name.", "Press B to edit.")
-	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),2,$15,'D-Pad up/down to    '
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),2,$16,'move arrows.        '
-	move.w	#2,(printx).w
-	move.w	(printx).w,-(sp)
-	addq.w	#1,(printy).w
-	jsr	(printz).l
-	String	'Press START to      '
-	addq.w	#1,(printy).w
-	move.w	(sp),(printx).w
-	jsr	(printz).l
-	String	'select name.        '
-	addq.w	#1,(printy).w
-	move.w	(sp)+,(printx).w
-	jsr	(printz).l
-	String	'Press B to edit.    '
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-PrintNamePrompt	;Name entry: "Enter new name:" for an empty name log slot namelogsel, else "Select or replace:"
-	movem.l	d0-d7/a0-a6,-(sp)
-	move.w	(namelogsel).w,d0
-	mulu.w	#$C,d0
-	movea.l	#namelog,a0
-	movea.l	#EnterNameTxt,a1
-	tst.b	0(a0,d0.w)
-	beq.w	.0
-	movea.l	#SelectNameTxt,a1
-.0
-	jsr	(print).l
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-SyncLetterCursor	;Name entry: the letter grid cursor d5 = the grid index of the current letter (FindLetter), 0 when it is not in the grid
-	movem.l	d0-d4/a0-a6,-(sp)
-	move.b	(nameentrybuf).w,d0
-	bsr.w	FindLetter
-	cmp.w	#$1E,d0
-	blt.w	.0
-	clr.w	d5
-	bra.w	.x
-.0
-	move.w	d0,d5
-	movea.l	#LetterGrid,a0
-	move.b	0(a0,d5.w),(nameentrybuf).w
-.x
-	movem.l	(sp)+,d0-d4/a0-a6
-	rts
-FindLetter	;d0 = index of letter d0 in LetterGrid, $1E when not found
-	movem.l	d1-d3/a0-a6,-(sp)
-	movea.l	#LetterGrid,a0
-	move.b	d0,d1
-	clr.w	d0
-	move.w	#$1E,d3
-.loop
-	cmp.b	0(a0,d0.w),d1
-	beq.w	.x
-	addq.w	#1,d0
-	dbf	d3,.loop
-	move.w	#$1E,d0
-.x
-	movem.l	(sp)+,d1-d3/a0-a6
-	rts
-PrintNameCursor	;Name entry: the " < " cursor
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),4,$13
-	add.w	d4,(printx).w
-	tst.w	(cursoron).w
-	beq.w	rtsNameCursor
-	jsr	(printz).l
-	String	' < '
-rtsNameCursor	;The shared rts of PrintNameCursor
-	rts
-PrintCurLetter	;Name entry: print grid letter d5 (with the cursor on, cursoron)
-	tst.w	(cursoron).w
-	beq.s	rtsNameCursor
-	movea.l	#ThreeStars,a1
-	move.w	#4,(a1)
-	move.b	#0,3(a1)
-	movea.l	#LetterGrid,a0
-	move.b	0(a0,d5.w),d0
-	move.b	d0,2(a1)
-	jmp	print
-LetterGridPos	;Name entry: printx / printy of grid letter d5 (6 letters a row, 2 cells apart); d0 / d1 = 3 x 3 box
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),$18,$10
-	move.w	d5,d0
-	ext.l	d0
-	divu.w	#6,d0
-	asl.w	#1,d0
-	add.w	d0,(printy).w
-	swap	d0
-	asl.w	#1,d0
-	add.w	d0,(printx).w
-	moveq	#3,d0
-	moveq	#3,d1
-	rts
-EnterNameTxt	dc.b	0	;PrintNamePrompt table
-	dc.b	$18,$BF,2,$10,$20,$20
-	dc.b	$45	;E
-	dc.b	$6E	;n
-	dc.b	$74	;t
-	dc.b	$65	;e
-	dc.b	$72	;r
-	dc.b	$20
-	dc.b	$6E	;n
-	dc.b	$65	;e
-	dc.b	$77	;w
-	dc.b	$20
-	dc.b	$6E	;n
-	dc.b	$61	;a
-	dc.b	$6D	;m
-	dc.b	$65	;e
-	dc.b	$3A	;:
-	dc.b	$20,0
-SelectNameTxt	dc.b	0	;PrintNamePrompt table
-	dc.b	$18,$BF,2,$10
-	dc.b	$53	;S
-	dc.b	$65	;e
-	dc.b	$6C	;l
-	dc.b	$65	;e
-	dc.b	$63	;c
-	dc.b	$74	;t
-	dc.b	$20
-	dc.b	$6F	;o
-	dc.b	$72	;r
-	dc.b	$20
-	dc.b	$72	;r
-	dc.b	$65	;e
-	dc.b	$70	;p
-	dc.b	$6C	;l
-	dc.b	$61	;a
-	dc.b	$63	;c
-	dc.b	$65	;e
-	dc.b	$3A	;:
-	dc.b	0
-PrintNameLog	;Name entry: the "Name Log" list (PrintNameField, GetLogName)
-	movem.l	d0-d7/a0-a6,-(sp)
-	move.w	(namelength).w,-(sp)
-	move.w	(namelogsel).w,-(sp)
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),5,8
-	move.w	#6,d7
-	move.w	#1,(namelogsel).w
-	movea.l	#TempBuffer,a1
-.loop
-	bsr.w	GetLogName
-	move.w	(printx).w,-(sp)
-	bsr.w	PrintNameField
-	move.w	(sp)+,(printx).w
-	addq.w	#1,(printy).w
-	addq.w	#1,(namelogsel).w
-	dbf	d7,.loop
-	move.w	(sp)+,(namelogsel).w
-	move.w	(sp)+,(namelength).w
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-MoveLogArrows	;Name entry: when the name log selection namelogsel changed, erase the old ] [ arrows and print them at the new row (PrintLogArrows)
-	movem.l	d0-d7/a0-a6,-(sp)
-	move.w	(namelogsel).w,d0
-	cmp.w	(namelogarrows).w,d0
-	beq.w	.x
-	movea.l	#LogArrowsClrTxt,a1
-	bsr.w	PrintLogArrows
-	movea.l	#LogArrowsTxt,a1
-	bsr.w	PrintLogArrows
-.x
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-PrintLogArrows	;Name entry: print the two arrow Strings at a1 on name log row namelogarrows, then namelogarrows = namelogsel
-	tst.w	(namelogarrows).w
-	beq.w	.0
-	jsr	(printz).l
-	String	-(TXPRI+TXMAP1),3,8
-	move.w	(namelogarrows).w,d0
-	subq.w	#1,d0
-	add.w	d0,(printy).w
-	move.l	a1,-(sp)
-	jsr	(print).l
-	movea.l	(sp)+,a1
-	adda.w	(a1),a1
-	move.w	#$12,(printx).w
-	jsr	(print).l
-.0
-	move.w	(namelogsel).w,(namelogarrows).w
-	rts
-LogArrowsTxt	dc.b	0	;MoveLogArrows data
-	dc.b	4
-	dc.b	$5D	;]
-	dc.b	0,0,4
-	dc.b	$5B	;[
-	dc.b	0
-LogArrowsClrTxt	dc.b	0	;MoveLogArrows data
-	dc.b	4,$20,0,0,4,$20,0
-GetNameLength	;namelength = length of the name being entered (up to '-' or 0, at most 12)
-	movem.l	d0-d7/a0-a6,-(sp)
-	move.w	#$B,d3
-	movea.l	#nameentrybuf,a0
-	clr.w	(namelength).w
-.loop
-	cmpi.b	#$2D,(a0)
-	beq.w	.x
-	tst.b	(a0)+
-	beq.w	.x
-	addq.w	#1,(namelength).w
-	dbf	d3,.loop
-.x
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-PrintNameField	;Name entry: print the 12 character name field from a1, '-' past the length namelength
-	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#ThreeStars,a0
-	move.w	(namelength).w,d0
-	move.w	#0,d3
-	move.w	#$E,(a0)+
-.loop
-	move.b	0(a1,d3.w),d1
-	cmp.w	(namelength).w,d3
-	blt.w	.0
-	move.b	#$2D,d1
-.0
-	move.b	d1,(a0)+
-	addq.w	#1,d3
-	cmp.w	#$C,d3
-	blt.s	.loop
-	movea.l	#ThreeStars,a1
-	jsr	(print).l
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-LetterGrid	dc.b	$41	;Name entry data
-	dc.b	$42	;B
-	dc.b	$43	;C
-	dc.b	$44	;D
-	dc.b	$45	;E
-	dc.b	$46	;F
-	dc.b	$47	;G
-	dc.b	$48	;H
-	dc.b	$49	;I
-	dc.b	$4A	;J
-	dc.b	$4B	;K
-	dc.b	$4C	;L
-	dc.b	$4D	;M
-	dc.b	$4E	;N
-	dc.b	$4F	;O
-	dc.b	$50	;P
-	dc.b	$51	;Q
-	dc.b	$52	;R
-	dc.b	$53	;S
-	dc.b	$54	;T
-	dc.b	$55	;U
-	dc.b	$56	;V
-	dc.b	$57	;W
-	dc.b	$58	;X
-	dc.b	$59	;Y
-	dc.b	$5A	;Z
-	dc.b	$2E
-	dc.b	$31	;1
-	dc.b	$32	;2
-	dc.b	$20
-	dc.b	$2D	;-
-	dc.b	0
-NameEntryFramer	;Framer with the name entry frame tiles (nameframechars as framercset)
-	move.w	(framercset).w,-(sp)
-	move.w	(nameframechars).w,(framercset).w
-	jsr	(Framer).l
-	move.w	(sp)+,(framercset).w
-	rts
-GetLogName	;Copy name log entry namelogsel to a1 ('-' for empty), namelength = its length
-	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#namelog,a0
-	move.w	(namelogsel).w,d2
-	mulu.w	#$C,d2
-	move.w	#0,(namelength).w
-	move.w	#$B,d3
-.loop
-	move.b	0(a0,d2.w),d0
-	beq.w	.0
-	bra.w	.1
-.0
-	move.b	#$2D,d0
-	subq.w	#1,(namelength).w
-.1
-	move.b	d0,(a1)+
-	addq.w	#1,(namelength).w
-	addq.w	#1,d2
-	dbf	d3,.loop
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-StoreUserName	;Name entry: store the name in save RAM (WriteNameRecord, MakeSRAMChecksum)
-	movem.l	d0-d7/a0-a6,-(sp)
-	movea.l	#namelog,a0
-	move.w	(namelogsel).w,d0
-	mulu.w	#$C,d0
-	adda.w	d0,a0
-	movea.l	#nameentrybuf,a1
-	move.w	#$B,d4
-.loop
-	cmpi.b	#$2D,(a1)
-	bne.w	.0
-	move.b	#0,(a1)
-.0
-	move.b	(a1)+,d1
-	cmp.b	(a0)+,d1
-	bne.w	.1
-	dbf	d4,.loop
-	bra.w	.3
-.1
-	movea.l	#namelog,a0
-	move.w	(namelogsel).w,d0
-	mulu.w	#$C,d0
-	adda.w	d0,a0
-	movea.l	#nameentrybuf,a1
-	move.w	#$B,d4
-.loop2
-	move.b	(a1)+,d1
-	cmp.b	#$2D,d1
-	bne.w	.2
-	move.b	#0,d1
-.2
-	move.b	d1,(a0)+
-	dbf	d4,.loop2
-	bsr.w	WriteNameLog
-	jsr	(WriteNameRecord).l
-	jsr	(MakeSRAMChecksum).l
-.3
-	movea.l	#homeuser,a5
-	tst.w	(nameentryvis).w
-	beq.w	.4
-	movea.l	#awayuser,a5
-.4
-	tst.b	(nameentrybuf).w
-	bne.w	.5
-	clr.w	(namelogsel).w
-.5
-	move.w	(namelogsel).w,(a5)
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-WriteNameRecord	;Write the name record (ReadSRAM / WriteSRAM)
-	movem.l	d0-d7/a0-a6,-(sp)
-	move.w	#$2D7,d7
-	moveq	#0,d0
-	moveq	#4,d1
-	movea.l	#ThreeStars,a0
-	move.w	(namelogsel).w,d6
-.loop
-	clr.w	d5
-	jsr	(ReadSRAM).l
-	cmp.b	1(a0),d6
-	bne.w	.0
-	clr.b	1(a0)
-	st	d5
-.0
-	cmp.b	3(a0),d6
-	bne.w	.1
-	clr.b	3(a0)
-	st	d5
-.1
-	tst.w	d5
-	beq.w	.2
-	jsr	(WriteSRAM).l
-.2
-	addq.l	#4,d0
-	dbf	d7,.loop
-	move.w	#$1B,d7
-	move.l	#$B60,d0
-	moveq	#$10,d1
-	movea.l	#ThreeStars,a0
-	move.w	(namelogsel).w,d6
-.loop2
-	clr.w	d5
-	jsr	(ReadSRAM).l
-	cmp.b	1(a0),d6
-	bne.w	.3
-	clr.b	1(a0)
-	st	d5
-.3
-	cmp.b	3(a0),d6
-	bne.w	.4
-	clr.b	3(a0)
-	st	d5
-.4
-	cmp.b	5(a0),d6
-	bne.w	.5
-	clr.b	5(a0)
-	st	d5
-.5
-	cmp.b	7(a0),d6
-	bne.w	.6
-	clr.b	7(a0)
-	st	d5
-.6
-	cmp.b	9(a0),d6
-	bne.w	.7
-	clr.b	9(a0)
-	st	d5
-.7
-	cmp.b	$B(a0),d6
-	bne.w	.8
-	clr.b	$B(a0)
-	st	d5
-.8
-	tst.w	d5
-	beq.w	.9
-	jsr	(WriteSRAM).l
-.9
-	addi.l	#$10,d0
-	dbf	d7,.loop2
-	move.l	#$D20,d0
-	move.w	(namelogsel).w,d3
-	asl.w	#4,d3
-	ext.l	d3
-	add.l	d3,d0
-	moveq	#$10,d1
-	movea.l	#ThreeStars,a0
-	jsr	(ReadSRAM).l
-	move.l	a0,-(sp)
-	move.w	#$F,d3
-.loop3
-	clr.b	(a0)+
-	dbf	d3,.loop3
-	movea.l	(sp)+,a0
-	jsr	(WriteSRAM).l
-	jsr	(MakeSRAMChecksum).l
-	movem.l	(sp)+,d0-d7/a0-a6
 	rts

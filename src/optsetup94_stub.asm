@@ -4,6 +4,8 @@
 	include	macros\genesis.mac	;String
 
 ; .region code
+PlayerCardTimer = $F87EA
+ResetCardTimer = $F87D2
 	org	$F739E
 
 ; includes for stubs to replace removed code

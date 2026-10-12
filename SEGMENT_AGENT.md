@@ -113,10 +113,10 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 | menu94 | matched | org $7E36, InitMenuState | 670 bytes, `$007E36-$0080D3`. InitMenuState (IDA sub_7E36) ... PrintTeamData, vcountwait, as 93 menu93 |
 | stats94 | matched | org $80D4, ShowScores | 7932 bytes, `$0080D4-$009FCF`. ShowScores ... _rjoy, as 93 stats93: the stats screens (menu item handlers) |
 | replay94 | matched | org $9FD0, ReplayMode | 4376 bytes, `$009FD0-$00B0E7`. ReplayMode (no IDA label) ... checkwindow. Was hockey94_02 |
-| input94 | matched | org $B0E8, doinput | 5672 bytes, `$00B0E8-$00C70F`. doinput ... setpads, check4bench. Was logic94_1 |
-| assign94 | matched | org $C710, assbench | 2444 bytes, `$00C710-$00D09B`. assbench ... asswingd. Was logic94_2 |
-| checks94 | matched | org $D09C, asswingo | 15940 bytes, `$00D09C-$010EDF`. asswingo ... EvadePC, checkob ... pucknorm, ChkOffsides ... WeightedRandomSelect. Was logic94_3 (`$D09C-$E62D`), logic94_4 (`$E62E-$FFE9`), logic94_5 (`$FFEA-$10EDF`) |
-| video94 | matched | org $10EE0, remap | 4172 bytes, `$010EE0-$011F2B`. remap ... Vmaddr, dobitmap ... AddTeamBlock. Was middle94_1 (`$10EE0-$11699`), middle94_2 (`$1169A-$11F2B`) |
+| input94 | matched | org $B0E8, doinput | 5522 bytes, `$00B0E8-$00C679`. doinput ... setpads. Was logic94_1 |
+| assign94 | matched | org $C67A, check4bench | 2594 bytes, `$00C67A-$00D09B`. check4bench, assbench ... asswingd. Was logic94_2 |
+| checks94 | matched | org $D09C, asswingo | 15852 bytes, `$00D09C-$010E87`. asswingo ... EvadePC, checkob ... pucknorm, ChkOffsides ... stopna. Was logic94_3 (`$D09C-$E62D`), logic94_4 (`$E62E-$FFE9`), logic94_5 (`$FFEA-$10EDF`) |
+| video94 | matched | org $10E88, UnpackNibbles | 4260 bytes, `$010E88-$011F2B`. UnpackNibbles, WeightedRandomSelect, remap ... Vmaddr, dobitmap ... AddTeamBlock. Was middle94_1 (`$10EE0-$11699`), middle94_2 (`$1169A-$11F2B`) |
 | penalty94 | matched | org $11F2C, AddPenalty | 6528 bytes, `$011F2C-$0138AB`. AddPenalty ... SetHor, PrintScores1 ... StartHL2. Was penalty94_1 (`$11F2C-$12C03`), penalty94_2 (`$12C04-$138AB`) |
 | collide94 | matched | org $138AC, checkcoll | 9454 bytes, `$0138AC-$015D99`. checkcoll ... setInjuryType, checkfight ... checkpuckcoll, puckstick ... ClampNibble. Was hockey94_03 (`$138AC-$14549`), hockey94_04 (`$1454A-$150E3`), hockey94_05 (`$150E4-$15D99`) |
 | display94 | matched | org $15D9A, VBlank | 3168 bytes, `$015D9A-$0169F9`. VBlank ... showcrowd, showclock ... KillCrowd. Was video94_1 (`$15D9A-$162FD`), video94_2 (`$162FE-$169F9`) |
@@ -129,10 +129,10 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 | onetimer94 | matched | org $F66EE, puckvzadj | 1648 bytes, `$0F66EE-$0F6D5D`. puckvzadj ... CheckOneTimerFacing: one-timer. First part of high94_1 |
 | fourway94 | matched | org $F6D5E, Detect4WayPlay | 300 bytes, `$0F6D5E-$0F6E89`. Detect4WayPlay ... Set4WayPlayer: 4 way play adaptor. Second part of high94_1 |
 | crowd94 | matched | org $F6E8A, LoadCrowdRec | 1300 bytes, `$0F6E8A-$0F739D`. LoadCrowdRec ... GetHotColdTotal: crowd meter, hot / cold. Last part of high94_1 |
-| optsetup94 | matched | org $F739E, GameSetUp | 6076 bytes, `$0F739E-$0F8B59`. GameSetUp ... PlayerCardScreen; setoptions is `$F8168`. 94 game setup screen. Was hockey94_08 |
-| cards94 | matched | org $F8B5A, wallcollduringcheck | 12334 bytes, `$0F8B5A-$0FBB87`. wallcollduringcheck ... WriteNameRecord: TeamPalettes (incbin), save RAM records, Player Cards. First part of high94_2 |
-| records94 | matched | org $FBB88, UserNameEntry | 2292 bytes, `$0FBB88-$0FC47B`. UserNameEntry ... RoundBigTxt: NAME ENTRY, Record Holders. Second part of high94_2 |
-| shootout94 | matched | org $FC47C, ClearShootout | 1822 bytes, `$0FC47C-$0FCB99`. ClearShootout ... PrintShooterNames: shootout. Last part of high94_2 |
+| optsetup94 | matched | org $F739E, GameSetUp | 5172 bytes, `$0F739E-$0F87D1`. GameSetUp ... DrawLogoBox; setoptions is `$F8168`. 94 game setup screen. Was hockey94_08 |
+| cards94 | matched | org $F87D2, ResetCardTimer | 10310 bytes, `$0F87D2-$0FB017`. ResetCardTimer ... PlayerCardScreen, wallcollduringcheck ... BuildCardPlayerList: TeamPalettes (incbin), save RAM records, Player Cards. First part of high94_2 |
+| records94 | matched | org $FB018, NameEntryScreen | 4872 bytes, `$0FB018-$0FC31F`. NameEntryScreen ... WriteNameRecord, UserNameEntry ... ReadTeamRecords: NAME ENTRY, Record Holders. Second part of high94_2 |
+| shootout94 | matched | org $FC320, ShootoutModeBox | 2170 bytes, `$0FC320-$0FCB99`. ShootoutModeBox, ClearShootout ... PrintShooterNames: shootout. Last part of high94_2 |
 | scout94 | matched | org $FCB9A, ScoutCrowdRecord | 2686 bytes, `$0FCB9A-$0FD617`. ScoutCrowdRecord ... ScoutStub; ScoutingReport (`$FCC76`) is the 94 MATCHUPS screen. Was hockey94_07 |
 | period94 | matched | org $FD618, EndShootout | 3008 bytes, `$0FD618-$0FE1D7`. EndShootout ... ShortenMsgTimer: shootout end, arena animations, Period Stats / Game Statistics. First part of high94_3 |
 | goalie94 | matched | org $FE1D8, ManualGoalieMenu | 894 bytes, `$0FE1D8-$0FE555`. ManualGoalieMenu ... EndArenaAnim: Manual Goalie. Second part of high94_3 |
