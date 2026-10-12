@@ -951,14 +951,14 @@ ShowInjuryBox	;Injury box: 'Injury to:' player TempPlOffset, 'Out for period', o
 .ex
 	movem.l	(sp)+,d0-d2/a0-a4
 	rts
-PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in Shootout (bit 0) jumps to PlayoffRoundScreen
+PenaltyShotBox	;Penalty shot box, called from chkprogress. Sets gmode2 bit 7; in Shootout (bit 0) jumps to ShootoutModeBox
 	;instead. Otherwise: printbig 'PENALTY SHOT!', the shooter (BA_Sktr_SCnum, BA_Team), the penalty name (Penaltylist, pspenalty) and ' by' the
 	;player BA_Checker_Offset of the other team
 	bset	#7,(gmode2).w
 	btst	#0,(gmode2).w
 .0
 	beq.w	.1
-	jmp	PlayoffRoundScreen
+	jmp	ShootoutModeBox
 .1
 	movem.l	d0-d2/a0-a4,-(sp)
 	move.w	#$FFFF,d0

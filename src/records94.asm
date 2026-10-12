@@ -631,7 +631,7 @@ ReadTeamRecords	;Record Holders: read the records (ReadSRAM)
 	movea.l	(sp)+,a1
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round. Jumped to from PenaltyShotBox
+ShootoutModeBox	;Shootout "SHOOTOUT MODE" box: the shooter " vs." the goalie and both teams' shootout goals. Jumped to from PenaltyShotBox
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l
@@ -640,7 +640,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	moveq	#$1B,d0
 	moveq	#$C,d1
 	jsr	(Framer).l
-	lea	RoundBigTxt(pc),a1
+	lea	ShootoutModeBigTxt(pc),a1
 	jsr	(printbig).l
 	move.w	(BA_Skater_Offset).w,d0
 	movea.l	#tmstruct,a2
@@ -699,7 +699,7 @@ PlayoffRoundScreen	;Playoff round screen: the two teams (" vs."), and the round.
 	jsr	(print).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-RoundBigTxt	dc.b	0	;PlayoffRoundScreen big text
+ShootoutModeBigTxt	dc.b	0	;ShootoutModeBox big text
 	dc.b	$16,$BF,4,3
 	dc.b	$53	;S
 	dc.b	$48	;H

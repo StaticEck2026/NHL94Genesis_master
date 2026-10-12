@@ -3,7 +3,7 @@
 ;	(FeaturedPictures), the save RAM records (team, player, crowd and user
 ;	records), the Player Cards screens and CalcAttrib, the user record NAME
 ;	ENTRY screen, Record Holders, the playoff round screen
-;	(PlayoffRoundScreen) and the shootout (shooters menu, next shooter,
+;	(ShootoutModeBox) and the shootout (shooters menu, next shooter,
 ;	"SHOOTOUT WON BY").
 ;	Inline Strings follow the print calls; labels inside Strings are not
 ;	separate labels. The team palettes are .pal incbins.

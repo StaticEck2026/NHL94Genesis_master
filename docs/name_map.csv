@@ -141,3 +141,5 @@ music_global_tick_counter,PalMode,behavior (body/usage read)
 gamesetuptilesetindex,animchars,behavior (body/usage read)
 SetPojoyMode,UpdatePlayoffLevel,93 lineage (same routine)
 PenShotPenalties2,PerLabels2,behavior: period name list like PerLabels
+PlayoffRoundScreen,ShootoutModeBox,behavior: the shootout SHOOTOUT MODE box, not a playoff round screen
+RoundBigTxt,ShootoutModeBigTxt,behavior: the shootout SHOOTOUT MODE box, not a playoff round screen

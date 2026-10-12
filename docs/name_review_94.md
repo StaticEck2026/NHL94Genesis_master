@@ -201,3 +201,128 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | SetCameraTop | ok |
 | SetFaceoffAnim | ok |
 | StartArenaAnim | ok |
+
+## crowd94
+
+| name | verdict |
+|---|---|
+| AttributeCalc | ok |
+| BuildHotColdLists | ok |
+| Clamp0to100 | ok |
+| CompareHotColdTotals | ok |
+| CopyColdestPlayer | ok |
+| CopyHottestPlayer | ok |
+| Create_HotCold_Table | ok |
+| Crowd_Noise | ok |
+| GetHotColdTotal | ok |
+| HotColdLoop | ok |
+| LoadCrowdRec | ok |
+| NextAwayColdPlayer | ok |
+| NextAwayHotPlayer | ok |
+| NextHomeColdPlayer | ok |
+| NextHomeHotPlayer | ok |
+| SortHotColdStarters | ok |
+| checkcornercoll | ok |
+| cornercollb | ok |
+| stopna2 | ok |
+
+## records94
+
+| name | verdict |
+|---|---|
+| CalcWinPercents | ok |
+| ClearRecordArea | ok |
+| GoalRecTitles | ok |
+| PrintPlayerRecords | ok |
+| PrintRecordName | ok |
+| PrintRecordPage | ok |
+| PrintRecordTitles | ok |
+| PrintWinRecords | ok |
+| ReadTeamRecords | ok |
+| RecHolderByTxt | ok |
+| RecHolderVsTxt | ok |
+| RecParenTxt | ok |
+| RecordHoldersScreen | ok |
+| SaveRecTitles | ok |
+| ShootoutModeBigTxt | renamed from RoundBigTxt |
+| ShootoutModeBox | renamed from PlayoffRoundScreen |
+| SkipOtherUserName | ok |
+| UserNameEntry | ok |
+| WinRecTitles | ok |
+
+## checks94
+
+| name | verdict |
+|---|---|
+| BreakawayOffsidesFlagSet | ok |
+| EndPenaltyShotPlay | ok |
+| PenaltyShotEndReturn | ok |
+| SelectPenaltyShotSkater | ok |
+| SetFaceoffComputerLine | ok |
+| SkateToTempTarget | ok |
+| StartFaceoffLineChange | ok |
+| UpdateFaceoffLineChangeTimer | ok |
+| UpdatePenaltyShotEnd | ok |
+| WaitForFaceoffLineChanges | ok |
+| assbreakaway | ok |
+| assgoaliecpu | ok |
+| assgoaliectrl | ok |
+| breakaway | ok |
+| checkanim | ok |
+| chkpuckc | ok |
+| goaliesave | ok |
+| puckpenshot | ok |
+| puckshootout | ok |
+| rtss11 | ok |
+
+## period94
+
+| name | verdict |
+|---|---|
+| AddArenaAnimSprite | ok |
+| ClampPositionBox | ok |
+| ClearGameStats | ok |
+| EndShootout | ok |
+| GetTeamRating | ok |
+| PeriodStatsScreen | ok |
+| PositionBoxes | ok |
+| PositionBoxesTop | ok |
+| PrintPlayerNameRight | ok |
+| PrintStatScrollArrows | ok |
+| SetStatScroll | ok |
+| ShortenMsgTimer | ok |
+| SkipNameNumber | ok |
+| StatScrollRow | ok |
+| StatScrollRowEnd | ok |
+| TeamRatings | ok |
+| TeamStatTextTblNoPen | ok |
+| rtsStatScroll | ok |
+| rtsStatTables | ok |
+| updatePPTeamTime | ok |
+
+## shootout94
+
+| name | verdict |
+|---|---|
+| ClearShooterScreen | ok |
+| ClearShootout | ok |
+| CountShootoutGoals | ok |
+| InitShooters | ok |
+| NextShooter | ok |
+| PrintShooterBox | ok |
+| PrintShooterList | ok |
+| PrintShooterNames | ok |
+| PrintShooterSlots | ok |
+| ResetShooterScroll | ok |
+| ShooterOverallTxt | ok |
+| ShooterOverallTxt2 | ok |
+| ShooterSelectList | ok |
+| ShootersBackground | ok |
+| ShootersExit | ok |
+| ShootersLoop | ok |
+| ShootersMove | ok |
+| ShootersPick | ok |
+| ShootersRedraw | ok |
+| ShootersSelect | ok |
+| ShootoutShooters | ok |
+| ShootoutWonBy | ok |
