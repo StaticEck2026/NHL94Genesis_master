@@ -1,9 +1,5 @@
-;	remap, forceblack, forcefade, cramfade, CopyPaletteToCRAM, randomd0s /
-;	randomd0, sroot, sfx, song, waitx, waitxsr, waitjoy, orjoy, nodiag,
-;	ProcessInputWithRepeat, ReadJoy1-4, ReadJoy, jdtab, DoDMApro, DoDMA,
-;	DoDMA_nd2, DoFill, WaitDMA, setVram and Vmaddr.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
+;	Shared helpers: palette fades, random numbers, square root, sound calls, joystick
+;	reading (four pads) and waits, VRAM DMA and fill, and video setup.
 
 remap
 	move.w	(disflags).w,-(sp)

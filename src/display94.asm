@@ -1,9 +1,5 @@
-;	VBlank, vb2, IRQ7, DumpSprites, DumpSprites2, DoDMAList, SetScroll2,
-;	setvideo and the sprite builders it calls (updatescroll, showref,
-;	checkfo, showzam, SetSframe, showcrowd).
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Bits: disflags 0 dfok, 2 dfng, 3 dfclock, 4 face off; sflags 0 sfpz, 7 sfhor; sflags2 1 sf2refref.
+;	Game play display: VBlank, vb2, IRQ7, sprite list building and DMA, scrolling, and
+;	the sprite builders for the rink, referee, faceoff, zamboni and crowd.
 
 VBlank	;Main vblank code for game play (vbint target, set by setupice and setupice_highlight). DumpSprites when
 	;dfok is set, cramfade, then the game clock. gmode2 bit 2 keeps the clock running after the whistle, and with gmode2 bit 1

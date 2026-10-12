@@ -1,10 +1,7 @@
-;	Player assignments assbench ... asswingd.
-;	There is no fight code: assfight and assfwatch are just an rts, and
-;	ClearMessageLine, banner and addinfo are gone. assgoaliebreakwait is new.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx).
-;	The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44, temp4 $46
-;	SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
+;	Player assignments: bench and penalty box trips, faceoffs, celebrations and the
+;	defense and wing positions. There is no fight code: assfight and assfwatch only return.
+;	SortCords offsets: Xpos 0, Ypos $14, position $34, assnum $36, asslist $38, temp3 $44,
+;	temp4 $46, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
 
 assbench	;player a3 should goto bench
 	btst	#pfalock,pflags(a3)

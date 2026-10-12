@@ -1,12 +1,9 @@
-;	Skater and goalie assignments: asswingo, asscenterd, asscentero, the
-;	goalie code (assgoaliectrl, assgoaliecpu, ClampYPosition,
-;	AdjustFacingDirection, goaliesave, assgoalietopuck), the breakaway code,
-;	asspuckc, chk4lc, chkpk / chkpk2, chk4shot, CompShoot, chk4pass and
-;	EvadePC.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
-;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36,
-;	temp1 $40, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62, pflags2 $63.
+;	Skater and goalie assignments: the wing and center positions, goalie control (player
+;	and computer), saves, breakaways, the puck carrier, and the computer's line change,
+;	shot and pass decisions.
+;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Xvel $28, Yvel $2A, position $34,
+;	assnum $36, temp1 $40, SCnum $52, facedir $54, SPA $58, nopuck $5E, pflags $62,
+;	pflags2 $63.
 
 asswingo	;player a3 is winger on offense
 	btst	#pfalock,pflags(a3)	;check if locked in animation

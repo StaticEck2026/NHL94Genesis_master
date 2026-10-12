@@ -1,14 +1,6 @@
-;	setupice, setupice_highlight, setupIceRinkPal, setupEASNmap, the tile
-;	reloads (ReloadEnergyBarTiles ... ReloadFaceOffMap), setupTeamBlocksMap,
-;	CopyTeamBlockMapData, defaultsprites, defaultsprites2, SprSort,
-;	resetplstuff, clearTeamStats, setteams, InitTeamStructure,
-;	setplayercolors, PeriodOver, IntermissionStart, GameOver, ExitToOpening,
-;	Opening, Opening2, PlayoffScreen and its helpers, PlayoffScreenText, then
-;	the text player (StartScoutText, ScoutTextPlayer, ScoutTextNextLine) used
-;	by ScoutingReport.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Bits: disflags 0 dfok, 1 df32c, 2 dfng; sflags 0 sfpz, 1 sfpj, 7 sfhor; gmode 1 gmdir.
+;	Rink and team setup: ice and tile setup, sprites and sort lists, team structures and
+;	colors, then the period, intermission and game end flow, the opening and playoff
+;	screens, and the text player used by the scouting report.
 
 setupice	;set all variables, send non purgeable graphics, build sprite frame lists for ice rink. Called from StartGame and StartPer.
 	;Decompresses the tile sets with DecompressGraphicsPlain / DecompressGraphicsWithCallback. Loads RevRinkTiles in a reverse angle replay

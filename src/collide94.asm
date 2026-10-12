@@ -1,12 +1,11 @@
-;	checkcoll, checkplcoll, checkcx, newcheck, checkint, checkcheck and
-;	CCStart, checkinglist, checkagr, holdcheck, Bcheck, FallDown and
-;	setInjuryType.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20 OldYpos, $28 Xvel, $2A Yvel,
-;	$2E impactp, $32 impact, $34 position, $40 temp1, $4A / $4C wall radius x / y, $4E wallcos, $50 wallsin, $52 SCnum,
-;	$54 facedir, $58 SPA, $5E / $5F nopuck, $62 pflags, $63 pflags2, $64 bit 1 breakaway, bit 3 one-timer, bit 4 wall
-;	collision, bit 5 fell, $66 pnum, $67 weight, $68 Agl, $71 Stk, $73 aggres, $74 Fgt, $75 Chk.
+;	Collisions: wall and player collisions, checking (body check, hold, hook), falls
+;	and injuries.
+;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20
+;	OldYpos, $28 Xvel, $2A Yvel, $2E impactp, $32 impact, $34 position, $40 temp1, $4A / $4C
+;	wall radius x / y, $4E wallcos, $50 wallsin, $52 SCnum, $54 facedir, $58 SPA, $5E / $5F
+;	nopuck, $62 pflags, $63 pflags2, $64 bit 1 breakaway, bit 3 one-timer, bit 4 wall
+;	collision, bit 5 fell, $66 pnum, $67 weight, $68 Agl, $71 Stk, $73 aggres, $74 Fgt,
+;	$75 Chk.
 
 checkcoll	;d2 = new x coord, d3 = new y coord, a3 = struct of object. Check wall collision (around the hot spot and the end of the stick) and
 	;player collisions, then move a3 in the OOlist sort order by its y. If a player collision set collflag, restore the old x/y instead. Called

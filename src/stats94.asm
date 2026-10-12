@@ -1,13 +1,8 @@
-;	The stats screens: Scores (ShowScores), Line Editor, Team Roster, Scoring
-;	Summary, Penalty Summary, Player Stats / Playoff Stats, Crowd Meter, the
-;	Timeout and goalie select menu items, and their helpers (SetupScreen,
-;	ExitStatsScreen, GetGoalieCount ... WaitVSyncAndReadInput).
-;	The screens are menu item handlers run from the pause menu.
-;	Small text uses printz2 / printsmall. With OptLine set the line icon
-;	entries come from LineIconPosTable-6 (the bytes before
-;	LineIconGroups). The crowd meter shows the arena / league records from
-;	save RAM. Each DecompressGraphicsWithCallback is followed by its 8 byte
-;	remap table.
+;	Stats screens, run as pause menu item handlers: Scores, Line Editor, Team Roster,
+;	Scoring and Penalty Summaries, Player and Playoff Stats, Crowd Meter (arena and league
+;	records from save RAM), Timeout and goalie select, with their helpers.
+;	With OptLine set the line icon entries come from LineIconPosTable-6 (the bytes before
+;	LineIconGroups).
 
 ShowScores	;"Scores" screen: the other games of the night in gsstruct over the Scores bitmap
 	;(ScoresMap); up / down scroll, start exits (ExitStatsScreen). Menu item handler (menu lists)

@@ -1,16 +1,10 @@
-;	AddPenalty, AddPenalty2, PenaltyManager, chkprogress, PenShotChk and
-;	getBAplayerInfo (penalty shot on a breakaway), InProgress, coinsearch,
-;	checkfornewpen, Stop4Pen, limitfo, UpdatePA, SetPA, SetPA2, PushRef,
-;	prefmes, ClearPenaltyMessage, PenGoalStuff, ClearPenaltyBuffer,
-;	updatepentime, ProcessPenaltyList, RemovePlayerFromList, chkatop,
-;	releasepl, GetLowestPen, updatepwrplay, ClrHor and SetHor.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Penalty numbers are Penaltylist word offsets: EOG 4, OOP 6, whistle $A, icing $C, goal $E, offsides $10,
-;	delay $2C. Team struct from HmShots (tmsize $364): 2 tmPwrGoals, 4 tmPwrPlays, 6 tmPenalties,
-;	8 tmPenmin, $A attack time, $1E tmdata, $22 tmsort, $24 tmap, $26 tmgoalie, $30 tmflags, $66 tmpdst, $9A penalty
-;	box list (bytes, -1 end), $102 per-player penalty minutes. Sort struct (SortCords, $80 each): $34 position,
-;	$40 temp1, $52 SCnum, $62 pflags, $63 pflags2, $64 bit 1 breakaway, $66 pnum.
+;	Penalty logic: penalties and stoppages, penalty shots on breakaways, the penalty box
+;	and power plays, referee messages, and the horizontal/vertical rink switch.
+;	Penalty numbers are Penaltylist word offsets: EOG 4, OOP 6, whistle $A, icing $C,
+;	goal $E, offsides $10, delay $2C. Team struct from HmShots: 2 tmPwrGoals, 4 tmPwrPlays,
+;	6 tmPenalties, 8 tmPenmin, $A attack time, $1E tmdata, $22 tmsort, $24 tmap, $26
+;	tmgoalie, $30 tmflags, $66 tmpdst, $9A penalty box list (bytes, -1 end), $102
+;	per-player penalty minutes.
 
 AddPenalty	;add penalty d0 (Penaltylist offset) for player a3. Ignored while the clock is stopped, when penalties are off, for a player with
 	;pflags2 bit 2 set, or offsides when offsides are off. Falls into AddPenalty2

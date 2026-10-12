@@ -1,15 +1,7 @@
-;	ReplayMode, getpzjoy, the replay icon and banner (ShowReplayIcon ...
-;	EraseReplayBanner), suba4 / adda4, UpdateCameraPos, RevReplayAdj,
-;	RestoreReplayFrame, ClampReplayView, updatereplay, rtss8, updateplayers,
-;	updateanim, freezewindow, checkwindow.
-;	New in 94: the reverse angle replay (sflags4 bits 4, 6, 7), the replay
-;	icon timer, 4 way play pads and the fall-down position fixes in
-;	updateplayers.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Inline print strings after printz use the String macro (length word includes itself, odd data is padded).
-;	Replay frames are $62 bytes from M68K_RAM to replayend ($FFFFAF54); recbpr is the record
-;	pointer. SortCords objects are $80 bytes (SCstruct).
+;	Instant replay (ReplayMode, the replay icon and banner, camera and frame restore),
+;	then the per-frame player and animation update and the scroll window.
+;	New in 94: the reverse angle replay.
+;	Replay frames are $62 bytes from M68K_RAM to replayend; recbpr is the record pointer.
 
 ReplayMode	;Instant replay play-back control and display code. Called from the pause menu.
 	;Tracking: a d-pad press picks the nearest object in that direction and the camera follows it
