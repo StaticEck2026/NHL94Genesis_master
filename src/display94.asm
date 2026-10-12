@@ -577,7 +577,7 @@ checksso	;do graphics for sso structure: arrows for the players when they are of
 	bne.w	rtss2
 	movea.w	#(Joy1Struct-M68K_RAM),a0
 	movea.w	#(sso-M68K_RAM),a3
-	move.w	#SPFarrow,d3
+	move.w	#SPFarrow,d3	;frame numbers are 6 higher than 92
 	bsr.w	.ca
 	adda.w	#$1C,a0	;ffosize
 	adda.w	#$14,a3	;ssosize
