@@ -54,5 +54,40 @@ setc2player = $C0DA		;jsr / jmp (x).l.
 GetPlayerCount = $9F9A			;jsr / jmp (x).l
 sublist = $1921C			;#x
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPAHold	=	$C90
+SPAhook	=	$1122
+SPAsweepchk	=	$B24
+SPAburst	=	$C5E
+SPAHold2	=	$CC2
+SPAinjuryfall	=	$145C
+SPAinjury1	=	$1AF4
+SPAstumble	=	$11E6
+SPAfallfwd	=	$D26
+SPAfallback	=	$DD8
+SPAflip	=	$136A
+SPAgstackr	=	$250
+SPAgstackl	=	$2A2
+SPAgdive	=	$2F4
+SPAshoulderchkl	=	$B96
+SPAshoulderchkr	=	$BC8
+SPAhipchkr	=	$C2C
+SPAhipchkl	=	$BFA
+SPAflail	=	$CF4
+SPAhook2	=	$1154
+SPAboardchk	=	$1AC2
+SPAboardmidl	=	$193E
+SPAboardmidr	=	$1A00
+SPAboardright	=	$17E8
+SPAboardleft	=	$18CC
+SPAboardtop	=	$1776
+SPAboardbot	=	$185A
+SPAsiren	=	$102E
+SPAbglass	=	$1078
+SPAcatch	=	$10D0
+SPFGoalie	=	407
+SPFSiren	=	563
+SPFghighr	=	658
+
 ; Main segment code
 	include	collide94.asm
