@@ -250,7 +250,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	btst	#6,d1
 	bne.w	.7
 	btst	#4,d1
-	bne.w	.9
+	bne.w	.exit
 	btst	#5,d1
 	beq.w	.top
 	bset	#6,(sflags4).w
@@ -264,7 +264,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 .8
 	clr.w	(menuitem).w
 	bset	#1,(sflags5).w
-.9
+.exit
 	bsr.w	forceblack
 	ori.w	#$F000,(PadControlBits).w
 	bclr	#5,(sflags).w

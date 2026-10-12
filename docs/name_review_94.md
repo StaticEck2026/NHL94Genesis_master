@@ -1250,3 +1250,4 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | data94 (full read) | routine names ok; PenaltyShotBox .box, FormatLastName .pad, ContinuePlayoffs .set, ResolveGames .win, ShowGoalBox .print; ContinuePlayoffs header: rename-history text removed |
 | checks94 (full read) | routine names ok; checkanim .far/.near/.save (same flow as doinput_cbut), goaliesave .low/.done, asspuckc .shot/.soshot/.pass/.path; clamps and 92 loops numeric |
 | collide94 (full read) | routine names ok (CCStart, SetupPenaltyShot); checkgoal .addg/.sum/.stat, FallDown .hitter; other locals are short skips or 92-parent loops, numeric |
+| replay94 | routine names ok (ShowReplayIcon, ClampReplayView); ReplayMode .exit; position clamps and 92 loops numeric |
