@@ -1,5 +1,5 @@
-;	New in 94: the shootout. This file sets the shooting order, counts the goals, shows the
-;	winner and runs the screen where the shooters are chosen.
+;	New in 94: the shootout. This file draws the shootout mode box, sets the shooting order,
+;	counts the goals, shows the winner and runs the screen where the shooters are chosen.
 
 ShootoutModeBox	;Shootout "SHOOTOUT MODE" box: the shooter " vs." the goalie and both teams' shootout goals. Jumped to from PenaltyShotBox
 	movem.l	d0-d7/a0-a6,-(sp)

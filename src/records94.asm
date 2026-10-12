@@ -1,5 +1,5 @@
-;	New in 94: user records. This file lets players enter their names, shows the Record Holders
-;	screen with the win, goal and save records kept in save RAM, and draws the shootout mode box.
+;	New in 94: user records. This file lets players enter their names and shows the Record
+;	Holders screen with the win, goal and save records kept in save RAM.
 
 NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_SetOptions): pick a name from the name log or enter a new one (NameLetterGrid ...
 	;SkipOtherUserName). Called from UserNameEntry
