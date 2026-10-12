@@ -257,9 +257,9 @@ p_music_vblank	;(vblank handler). Read the pads (ReadJoyData), clear the change 
 	moveq	#5,d0
 .loop3
 	addq.b	#1,5(a0)	;age
-	bne.w	.2
+	bne.w	.next
 	subq.b	#1,5(a0)	;hold at $FF
-.2
+.next
 	addq.w	#8,a0
 	dbf	d0,.loop3
 	rts
@@ -649,9 +649,9 @@ handle_command_30	;event $3x, controller +2 = +3 on channel +1 bits 3-0 of track
 	moveq	#5,d0
 .loop
 	cmp.b	(a2),d4
-	bne.w	.1
+	bne.w	.next
 	bsr.w	SetChannelVolume
-.1
+.next
 	addq.w	#8,a2
 	dbf	d0,.loop
 	rts
