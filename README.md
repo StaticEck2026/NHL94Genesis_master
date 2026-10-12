@@ -21,7 +21,7 @@ Style source for a segment is the matching file in [NHLPA93Genesis](https://gith
 
 Segment builds use `buildseg.bat` and `npm run seg:<name>` once a segment has a stub and a confirmed org. Verify against `lst/nhl94.bin`.
 
-`npm run extractassets` runs `extractAssets94.js` against `lst/nhl94.bin`. That is for the graphics and sound data pass, not for the code segments.
+`npm run extractassets` runs `tools/extractAssets94.js` against `lst/nhl94.bin`. That is for the graphics and sound data pass, not for the code segments.
 
 Full ROM builds assemble `src/nhl94.asm`. The listing is `output/nhl94 .lst`. The opcode-corrected output is `output/modified_nhl94.bin`.
 

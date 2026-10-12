@@ -1,11 +1,11 @@
 // Overlay one assembled and fixopcodes-patched segment onto lst/nhl94.bin.
-// Usage: node verifySegment.js <segment> <org> <reference.bin> [<first> <last>]
+// Usage: node tools/verifySegment.js <segment> <org> <reference.bin> [<first> <last>]
 const fs = require('fs');
 const path = require('path');
 
 const [segment, orgArg, referencePath, firstArg, lastArg] = process.argv.slice(2);
 if (!segment || !orgArg || !referencePath) {
-  console.error('Usage: node verifySegment.js <segment> <org> <reference.bin> [<first> <last>]');
+  console.error('Usage: node tools/verifySegment.js <segment> <org> <reference.bin> [<first> <last>]');
   process.exit(1);
 }
 
@@ -15,8 +15,9 @@ if (!Number.isInteger(org) || org < 0) {
   process.exit(1);
 }
 
-const builtPath = path.join('output', `modified_${segment}.bin`);
-const patchedPath = path.join('output', `${segment}_patched.bin`);
+const ROOT = path.join(__dirname, '..');
+const builtPath = path.join(ROOT, 'output', `modified_${segment}.bin`);
+const patchedPath = path.join(ROOT, 'output', `${segment}_patched.bin`);
 const built = fs.readFileSync(builtPath);
 const reference = fs.readFileSync(referencePath);
 

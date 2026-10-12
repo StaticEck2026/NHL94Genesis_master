@@ -8,8 +8,8 @@ wine cmd /c "set rev=0&& set checksum=1&& $bat" >/tmp/top.log 2>&1
 log=$(ls -t output/Build*.log | head -1)
 grep -qP '^[1-9]\d* error' "$log" && echo "TOP ERRORS in $log"
 [ -s output/$top.bin ] || echo "TOP NO BIN"
-node fixopcodes.js "output/$top .lst" output/$top.bin >/dev/null 2>&1
-node verifyRom.js output/modified_$top.bin $ref 2>&1 | grep -iE 'match|differ' | head -2
+node tools/fixopcodes.js "output/$top .lst" output/$top.bin >/dev/null 2>&1
+node tools/verifyRom.js output/modified_$top.bin $ref 2>&1 | grep -iE 'match|differ' | head -2
 for s in $(node -e 'for(const k in require("./package.json").scripts) if(/^seg:/.test(k)&&!/-data$/.test(k)) console.log(k)'); do
   cmd=$(node -e "console.log(require('./package.json').scripts['$s'])")
   seg=$(echo "$cmd" | grep -oP 'buildseg.bat \K\S+' | sed 's/.*\\//')
@@ -19,7 +19,7 @@ for s in $(node -e 'for(const k in require("./package.json").scripts) if(/^seg:/
     case "$part" in
       npm*) ;;
       buildseg*) wine cmd /c "$part" >/tmp/seg.log 2>&1; [ -s output/$seg.bin ] || { echo "$s: NO BIN"; ok=0; } ;;
-      node\ verifySegment*) r=$(eval "$(echo "$part" | tr '\\' '/')" 2>&1 | grep -iE 'match|differ|fail' | head -1); echo "$s: $r";;
+      node\ tools/verifySegment*) r=$(eval "$(echo "$part" | tr '\\' '/')" 2>&1 | grep -iE 'match|differ|fail' | head -1); echo "$s: $r";;
       node*) eval "$(echo "$part" | tr '\\' '/')" >/dev/null 2>&1 ;;
     esac
   done; unset IFS

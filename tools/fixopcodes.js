@@ -140,7 +140,7 @@ async function main() {
         const [lstFilePath, binFilePath, orgArg] = process.argv.slice(2);
 
         if (!lstFilePath || !binFilePath) {
-            console.error('Usage: node fixopcodes.js <listing.lst> <binary.bin> [org]');
+            console.error('Usage: node tools/fixopcodes.js <listing.lst> <binary.bin> [org]');
             process.exit(1);
         }
 

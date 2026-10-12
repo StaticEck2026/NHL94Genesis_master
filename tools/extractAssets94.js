@@ -532,7 +532,7 @@ async function verifyCRC32(filePath) {
 async function extractAssets(romPath, options = {}) {
     // Set default options
     const extractOptions = {
-        outputDir: options.outputDir || 'Extracted',
+        outputDir: options.outputDir || path.join(__dirname, '..', 'Extracted'),
         verbose: options.verbose || false
     };
     
@@ -584,7 +584,7 @@ function parseArgs() {
     const args = process.argv.slice(2);
     const options = {
         romFile: null,
-        outputDir: 'Extracted',
+        outputDir: path.join(__dirname, '..', 'Extracted'),
         verbose: false
     };
 
@@ -620,12 +620,12 @@ NHL 92 Asset Extractor
 
 This script extracts assets from NHL Hockey (1991/1992) ROM files.
 
-Usage: node extractAssets92.js [options] <rom_file_path>
+Usage: node tools/extractAssets94.js [options] <rom_file_path>
 
 Options:
   -h, --help              Display this help message
   -v, --verbose           Display detailed extraction information
-  -o, --output <dir>      Specify output directory (default: 'Extracted')
+  -o, --output <dir>      Specify output directory (default: <repo>/Extracted)
 
 Notes:
   - This script extracts all known assets from the NHL 92 ROM

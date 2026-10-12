@@ -7,7 +7,7 @@
 //      alone and reported).
 //   3. Push every non-default branch that is ahead of its remote branch or has none yet (git push -u, never --force). A diverged
 //      branch is not merged; its local commits are pushed to autosave/<branch> instead, so they are on GitHub too.
-// Usage: node sync.js [--pull-only] [--quiet]. Always exits 0, so a hook never blocks the session; problems are printed.
+// Usage: node tools/sync.js [--pull-only] [--quiet]. Always exits 0, so a hook never blocks the session; problems are printed.
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +36,7 @@ function withRetry(args) { // network commands: retry 4 times, 2 / 4 / 8 / 16 s 
 }
 
 function main() {
-  process.chdir(__dirname); // sync.js sits at the repo root: work there whatever directory the hook runs in
+  process.chdir(path.join(__dirname, '..')); // sync.js sits in tools/: work at the repo root whatever directory the hook runs in
   const top = tryGit(['rev-parse', '--show-toplevel']);
   if (!top.ok) { say('not a git repository: nothing to do'); return; }
   process.chdir(top.out);

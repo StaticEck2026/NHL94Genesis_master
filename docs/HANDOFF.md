@@ -10,11 +10,11 @@ ROMs (gitignored, never commit): lst/nhl94.bin.
 Windows: `npm run build:retail` (extractassets, build94.bat, fixopcodes, verify);
 segments: `npm run seg:<name>` (all keys in package.json `seg:*`).
 Linux (wine): `apt install wine wine32` (dpkg --add-architecture i386), `export WINEDEBUG=-all`, then
-1. `node extractAssets94.js lst/nhl94.bin` (once, fills Extracted/)
+1. `node tools/extractAssets94.js lst/nhl94.bin` (once, fills Extracted/)
 2. `wine cmd /c "set rev=0&& set checksum=1&& build94.bat"`
-3. `node fixopcodes.js "output/nhl94 .lst" output/nhl94.bin`
-4. `node verifyRom.js output/modified_nhl94.bin <reference ROM>` must print MATCH
-5. Segments: run each package.json `seg:*` chain the same way (`wine cmd /c "buildseg.bat <seg>"`, then its node steps); verifySegment.js must MATCH.
+3. `node tools/fixopcodes.js "output/nhl94 .lst" output/nhl94.bin`
+4. `node tools/verifyRom.js output/modified_nhl94.bin <reference ROM>` must print MATCH
+5. Segments: run each package.json `seg:*` chain the same way (`wine cmd /c "buildseg.bat <seg>"`, then its node steps); tools/verifySegment.js must MATCH.
 Failed-assembly detection: delete output/*.bin first, then check the bin exists and is fresh and that output/Build*.log has no
 `^[1-9][0-9]* error` line. tools/verify_all.sh does all of this (top ROM + every segment).
 
@@ -61,3 +61,4 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   (tools_ll/consist.py). Next: 95G (MISMATCH routines from
   prop.py, then new-in-95 routines, then data labels/equates).
 - Header rewrite (file header comments, 92 style): 94G nhl94, main, teamdata, frames, ram, macros, sega, stubinc, hockey, menu, stats, replay, input, assign, checks, video, penalty, collide, display, setup, all modules and stubs done (94G complete).
+- Restructure: root .js tools (extractAssets94, fixopcodes, verifyRom, verifySegment, sync) moved to tools/; run from repo root as node tools/<name>.js (default Extracted/output paths resolve from the repo root). Fresh extract + ROM + all segments MATCH.
