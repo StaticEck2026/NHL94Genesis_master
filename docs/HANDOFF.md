@@ -68,3 +68,4 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   PlayerCardScreen optsetup94 -> cards94 (player cards); the name entry block NameEntryScreen ... WriteNameRecord
   cards94 -> records94 (user name entry); ShootoutModeBox records94 -> shootout94. Stub orgs/equates,
   package.json, nhl94.asm and the ROM map updated. MATCH.
+- Segment stubs moved to src/stubinc/ (buildseg.bat assembles stubinc\<seg>_stub.asm). MATCH.

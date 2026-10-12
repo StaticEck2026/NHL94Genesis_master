@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 REM Usage: buildseg.bat hockey94
-REM Assembles src\<name>_stub.asm to output\<name>.bin
+REM Assembles src\stubinc\<name>_stub.asm to output\<name>.bin
 
 if "%~1"=="" (
     echo ERROR: No segment name provided
@@ -27,7 +27,7 @@ cd /d "%WORKSPACE%src" || exit /b 1
   /p /m /g ^
   /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz+ /o omq- /o oaq+ /o osq+ ^
   %CHECKSUM_FLAG% %REV_FLAG% ^
-  "%ROM_NAME%_stub.asm,%WORKSPACE%output\%ROM_NAME%.bin,%WORKSPACE%output\%ROM_NAME%,%WORKSPACE%output\%ROM_NAME%" ^
+  "stubinc\%ROM_NAME%_stub.asm,%WORKSPACE%output\%ROM_NAME%.bin,%WORKSPACE%output\%ROM_NAME%,%WORKSPACE%output\%ROM_NAME%" ^
   > "%WORKSPACE%output\Build_%ROM_NAME%.log"
 
 if errorlevel 1 (
