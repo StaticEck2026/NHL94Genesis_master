@@ -564,10 +564,10 @@ DisplayTeamStatsScreen	;Team logos (PutTeamBlock), then each TeamStatTextTbl row
 	moveq	#$E,d6
 	lea	TeamStatTextTbl(pc),a1
 	tst.w	(OptPen).w
-	bne.w	.loop
+	bne.w	.row
 	move.w	#$A,d6
 	lea	TeamStatTextTblNoPen(pc),a1
-.loop
+.row
 	move.w	(a1),d0
 	lsr.w	#1,d0
 	neg.w	d0
@@ -583,7 +583,7 @@ DisplayTeamStatsScreen	;Team logos (PutTeamBlock), then each TeamStatTextTbl row
 	bsr.w	PrintStatValue
 	lea	4(a0),a1
 	addq.w	#2,(printy).w
-	dbf	d6,.loop
+	dbf	d6,.row
 	rts
 PrintStatValue	;Print TeamStatTextTbl entry a0 for team a2 centred at printx: the value (offsets $A and $352 are times
 	;PushTime), "/second" if any, " (pct%)" for passing. Offset $FFFF is the shooting percentage (goals $C * 100 / shots 0), printed with a

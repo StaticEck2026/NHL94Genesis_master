@@ -36,15 +36,15 @@ HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the
 	btst	#7,d1	;sbut
 	bne.w	.flip	;start: Z clear, flipped to eq
 	btst	#1,d1	;dbut
-	beq.w	.1
+	beq.w	.up
 	addq.w	#1,(menuitem).w	;next lower item
 	bra.w	UpdateMenuSelection
-.1
+.up
 	btst	#0,d1	;ubut
-	beq.w	.2
+	beq.w	.sel
 	subq.w	#1,(menuitem).w	;next higher item
 	bra.w	UpdateMenuSelection
-.2
+.sel
 	btst	#5,d1	;cbut
 	beq.w	.flip	;nothing: Z set, flipped to ne
 	bsr.w	seta2
@@ -53,11 +53,11 @@ HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the
 	adda.w	(a0),a0
 	adda.w	(a0),a0
 	bra.w	.3
-.4
+.next
 	addq.w	#4,a0
 .3
 	adda.w	(a0),a0
-	dbf	d0,.4
+	dbf	d0,.next
 	movea.l	(a0),a0
 	jsr	(a0)	;the handler of the selected item
 	bclr	#1,(sflags5).w	;the handler drew its own screen
@@ -80,12 +80,12 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 	adda.w	(a0),a0
 	adda.w	(a0),a0
 	bra.w	.2
-.1
+.next
 	adda.w	(a0),a0
 	addq.w	#4,a0
 	tst.w	2(a0)	;negative: the last item
 .2
-	dbmi	d0,.1
+	dbmi	d0,.next
 	addq.w	#1,d0
 	sub.w	d0,(menuitem).w	;no item below the last
 	move.w	(menuitem).w,d0
@@ -95,9 +95,9 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 .3
 	subq.w	#3,d0
 	cmp.w	(menuitem+2).w,d0
-	ble.w	.4
+	ble.w	.print
 	move.w	d0,(menuitem+2).w	;scroll down
-.4
+.print
 	bsr.w	SetMenuPrintX
 	move.w	#$D,(printy).w
 	movea.l	(menulist).w,a1
@@ -110,19 +110,19 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 	adda.w	(a1),a1
 	move.w	(menuitem+2).w,d0	;skip to the first item shown
 	bra.w	.6
-.5
+.skip
 	adda.w	(a1),a1
 	addq.w	#4,a1
 .6
-	dbf	d0,.5
+	dbf	d0,.skip
 	moveq	#3,d1	;4 rows
 	move.w	#$C,(printy).w
 	bsr.w	SetMenuPrintX
 	move.w	(menuitem+2).w,d0
-	beq.w	.7
+	beq.w	.row
 	jsr	(printsmallz).l	;more items above
 	String	CC_SetAttribute,5,CC_AddX,1,CC_AddY,1,'{',CC_AddY,$FF	;(and hid the rest)
-.7
+.row
 	bsr.w	SetMenuPrintX
 	jsr	(printsmallz).l	;start of an item row
 	String	CC_AddX,2,CC_AddY,1
@@ -130,15 +130,15 @@ UpdateMenuSelection	;Clamp the selection, scroll the 4 rows shown and print the 
 	movea.l	(menulist).w,a1
 	jsr	(printsmall).l
 	cmp.w	(menuitem).w,d0
-	bne.w	.8
+	bne.w	.nosel
 	jsr	(printsmall).l	;the selected item marker
-.8
+.nosel
 	movea.l	(sp)+,a1
 	bsr.w	PrintMenuItem	;the item text
 	addq.w	#1,d0
 	addq.w	#4,a1
 	tst.w	2(a1)	;negative: the last item
-	dbmi	d1,.7
+	dbmi	d1,.row
 	bmi.w	.x
 	bsr.w	SetMenuPrintX
 	jsr	(printsmallz).l	;more items below
@@ -182,14 +182,14 @@ PutTeamBlock	;Copy 2 rows of 11 map words from TeamBlockMap+d0 to printx / print
 	movea.w	#(TeamBlockMap-M68K_RAM),a1
 	adda.w	d0,a1
 	moveq	#1,d2	;2 rows
-.0
+.row
 	jsr	(xyVmMap).l
 	move.w	#$A,d1	;11 words
 .1
 	move.w	(a1)+,(a0)
 	dbf	d1,.1
 	addq.w	#1,(printy).w
-	dbf	d2,.0
+	dbf	d2,.row
 	addi.w	#$B,(printx).w
 	subq.w	#2,(printy).w
 	move.w	(sp)+,(disflags).w

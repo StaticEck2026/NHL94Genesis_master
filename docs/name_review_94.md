@@ -1234,3 +1234,11 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | pf3gctrl | ok |
 | pf3onetimer | ok |
 | pf3wall | ok |
+
+## Local labels
+
+| module | status |
+|---|---|
+| stats94, menu94 | 93G local names propagated (same routine structure) |
+| hockey94 | Pausemode .loop from 93 |
+| period94 | DisplayTeamStatsScreen .row from 93 |
