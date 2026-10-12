@@ -4,8 +4,8 @@
 ;
 ;	The sub CPU owns the game. This CPU drives the VDP and trades commands through
 ;	the gate array ($A1200E flags, $A12010 command words, $A12020 status words).
-;	$FF0000-$FF0271 is transcribed and verified against MAIN.BIN. Labels past that
-;	exist so the branches assemble; their bodies are still in the binary.
+;	$FF0000-$FF183F is transcribed and verified. This file is $FF0000-$FF0271.
+;	maindma.asm, maincont.asm, mainblit.asm and mainvdp.asm continue it.
 
 	org	$FF0000
 

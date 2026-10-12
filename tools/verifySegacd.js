@@ -67,5 +67,9 @@ function compareAt(builtRel, discRel, discOff, length) {
 }
 
 compare('output/maincd.bin', 'cdbin/MAIN.BIN', 0x272);
+compareAt('output/maindma.bin', 'cdbin/MAIN.BIN', 0x272, 0x28E);
+compareAt('output/maincont.bin', 'cdbin/MAIN.BIN', 0x500, 0x7B8);
+compareAt('output/mainblit.bin', 'cdbin/MAIN.BIN', 0xCB8, 0x608);
+compareAt('output/mainvdp.bin', 'cdbin/MAIN.BIN', 0x12C0, 0x580);
 compare('output/subboot.bin', 'cdbin/STARTER.BIN', 0x90);
 compareAt('output/subheap.bin', 'cdbin/STARTER.BIN', 0x4FA8, 0xC0);
