@@ -577,11 +577,11 @@ checksso	;do graphics for sso structure: arrows for the players when they are of
 	bne.w	rtss2
 	movea.w	#(Joy1Struct-M68K_RAM),a0
 	movea.w	#(sso-M68K_RAM),a3
-	move.w	#$180,d3	;SPFarrow
+	move.w	#SPFarrow,d3
 	bsr.w	.ca
 	adda.w	#$1C,a0	;ffosize
 	adda.w	#$14,a3	;ssosize
-	move.w	#$183,d3	;SPFarrow+3
+	move.w	#SPFarrow+3,d3
 	bsr.w	.ca
 	tst.w	(cont3team).w
 	beq.w	rtss2	;on screen: no arrow

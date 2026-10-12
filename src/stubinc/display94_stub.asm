@@ -35,5 +35,8 @@ printz = $11B92			;jsr / jmp (x).l.
 sizetab = $1920C			;#x
 SmallFontMap = $AAC52		;#x.
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPFarrow	=	384
+
 ; Main segment code
 	include	display94.asm
