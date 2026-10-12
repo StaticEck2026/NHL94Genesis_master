@@ -1,3 +1,7 @@
+;	Song selection, save RAM line data and win records, shootout skate paths, picture
+;	unpacking, team graphics, the high score and title screens with the credits, team logo
+;	palettes, and assorted game helpers.
+
 ChooseSong	;SongNum = byte SongIndex of the 6 song bytes of team HmTeam, or one of the 8 of RandomSongs at random
 	;when 0; $FFFF with gmode bit 4. Called from StartPer, checkgoal, puckshootout and LeadSong
 	movem.l	d0-d1/a0-a1,-(sp)

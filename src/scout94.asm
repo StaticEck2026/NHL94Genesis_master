@@ -1,15 +1,7 @@
-;	ScoutingReport, the pregame MATCHUPS screen, with its helpers:
-;	ScoutCrowdRecord, GetTeamNickname / GetTeamArena (team data for the text
-;	player's '@', '=', '*', '^' and ';' codes), the unused ScoutCrowdRecordBy
-;	/ GetTeamCity, the matchup pager PageMatchup, the rating, picture and
-;	position helpers, ScoutRatingText, and the advantage marks
-;	(PrintAdvantageMarks). The text player itself (StartScoutText,
-;	ScoutTextPlayer, ScoutTextNextLine) is with the setup code.
-;	Each DecompressGraphicsWithCallback is followed by its 8 byte remap table.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $DF / $DE the same with printa
-;	$4000). printz2 codes: $F8 attribute,map,x,y; $F9 char set. Pad bits: dbut 1, cbut 5, abut 6, sbut 7.
+;	Scouting report: the pregame MATCHUPS screen with its pager, team text, rating,
+;	picture and position helpers, and the advantage marks.
+;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa. printz2
+;	codes: $F8 attribute,map,x,y; $F9 char set.
 
 ScoutCrowdRecord	;The text player's '@' (ScoutTextPlayer): return a1 = the home team's crowd record in dB as a String at TempBuffer (SRAM team record
 	;byte 8, 80 if 0). ReadCrowdRecord reads the 16 byte SRAM record of team d1 ($B60 + d1 * 16) to a0

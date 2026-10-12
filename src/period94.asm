@@ -1,11 +1,5 @@
-;	New in 94: code in the high ROM before the checksum: the shootout end,
-;	the game stats clear, the arena animations (RunArenaAnim,
-;	AddArenaAnimSprite, ArenaAnims), the Period Stats and Game Statistics
-;	screens (PeriodStatsScreen, GameStatisticsScreen, TeamStatTextTbl), the
-;	Manual Goalie menu item, ChooseSong, the shootout skate paths, the save
-;	RAM option and three stars blocks, the player picture unpack
-;	(UnpackPicture), HiScoreScreen, newTitleScreen and the credits,
-;	clrTmPdst and chgplayer.
+;	Shootout end, game stats clear, arena animation sprites, the Period Stats and Game
+;	Statistics screens with their stat tables, power play time and team ratings.
 
 EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
 	;7-$B are set up (setplayer) above or below the view and get assscore (assinsert 7)

@@ -1,10 +1,5 @@
-;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and
-;	the helpers after it (UpdatePlayoffLevel, DrawMatchupBitmaps, DrawTeamBitmap,
-;	dotb, ClearRosterName, setoptions_printpos2, PickStartingGoalie), then the
-;	options screen vblank handler (VBlank_SetOptions).
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
-;	cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Inline print strings after printz use the String macro (length word includes itself).
+;	New in 94: the EA Sports screen shown at startup, the playoff matchup bitmaps and the
+;	related option screen helpers, then the options screen vblank handler.
 
 EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or $50 x 4 frames (about 5 s)
 	move.l	#vb2,(vbint).w	;vblank handler

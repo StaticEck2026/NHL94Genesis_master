@@ -1,3 +1,6 @@
+;	New in 94: the shootout: shooter order and goal count, the winner message, and the
+;	shooters selection screen.
+
 ClearShootout	;Clear the player structs (SortCords) and the shootout state.
 	movea.l	#SortCords,a0
 	move.w	#$3FF,d0

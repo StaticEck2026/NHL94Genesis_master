@@ -1,20 +1,11 @@
-;	68k side of the sound driver: p_turnoff, play_sfx_or_music_track,
-;	stop_current_song, the pad readers (ReadJoyData ... ResetZ80Bus, run from
-;	p_music_vblank), p_music_vblank, UploadCommandBufferToZ80,
-;	ProcessOneMusicTrack and the event handlers,
-;	UpdateChannelFrequencyAndVolume, SetChannelVolume, p_initialZ80 and
-;	ClearAllTrackAndSFXSlots.
-;	Sounds 0-$7A (93 had 0-$37) go through a long pointer table; channel
-;	structs are 8 bytes (93 used 6) with a voice volume word (+4); there is a
-;	controller event (handle_command_30), vblank pad reading, and the 50 Hz
-;	tempo block.
-;	RAM: fm_track_slots (8 x 6 bytes), fm_channel_structs (6 x 8 bytes: +0
-;	key, +1 note, +2 volume, +3 patch, +4 output channel, +5 age, +6 bit 0
-;	on), fm_voice_usage_table (8 bytes per key: word +0 pitch bend, +3 patch,
-;	word +4 volume), Z80_command_buffer (33 bytes, copied to Z80 RAM $02),
-;	per_channel_attenuation_table, music_needs_z80_update.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
+;	Sound driver, 68000 side: sound and song start and stop, the pad readers run from
+;	p_music_vblank, the music track player and its event handlers, channel volume and
+;	frequency, and Z80 setup; followed by the Z80 program and sound data.
+;	Sounds go through a long pointer table.
+;	RAM: fm_track_slots (8 x 6 bytes), fm_channel_structs (6 x 8 bytes: +0 key, +1 note,
+;	+2 volume, +3 patch, +4 output channel, +5 age, +6 bit 0 on), fm_voice_usage_table (8
+;	bytes per key: word +0 pitch bend, +3 patch, word +4 volume), Z80_command_buffer (33
+;	bytes, copied to Z80 RAM $02), per_channel_attenuation_table, music_needs_z80_update.
 
 p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute every output channel, send the buffer
 	;and stop the PCM channel. Called from Begin and the game screens

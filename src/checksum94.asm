@@ -1,6 +1,4 @@
-;	ROM checksum check (ValidationRoutine), followed by the $FF fill to the
-;	end of the ROM (nhl94.asm). There is no SecurityCheck word before it, and
-;	the long count and sum are new values.
+;	ROM checksum check (ValidationRoutine), followed by the $FF fill to the end of the ROM.
 
 ValidationRoutine	; Called once at power on from Start. Adds
 	;every ROM long from 0 up to this routine, skipping the header long at $18C. Returns if the sum is right, else turns the screen red and

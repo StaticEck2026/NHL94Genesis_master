@@ -1,10 +1,6 @@
-;	DefaultMenus (defmenuoptions), ContinuePlayoffs, NewPO, MakeTree,
-;	FigureJoy, InitializeGameStructures, GetRandomUnusedTeam, the playoff
-;	password code (ReadPassBits ... SuperDiv, GetShifter) and the playoff
-;	stat packing (AddPlayoffTeamStats, BitWidthTable, ReadTeamStats).
-;	The playoff bits are kept in pwddatabuffer and saved through
-;	WriteLineData. There are 9 menu options (93 had 7), adding FourWayPlay
-;	(cont3team / cont4team: the Three and Four player choices) and Shootout.
+;	Menu and playoff data: the default menu options, playoff tree setup, pad assignment,
+;	game structure setup, the playoff password code and the playoff stat packing.
+;	The playoff bits are kept in pwddatabuffer and saved through WriteLineData.
 
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.

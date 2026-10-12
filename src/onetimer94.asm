@@ -1,10 +1,5 @@
-;	New in 94: code in the high ROM after the graphics: the one-timer
-;	(puckvzadj, OneTimerPass / OneTimerTarget pass target, assonetimer,
-;	setonetimeranim, onetimershot), the 4 way play adaptor test
-;	(Detect4WayPlay), the crowd meter (LoadCrowdRec, Crowd_Noise), stopna2,
-;	the corner wall check, the hot / cold tables (Create_HotCold_Table,
-;	AttributeCalc) and the hot / cold player lists for the MATCHUPS text
-;	(NextHomeHotPlayer ... GetHotColdTotal).
+;	New in 94: the one-timer: the pass and its target, the one-timer assignment, animation
+;	and shot.
 
 puckvzadj	;set puckvz for a top shelf shot from the distance to the goal line ($108) over puckvy, at most $7FFF. Called from doshot
 	movem.l	d0-d7/a0-a6,-(sp)

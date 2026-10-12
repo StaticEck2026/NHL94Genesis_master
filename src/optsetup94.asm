@@ -1,23 +1,12 @@
-;	The game setup screen. GameSetUp (called from PeriodOver) runs the menu
-;	and the start / demo exits, setoptions only builds the screen, and
-;	ReadSetupPads waits for a pad. Helpers: MoveMenuFrame, ChangeOption,
-;	WrapOption, PrintOptions, PrintOptionValue, PrintOptTeamName, SetFrameRect,
-;	SetupDemo, SetupStart, OptionLimits, OptionValueOffsets, OptionNames.
-;	New in 94: the Goalies and User Records options (9 lines, 6 shown,
-;	scrolled by setupfirstline), Shootout, four way play, the team logo
-;	blocks (DrawHomeBlock / DrawVisBlock) and player cards with user records
-;	(PlayerCardTimer, PlayerCardScreen). UpdateRosterPlayers is an empty
-;	routine kept where the animated roster players used to be updated.
-;	SetFrameRectUnused and CheckNOPUnused are unreferenced. Each
-;	DecompressGraphicsWithCallback is followed by its 8 byte remap table.
-;	TeamLogoBitmaps is a dc.l table.
-;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
-;	fixopcodes.js patches the cmp encoding after assembly.
-;	Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season, Continue Playoffs, New Playoffs, New
-;	Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1Team, 6 Opt2Team, 8 OptPerlen, $A OptGoalie, $C OptUserRec (0 On), $E OptPen (0 Off),
-;	$10 OptLine (0 On, 2 Auto). setupcardflags bits: 0 player card up, 1 card side (visitors), 2 / 3 home / visitors block drawn,
-;	5 C pressed, 6 / 7 home / visitors logo shown. Pad bits: ubut 0, dbut 1, lbut 2, rbut 3, cbut 5, sbut 7.
-;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa ($FF / $FE map 1 / 2, $BF map 1 + priority).
+;	Game setup screen: the option menu, the start and demo exits, option printing and
+;	limits. New in 94: the Goalies and User Records options, Shootout, 4 way play, team logo
+;	blocks and player cards on the setup screen.
+;	Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season,
+;	Continue Playoffs, New Playoffs, New Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1Team,
+;	6 Opt2Team, 8 OptPerlen, $A OptGoalie, $C OptUserRec (0 On), $E OptPen (0 Off), $10
+;	OptLine (0 On, 2 Auto). setupcardflags bits: 0 player card up, 1 card side (visitors),
+;	2 / 3 home / visitors block drawn, 5 C pressed, 6 / 7 home / visitors logo shown.
+;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa.
 
 GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setoptions), then runs the menu: up / down move the frame, left /
 	;right change the option (ChangeOption) and redraw (FixModeOptions), start begins the game (SetupStart), and $5460 frames without a

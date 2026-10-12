@@ -1,3 +1,6 @@
+;	The crowd meter (arena record and crowd noise), the corner wall check, and the hot /
+;	cold player tables and lists used by AttributeCalc and the MATCHUPS text.
+
 LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (ReadCrowdRecord into the buffer at ThreeStars), $50 when none. Called from StartGame
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(HomeTeam).w,d1
