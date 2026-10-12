@@ -2119,9 +2119,9 @@ GetPlayerCount	;d0 = players on team a2 (records until a length word of 2)
 	rts
 WaitVSyncAndReadInput	;Wait for vcount to change and for a new button press (d1)
 	move.w	(vcount).w,d1
-.rj0
+.wait
 	cmp.w	(vcount).w,d1
-	beq.s	.rj0
+	beq.s	.wait
 	bsr.w	getpzjoy
 	bsr.w	nodiag
 	tst.b	d1

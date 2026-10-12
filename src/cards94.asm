@@ -1969,9 +1969,9 @@ CalcAttrib	;The overall rating of player d0: his attributes weighted by OvrPlaye
 	clr.w	d1	;clear d1
 	moveq	#$F,d2	;move 15 dec into d2 (start at bit 15)
 	swap	d4	;swap words in d4
-.loop2
+.bit
 	btst	d2,d4	;bit test d2 bit in d4
-	beq.w	.check	;branch if bit is 0
+	beq.w	.next	;branch if bit is 0
 	move.w	d2,d3	;move d2 into d3
 	lsr.w	#1,d3	;divide d3 by 2
 	neg.w	d3	;negate d3
@@ -2026,8 +2026,8 @@ CalcAttrib	;The overall rating of player d0: his attributes weighted by OvrPlaye
 .00
 	add.w	d3,d0	;add d3 to d0 (d0 = attribute value)
 	addi.w	#$64,d1	;'d'   ; add 100 dec to d1
-.check
-	dbf	d2,.loop2
+.next
+	dbf	d2,.bit
 	cmpa.l	#AttribWgtList,a6	;compare address value FAB3C to a6
 	beq.w	.3	;branch if equal
 	move.w	#$64,d1	;'d'   ; move 100 dec into d1

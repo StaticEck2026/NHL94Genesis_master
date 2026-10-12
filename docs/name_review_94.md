@@ -1256,3 +1256,4 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 | optsetup94 | routine names ok; ChangeOption .wrap/.set, ReadSetupPads .timer, PlayerCardScreen .fade, DrawTeamLogo .draw, PrintOptionNames .done, GameSetUp .fix; menu-key dispatch skips numeric |
 | cards94 | routine names ok; *RecordIO/NameLogIO .read, PlayerCards .draw/.exit, UpdateTeamRecord .write, NameEntryScreen .input; field-by-field skips numeric |
 | note | modules after input94 were reviewed by branch structure (every label with its branches and neighbouring lines), not every line |
+| 93->94 consistency check | all 42 locals renamed in 93G present in the matching 94 routine. Hand-aligned: WaitVSyncAndReadInput .rj0->.wait; GetNameandAttrib's rating loop lives in CalcAttrib in 94 (.skip already, .loop2->.bit, .check->.next). Not applicable: MenuWaitVblank (94 vcountwait, also .wait), banner (no 94 routine) |
