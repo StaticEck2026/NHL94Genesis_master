@@ -3,6 +3,7 @@
 set -- "$(cd "$(dirname "$0")/.." && pwd)" build94.bat nhl94 lst/nhl94.bin
 export WINEDEBUG=-all
 cd "$1"; bat=$2; top=$3; ref=$4
+rm -rf Extracted; node tools/extractAssets94.js $ref >/tmp/x94.log 2>&1 || { echo "EXTRACT FAIL"; tail -5 /tmp/x94.log; }
 rm -f output/$top.bin output/modified_$top.bin
 wine cmd /c "set rev=0&& set checksum=1&& $bat" >/tmp/top.log 2>&1
 log=$(ls -t output/Build*.log | head -1)

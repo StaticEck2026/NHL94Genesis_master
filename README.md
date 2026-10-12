@@ -3,6 +3,13 @@
 Bitwise rebuild of NHL 94 for the Sega Genesis.
 
 The listing is `lst/nhl94.bin.lst`. The ROM it was generated from is `lst/nhl94.bin`. That file is the reference for every segment verify. Do not use a different ROM.
+## Supported ROMs
+NHL 94 had one retail release; `tools/extractAssets94.js` accepts only that ROM, found by SHA-1, and refuses any other (bad dump, hack, prototype) with its SHA-1, size and header. The slices are kept as a per-version map from retail address, so a new version only needs a row with its SHA-1 and offsets.
+
+| Version | Header | File | Size | SHA-1 |
+| --- | --- | --- | --- | --- |
+| Retail | `1993.JUL`, `GM T-50656 -00` | `lst/nhl94.bin` | 1 MB | `7b1489ab501258133bf03e5f0892b77d04312580` |
+
 
 The listing is an IDA LST in ASM68K / MRI mode. It has no address column. `loc_` / `sub_` names are the address.
 

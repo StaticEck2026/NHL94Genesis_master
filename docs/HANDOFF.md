@@ -10,7 +10,7 @@ ROMs (gitignored, never commit): lst/nhl94.bin.
 Windows: `npm run build:retail` (extractassets, build94.bat, fixopcodes, verify);
 segments: `npm run seg:<name>` (all keys in package.json `seg:*`).
 Linux (wine): `apt install wine wine32` (dpkg --add-architecture i386), `export WINEDEBUG=-all`, then
-1. `node tools/extractAssets94.js lst/nhl94.bin` (once, fills Extracted/)
+1. `node tools/extractAssets94.js lst/nhl94.bin` (once, fills Extracted/) Accepts the one retail ROM (SHA-1 7b1489ab...); other ROMs are refused.
 2. `wine cmd /c "set rev=0&& set checksum=1&& build94.bat"`
 3. `node tools/fixopcodes.js "output/nhl94 .lst" output/nhl94.bin`
 4. `node tools/verifyRom.js output/modified_nhl94.bin <reference ROM>` must print MATCH
@@ -69,3 +69,4 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   cards94 -> records94 (user name entry); ShootoutModeBox records94 -> shootout94. Stub orgs/equates,
   package.json, nhl94.asm and the ROM map updated. MATCH.
 - Segment stubs moved to src/stubinc/ (buildseg.bat assembles stubinc\<seg>_stub.asm). MATCH.
+- Extractor takes any known retail ROM: SHA-1 detection (one retail version, 1993.JUL -00), per-version offset map, clear refusal of unknown ROMs. verify_all.sh extracts fresh first. Fresh extract + ROM + all segments MATCH.

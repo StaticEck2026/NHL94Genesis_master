@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
-const crc32 = require('crc-32'); // Requires 'crc-32' package: npm install crc-32
+const crypto = require('crypto');
 
 // Asset definitions from the .lst file
 const assets = [
@@ -514,19 +514,26 @@ const assets = [
     // { name: 'EASN.map.jim', folder: 'NHL94/Graphics', start: 0x0007FC20, end: 0x0007FE8A }
 ];
 
-// Expected CRC32 of lst/nhl94.bin
-const EXPECTED_CRC32 = 0x9438F5DD;
+// Known retail ROMs. NHL 94 had one retail release (1993.JUL, GM T-50656 -00); slices are at its
+// addresses. A new version goes here with its SHA-1 and a map from retail address to its own.
+const VERSIONS = [
+    { id: 'retail', label: 'NHL 94 retail (1993.JUL, GM T-50656 -00)', file: 'lst/nhl94.bin',
+      sha1: '7b1489ab501258133bf03e5f0892b77d04312580', size: 0x100000, date: '1993.JUL', serial: 'GM T-50656 -00',
+      map: (a) => a },
+];
 
-async function verifyCRC32(filePath) {
-    try {
-        const data = await fs.readFile(filePath);
-        const calculatedCRC = crc32.buf(data) >>> 0; // Convert to unsigned 32-bit integer
-        console.log('Caclulated CRC32:', calculatedCRC, EXPECTED_CRC32);
-        return calculatedCRC === EXPECTED_CRC32;
-    } catch (error) {
-        console.error(`Error reading ROM file for CRC32 check: ${error.message}`);
-        return false;
-    }
+// Find the version of a ROM by SHA-1. Size and header are only used to explain a refusal.
+function detectVersion(data) {
+    const sha1 = crypto.createHash('sha1').update(data).digest('hex');
+    const v = VERSIONS.find((x) => x.sha1 === sha1);
+    if (v) return { version: v, sha1 };
+    const date = data.subarray(0x118, 0x120).toString('latin1');
+    const serial = data.subarray(0x180, 0x18E).toString('latin1');
+    const near = VERSIONS.find((x) => x.size === data.length && x.date === date && x.serial === serial);
+    let msg = `Unknown ROM: SHA-1 ${sha1}, ${data.length} bytes, header date '${date}', serial '${serial}'.\n`;
+    if (near) msg += `Header matches ${near.label}, but the SHA-1 does not (bad dump, hack, or byte-swapped/interleaved file?).\n`;
+    msg += 'Supported ROMs:\n' + VERSIONS.map((x) => `  ${x.label}: SHA-1 ${x.sha1} (${x.file})`).join('\n');
+    return { version: null, sha1, msg };
 }
 
 async function extractAssets(romPath, options = {}) {
@@ -537,15 +544,14 @@ async function extractAssets(romPath, options = {}) {
     };
     
     try {
-        // Verify CRC32
-        const isValid = await verifyCRC32(romPath);
-        if (!isValid) {
-            console.error(`CRC32 checksum mismatch. Expected ${EXPECTED_CRC32.toString(16).toUpperCase()}. Aborting extraction.`);
+        const romData = await fs.readFile(romPath);
+        const { version, msg } = detectVersion(romData);
+        if (!version) {
+            console.error(msg + '\nAborting extraction.');
+            process.exitCode = 1;
             return;
         }
-
-        // Read the ROM file
-        const romData = await fs.readFile(romPath);
+        console.log(`ROM: ${version.label}`);
 
         // Create base Extracted directory
         const baseDir = extractOptions.outputDir;
@@ -558,14 +564,15 @@ async function extractAssets(romPath, options = {}) {
             await fs.mkdir(outputDir, { recursive: true });
 
             // Extract data
-            const assetData = romData.slice(asset.start, asset.end);
+            const start = version.map(asset.start), end = version.map(asset.end - 1) + 1;
+            const assetData = romData.slice(start, end);
 
             // Write to file
             const outputPath = path.join(outputDir, asset.name);
             await fs.writeFile(outputPath, assetData);
             
             if (extractOptions.verbose) {
-                console.log(`Extracted ${asset.name} (${assetData.length} bytes) from offset 0x${asset.start.toString(16)} to 0x${asset.end.toString(16)}`);
+                console.log(`Extracted ${asset.name} (${assetData.length} bytes) from offset 0x${start.toString(16)} to 0x${end.toString(16)}`);
                 console.log(`Saved to ${outputPath}`);
             } else {
                 console.log(`Extracted ${asset.name} to ${outputPath}`);
@@ -576,6 +583,7 @@ async function extractAssets(romPath, options = {}) {
         console.log(`Extracted ${assets.length} assets from NHL 94 ROM.`);
     } catch (error) {
         console.error(`Error during extraction: ${error.message}`);
+        process.exitCode = 1;
     }
 }
 
@@ -615,10 +623,10 @@ function parseArgs() {
 // Display help information
 function displayHelp() {
     console.log(`
-NHL 92 Asset Extractor
+NHL 94 Asset Extractor
 ======================
 
-This script extracts assets from NHL Hockey (1991/1992) ROM files.
+This script extracts assets from the NHL 94 Sega Genesis ROM.
 
 Usage: node tools/extractAssets94.js [options] <rom_file_path>
 
@@ -628,12 +636,11 @@ Options:
   -o, --output <dir>      Specify output directory (default: <repo>/Extracted)
 
 Notes:
-  - This script extracts all known assets from the NHL 92 ROM
-  - ROM checksums are verified to ensure correct ROM is used
+  - Accepts the known retail ROM (found by SHA-1); any other ROM is refused
 
 Examples:
-  node extractAssets92.js nhl94retail.bin
-  node extractAssets92.js --verbose --output NHL94Assets nhl94retail.bin
+  node tools/extractAssets94.js lst/nhl94.bin
+  node tools/extractAssets94.js --verbose --output NHL94Assets lst/nhl94.bin
     `);
 }
 
