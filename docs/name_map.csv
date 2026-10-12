@@ -145,3 +145,4 @@ PlayoffRoundScreen,ShootoutModeBox,behavior: the shootout SHOOTOUT MODE box, not
 RoundBigTxt,ShootoutModeBigTxt,behavior: the shootout SHOOTOUT MODE box, not a playoff round screen
 j_NewPO,GoNewPlayoffs,style: no j_ prefix (jmp to NewPO)
 exit,rtsChgplayer,style: shared rts of chgplayer
+StartText,CopyString,behavior: copies a string

@@ -604,7 +604,7 @@ PrintRecordValue	;Record line for a player card (PlayerCardScreen): copy RecordT
 	movea.l	a1,a3
 	movea.l	#RecordTxt,a1
 	movem.l	d0-d1,-(sp)
-	bsr.w	StartText
+	bsr.w	CopyString
 	movem.l	(sp)+,d0-d1
 	bsr.w	GetRecordValue
 	tst.w	d0
@@ -674,7 +674,7 @@ RecSaveTxt	dc.b	0	;PrintRecordValue text
 	dc.b	$76	;v
 	dc.b	$65	;e
 	dc.b	0
-StartText	;Copy String a1 (length word first) to a3
+CopyString	;Copy String a1 (length word first) to a3
 	movem.l	d0,-(sp)
 	move.w	(a1),d0
 	subq.w	#1,d0
@@ -773,7 +773,7 @@ PrintRecordHolder	;Record holder line: RecByTxt ("by") then the holder's user na
 	movea.l	a1,a3
 	movea.l	#RecByTxt,a1
 	movem.l	d0-d1,-(sp)
-	bsr.w	StartText
+	bsr.w	CopyString
 	movem.l	(sp)+,d0-d1
 	movea.l	#TempBuffer,a1
 	bsr.w	AppendRecordHolder
@@ -798,7 +798,7 @@ PrintRecordVs	;Record line: RecVsTxt ("vs.") then the user name and the opponent
 	movea.l	a1,a3
 	movea.l	#RecVsTxt,a1
 	movem.l	d0-d1,-(sp)
-	bsr.w	StartText
+	bsr.w	CopyString
 	movem.l	(sp)+,d0-d1
 	movea.l	#TempBuffer,a1
 	bsr.w	AppendRecordVs
@@ -1240,7 +1240,7 @@ AppendUserName	;Append user name d2 (12 bytes of the name log at namelog, spaces
 	movea.l	a1,a3
 	move.l	a3,-(sp)
 	movea.l	#NoNameTxt,a1
-	jsr	(StartText).l
+	jsr	(CopyString).l
 	movea.l	(sp)+,a2
 	bsr.w	TrimSpaces
 .x
@@ -1472,7 +1472,7 @@ DrawPlayerCard	;Draw a player card: picture (DrawPictureBox), name, "Records" an
 	clr.w	d7
 	movea.l	#ThreeStars,a3
 	movea.l	a2,a1
-	bsr.w	StartText
+	bsr.w	CopyString
 	movea.l	#ThreeStars+2,a3
 .loop2
 	addq.w	#1,d7

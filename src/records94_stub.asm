@@ -39,7 +39,7 @@ CornerLogoMap = $E9A80		;movea.l #x, retail long
 ArenaGfxBank = $E9ED6		;#x
 vcountwait = $80BA		;jsr / jmp (x).l
 
-StartText = $F997A		;bsr.w / bra.w / Bcc.w.
+CopyString = $F997A		;bsr.w / bra.w / Bcc.w.
 ReadNameLog = $F9C68		;bsr.w / bra.w / Bcc.w.
 AppendUserName = $FA014		;bsr.w / bra.w / Bcc.w.
 AppendTeamName = $FA880		;bsr.w / bra.w / Bcc.w.

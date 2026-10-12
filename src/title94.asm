@@ -671,7 +671,7 @@ PlayedByText	;PlayedByHome / PlayedByAway body
 	move.l	a1,-(sp)
 	movea.l	#TempBuffer,a3
 	movea.l	#PlayedByTxt,a1
-	bsr.w	StartText
+	bsr.w	CopyString
 	movea.l	(sp)+,a1
 	movea.l	#TempBuffer,a3
 	jsr	(appstring).l

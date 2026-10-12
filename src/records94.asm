@@ -425,7 +425,7 @@ PrintPlayerRecords	;Record Holders: the rows of the other page (PrintRecordName)
 	move.w	#$19,(printx).w
 	movea.l	#RecHolderByTxt,a1
 	movea.l	#mesarea,a3
-	bsr.w	StartText
+	bsr.w	CopyString
 	move.w	d0,-(sp)
 	cmpi.w	#1,(TempWord1).w
 	bne.w	.4

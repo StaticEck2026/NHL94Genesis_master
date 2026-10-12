@@ -45,7 +45,7 @@ ScoutCrowdRecordBy	;unused: return a1 = 'by <name> ' for the home team's crowd r
 	movea.l	#ThreeStars,a3	;String buffer
 	movea.l	#ScoutByTxt,a1
 	move.l	a3,-(sp)
-	jsr	(StartText).l	;copy the String at a1 to a3: 'by '
+	jsr	(CopyString).l	;copy the String at a1 to a3: 'by '
 	movea.l	(sp)+,a3
 	clr.w	d2
 	move.b	9(a0),d2
