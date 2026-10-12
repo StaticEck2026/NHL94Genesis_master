@@ -505,7 +505,7 @@ defaultsprites2	;objects which are tied to screen scrolling and have velocity: t
 	dc.w	0	;goal net
 	dc.w	$10C
 	dc.w	0
-	dc.w	SPFgoal
+	dc.w	SPFgoal	;92 used $18E
 	dc.w	0
 	dc.w	$B
 	dc.w	$14
@@ -535,7 +535,7 @@ defaultsprites2	;objects which are tied to screen scrolling and have velocity: t
 	dc.w	0	;puck shadow
 	dc.w	0
 	dc.w	0
-	dc.w	SPFpuck
+	dc.w	SPFpuck	;92 used $183, 4 chars
 	dc.w	0
 	dc.w	$11
 	dc.w	3
@@ -600,7 +600,7 @@ resetplstuff	;reset team variables/and players on both teams. Called from puckfa
 	clr.b	pflags2(a3)	;pflags2
 	tst.w	position(a3)	;check for goalie
 	bmi.w	.next
-	move.w	#SPAglide,d1
+	move.w	#SPAglide,d1	;92 $346
 	bsr.w	SetSPA
 	clr.w	impact(a3)	;impact
 	clr.b	nopuck(a3)	;nopuck
