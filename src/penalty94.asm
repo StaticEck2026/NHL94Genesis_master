@@ -1013,8 +1013,8 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 ;	(bit 1 gsfhl, bit 2 gsfso).
 
 printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team names and scores). Horizontal rink
-	;.sbscreen: period and both team logos with big scores. The period name is gsp of PerLabels, or name 4 of PenShotPenalties2
-	;when gmode2 bit 1 is set; the horizontal rink uses PenShotPenalties2 (name 4 when bit 0 is set). sflags5 bit 7 sets crowdnoisedelay = $78.
+	;.sbscreen: period and both team logos with big scores. The period name is gsp of PerLabels, or name 4 of PerLabels2
+	;when gmode2 bit 1 is set; the horizontal rink uses PerLabels2 (name 4 when bit 0 is set). sflags5 bit 7 sets crowdnoisedelay = $78.
 	;Called from USBoard, Pausemode, lcfound2 and others
 	movem.l	d0-d2/a0-a3,-(sp)
 	btst	#sfhor,(sflags).w	;sfhor
@@ -1036,7 +1036,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	btst	#1,(gmode2).w
 	beq.w	.1
 	move.w	#4,d0
-	movea.l	#PenShotPenalties2,a1
+	movea.l	#PerLabels2,a1
 .1
 	bsr.w	PrintStringFromList
 	bsr.w	EASNLogo
@@ -1066,7 +1066,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	beq.w	.2
 	move.w	#4,d0
 .2
-	movea.l	#PenShotPenalties2,a1	;the horizontal rink always takes the name from PenShotPenalties2
+	movea.l	#PerLabels2,a1	;the horizontal rink always takes the name from PerLabels2
 	bsr.w	AdvanceStringPtr
 	move.w	(a1),d0
 	lsr.w	#1,d0	;center the period name on x $11

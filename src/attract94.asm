@@ -1,5 +1,5 @@
 ;	New in 94: the EA Sports screen (EASportsScreen, called from Begin) and
-;	the helpers after it (SetPojoyMode, DrawMatchupBitmaps, DrawTeamBitmap,
+;	the helpers after it (UpdatePlayoffLevel, DrawMatchupBitmaps, DrawTeamBitmap,
 ;	dotb, ClearRosterName, setoptions_printpos2, PickStartingGoalie), then the
 ;	options screen vblank handler (VBlank_SetOptions).
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real
@@ -51,7 +51,7 @@ EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or 
 .ex	move	#$2700,sr
 	rts
 
-SetPojoyMode	;Set pojoy from the number of players for play modes 2 and 3.
+UpdatePlayoffLevel	;Set pojoy from the number of players for play modes 2 and 3.
 	cmpi.w	#2,(OptPlayMode).w
 	blt.w	rtss2
 	cmpi.w	#4,(OptPlayMode).w

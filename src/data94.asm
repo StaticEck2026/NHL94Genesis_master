@@ -1567,7 +1567,7 @@ PerLabels	String	'1',$12	;text list for periods; ' F' is the final. Used by prin
 	String	'OT'
 	String	' F'
 
-PenShotPenalties2	String	'1',$12	;the same with a blank last entry. Used by printscores1
+PerLabels2	String	'1',$12	;the same with a blank last entry. Used by printscores1
 	String	'2',$13
 	String	'3',$14
 	String	'OT'

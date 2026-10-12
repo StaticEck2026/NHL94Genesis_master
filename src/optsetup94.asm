@@ -956,7 +956,7 @@ SetupStart	;Start pressed: Copy Goalies to both teams, set pojoy, seed RNGseed, 
 	move.w	(OptGoalie).w,-(sp)
 	move.w	(sp),(goaliemode1).w
 	move.w	(sp)+,(goaliemode2).w
-	jsr	(SetPojoyMode).l
+	jsr	(UpdatePlayoffLevel).l
 	move.w	(VDP_CNTR).l,(seed).w
 	move.w	(VDP_CNTR).l,(seed+2).w
 	move.w	(OptLine).w,(TmpOptLine2).w
