@@ -79,7 +79,7 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 
 `npm run build:segacd` assembles the fragments below and compares them to `cdbin/`. The cartridge ROM is not involved. The Sega CD assemble uses `/o oz-` so a written `$0(an)` stays a 16-bit displacement. The cartridge build still uses `/o oz+`.
 
-Verified bytes are 13,832 of the 410,162 bytes in the four code files (3.4%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416, 22.3%). `STARTER.BIN` is 336 bytes. `HOCKEY.BIN` and `PLAYER.BIN` are not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched.
+Verified bytes are 15,470 of the 410,162 bytes in the four code files (3.8%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416, 22.3%). `STARTER.BIN` is 1,512 bytes. `HOCKEY.BIN` is 462 bytes. `PLAYER.BIN` is not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD-DA, the PCM stream, and the cartridge crowd channel are written up in `docs/segacd_audio.md`.
 
 | Source | Compared to | Bytes |
 | --- | --- | --- |
@@ -94,6 +94,15 @@ Verified bytes are 13,832 of the 410,162 bytes in the four code files (3.4%). `M
 | `src/segacd/maintext.asm` | `cdbin/MAIN.BIN` `$302A` | `$FF302A`-`$FF34B7` (1,166) |
 | `src/segacd/subboot.asm` | `cdbin/STARTER.BIN` | first `$90` bytes (144) |
 | `src/segacd/subheap.asm` | `cdbin/STARTER.BIN` `$4FA8` | `EngineIdle` and `GetData` (192) |
+| `src/segacd/pcmclear.asm` | `cdbin/STARTER.BIN` `$3A0C` | PCM channel wipe (106) |
+| `src/segacd/cdcwait.asm` | `cdbin/STARTER.BIN` `$3A76` | `CDBCHK` spin (20) |
+| `src/segacd/pcmchip.asm` | `cdbin/STARTER.BIN` `$3FD0` | PCM init, start, stop, address, bank load (298) |
+| `src/segacd/audiostream.asm` | `cdbin/STARTER.BIN` `$508C` | `AudioPlayPos` through `AudioBusy` (632) |
+| `src/segacd/cdfade.asm` | `cdbin/STARTER.BIN` `$54F6` | seek/repeat, fader ramp, stop (120) |
+| `src/segacd/cdrequest.asm` | `cdbin/HOCKEY.BIN` `$1C1D2` | store a requested CD track (52) |
+| `src/segacd/cdtrack.asm` | `cdbin/HOCKEY.BIN` `$1C206` | choose a track and `MSCPLAY1` (202) |
+| `src/segacd/cdcrowd.asm` | `cdbin/HOCKEY.BIN` `$238CE` | crowd-volume slew, no PSG write (78) |
+| `src/segacd/cdstart.asm` | `cdbin/HOCKEY.BIN` `$24D66` | CD-DA mode, seek track 4, repeat it (130) |
 
 `maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. Past the handshake it clears the eight command words, waits on memory-mode bit 2, and hands word RAM back and forth (DMNA / RET in `$A12003`). Two commands add `$180000` to a sub CPU pointer so the main CPU sees the same word RAM (`$080000` there, `$200000` here).
 
@@ -106,5 +115,7 @@ Verified bytes are 13,832 of the 410,162 bytes in the four code files (3.4%). `M
 `maintext.asm` is the Sierra C handlers those calls land in: `DoDrawTextCommand`, `DoMoviePlayBack`, `MAINCODE`, `ReDraw`, `drawprint`, `NumStr`, `HexStr`, `aprint`, `InitWorld`, `GetCommandFromSub`, and `Set1MFlag`. Each `rts` is followed by the function name (a tag byte, then the ASCII). `InitWorld` prints `MAINCPU is alive`. The same eleven names occur again later in the file, `$2240` bytes on.
 
 `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`. `subheap.asm` is the Sierra C `EngineIdle` and `GetData` at `$262A8` (the `link a6` the boot jumps to). The function name is the bytes after each `rts`.
+
+The audio slices are the sub CPU's CD-DA calls and the PCM stream. `docs/segacd_audio.md` lists the `_CDBIOS` numbers, the track word at `$1745E`, and the crowd-volume routine whose PSG stores were dropped.
 
 `tools/emit_m68k.py` writes a slice as SNASM (`moveq #-1` instead of `moveq #$FF`, unsized `btst` to a data register, `$FFFFFD08.w` instead of `$FD08.w`). `tools/segacd_relocs.py` is the six-instruction matcher behind `docs/segacd_pairs.txt`.

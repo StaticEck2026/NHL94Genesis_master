@@ -65,5 +65,50 @@ if errorlevel 1 (
     echo subheap assembly failed
     exit /b 1
 )
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\pcmclear.asm,%WORKSPACE%output\pcmclear.bin,%WORKSPACE%output\pcmclear,%WORKSPACE%output\pcmclear" > "%WORKSPACE%output\Build_pcmclear.log"
+if errorlevel 1 (
+    echo pcmclear assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\cdcwait.asm,%WORKSPACE%output\cdcwait.bin,%WORKSPACE%output\cdcwait,%WORKSPACE%output\cdcwait" > "%WORKSPACE%output\Build_cdcwait.log"
+if errorlevel 1 (
+    echo cdcwait assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\pcmchip.asm,%WORKSPACE%output\pcmchip.bin,%WORKSPACE%output\pcmchip,%WORKSPACE%output\pcmchip" > "%WORKSPACE%output\Build_pcmchip.log"
+if errorlevel 1 (
+    echo pcmchip assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\audiostream.asm,%WORKSPACE%output\audiostream.bin,%WORKSPACE%output\audiostream,%WORKSPACE%output\audiostream" > "%WORKSPACE%output\Build_audiostream.log"
+if errorlevel 1 (
+    echo audiostream assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\cdfade.asm,%WORKSPACE%output\cdfade.bin,%WORKSPACE%output\cdfade,%WORKSPACE%output\cdfade" > "%WORKSPACE%output\Build_cdfade.log"
+if errorlevel 1 (
+    echo cdfade assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\cdrequest.asm,%WORKSPACE%output\cdrequest.bin,%WORKSPACE%output\cdrequest,%WORKSPACE%output\cdrequest" > "%WORKSPACE%output\Build_cdrequest.log"
+if errorlevel 1 (
+    echo cdrequest assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\cdtrack.asm,%WORKSPACE%output\cdtrack.bin,%WORKSPACE%output\cdtrack,%WORKSPACE%output\cdtrack" > "%WORKSPACE%output\Build_cdtrack.log"
+if errorlevel 1 (
+    echo cdtrack assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\cdcrowd.asm,%WORKSPACE%output\cdcrowd.bin,%WORKSPACE%output\cdcrowd,%WORKSPACE%output\cdcrowd" > "%WORKSPACE%output\Build_cdcrowd.log"
+if errorlevel 1 (
+    echo cdcrowd assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq+ /o osq+ "segacd\cdstart.asm,%WORKSPACE%output\cdstart.bin,%WORKSPACE%output\cdstart,%WORKSPACE%output\cdstart" > "%WORKSPACE%output\Build_cdstart.log"
+if errorlevel 1 (
+    echo cdstart assembly failed
+    exit /b 1
+)
 
 endlocal
