@@ -394,19 +394,19 @@ PrintParenNumber	;PrintPlayerAssists / PrintPlayerGoals: the number (1 to 3 digi
 	move.w	#$E,(printx).w
 	movem.l	(sp)+,d0/a2
 	rts
-PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl). For frames SPAboardtop / SPAboardbot (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and
-	;SPAboardright / SPAboardmidr / SPAboardleft / SPAboardmidl (x to +-$82 / $88 by bit 3 of 4(a3)) of SPA(a3): move player a3 half way there. Called from updateplayers
-	cmpi.w	#SPAboardmidl,SPA(a3)
+PlaceBoardFall	;A player falling into the boards (SPAboardfront ... SPAbenchcheckl). For frames SPAboardfront / SPAboardback (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and
+	;SPAboardright / SPAbenchcheckr / SPAboardleft / SPAbenchcheckl (x to +-$82 / $88 by bit 3 of 4(a3)) of SPA(a3): move player a3 half way there. Called from updateplayers
+	cmpi.w	#SPAbenchcheckl,SPA(a3)
 	beq.w	.12
-	cmpi.w	#SPAboardmidr,SPA(a3)
+	cmpi.w	#SPAbenchcheckr,SPA(a3)
 	beq.w	.8
 	cmpi.w	#SPAboardleft,SPA(a3)
 	beq.w	.10
 	cmpi.w	#SPAboardright,SPA(a3)
 	beq.w	.6
-	cmpi.w	#SPAboardtop,SPA(a3)
+	cmpi.w	#SPAboardfront,SPA(a3)
 	beq.w	.0
-	cmpi.w	#SPAboardbot,SPA(a3)
+	cmpi.w	#SPAboardback,SPA(a3)
 	beq.w	.3
 	bra.w	.x
 .0

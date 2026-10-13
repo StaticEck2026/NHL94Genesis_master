@@ -62,12 +62,12 @@ ArenaGfxBank = $E9ED6		;dc.l x+n in ArenaAnims and TeamGfxList
 PlayoffSprite = $F3098		;#x+$12E0
 
 ; frames94 equates (the segment does not include frames94.asm; it emits bytes)
-SPAboardmidl	=	$193E
-SPAboardmidr	=	$1A00
+SPAbenchcheckl	=	$193E
+SPAbenchcheckr	=	$1A00
 SPAboardleft	=	$18CC
 SPAboardright	=	$17E8
-SPAboardtop	=	$1776
-SPAboardbot	=	$185A
+SPAboardfront	=	$1776
+SPAboardback	=	$185A
 SPAglide	=	$50C
 
 ; Main segment code

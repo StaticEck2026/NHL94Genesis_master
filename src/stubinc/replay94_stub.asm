@@ -56,12 +56,12 @@ SPFpuck	=	394
 SPFbglass	=	653
 SPFfight	=	354
 SPFPen	=	377
-SPAboardmidl	=	$193E
-SPAboardmidr	=	$1A00
+SPAbenchcheckl	=	$193E
+SPAbenchcheckr	=	$1A00
 SPAboardleft	=	$18CC
 SPAboardright	=	$17E8
-SPAboardtop	=	$1776
-SPAboardbot	=	$185A
+SPAboardfront	=	$1776
+SPAboardback	=	$185A
 SPAinjuryfall	=	$145C
 SPAinjury1	=	$1AF4
 

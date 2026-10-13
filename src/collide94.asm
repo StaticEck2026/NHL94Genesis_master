@@ -615,7 +615,7 @@ Bcheck	;a2 = player that is B checking, a3 = player being checked. Entered from 
 	rts
 FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in some anims, or the same pair as the last call. A skater hitter
 	;adds check stats (team $10, player $11C, ChkCnt). A hit into the wall picks a fall anim from .FallList by where a2 is (the SPAboardright /
-	;SPAboardleft falls near center ice (|Ypos| up to $59 / $38) become SPAboardmidl / SPAboardmidr), a strong Stk player may just stumble, and an injury
+	;SPAboardleft falls near center ice (|Ypos| up to $59 / $38) become SPAbenchcheckl / SPAbenchcheckr), a strong Stk player may just stumble, and an injury
 	;(setInjuryType) adds penalty $12 (or $14) and stops play. Then the crowd and a check sound (newcheck). Called from checkint (.ci), CCStart and
 	;Bcheck
 	cmpi.w	#$B,SCnum(a2)	;0-11 are player structs
@@ -757,7 +757,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	move.w	d1,-(sp)	;push to stack
 	move.b	#0,temp1(a3)	;clear temp1
 	move.b	#0,glitch(a3)	;clear glitch
-	move.w	#SPAboardchk,d1
+	move.w	#SPAcrosscheck,d1
 	jsr	(SetSPA).l	;set animation
 	clr.w	Xvel(a3)	;clear Xvel
 	clr.w	Yvel(a3)	;clear Yvel
@@ -796,10 +796,10 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	move.w	#7,d0
 	jsr	(StartArenaAnim).l
 	move.w	(sp)+,d0
-	move.w	#SPAboardmidl,d1	;anim value
+	move.w	#SPAbenchcheckl,d1	;anim value
 	btst	#3,4(a2)
 	beq.w	.6
-	move.w	#SPAboardmidr,d1
+	move.w	#SPAbenchcheckr,d1
 	bra.w	.6
 .1
 	cmp.w	#SPAboardright,d1	;player right of center
@@ -808,10 +808,10 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	bgt.w	.4	;branch if higher
 	cmpi.w	#$FFC8,Ypos(a2)	;compare -38 to Ypos
 	blt.w	.4	;branch if lower
-	move.w	#SPAboardmidr,d1	;change anim value
+	move.w	#SPAbenchcheckr,d1	;change anim value
 	btst	#3,4(a2)	;check bit 3 of frame
 	beq.w	.6	;branch if zero
-	move.w	#SPAboardmidl,d1	;change anim value
+	move.w	#SPAbenchcheckl,d1	;change anim value
 	bra.w	.6
 .4
 	btst	#3,4(a2)	;check bit 3 of frame
@@ -832,12 +832,12 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	movem.l	(sp)+,d0/a0	;pop from stack
 	bra.w	.8
 .FallList	;(a table inside FallDown). Fall anim by where a2 is: above, right, below, left (2 words each)
-	dc.w	SPAboardtop
-	dc.w	SPAboardtop
+	dc.w	SPAboardfront
+	dc.w	SPAboardfront
 	dc.w	SPAboardright
 	dc.w	SPAboardright
-	dc.w	SPAboardbot
-	dc.w	SPAboardbot
+	dc.w	SPAboardback
+	dc.w	SPAboardback
 	dc.w	SPAboardleft
 	dc.w	SPAboardleft
 .7

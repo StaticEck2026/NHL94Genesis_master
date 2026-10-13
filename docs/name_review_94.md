@@ -331,20 +331,20 @@ Verdicts from reading each routine body / usage. "ok" = name matches behavior.
 
 | name | verdict |
 |---|---|
-| SPAboardbot | ok |
-| SPAboardbot_table | ok |
-| SPAboardchk | ok |
-| SPAboardchk_table | ok |
+| SPAboardback | ok |
+| SPAboardback_table | ok |
+| SPAcrosscheck | ok |
+| SPAcrosscheck_table | ok |
 | SPAboardleft | ok |
 | SPAboardleft_table | ok |
-| SPAboardmidl | ok |
-| SPAboardmidl_table | ok |
-| SPAboardmidr | ok |
-| SPAboardmidr_table | ok |
+| SPAbenchcheckl | ok |
+| SPAbenchcheckl_table | ok |
+| SPAbenchcheckr | ok |
+| SPAbenchcheckr_table | ok |
 | SPAboardright | ok |
 | SPAboardright_table | ok |
-| SPAboardtop | ok |
-| SPAboardtop_table | ok |
+| SPAboardfront | ok |
+| SPAboardfront_table | ok |
 | SPAghighl | ok |
 | SPAghighl_table | ok |
 | SPAghighr | ok |

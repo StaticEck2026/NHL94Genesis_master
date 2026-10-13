@@ -149,3 +149,8 @@ StartText,CopyString,behavior: copies a string
 (new equate),SPFslamtop,frame 708 slam hold top
 (new equate),SPFslambot,frame 712 slam hold bottom
 (new equate),SPFghighr,frame 658 goalie high right
+SPAboardtop,SPAboardfront,behavior
+SPAboardbot,SPAboardback,behavior
+SPAboardmidl,SPAbenchcheckl,behavior
+SPAboardmidr,SPAbenchcheckr,behavior
+SPAboardchk,SPAcrosscheck,behavior
