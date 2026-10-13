@@ -303,25 +303,25 @@ defaultsprites	;allocate vram and assign char area for graphic structures. d4 = 
 	dc.w	0	;xcord,ycord,zpos,frame,attribute,vram char size
 	dc.w	0
 	dc.w	$FFFF
-	dc.w	$188	;SPFpad+2 frame (puck poss. star)
+	dc.w	SPFpad+2	;puck poss. star
 	dc.w	0
 	dc.w	7
 	dc.w	0
 	dc.w	0
 	dc.w	$FFFF
-	dc.w	$186	;SPFpad+0 frame (joypad 1 star)
+	dc.w	SPFpad	;joypad 1 star
 	dc.w	0
 	dc.w	7
 	dc.w	0
 	dc.w	0
 	dc.w	$FFFF
-	dc.w	$187	;SPFpad+1 frame (joypad 2 star)
+	dc.w	SPFpad+1	;joypad 2 star
 	dc.w	0
 	dc.w	7
 	dc.w	0
 	dc.w	0
 	dc.w	$FFFF
-	dc.w	$189	;SPFPad+3 frame (replay cursor)
+	dc.w	SPFreplay	;replay cursor
 	dc.w	$8000
 	dc.w	7
 	dc.w	0
@@ -339,7 +339,7 @@ defaultsprites	;allocate vram and assign char area for graphic structures. d4 = 
 	dc.w	0
 	dc.w	0
 	dc.w	$FFFF
-	dc.w	$161	;SPFgloves frame
+	dc.w	SPFgloves
 	dc.w	0
 	dc.w	5
 defaultsprites2	;objects which are tied to screen scrolling and have velocity: the 16 SortCords objects from .list (players, puck, puck shadow, goal
@@ -505,7 +505,7 @@ defaultsprites2	;objects which are tied to screen scrolling and have velocity: t
 	dc.w	0	;goal net
 	dc.w	$10C
 	dc.w	0
-	dc.w	$195
+	dc.w	SPFgoal	;92 used $18E
 	dc.w	0
 	dc.w	$B
 	dc.w	$14
@@ -515,7 +515,7 @@ defaultsprites2	;objects which are tied to screen scrolling and have velocity: t
 	dc.w	0	;goal net 2
 	dc.w	$FEF4
 	dc.w	0
-	dc.w	$196
+	dc.w	SPFgoal+1
 	dc.w	0
 	dc.w	$11
 	dc.w	$14
@@ -525,7 +525,7 @@ defaultsprites2	;objects which are tied to screen scrolling and have velocity: t
 	dc.w	0	;puck
 	dc.w	0
 	dc.w	0
-	dc.w	$18B
+	dc.w	SPFpuck+1
 	dc.w	0
 	dc.w	1
 	dc.w	5
@@ -535,7 +535,7 @@ defaultsprites2	;objects which are tied to screen scrolling and have velocity: t
 	dc.w	0	;puck shadow
 	dc.w	0
 	dc.w	0
-	dc.w	$18A
+	dc.w	SPFpuck	;92 used $183, 4 chars
 	dc.w	0
 	dc.w	$11
 	dc.w	3
@@ -600,7 +600,7 @@ resetplstuff	;reset team variables/and players on both teams. Called from puckfa
 	clr.b	pflags2(a3)	;pflags2
 	tst.w	position(a3)	;check for goalie
 	bmi.w	.next
-	move.w	#$50C,d1
+	move.w	#SPAglide,d1	;92 $346
 	bsr.w	SetSPA
 	clr.w	impact(a3)	;impact
 	clr.b	nopuck(a3)	;nopuck

@@ -146,3 +146,6 @@ RoundBigTxt,ShootoutModeBigTxt,behavior: the shootout SHOOTOUT MODE box, not a p
 j_NewPO,GoNewPlayoffs,style: no j_ prefix (jmp to NewPO)
 exit,rtsChgplayer,style: shared rts of chgplayer
 StartText,CopyString,behavior: copies a string
+(new equate),SPFslamtop,frame 708 slam hold top
+(new equate),SPFslambot,frame 712 slam hold bottom
+(new equate),SPFghighr,frame 658 goalie high right

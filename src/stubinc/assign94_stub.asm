@@ -33,5 +33,16 @@ setplayer = $15AA4		;jsr / jmp (x).l at $C842
 skateto = $103C8			;bsr.w / Bcc.w at $C85E
 vtoa = $10676			;bsr.w / Bcc.w at $CC3A
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPAglide	=	$50C
+SPAgready	=	$2
+SPAwallleft	=	$FAC
+SPAwallright	=	$F6E
+SPAfaceoff	=	$FEA
+SPAfaceoffr	=	$1014
+SPAstanley	=	$109E
+SPAcelebrate	=	$E8A
+SPApump	=	$EFC
+
 ; Main segment code
 	include	assign94.asm

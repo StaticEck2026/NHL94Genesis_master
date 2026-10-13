@@ -367,9 +367,9 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	beq.w	.0	;branch if 0
 	btst	#3,(sflags4).w	;test bit 3
 	bne.w	.assstart	;branch if set
-	cmpi.w	#$2C4,6(a3)	;compare to alice frame number
+	cmpi.w	#SPFslamtop,6(a3)	;compare to alice frame number
 	bne.w	.assstart	;branch if not equal
-	cmpi.w	#$2C8,6(a3)	;compare to alice frame number
+	cmpi.w	#SPFslambot,6(a3)	;compare to alice frame number
 	bne.w	.assstart	;branch if not equal
 	bset	#3,(sflags4).w	;set bit 3
 	move.w	#SFXcheck,-(sp)	;SFX
@@ -388,10 +388,10 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	ble.w	.assstart	;branch if less than
 	bset	#1,(sflags4).w	;set bit 1
 	bclr	#3,(sflags4).w	;clear bit 3
-	move.w	#$1596,d1	;SPAgslamtop: goalie stick slam after a goal, top net
+	move.w	#SPAgslamtop,d1	;goalie stick slam after a goal, top net
 	btst	#7,pflags(a3)	;check what goal shooting at
 	beq.w	.1	;branch if bottom
-	move.w	#$1684,d1	;SPAgslambot: bottom net
+	move.w	#SPAgslambot,d1	;bottom net
 .1
 	bsr.w	SetSPA	;set animation of d1
 	bset	#1,pflags2(a3)	;set anim in progress
@@ -434,16 +434,16 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	bne.w	rtss2	;exit if so
 	btst	#0,(sflags4).w	;check bit 0
 	beq.w	.noskate3	;branch if not set
-	cmpi.w	#$2C5,6(a3)	;check alice frame
+	cmpi.w	#SPFslamtop+1,6(a3)	;check alice frame
 	beq.w	.noskate2	;branch if equal
-	cmpi.w	#$2C9,6(a3)	;check alice frame
+	cmpi.w	#SPFslambot+1,6(a3)	;check alice frame
 	bne.w	.noskate3	;branch if not equal
 	move.w	#4,facedir(a3)	;set 4 to facedir - face down
 	bra.w	.noskate3
 .noskate2
 	move.w	#0,facedir(a3)	;set 0 to facedir - face up
 .noskate3
-	move.w	#2,d1	;2 = SPAgready
+	move.w	#SPAgready,d1
 	bsr.w	SetSPA
 	btst	#2,(BA_PS_flags).w	;check bit 2
 	bne.w	.noskate4	;branch if set
@@ -576,7 +576,7 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	bsr.w	vtoa
 	move.w	d0,facedir(a3)	;d0 into facedir. Goalie will face puck
 	move.b	#8,nopuck(a3)	;move 8 to nopuck collision
-	move.w	#$2F4,d1	;goalie dive anim.
+	move.w	#SPAgdive,d1	;goalie dive anim.
 	bsr.w	SetSPA	;set animation
 	bset	#1,pflags2(a3)	;set anim in progress
 	addi.w	#$96,(crowdlevel).w
@@ -926,13 +926,13 @@ goaliesave
 	add.w	d0,d0
 	lea	.saveanim(pc),a1
 	move.w	0(a1,d0.w),d1
-	cmp.w	#$178,d1
+	cmp.w	#SPAgglovel,d1
 	bne.w	.13
 	andi.w	#3,d3
 	beq.w	.13
 	cmpi.b	#$B,aggress(a3)	;73 = Glove Left. Compares 11 dec to GloveL
 	blt.w	.13	;branch if less than
-	move.w	#$1AA,d1	;reach out glove save
+	move.w	#SPAgglovel2,d1	;reach out glove save
 .13
 	bsr.w	SetSPA
 	addi.w	#$96,(crowdlevel).w
@@ -943,17 +943,17 @@ goaliesave
 	asr.w	Yvel(a3)
 	rts
 .saveanim	;SPA per save type. Same 10 words as the unreferenced table in the input code
-	dc.w	$146
+	dc.w	SPAgglover
 	;blocker save
-	dc.w	$178	;glove save
-	dc.w	$250	;pad stack right
-	dc.w	$2A2	;pad stack left
-	dc.w	$1EC	;kick save
-	dc.w	$21E	;blocking butterfly save
-	dc.w	$148E	;SPAghighr. high shoulder save right
-	dc.w	$14C0	;SPAghighl. high shoulder save left
-	dc.w	$14F2	;SPAgstick2r. stick save right
-	dc.w	$1544	;SPAgstick2l. stick save left
+	dc.w	SPAgglovel	;glove save
+	dc.w	SPAgstackr	;pad stack right
+	dc.w	SPAgstackl	;pad stack left
+	dc.w	SPAgstickr	;kick save
+	dc.w	SPAgstickl	;blocking butterfly save
+	dc.w	SPAghighr	;high shoulder save right
+	dc.w	SPAghighl	;high shoulder save left
+	dc.w	SPAgstick2r	;stick save right
+	dc.w	SPAgstick2l	;stick save left
 ; assignment to have goalie skate to the puck when it is loose
 assgoalietopuck
 	btst	#3,pflags(a3)
@@ -1620,7 +1620,7 @@ EvadePC
 	subi.w	#$58,d1	;'X'   ; sub 88 from Ypos (top blue line)
 	cmp.w	#$A,d1	;compare to 10 decimal
 	bgt.w	.ex	;exit if greater
-	cmp.w	#$FFCE,d1	;compare to -50
+	cmp.w	#-50,d1
 	blt.w	.ex	;branch if less than
 	moveq	#2,d0
 	move.w	(a3),d1	;Xpos
@@ -2387,7 +2387,7 @@ puckpenshot
 	clr.w	(a0)
 	move.w	#$FEF4,$14(a0)
 	movea.w	#(SortCords+((puckscnum+1)*SCstruct)-M68K_RAM),a0	;puck shadow SCstruct
-	move.w	#$18A,6(a0)
+	move.w	#SPFpuck,6(a0)
 	clr.w	$58(a0)
 	clr.w	4(a0)
 	clr.w	(SortCords+(puckscnum*SCstruct)+attribute).w
@@ -2500,7 +2500,7 @@ puckpenshot
 	move.w	d0,facedir(a3)
 	bclr	#2,pflags2(a3)
 	bclr	#5,pflags(a3)
-	move.w	#$50C,d1
+	move.w	#SPAglide,d1
 	bsr.w	SetSPA
 .nextplayer
 	suba.l	#$80,a3
@@ -3045,7 +3045,7 @@ puckfaceoff2
 	clr.w	(a0)
 	move.w	#$FEF4,Ypos(a0)	;Ypos
 	movea.w	#(SortCords+((puckscnum+1)*SCstruct)-M68K_RAM),a0	;move to puck shadow SCnum
-	move.w	#$18A,frame(a0)	;#SPFpuck, Frame
+	move.w	#SPFpuck,frame(a0)
 	clr.w	SPA(a0)	;SPA
 	clr.w	attribute(a0)	;attribute
 	clr.w	(SortCords+(puckscnum*SCstruct)+attribute).w	;clear puck SCnum attribute
@@ -3141,7 +3141,7 @@ puckfaceoff2
 	move.w	d0,facedir(a3)	;facedir
 	bclr	#2,pflags2(a3)	;#pf2unav
 	bclr	#pfalock,pflags(a3)	;#pfalock
-	move.w	#$50C,d1	;#SPAglide
+	move.w	#SPAglide,d1
 	bsr.w	SetSPA
 .next
 	adda.w	#$80,a3	;#Scstruct
@@ -3718,12 +3718,12 @@ puckflip
 	eor.w	d0,facedir(a3)	;facedir
 	andi.w	#3,facedir(a3)
 	st	SPAcnt(a3)	;SPAcnt
-	move.w	#$46A,d1	;#SPApflip
+	move.w	#SPApflip,d1
 	bra.w	SetSPA
 ; assignment for puck shadow
 ; a3 = puck shadow
 puckshadow
-	cmpi.w	#$18A,frame(a3)	;#SPFpuck, frame
+	cmpi.w	#SPFpuck,frame(a3)
 	bne.w	.siren	;shadow turns into siren on goals
 	move.w	Xpos-SCstruct(a3),(a3)	;Xpos-SCstruct, Xpos
 	move.w	Ypos-SCstruct(a3),Ypos(a3)	;Ypos-SCstruct, Ypos
@@ -4116,10 +4116,10 @@ SetSPA
 doplayeracc
 	tst.w	position(a3)
 	beq.w	goalieacc	;goalie is special
-	move.w	#$50C,d1	;#SPAglide
+	move.w	#SPAglide,d1
 	btst	#pfrev,pflags(a3)	;check if skating backwards
 	beq.w	.d0	;branch if not
-	move.w	#$A60,d1	;#SPAglideback
+	move.w	#SPAglideback,d1
 .d0
 	andi.w	#$F,d0	;pass first 4 bits of d0
 	cmp.w	#7,d0	;compare to 7
@@ -4228,13 +4228,13 @@ doplayeracc
 	clr.w	d1
 	tst.w	0(a0,d0.w)
 	bpl.w	.s1
-	eori.w	#$FFCE,d1	;#SPAturnl-#SPAturnr
+	eori.w	#SPAturnl-SPAturnr,d1
 .s1
 	btst	#3,attribute(a3)	;test bit 3 of attribute
 	beq.w	.s2
-	eori.w	#$FFCE,d1	;#SPAturnl-#SPAturnr
+	eori.w	#SPAturnl-SPAturnr,d1
 .s2
-	addi.w	#$694,d1	;#SPAturnr
+	addi.w	#SPAturnr,d1
 	bset	#pf2aip,pflags2(a3)	;set animation in progress flag
 .s3
 	bsr.w	SetSPA
@@ -4303,7 +4303,7 @@ goalieacc	;goalie gets acc. in direction d0. Turns facedir one step toward d0
 	bsr.w	AdjustFacingDirection
 	movem.w	(sp)+,d0-d1
 .setready
-	move.w	#2,d1
+	move.w	#SPAgready,d1
 	btst	#1,pflags2(a3)
 	bne.w	.exit
 	bsr.w	SetSPA
@@ -4336,7 +4336,7 @@ goalieacc	;goalie gets acc. in direction d0. Turns facedir one step toward d0
 	move.w	d0,d2
 	bra.w	playeracc
 .normalgoalie
-	move.w	#2,d1
+	move.w	#SPAgready,d1
 	btst	#3,pflags(a3)
 	beq.w	.goalieacc2
 	btst	#2,pflags(a3)
@@ -4392,7 +4392,7 @@ goalieacc	;goalie gets acc. in direction d0. Turns facedir one step toward d0
 	andi.w	#7,d0
 	move.w	d0,facedir(a3)
 .d11
-	move.w	#$3D8,d1
+	move.w	#SPAgskate,d1
 	bsr.w	SetSPA
 	move.w	facedir(a3),d2
 	bra.w	playeracc
@@ -4422,24 +4422,24 @@ noturn0	;doplayeracc when the wanted direction needs no turn (.ftab entry 0). d0
 	subq.w	#2,facedir(a3)
 .nos0
 	andi.w	#7,facedir(a3)
-	move.w	#$50C,d1
+	move.w	#SPAglide,d1
 	btst	#pfrev,pflags(a3)
 	beq.w	SetSPA
-	move.w	#$A60,d1
+	move.w	#SPAglideback,d1
 	bra.w	SetSPA
 .nochg
-	move.w	#$A92,d1
+	move.w	#SPAskateback,d1
 	btst	#pfrev,pflags(a3)
 	bne.w	.ns
-	move.w	#$5D0,d1
-	btst	#6,pflags2(a3)
+	move.w	#SPAskate,d1
+	btst	#6,pflags2(a3)	;pflags2 bit 6 uses animation SPAstumble
 	beq.w	.nb6
-	move.w	#$11E6,d1
+	move.w	#SPAstumble,d1
 .nb6
 	move.w	(puckc).w,d4
 	cmp.w	SCnum(a3),d4
 	bne.w	.ns
-	move.w	#$53E,d1
+	move.w	#SPAskatewp,d1
 .ns
 	btst	#pf2aip,pflags2(a3)
 	bne.w	noturn
@@ -4621,11 +4621,11 @@ dostop
 	jmp	stopna2
 	bra.w	stopna
 .set
-	move.w	#$50C,d1	;#SPAglide
+	move.w	#SPAglide,d1
 	btst	#pfrev,pflags(a3)	;#pfrev - skating backwards
 	bne.w	.0
 	bset	#pf2aip,pflags2(a3)	;#pf2aip
-	move.w	#$6C6,d1	;#SPAstop
+	move.w	#SPAstop,d1
 .0
 	bsr.w	SetSPA
 	tst.w	position(a3)

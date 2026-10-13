@@ -3,7 +3,7 @@
 ;	offset of its table in the list.
 
 ; Sprite Frame (SPF) base indices. gready has 3 frames per direction (93 had 2),
-; so every base from SPFSiren up is 8 higher than in 93. Frames 658 and up have no name.
+; so every base from SPFSiren up is 8 higher than in 93. SPFghighr is frame 658 and frames after it have no name.
 SPFskatewp	=	1
 SPFskate	=	SPFskatewp+40	; 41
 SPFturnl	=	SPFskate+40	; 81
@@ -47,6 +47,9 @@ SPFstumble	=	SPFhook+16	; 609
 SPFflip	=	SPFstumble+24	; 633
 SPFinjury1	=	SPFflip+8	; 641
 SPFbglass	=	SPFinjury1+12	; 653
+SPFslamtop	=	708
+SPFslambot	=	712
+SPFghighr	=	658
 
 SPAlist	;animation table list
 	dc.w	0
@@ -1300,7 +1303,7 @@ SPAgstick2l_table:	;Frames 676-705
 .6	dc.w	700,4,701,-32
 .7	dc.w	704,4,705,-32
 
-SPAgslamtop	=	*-SPAlist	; $1596. Goalie in the top net (pfgoal 0) turns and slams his stick after a goal: sfx $1C on frame 708 (assgoaliecpu)
+SPAgslamtop	=	*-SPAlist	; $1596. Goalie in the top net (pfgoal 0) turns and slams his stick after a goal: sfx $1C on frame SPFslamtop (assgoaliecpu)
 SPAgslamtop_table:	;Frames 407-709
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1313,17 +1316,17 @@ SPAgslamtop_table:	;Frames 407-709
 	dc.w	.7-.t
 	dc.w	0
 
-.0	dc.w	706,5,707,5,708,10,709,-5
-.1	dc.w	SPFGoalie+3,8,SPFGoalie,8,706,5,707,5,708,10,709,-5
-.2	dc.w	SPFGoalie+6,8,SPFGoalie+3,8,SPFGoalie+3,8,706,5,707,5,708,10,709,-5
-.3	dc.w	SPFGoalie+9,8,SPFGoalie+6,8,SPFGoalie+6,8,SPFGoalie+6,8,706,5,707,5,708,10,709,-5
-.4	dc.w	SPFGoalie+12,8,SPFGoalie+9,8,SPFGoalie+9,8,SPFGoalie+9,8,SPFGoalie+9,8,706,5,707,5,708,10
-	dc.w	709,-5
-.5	dc.w	SPFGoalie+15,8,SPFGoalie+18,8,SPFGoalie+18,8,SPFGoalie+18,8,706,5,707,5,708,10,709,-5
-.6	dc.w	SPFGoalie+18,8,SPFGoalie+21,8,SPFGoalie+21,8,706,5,707,5,708,10,709,-5
-.7	dc.w	SPFGoalie+21,8,SPFGoalie+24,8,706,5,707,5,708,10,709,-5
+.0	dc.w	706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
+.1	dc.w	SPFGoalie+3,8,SPFGoalie,8,706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
+.2	dc.w	SPFGoalie+6,8,SPFGoalie+3,8,SPFGoalie+3,8,706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
+.3	dc.w	SPFGoalie+9,8,SPFGoalie+6,8,SPFGoalie+6,8,SPFGoalie+6,8,706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
+.4	dc.w	SPFGoalie+12,8,SPFGoalie+9,8,SPFGoalie+9,8,SPFGoalie+9,8,SPFGoalie+9,8,706,5,707,5,SPFslamtop,10
+	dc.w	SPFslamtop+1,-5
+.5	dc.w	SPFGoalie+15,8,SPFGoalie+18,8,SPFGoalie+18,8,SPFGoalie+18,8,706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
+.6	dc.w	SPFGoalie+18,8,SPFGoalie+21,8,SPFGoalie+21,8,706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
+.7	dc.w	SPFGoalie+21,8,SPFGoalie+24,8,706,5,707,5,SPFslamtop,10,SPFslamtop+1,-5
 
-SPAgslambot	=	*-SPAlist	; $1684. Goalie in the bottom net (pfgoal 1) turns and slams his stick after a goal: sfx $1C on frame 712 (assgoaliecpu)
+SPAgslambot	=	*-SPAlist	; $1684. Goalie in the bottom net (pfgoal 1) turns and slams his stick after a goal: sfx $1C on frame SPFslambot (assgoaliecpu)
 SPAgslambot_table:	;Frames 407-713
 .t	;offset to each direction of animation (0-7)
 	dc.w	.0-.t
@@ -1336,15 +1339,15 @@ SPAgslambot_table:	;Frames 407-713
 	dc.w	.7-.t
 	dc.w	0
 
-.0	dc.w	SPFGoalie,8,SPFGoalie+3,8,SPFGoalie+3,8,SPFGoalie+3,8,SPFGoalie+3,8,710,5,711,5,712,10
-	dc.w	713,-5
-.1	dc.w	SPFGoalie+3,8,SPFGoalie+6,8,SPFGoalie+6,8,SPFGoalie+6,8,710,5,711,5,712,10,713,-5
-.2	dc.w	SPFGoalie+6,8,SPFGoalie+9,8,SPFGoalie+9,8,710,5,711,5,712,10,713,-5
-.3	dc.w	SPFGoalie+9,8,SPFGoalie+12,8,710,5,711,5,712,10,713,-5
-.4	dc.w	SPFGoalie+12,8,710,5,711,5,712,10,713,-5
-.5	dc.w	SPFGoalie+15,8,SPFGoalie+12,8,710,5,711,5,712,10,713,-5
-.6	dc.w	SPFGoalie+18,8,SPFGoalie+15,8,SPFGoalie+15,8,710,5,711,5,712,10,713,-5
-.7	dc.w	SPFGoalie+21,8,SPFGoalie+18,8,SPFGoalie+18,8,SPFGoalie+18,8,710,5,711,5,712,10,713,-5
+.0	dc.w	SPFGoalie,8,SPFGoalie+3,8,SPFGoalie+3,8,SPFGoalie+3,8,SPFGoalie+3,8,710,5,711,5,SPFslambot,10
+	dc.w	SPFslambot+1,-5
+.1	dc.w	SPFGoalie+3,8,SPFGoalie+6,8,SPFGoalie+6,8,SPFGoalie+6,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
+.2	dc.w	SPFGoalie+6,8,SPFGoalie+9,8,SPFGoalie+9,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
+.3	dc.w	SPFGoalie+9,8,SPFGoalie+12,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
+.4	dc.w	SPFGoalie+12,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
+.5	dc.w	SPFGoalie+15,8,SPFGoalie+12,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
+.6	dc.w	SPFGoalie+18,8,SPFGoalie+15,8,SPFGoalie+15,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
+.7	dc.w	SPFGoalie+21,8,SPFGoalie+18,8,SPFGoalie+18,8,SPFGoalie+18,8,710,5,711,5,SPFslambot,10,SPFslambot+1,-5
 
 SPAboardtop	=	*-SPAlist	; $1776. Checked into the end boards behind the top goal line (FallDown.FallList 0)
 SPAboardtop_table:	;Frames 276-753

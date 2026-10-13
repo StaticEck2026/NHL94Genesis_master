@@ -394,19 +394,19 @@ PrintParenNumber	;PrintPlayerAssists / PrintPlayerGoals: the number (1 to 3 digi
 	move.w	#$E,(printx).w
 	movem.l	(sp)+,d0/a2
 	rts
-PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl). For frames $1776 / $185A (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and
-	;$17E8 / $1A00 / $18CC / $193E (x to +-$82 / $88 by bit 3 of 4(a3)) of $58(a3): move player a3 half way there. Called from updateplayers
-	cmpi.w	#$193E,SPA(a3)
+PlaceBoardFall	;A player falling into the boards (SPAboardtop ... SPAboardmidl). For frames SPAboardtop / SPAboardbot (y to $124 / $FEDC, or $116 / $FEEA by FallXPos) and
+	;SPAboardright / SPAboardmidr / SPAboardleft / SPAboardmidl (x to +-$82 / $88 by bit 3 of 4(a3)) of SPA(a3): move player a3 half way there. Called from updateplayers
+	cmpi.w	#SPAboardmidl,SPA(a3)
 	beq.w	.12
-	cmpi.w	#$1A00,SPA(a3)
+	cmpi.w	#SPAboardmidr,SPA(a3)
 	beq.w	.8
-	cmpi.w	#$18CC,SPA(a3)
+	cmpi.w	#SPAboardleft,SPA(a3)
 	beq.w	.10
-	cmpi.w	#$17E8,SPA(a3)
+	cmpi.w	#SPAboardright,SPA(a3)
 	beq.w	.6
-	cmpi.w	#$1776,SPA(a3)
+	cmpi.w	#SPAboardtop,SPA(a3)
 	beq.w	.0
-	cmpi.w	#$185A,SPA(a3)
+	cmpi.w	#SPAboardbot,SPA(a3)
 	beq.w	.3
 	bra.w	.x
 .0
@@ -743,7 +743,7 @@ ReadGoaliePulled	;Z clear when the team of a3 pulled its goalie ($26 of the team
 	tst.w	$26(a1)
 	movem.l	(sp)+,a1
 	rts
-EndOneTimer	;End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA $50C, then assexit (goalie) or Setplass. Called from assonetimer and checkgoal (.setass)
+EndOneTimer	;End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA SPAglide, then assexit (goalie) or Setplass. Called from assonetimer and checkgoal (.setass)
 	movem.l	d0/a0,-(sp)
 	bclr	#pf3onetimer,pflags3(a3)
 	bclr	#5,pflags(a3)
@@ -751,7 +751,7 @@ EndOneTimer	;End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA $
 	clr.w	(onetimerflags).w
 	st	(onetimerplayer).w
 	move.w	d1,-(sp)
-	move.w	#$50C,d1
+	move.w	#SPAglide,d1
 	jsr	(SetSPA).l
 	tst.w	position(a3)
 	bpl.w	.0

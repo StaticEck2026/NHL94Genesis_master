@@ -51,5 +51,19 @@ ReplayMap = $BB4EE		;movea.l #x at $A4C6
 vcountwait = $80BA		;jsr (x).l at $A548.
 vtoa = $10676			;jsr (x).l at $A15A
 
+; frames94 equates (the segment does not include frames94.asm; it emits bytes)
+SPFpuck	=	394
+SPFbglass	=	653
+SPFfight	=	354
+SPFPen	=	377
+SPAboardmidl	=	$193E
+SPAboardmidr	=	$1A00
+SPAboardleft	=	$18CC
+SPAboardright	=	$17E8
+SPAboardtop	=	$1776
+SPAboardbot	=	$185A
+SPAinjuryfall	=	$145C
+SPAinjury1	=	$1AF4
+
 ; Main segment code
 	include	replay94.asm
