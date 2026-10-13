@@ -140,5 +140,7 @@ vite.config.ts.timestamp-*
 
 Extracted/**
 output/**
+# Sega CD disc files. Not in the repo; cdbin/MAIN.BIN and the rest are local.
+cdbin/
 # nhl*.bin
 nhl*.md
