@@ -33,7 +33,7 @@ Names below are the function numbers in Sega's `CDBIOS.INC`. The call shapes in 
 | `$1747A` | `asv`, the crowd-volume accumulator from the cartridge |
 | `$17CD2` | `crowdlevel`, same role as cartridge `$FFFFB89C` |
 
-`cdrequest.asm` (`HOCKEY.BIN` `$1C1D2`) reads one word from the stack. A value from `$30` through `$77` stores `1` at `$1745C` and stores `value - $29` at `$1745E`. That range becomes tracks `$07` through `$4E`. Anything outside the range returns without writing either word.
+`cdrequest.asm` (`HOCKEY.BIN` `$1C1D2`) is `song`. The game is entered at `$1B000`, and `$1B000 + $1C1D2` is the `jsr $371D2` every call site uses. It reads one word from the stack. A value from `$30` through `$77` stores `1` at `$1745C` and stores `value - $29` at `$1745E`. That range becomes tracks `$07` through `$4E`. Anything outside the range, including song `$79` and song `$7A`, returns without writing either word. `docs/segacd_song.md` is the call list and the `sfx` command next to it.
 
 `cdtrack.asm` (`$1C206`) is the selector:
 

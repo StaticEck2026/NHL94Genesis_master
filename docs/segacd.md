@@ -79,7 +79,7 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 
 `npm run build:segacd` assembles the fragments below and compares them to `cdbin/`. The cartridge ROM is not involved. The Sega CD assemble uses `/o oz-` so a written `$0(an)` stays a 16-bit displacement. The cartridge build still uses `/o oz+`.
 
-Verified bytes are 21,958 of the 410,162 bytes in the four code files (5.4%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416) plus the hardware readers and the Z80 loader (498 bytes more, 13,994 total, 23.2%). `STARTER.BIN` is 2,804 bytes. `HOCKEY.BIN` is 2,400 bytes. `PLAYER.BIN` is 2,760 bytes. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD audio is `docs/segacd_audio.md`. The scouting-report script and its song call are `docs/segacd_announce.md`. Career stats and photos are `docs/segacd_stats.md`. Crowd frames are `docs/segacd_crowd.md`. The film player, Z80 loader, and hardware readers are `docs/segacd_film.md`.
+Verified bytes are 22,690 of the 410,162 bytes in the four code files (5.5%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416) plus the hardware readers and the Z80 loader (498 bytes more, 13,994 total, 23.2%). `STARTER.BIN` is 3,280 bytes. `HOCKEY.BIN` is 2,656 bytes. `PLAYER.BIN` is 2,760 bytes. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD audio is `docs/segacd_audio.md`. `song` and `sfx` are `docs/segacd_song.md`. The scouting-report script is `docs/segacd_announce.md`. Career stats and photos are `docs/segacd_stats.md`. Crowd frames are `docs/segacd_crowd.md`. The film player, Z80 loader, and hardware readers are `docs/segacd_film.md`.
 
 | Source | Compared to | Bytes |
 | --- | --- | --- |
@@ -99,7 +99,10 @@ Verified bytes are 21,958 of the 410,162 bytes in the four code files (5.4%). `M
 | `src/segacd/pcmchip.asm` | `cdbin/STARTER.BIN` `$3FD0` | PCM init, start, stop, address, bank load (298) |
 | `src/segacd/audiostream.asm` | `cdbin/STARTER.BIN` `$508C` | `AudioPlayPos` through `AudioBusy` (632) |
 | `src/segacd/cdfade.asm` | `cdbin/STARTER.BIN` `$54F6` | seek/repeat, fader ramp, stop (120) |
-| `src/segacd/cdrequest.asm` | `cdbin/HOCKEY.BIN` `$1C1D2` | store a requested CD track (52) |
+| `src/segacd/cdrequest.asm` | `cdbin/HOCKEY.BIN` `$1C1D2` | `song` at runtime `$371D2` (52) |
+| `src/segacd/sfxcd.asm` | `cdbin/HOCKEY.BIN` `$1C10C` | `sfx`, command `$26` (104) |
+| `src/segacd/gate34.asm` | `cdbin/HOCKEY.BIN` `$1C174` | command `$34` (94) |
+| `src/segacd/songplay.asm` | `cdbin/HOCKEY.BIN` `$10B1E` | `song` then one `MSCPLAY1` (58) |
 | `src/segacd/cdtrack.asm` | `cdbin/HOCKEY.BIN` `$1C206` | choose a track and `MSCPLAY1` (202) |
 | `src/segacd/cdcrowd.asm` | `cdbin/HOCKEY.BIN` `$238CE` | crowd-volume slew, no PSG write (78) |
 | `src/segacd/cdstart.asm` | `cdbin/HOCKEY.BIN` `$24D66` | CD-DA mode, seek track 4, repeat it (130) |
@@ -112,6 +115,9 @@ Verified bytes are 21,958 of the 410,162 bytes in the four code files (5.4%). `M
 | `src/segacd/playerpage.asm` | `cdbin/PLAYER.BIN` `$23D0` | team stat page (1,100) |
 | `src/segacd/crowdanim.asm` | `cdbin/HOCKEY.BIN` `$10D28` | crowd frame driver (318) |
 | `src/segacd/crowdtable.asm` | `cdbin/HOCKEY.BIN` `$2654C` | crowd frame table, same as cartridge `cd0` (128) |
+| `src/segacd/filmrun.asm` | `cdbin/STARTER.BIN` `$3D94` | movie open/task/close switch (278) |
+| `src/segacd/filmcmd.asm` | `cdbin/STARTER.BIN` `$4D9E` | post a movie command (44) |
+| `src/segacd/filmbuf.asm` | `cdbin/STARTER.BIN` `$4E26` | film buffer allocator (154) |
 | `src/segacd/filmopen.asm` | `cdbin/STARTER.BIN` `$4336` | `FilmOpen` (514) |
 | `src/segacd/filmsm.asm` | `cdbin/STARTER.BIN` `$3EAA` | `SM` chunk copy (294) |
 | `src/segacd/filmtask.asm` | `cdbin/STARTER.BIN` `$458C` | `FilmTask` (418) |
@@ -137,6 +143,10 @@ The audio slices are the sub CPU's CD-DA calls and the PCM stream. `docs/segacd_
 
 `crowdanim.asm` is the cartridge crowd-frame driver. The frame table in `crowdtable.asm` matches `cd0` with nothing added. The HV counter reads became command `$1B` and a word from `$FF8010`. `docs/segacd_crowd.md`.
 
-`filmopen.asm`, `filmsm.asm`, `filmtask.asm`, and `filmclose.asm` are the SDK film player (`FILM` / `SM`). `z80load.asm` copies a `$C3 $00` block to the Z80. `hwread.asm` is the main CPU's one-line port readers, including the HV counter copy into `$A12010`. `docs/segacd_film.md`.
+`filmrun.asm` chooses `FilmOpen`, `FilmTask`, or `FilmClose`. `filmcmd.asm` posts that choice to the main CPU, where `DoMoviePlayBack` blits command `2`. `filmbuf.asm` allocates the buffer. `filmopen.asm`, `filmsm.asm`, `filmtask.asm`, and `filmclose.asm` are the `FILM` / `SM` player. `docs/segacd_film.md`.
+
+`cdrequest.asm` is `song` at runtime `$371D2`. `sfxcd.asm` is `sfx` at `$3710C`. `songplay.asm` is the one call that then `MSCPLAY1`s the track. `docs/segacd_song.md`.
+
+`z80load.asm` copies a `$C3 $00` block to the Z80. `hwread.asm` is the main CPU's one-line port readers, including the HV counter copy into `$A12010`.
 
 `tools/emit_m68k.py` writes a slice as SNASM (`moveq #-1` instead of `moveq #$FF`, unsized `btst` to a data register, `$FFFFFD08.w` instead of `$FD08.w`). `tools/segacd_relocs.py` is the six-instruction matcher behind `docs/segacd_pairs.txt`.

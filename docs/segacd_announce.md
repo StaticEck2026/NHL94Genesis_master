@@ -13,7 +13,7 @@ jsr     $371D2.l
 
 `$7A` is the cartridge `SngScout`. On the cartridge that id is the FM stream `fmtune_scouting` in `sound94.asm`, the last entry of `SoundStreamTable`. `$371D2` is `song`. The cartridge `song` saves every register, reads the word at `64(sp)`, and calls `play_sfx_or_music_track`.
 
-`$371D2` is not in `HOCKEY.BIN`, `STARTER.BIN`, `PLAYER.BIN`, `MAIN.BIN`, `GRAPH2.BIN`, or `GTABLE.BIN`. The same address is called from five sites:
+`HOCKEY.BIN` is entered at `$1B000`, so `$371D2` is file `$1C1D2`, `cdrequest.asm`. It is the disc's `song`. `$79` and `$7A` are above its `$30`–`$77` window, so those two calls do not store a CD track. The same address is called from five sites:
 
 | Call | Argument |
 | --- | --- |

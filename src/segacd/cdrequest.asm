@@ -1,6 +1,9 @@
-; HOCKEY.BIN track request, $1C1D2-$1C205.
-; A word argument in $30-$77 sets $1745C and stores argument-$29 in $1745E.
-; $1745E is the track word. $1745C asks the selector at $1C206 to apply it.
+; HOCKEY.BIN song, file $1C1D2-$1C205.
+; The game is entered at $1B000, so this is the jsr $371D2 target.
+; Cartridge song took one word on the stack and called the FM driver.
+; Here a word in $30-$77 sets $1745C and stores argument-$29 in $1745E.
+; $79 and $7A are outside that window and do not change the track.
+; See docs/segacd_song.md.
 
 	org	$1C1D2
 

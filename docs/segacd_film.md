@@ -21,6 +21,24 @@ The names sit in `STARTER.BIN` after each `rts`: `FilmOpen` at file `$4539`, `Fi
 
 `FilmClose` stops the block at `$30(a4)`, frees `$14(a4)`, sets the frame index back to -1, and calls `$2609E` with 3.
 
+## Who calls it
+
+`filmrun.asm` (file `$3D94`, runtime `$25094`) is the switch in front of those three.
+
+| Word at `4(sp)` | What runs |
+| --- | --- |
+| `0` | Save six caller longs into the block at `$24FB4`, set bit 2 of `$FF8002`, install two BIOS vectors, call `FilmOpen` with the long at `$A(a6)` |
+| `1` | `FilmTask` |
+| anything else | `FilmClose`, then put the two old vectors back |
+
+The first vector replaces BIOS `$5F36`. Its handler adds one to the long at `$24FB8` and, if the long at `$24FE8` is set, calls it. The second replaces BIOS `$5F90`. Open installs both. Close restores both. The bytes between the switch and those hooks clear eight longs at address `0` and store `$208008` at `$80`.
+
+`filmcmd.asm` (runtime `$2609E`) is the post those calls use. It waits until `$FF8010` is `0`, writes the caller's word to `$FF8020`, waits until `$FF8010` is nonzero, and clears `$FF8020`. `GetCommandFromSub` in `maintext.asm` is the main CPU side: it waits for `$A12020`, answers `$1` in `$A12010`, and returns the word. `DoMoviePlayBack` loops on that. Command `2` is the frame: it reads three longs from word RAM at `$200000` and calls `$FF2BA0`. `FilmTask` posts `2` after an `SM` chunk. `FilmClose` posts `3`.
+
+`filmbuf.asm` (runtime `$26126`) asks `$25E34` for a size. Below `$14000` it returns -1. Above `$34000` it clamps. It then rounds `(size - $4000)` up to a multiple of `$800`, allocates that plus `$4000`, and stores the pointer in the film block.
+
+The `FILM` bytes are not in these six disc files. `filmrun` plays whatever buffer the caller passes.
+
 The `add.l #$7FF,d0` in `FilmOpen` is the same encoding as `AudioTime`: the disc has `D0BC`, and SNASM would emit `addi.l`. The source uses `dc.w $D0BC` / `dc.l $000007FF`.
 
 ## Z80 loader

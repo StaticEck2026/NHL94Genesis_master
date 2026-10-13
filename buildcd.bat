@@ -186,4 +186,34 @@ if errorlevel 1 (
     echo scoutload assembly failed
     exit /b 1
 )
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\sfxcd.asm,%WORKSPACE%output\sfxcd.bin,%WORKSPACE%output\sfxcd,%WORKSPACE%output\sfxcd" > "%WORKSPACE%output\Build_sfxcd.log"
+if errorlevel 1 (
+    echo sfxcd assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\gate34.asm,%WORKSPACE%output\gate34.bin,%WORKSPACE%output\gate34,%WORKSPACE%output\gate34" > "%WORKSPACE%output\Build_gate34.log"
+if errorlevel 1 (
+    echo gate34 assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\songplay.asm,%WORKSPACE%output\songplay.bin,%WORKSPACE%output\songplay,%WORKSPACE%output\songplay" > "%WORKSPACE%output\Build_songplay.log"
+if errorlevel 1 (
+    echo songplay assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmrun.asm,%WORKSPACE%output\filmrun.bin,%WORKSPACE%output\filmrun,%WORKSPACE%output\filmrun" > "%WORKSPACE%output\Build_filmrun.log"
+if errorlevel 1 (
+    echo filmrun assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmcmd.asm,%WORKSPACE%output\filmcmd.bin,%WORKSPACE%output\filmcmd,%WORKSPACE%output\filmcmd" > "%WORKSPACE%output\Build_filmcmd.log"
+if errorlevel 1 (
+    echo filmcmd assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmbuf.asm,%WORKSPACE%output\filmbuf.bin,%WORKSPACE%output\filmbuf,%WORKSPACE%output\filmbuf" > "%WORKSPACE%output\Build_filmbuf.log"
+if errorlevel 1 (
+    echo filmbuf assembly failed
+    exit /b 1
+)
 endlocal
