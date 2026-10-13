@@ -126,4 +126,64 @@ if errorlevel 1 (
     exit /b 1
 )
 
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\playerpic.asm,%WORKSPACE%output\playerpic.bin,%WORKSPACE%output\playerpic,%WORKSPACE%output\playerpic" > "%WORKSPACE%output\Build_playerpic.log"
+if errorlevel 1 (
+    echo playerpic assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\playercareer.asm,%WORKSPACE%output\playercareer.bin,%WORKSPACE%output\playercareer,%WORKSPACE%output\playercareer" > "%WORKSPACE%output\Build_playercareer.log"
+if errorlevel 1 (
+    echo playercareer assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\playerpage.asm,%WORKSPACE%output\playerpage.bin,%WORKSPACE%output\playerpage,%WORKSPACE%output\playerpage" > "%WORKSPACE%output\Build_playerpage.log"
+if errorlevel 1 (
+    echo playerpage assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\crowdanim.asm,%WORKSPACE%output\crowdanim.bin,%WORKSPACE%output\crowdanim,%WORKSPACE%output\crowdanim" > "%WORKSPACE%output\Build_crowdanim.log"
+if errorlevel 1 (
+    echo crowdanim assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\crowdtable.asm,%WORKSPACE%output\crowdtable.bin,%WORKSPACE%output\crowdtable,%WORKSPACE%output\crowdtable" > "%WORKSPACE%output\Build_crowdtable.log"
+if errorlevel 1 (
+    echo crowdtable assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmopen.asm,%WORKSPACE%output\filmopen.bin,%WORKSPACE%output\filmopen,%WORKSPACE%output\filmopen" > "%WORKSPACE%output\Build_filmopen.log"
+if errorlevel 1 (
+    echo filmopen assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmsm.asm,%WORKSPACE%output\filmsm.bin,%WORKSPACE%output\filmsm,%WORKSPACE%output\filmsm" > "%WORKSPACE%output\Build_filmsm.log"
+if errorlevel 1 (
+    echo filmsm assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmtask.asm,%WORKSPACE%output\filmtask.bin,%WORKSPACE%output\filmtask,%WORKSPACE%output\filmtask" > "%WORKSPACE%output\Build_filmtask.log"
+if errorlevel 1 (
+    echo filmtask assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\filmclose.asm,%WORKSPACE%output\filmclose.bin,%WORKSPACE%output\filmclose,%WORKSPACE%output\filmclose" > "%WORKSPACE%output\Build_filmclose.log"
+if errorlevel 1 (
+    echo filmclose assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\z80load.asm,%WORKSPACE%output\z80load.bin,%WORKSPACE%output\z80load,%WORKSPACE%output\z80load" > "%WORKSPACE%output\Build_z80load.log"
+if errorlevel 1 (
+    echo z80load assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\hwread.asm,%WORKSPACE%output\hwread.bin,%WORKSPACE%output\hwread,%WORKSPACE%output\hwread" > "%WORKSPACE%output\Build_hwread.log"
+if errorlevel 1 (
+    echo hwread assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\scoutload.asm,%WORKSPACE%output\scoutload.bin,%WORKSPACE%output\scoutload,%WORKSPACE%output\scoutload" > "%WORKSPACE%output\Build_scoutload.log"
+if errorlevel 1 (
+    echo scoutload assembly failed
+    exit /b 1
+)
 endlocal

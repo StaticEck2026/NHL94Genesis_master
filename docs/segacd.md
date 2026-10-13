@@ -10,7 +10,7 @@ The six disc files used here live in `cdbin/` locally (`MAIN.BIN`, `STARTER.BIN`
 | --- | --- | --- |
 | `STARTER.BIN` | Sub | SDK boot. Heap, film player, main/sub commands. Linked at `$21300`: the first instruction jumps to a Sierra C `link a6,#0` at `$262A8`. |
 | `HOCKEY.BIN` | Sub | The game. Linked at `0` (its own branches land inside the file). About 181 KB. |
-| `PLAYER.BIN` | Sub | A second module, also linked at `0`, with a relocating startup (`lea 0(pc,a6.l),a6`) and the scouting strings ("Power play advantage", "Number of forwards"). |
+| `PLAYER.BIN` | Sub | A second module, also linked at `0`, with a relocating startup (`lea 0(pc,a6.l),a6`). Career stats, the team page, and player photos. The "Power play advantage" lines are this page, not the Ron Barr script. |
 | `MAIN.BIN` | Main | SDK shell in Genesis RAM at `$FF0000`. Talks to the VDP and to the sub CPU through `$A120xx`. |
 | `GTABLE.BIN` | | 2 KB of long offsets. |
 | `GRAPH2.BIN` | | 3 MB graphics archive. The first longs are offsets into the file. |
@@ -79,7 +79,7 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 
 `npm run build:segacd` assembles the fragments below and compares them to `cdbin/`. The cartridge ROM is not involved. The Sega CD assemble uses `/o oz-` so a written `$0(an)` stays a 16-bit displacement. The cartridge build still uses `/o oz+`.
 
-Verified bytes are 16,622 of the 410,162 bytes in the four code files (4.1%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416, 22.3%). `STARTER.BIN` is 1,512 bytes. `HOCKEY.BIN` is 1,614 bytes. `PLAYER.BIN` is not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD audio is `docs/segacd_audio.md`. The scouting-report script and its song call are `docs/segacd_announce.md`.
+Verified bytes are 21,958 of the 410,162 bytes in the four code files (5.4%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416) plus the hardware readers and the Z80 loader (498 bytes more, 13,994 total, 23.2%). `STARTER.BIN` is 2,804 bytes. `HOCKEY.BIN` is 2,400 bytes. `PLAYER.BIN` is 2,760 bytes. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD audio is `docs/segacd_audio.md`. The scouting-report script and its song call are `docs/segacd_announce.md`. Career stats and photos are `docs/segacd_stats.md`. Crowd frames are `docs/segacd_crowd.md`. The film player, Z80 loader, and hardware readers are `docs/segacd_film.md`.
 
 | Source | Compared to | Bytes |
 | --- | --- | --- |
@@ -106,6 +106,18 @@ Verified bytes are 16,622 of the 410,162 bytes in the four code files (4.1%). `M
 | `src/segacd/scoutopen.asm` | `cdbin/HOCKEY.BIN` `$D2B6` | scouting screen open, song `$7A` (226) |
 | `src/segacd/scouttext.asm` | `cdbin/HOCKEY.BIN` `$2486C` | scouting text player (542) |
 | `src/segacd/scouttok.asm` | `cdbin/HOCKEY.BIN` `$24A8A` | scouting script tokens (384) |
+| `src/segacd/scoutload.asm` | `cdbin/HOCKEY.BIN` `$24C12` | scouting file directory load (340) |
+| `src/segacd/playerpic.asm` | `cdbin/PLAYER.BIN` `$1D54` | player photo picker (700) |
+| `src/segacd/playercareer.asm` | `cdbin/PLAYER.BIN` `$2010` | career-stat rows (960) |
+| `src/segacd/playerpage.asm` | `cdbin/PLAYER.BIN` `$23D0` | team stat page (1,100) |
+| `src/segacd/crowdanim.asm` | `cdbin/HOCKEY.BIN` `$10D28` | crowd frame driver (318) |
+| `src/segacd/crowdtable.asm` | `cdbin/HOCKEY.BIN` `$2654C` | crowd frame table, same as cartridge `cd0` (128) |
+| `src/segacd/filmopen.asm` | `cdbin/STARTER.BIN` `$4336` | `FilmOpen` (514) |
+| `src/segacd/filmsm.asm` | `cdbin/STARTER.BIN` `$3EAA` | `SM` chunk copy (294) |
+| `src/segacd/filmtask.asm` | `cdbin/STARTER.BIN` `$458C` | `FilmTask` (418) |
+| `src/segacd/filmclose.asm` | `cdbin/STARTER.BIN` `$473A` | `FilmClose` (66) |
+| `src/segacd/z80load.asm` | `cdbin/MAIN.BIN` `$76C8` | Z80 loader (240) |
+| `src/segacd/hwread.asm` | `cdbin/MAIN.BIN` `$3B3C` | VDP, joypad, and HV readers (258) |
 
 `maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. Past the handshake it clears the eight command words, waits on memory-mode bit 2, and hands word RAM back and forth (DMNA / RET in `$A12003`). Two commands add `$180000` to a sub CPU pointer so the main CPU sees the same word RAM (`$080000` there, `$200000` here).
 
@@ -120,5 +132,11 @@ Verified bytes are 16,622 of the 410,162 bytes in the four code files (4.1%). `M
 `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`. `subheap.asm` is the Sierra C `EngineIdle` and `GetData` at `$262A8` (the `link a6` the boot jumps to). The function name is the bytes after each `rts`.
 
 The audio slices are the sub CPU's CD-DA calls and the PCM stream. `docs/segacd_audio.md` lists the `_CDBIOS` numbers, the track word at `$1745E`, and the crowd-volume routine whose PSG stores were dropped. `scoutopen.asm` starts the scouting screen on song `$7A`. `scouttext.asm` and `scouttok.asm` type the Ron Barr script. `docs/segacd_announce.md` is that write-up.
+
+`playerpic.asm`, `playercareer.asm`, and `playerpage.asm` are the `PLAYER.BIN` overlay: a photo (or a generic `$504`-byte frame), the Regular/Playoff career rows, and the Players/Goalies page with the power-play lines. `docs/segacd_stats.md`.
+
+`crowdanim.asm` is the cartridge crowd-frame driver. The frame table in `crowdtable.asm` matches `cd0` with nothing added. The HV counter reads became command `$1B` and a word from `$FF8010`. `docs/segacd_crowd.md`.
+
+`filmopen.asm`, `filmsm.asm`, `filmtask.asm`, and `filmclose.asm` are the SDK film player (`FILM` / `SM`). `z80load.asm` copies a `$C3 $00` block to the Z80. `hwread.asm` is the main CPU's one-line port readers, including the HV counter copy into `$A12010`. `docs/segacd_film.md`.
 
 `tools/emit_m68k.py` writes a slice as SNASM (`moveq #-1` instead of `moveq #$FF`, unsized `btst` to a data register, `$FFFFFD08.w` instead of `$FD08.w`). `tools/segacd_relocs.py` is the six-instruction matcher behind `docs/segacd_pairs.txt`.

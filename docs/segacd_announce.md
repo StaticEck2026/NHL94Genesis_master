@@ -70,8 +70,8 @@ The typer then calls `printz` (`$1DF6E`) with the inline string whose length wor
 
 `ScrollDisplayUp` is the tail of `scouttok.asm`. At seven lines it calls `$379D6` eight times to scroll the text window. Nothing in the typer, the token handlers, or the scroll calls `_CDBIOS` or the PCM stream.
 
-The loader just after that scroll (`$24C12`) tests `$3FC0A` and, when it is set, calls `$376F2`. It then calls the SDK entry `$6044` with `d7 = $D`, then with `d7 = 1` and `d0 = 0`, and adds the returned pointer to a run of longs. Those longs become `$47CFC` (the script base) and the picture and font pointers the screen uses (`$47D54` is the Ron Barr picture the open path draws). That loader is not transcribed yet. The words it relocates are the directory of the file the SDK returns for id 0.
+`scoutload.asm` (`$24C12`) is the loader just after that scroll. It stops where `cdstart.asm` begins (`$24D66`). It tests `$3FC0A` and, when it is set, calls `$376F2`. It then calls the SDK entry `$6044` with `d7 = $D`, then with `d7 = 1` and `d0 = 0`, then with `d7 = 3`. It adds the returned pointer to a run of longs. Those longs become `$47CFC` (the script base) and the picture and font pointers the screen uses (`$47D54` is the Ron Barr picture the open path draws). The words it relocates are the directory of the file the SDK returns for id 0.
 
 ## What is not this screen
 
-`FilmOpen` / `FilmTask` / `FilmClose` in `STARTER.BIN` (`$25824`, `$2588C`, `$25A3A`) are the movie player. `FilmTask` feeds the PCM chip through `AudioFeed` when a chunk's first word is `$534D`. The scouting typer does not branch to those routines. Digitized movie audio and the scouting script are different callers of different code.
+`FilmOpen` / `FilmTask` / `FilmClose` in `STARTER.BIN` (runtime `$25636`, `$2588C`, `$25A3A`) are the movie player. `FilmTask` calls the `SM` copier when a chunk's first word is `$534D`. That copier does not touch the PCM chip. The scouting typer does not branch to those routines. Digitized movie audio and the scouting script are different callers of different code. `docs/segacd_film.md`.
