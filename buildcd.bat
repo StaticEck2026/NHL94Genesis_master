@@ -110,5 +110,20 @@ if errorlevel 1 (
     echo cdstart assembly failed
     exit /b 1
 )
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\scoutopen.asm,%WORKSPACE%output\scoutopen.bin,%WORKSPACE%output\scoutopen,%WORKSPACE%output\scoutopen" > "%WORKSPACE%output\Build_scoutopen.log"
+if errorlevel 1 (
+    echo scoutopen assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\scouttext.asm,%WORKSPACE%output\scouttext.bin,%WORKSPACE%output\scouttext,%WORKSPACE%output\scouttext" > "%WORKSPACE%output\Build_scouttext.log"
+if errorlevel 1 (
+    echo scouttext assembly failed
+    exit /b 1
+)
+"%WORKSPACE%assembler\Assembler.exe" /p /m /g /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz- /o omq- /o oaq- /o osq- "segacd\scouttok.asm,%WORKSPACE%output\scouttok.bin,%WORKSPACE%output\scouttok,%WORKSPACE%output\scouttok" > "%WORKSPACE%output\Build_scouttok.log"
+if errorlevel 1 (
+    echo scouttok assembly failed
+    exit /b 1
+)
 
 endlocal

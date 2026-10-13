@@ -79,7 +79,7 @@ The team block at the front of `HOCKEY.BIN` matches the cartridge from Montreal'
 
 `npm run build:segacd` assembles the fragments below and compares them to `cdbin/`. The cartridge ROM is not involved. The Sega CD assemble uses `/o oz-` so a written `$0(an)` stays a 16-bit displacement. The cartridge build still uses `/o oz+`.
 
-Verified bytes are 15,470 of the 410,162 bytes in the four code files (3.8%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416, 22.3%). `STARTER.BIN` is 1,512 bytes. `HOCKEY.BIN` is 462 bytes. `PLAYER.BIN` is not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD-DA, the PCM stream, and the cartridge crowd channel are written up in `docs/segacd_audio.md`.
+Verified bytes are 16,622 of the 410,162 bytes in the four code files (4.1%). `MAIN.BIN` is contiguous from the first byte through `$FF34B7` (13,496 of 60,416, 22.3%). `STARTER.BIN` is 1,512 bytes. `HOCKEY.BIN` is 1,614 bytes. `PLAYER.BIN` is not transcribed yet. `GRAPH2.BIN` and `GTABLE.BIN` are still untouched. CD audio is `docs/segacd_audio.md`. The scouting-report script and its song call are `docs/segacd_announce.md`.
 
 | Source | Compared to | Bytes |
 | --- | --- | --- |
@@ -103,6 +103,9 @@ Verified bytes are 15,470 of the 410,162 bytes in the four code files (3.8%). `M
 | `src/segacd/cdtrack.asm` | `cdbin/HOCKEY.BIN` `$1C206` | choose a track and `MSCPLAY1` (202) |
 | `src/segacd/cdcrowd.asm` | `cdbin/HOCKEY.BIN` `$238CE` | crowd-volume slew, no PSG write (78) |
 | `src/segacd/cdstart.asm` | `cdbin/HOCKEY.BIN` `$24D66` | CD-DA mode, seek track 4, repeat it (130) |
+| `src/segacd/scoutopen.asm` | `cdbin/HOCKEY.BIN` `$D2B6` | scouting screen open, song `$7A` (226) |
+| `src/segacd/scouttext.asm` | `cdbin/HOCKEY.BIN` `$2486C` | scouting text player (542) |
+| `src/segacd/scouttok.asm` | `cdbin/HOCKEY.BIN` `$24A8A` | scouting script tokens (384) |
 
 `maincd.asm` is the main CPU command loop: read `$A12020` when sub flag bit 6 is set, dispatch through the long table at `$FF01BE`, and put the VBlank vector at `$FD08` back when the command finishes. Past the handshake it clears the eight command words, waits on memory-mode bit 2, and hands word RAM back and forth (DMNA / RET in `$A12003`). Two commands add `$180000` to a sub CPU pointer so the main CPU sees the same word RAM (`$080000` there, `$200000` here).
 
@@ -116,6 +119,6 @@ Verified bytes are 15,470 of the 410,162 bytes in the four code files (3.8%). `M
 
 `subboot.asm` is the sub CPU's first instructions, the flag handshake, BIOS function 0 at `$6044`, and `jmp $1B000` into `HOCKEY.BIN`. `subheap.asm` is the Sierra C `EngineIdle` and `GetData` at `$262A8` (the `link a6` the boot jumps to). The function name is the bytes after each `rts`.
 
-The audio slices are the sub CPU's CD-DA calls and the PCM stream. `docs/segacd_audio.md` lists the `_CDBIOS` numbers, the track word at `$1745E`, and the crowd-volume routine whose PSG stores were dropped.
+The audio slices are the sub CPU's CD-DA calls and the PCM stream. `docs/segacd_audio.md` lists the `_CDBIOS` numbers, the track word at `$1745E`, and the crowd-volume routine whose PSG stores were dropped. `scoutopen.asm` starts the scouting screen on song `$7A`. `scouttext.asm` and `scouttok.asm` type the Ron Barr script. `docs/segacd_announce.md` is that write-up.
 
 `tools/emit_m68k.py` writes a slice as SNASM (`moveq #-1` instead of `moveq #$FF`, unsized `btst` to a data register, `$FFFFFD08.w` instead of `$FD08.w`). `tools/segacd_relocs.py` is the six-instruction matcher behind `docs/segacd_pairs.txt`.

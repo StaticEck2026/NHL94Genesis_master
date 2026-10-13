@@ -86,3 +86,6 @@ compareAt('output/cdrequest.bin', 'cdbin/HOCKEY.BIN', 0x1C1D2, 0x34);
 compareAt('output/cdtrack.bin', 'cdbin/HOCKEY.BIN', 0x1C206, 0xCA);
 compareAt('output/cdcrowd.bin', 'cdbin/HOCKEY.BIN', 0x238CE, 0x4E);
 compareAt('output/cdstart.bin', 'cdbin/HOCKEY.BIN', 0x24D66, 0x82);
+compareAt('output/scoutopen.bin', 'cdbin/HOCKEY.BIN', 0xD2B6, 0xE2);
+compareAt('output/scouttext.bin', 'cdbin/HOCKEY.BIN', 0x2486C, 0x21E);
+compareAt('output/scouttok.bin', 'cdbin/HOCKEY.BIN', 0x24A8A, 0x180);
