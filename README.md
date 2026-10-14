@@ -17,7 +17,7 @@ Style source for a segment is the matching file in [NHLPA93Genesis](https://gith
 
 ## Segment queue
 
-`src/nhl94.asm` is the top level and the include list, in ROM order. `SEGMENT_AGENT.md` is the rule file. `PROMPT.md` is the first Copilot prompt. Placeholder files are comments only.
+`src/nhl94.asm` is the top level and the include list, in ROM order. `SEGMENT_AGENT.md` is the rule file. Placeholder files are comments only.
 
 94-only files that 93 did not have:
 
