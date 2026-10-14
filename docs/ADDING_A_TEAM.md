@@ -36,9 +36,11 @@ Put the new number into the existing rows. Do not add a row. The build checks th
 
 ## Save RAM
 
-Crowd records are `NumTeams` blocks of 16 bytes at `CrowdRecBase`. They have to end at or before `TeamRecBase`, where the records block starts. The build checks that.
+Crowd records are `NumTeams` blocks of 16 bytes at `CrowdRecBase`. The stock league ends on the records block, so `TeamRecBase` stays put. A larger league starts the records block at the end of the crowd records, and starts `NameLogBase` at the end of that block. The retail addresses do not change.
 
-The records block itself is eight 16-byte records (the `$80` bytes `ClearWinRecords` and `ReadTeamRecords` move). It is not one record per team. The name log that follows it is not moved.
+The records block itself is eight 16-byte records (`RecordsBytes`). It is not one record per team. The name log is `NameLogBytes` at `NameLogBase`. Line data stays at `LineDataBase`. The build stops if the name log would run into the line data.
+
+`TeamRatings` is one byte per team. The next routine is aligned after the length check. The stock table is already even, so that alignment adds nothing.
 
 ## Where the new bytes go
 

@@ -62,11 +62,11 @@ TeamSongsEnd
 	ENDIF
 RandomSongs	;ChooseSong: the 8 songs for a random pick
 	dc.b	$34,$40,$42,$49,$58,$5C,$65,$66
-ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer; sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin and
+ReadLineData	;Read the $100 bytes at save RAM LineDataBase to databuffer; sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin and
 	;GameSetUp
 	movem.l	d0-d1/a0,-(sp)
 	move.l	#$100,d1
-	move.l	#$1EF6,d0
+	move.l	#LineDataBase,d0
 	movea.l	#databuffer,a0
 	jsr	(ReadSRAM).l
 	bclr	#4,(sflags).w
@@ -74,10 +74,10 @@ ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer; sflags bit 4 
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
 	rts
-WriteLineData	;Write databuffer back to save RAM $1EF6 (WriteSRAM, MakeSRAMChecksum); as ReadLineData after. Called from EncodePW and EncodeTeamLines
+WriteLineData	;Write databuffer back to save RAM at LineDataBase (WriteSRAM, MakeSRAMChecksum); as ReadLineData after. Called from EncodePW and EncodeTeamLines
 	movem.l	d0-d1/a0,-(sp)
 	move.l	#$100,d1
-	move.l	#$1EF6,d0
+	move.l	#LineDataBase,d0
 	movea.l	#databuffer,a0
 	jsr	(WriteSRAM).l
 	jsr	(MakeSRAMChecksum).l

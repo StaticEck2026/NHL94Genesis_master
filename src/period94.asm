@@ -760,6 +760,7 @@ TeamRatingsEnd
 	IF (TeamRatingsEnd-TeamRatings)<>NumTeams
 		inform	3,"TeamRatings needs one byte per team"
 	ENDIF
+	even
 ShortenMsgTimer	;Cap msgtimer at 2, unless a second pad is on (cont2team) and a3 is not the puck carrier. Called from doinput
 	movem.l	d0,-(sp)
 	tst.w	(cont2team).w

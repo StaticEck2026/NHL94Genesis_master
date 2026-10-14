@@ -1153,15 +1153,15 @@ TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 WriteTeamRecord	;Write the team record block (TeamRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	TeamRecordIO
-WriteNameLog	;Write the user name log ($80 bytes at namelog) to save RAM $DA0 (NameLogIO)
+WriteNameLog	;Write the user name log ($80 bytes at namelog) to save RAM at NameLogBase (NameLogIO)
 	bset	#6,(sflags6).w
 	bra.w	NameLogIO
-ReadNameLog	;Read the user name log from save RAM $DA0 to namelog. Called from GameSetUp
+ReadNameLog	;Read the user name log from save RAM at NameLogBase to namelog. Called from GameSetUp
 	bclr	#6,(sflags6).w
 NameLogIO	;A user record block: read or write (sflags6 bit 6)
 	movem.l	d0-d7/a0-a6,-(sp)
-	move.l	#$80,d1
-	move.l	#$DA0,d0
+	move.l	#NameLogBytes,d1
+	move.l	#NameLogBase,d0
 	movea.l	#namelog,a0
 	btst	#6,(sflags6).w
 	beq.w	.read
