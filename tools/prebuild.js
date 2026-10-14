@@ -1,4 +1,4 @@
-// prebuild.js: run before every build (npm run build:*, seg:*, build94.bat, buildseg.bat).
+// prebuild.js: run before every build (step 1 of tools/build.js: npm run build:*, npm run seg, build94.bat, buildseg.bat).
 // Usage: node tools/prebuild.js [retail]
 // The ROM must be present (and the right version); then makes sure Extracted/ is complete, and runs
 // the extractor if it is not. If the ROM is missing or wrong, stops with the path, file name, SHA-1

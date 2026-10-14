@@ -64,9 +64,7 @@ Still present from 93: Ottawa Senators, Tampa Bay Lightning, San Jose Sharks, Qu
 
 ## Build
 
-`buildseg.bat <name>` assembles `src/stubinc/<name>_stub.asm`. The stub is `org` at the confirmed start, includes `src/stubinc`, and includes `src/<name>.asm`.
-
-`npm run seg:<name>` runs buildseg, then `tools/fixopcodes.js` on `output/<name> .lst` and `output/<name>.bin` with the org, then `tools/verifySegment.js`. The assembler listing name has a space before `.lst`.
+`npm run seg -- <name>` (or `node tools/build.js --seg <name>`, or `buildseg.bat <name>`) assembles `src/stubinc/<name>_stub.asm`, runs `tools/fixopcodes.js` with the org, then `tools/verifySegment.js`. The stub is `org` at the confirmed start, includes `src/stubinc`, and includes `src/<name>.asm`. Each segment's org is in `tools/segments.json`; a new segment is one line there. The assembler listing name has a space before `.lst`.
 
 A MATCH of 0 bytes is a failure. The byte count must be the confirmed range.
 
