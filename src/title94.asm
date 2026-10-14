@@ -56,6 +56,10 @@ TeamSongs	;ChooseSong: 6 songs per team (TeamList order), 0 = random (RandomSong
 	dc.b	$77,$75,$76,0,$5A,0
 	dc.b	$54,$55,$53,0,$5A,0
 	dc.b	$54,$55,$53,0,$5A,0
+TeamSongsEnd
+	IF (TeamSongsEnd-TeamSongs)<>(NumTeams*6)
+		inform	3,"TeamSongs needs 6 songs per team"
+	ENDIF
 RandomSongs	;ChooseSong: the 8 songs for a random pick
 	dc.b	$34,$40,$42,$49,$58,$5C,$65,$66
 ReadLineData	;Read the $100 bytes at save RAM $1EF6 to databuffer; sflags bit 4 cleared, lastsfx = -1, recbpr = $FFFF0000. Called from Begin and
@@ -82,7 +86,7 @@ WriteLineData	;Write databuffer back to save RAM $1EF6 (WriteSRAM, MakeSRAMCheck
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
 	rts
-ClearWinRecords	;Clear bytes 8-$B of the 8 ThreeStars records and write the $80 bytes to save RAM $D20 (WriteSRAM, MakeSRAMChecksum). Called from RecordHoldersScreen
+ClearWinRecords	;Clear bytes 8-$B of the 8 ThreeStars records and write the $80 bytes at TeamRecBase (WriteSRAM, MakeSRAMChecksum). Called from RecordHoldersScreen
 	;(Record Holders)
 	movem.l	d0-d7/a0-a6,-(sp)
 	movea.l	#ThreeStars,a0
@@ -94,7 +98,7 @@ ClearWinRecords	;Clear bytes 8-$B of the 8 ThreeStars records and write the $80 
 	clr.b	$B(a0)
 	adda.w	#$10,a0
 	dbf	d7,.loop
-	move.l	#$D20,d0
+	move.l	#TeamRecBase,d0
 	move.l	#$80,d1
 	movea.l	#ThreeStars,a0
 	jsr	(WriteSRAM).l
@@ -364,6 +368,10 @@ TeamGfxList	;LoadHomeTeamGfx: one address per team (TeamList order) in ArenaGfxB
 	dc.l	ArenaGfxBank+$6D4A,ArenaGfxBank+$7054,ArenaGfxBank+$735E,ArenaGfxBank+$7668
 	dc.l	ArenaGfxBank+$7972,ArenaGfxBank+$7C7C,ArenaGfxBank+$7F86,ArenaGfxBank+$8290
 	dc.l	ArenaGfxBank+$859A,ArenaGfxBank+$88A4,ArenaGfxBank+$8EB8,ArenaGfxBank+$8EB8
+TeamGfxListEnd
+	IF (TeamGfxListEnd-TeamGfxList)<>(NumTeams*4)
+		inform	3,"TeamGfxList needs one entry per team"
+	ENDIF
 PrintPlayerAssists	;Print " (n)": byte $CE + d0 of team a2, then the next row at x $E. Called from ShowGoalBox
 	movem.l	d0/a2,-(sp)
 	jsr	(printz).l
@@ -478,9 +486,9 @@ PlaceBoardFall	;A player falling into the boards (SPAboardfront ... SPAbenchchec
 	add.w	d0,(a3)
 .x
 	rts
-GetLeagueCrowdRecord	;d0 = the team (of 28) with the highest crowd record byte 8 (ReadCrowdRecord; 0 counts as $50). Called from PrintCrowdMeter
+GetLeagueCrowdRecord	;d0 = the team (of NumTeams) with the highest crowd record byte 8 (ReadCrowdRecord; 0 counts as $50). Called from PrintCrowdMeter
 	movem.l	d1-d7/a0-a6,-(sp)
-	move.w	#$1B,d1
+	move.w	#NumTeams-1,d1
 	ext.l	d1
 	clr.w	d7
 	movea.l	#ThreeStars,a0
@@ -1072,6 +1080,10 @@ TeamLogoPalettes	;Team logo palettes, 16 colors per team. Used by PeriodStatsScr
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalWPGA.pal	;WPG, the TeamPalettes matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASEA.pal	;ASE, the TeamPalettes matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWA.pal	;ASW, the TeamPalettes matchup logo palette
+TeamLogoPalettesEnd
+	IF (TeamLogoPalettesEnd-TeamLogoPalettes)<>(NumTeams*32)
+		inform	3,"TeamLogoPalettes needs one palette per team"
+	ENDIF
 LeadSong	;Not in a shootout (gmode2 bit 1), scores not level: once (sflags2 bit 5), ChooseSong with SongIndex 1 (home ahead) or 4
 	;and sflags8 bit 6; sflags2 is put back on exit. Called from puckfaceoff2
 	movem.l	d0/a0-a3,-(sp)

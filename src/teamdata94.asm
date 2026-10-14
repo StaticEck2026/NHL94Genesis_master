@@ -35,6 +35,9 @@ TeamList	;List Pointer Table Start. Team number = index (ANH 0 ... WPG 25, ASE 2
 	dc.l	AllStarsWest	;27 ASW
 
 NumofTeams	=	(*-TeamList)/4
+	IF NumofTeams<>NumTeams
+		inform	3,"TeamList needs one entry per team"
+	ENDIF
 Playerdata	=	0
 Palettedata	=	2
 Teamname	=	4
@@ -1731,7 +1734,9 @@ Anaheim	;ANH
 .ar	;arena.
 	String	'Pond'
 
-playoffseats	;playoff tree seedings: 32 rows of 16 team numbers
+playoffseats	;32 rows of 16 team numbers (PlayoffRows by PlayoffRowTeams). Not one entry per team.
+	;NewPO picks a row at random, then finds the chosen team in that row. All-star teams are
+	;not seeded. A new team is inserted into these rows; the row count stays 32.
 	dc.b	BUF,BOS,MTL,QUE, NYI,WSH,NJ,PIT, TOR,DET,STL,CHI, LA,CGY,WPG,VAN
 	dc.b	NYI,BUF,TB,MTL, QUE,PIT,NYR,BOS, CGY,TOR,LA,VAN, STL,DET,DAL,CHI
 	dc.b	NJ,PIT,PHI,BUF, HFD,MTL,WSH,BOS, DAL,TOR,EDM,CHI, SJ,VAN,LA,DET
@@ -1767,7 +1772,10 @@ playoffseats	;playoff tree seedings: 32 rows of 16 team numbers
 	dc.b	NYR,BUF,FLA,TB, WSH,PIT,BOS,MTL, TOR,CHI,WPG,VAN, DAL,LA,ANH,STL
 	dc.b	NJ,MTL,OTW,BUF, TB,PIT,NYR,NYI, EDM,LA,SJ,CHI, ANH,VAN,DET,STL
 	dc.b	WSH,FLA,NJ,PIT, BOS,MTL,TB,BUF, SJ,STL,DET,CHI, ANH,LA,WPG,VAN
-
+PlayoffSeatsEnd
+	IF (PlayoffSeatsEnd-playoffseats)<>(PlayoffRows*PlayoffRowTeams)
+		inform	3,"playoffseats must be 32 rows of 16 teams"
+	ENDIF
 
 Credits	;title screen scroller: movea.l #Credits (copyright lines), then #CreditsList
 	String	'$ 1993 Electronic Arts'

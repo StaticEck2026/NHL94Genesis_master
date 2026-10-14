@@ -59,4 +59,6 @@ set "longFlag=/e LONGBRA=1"
 goto assemble
 :assembled
 endlocal
+findstr /C:" 0 error" "%workspaceFolder%output\Build94.log" >nul
+if errorlevel 1 exit /b 1
 exit /b 0

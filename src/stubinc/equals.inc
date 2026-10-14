@@ -253,3 +253,21 @@ WSH equ 24
 WPG equ 25
 ASE equ 26
 ASW equ 27
+; NumTeams includes the two all-star teams, which stay last. NumPlayoffTeams is the first
+; all-star number: a new playoff team is inserted before ASE and both all-star numbers move up.
+NumTeams equ ASW+1
+NumPlayoffTeams equ ASE
+PlayoffRows equ 32
+PlayoffRowTeams equ 16
+; Crowd records are NumTeams blocks of CrowdRecBytes at CrowdRecBase. They must end at or
+; before TeamRecBase, where the records block starts. The name log after that is not moved.
+CrowdRecBase equ $B60
+CrowdRecBytes equ 16
+TeamRecBase equ $D20
+CrowdRecEnd equ CrowdRecBase+NumTeams*CrowdRecBytes
+	IF TeamRecBase<CrowdRecEnd
+		inform	3,"Crowd records run into the team records"
+	ENDIF
+	IF 32<NumPlayoffTeams
+		inform	3,"The playoff draw only keeps 32 team bits"
+	ENDIF

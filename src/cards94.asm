@@ -326,6 +326,10 @@ TeamPalettes	;Matchup and player card palettes: 56 of 16 colors, two per team (2
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASEB.pal	;ASE other side
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWA.pal	;ASW matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWB.pal	;ASW other side
+TeamPalettesEnd
+	IF (TeamPalettesEnd-TeamPalettes)<>(NumTeams*64)
+		inform	3,"TeamPalettes needs two palettes per team"
+	ENDIF
 FeaturedPictures	;The featured player pictures
 	;of each team (TeamList order): a list of picture.l (NoPicSkater1 ... Card<player>) and roster index.w, 0 ends
 	dc.l	.ANH,.BOS,.BUF,.CGY
@@ -335,6 +339,10 @@ FeaturedPictures	;The featured player pictures
 	dc.l	.PHI,.PIT,.QUE,.SJ
 	dc.l	.STL,.TB,.TOR,.VAN
 	dc.l	.WSH,.WPG,.ASE,.ASW
+.listend
+	IF (.listend-FeaturedPictures)<>(NumTeams*4)
+		inform	3,"FeaturedPictures needs one entry per team"
+	ENDIF
 .FLA
 	dc.l	NoPicGoalie2
 	dc.w	0
@@ -1104,14 +1112,14 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 WritePlayerRecord	;Write the 4 byte player record
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
-ReadCrowdRecord	;Read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
+ReadCrowdRecord	;Read the 16 byte crowd record block of team d1 from save RAM (CrowdRecBase + team * 16) to a0. Called from
 	;LoadCrowdRec and PrintCrowdMeter
 	bclr	#6,(sflags6).w
 CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from ReadCrowdRecord and WriteCrowdRecord
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.l	d1,d0
 	asl.w	#4,d0
-	addi.l	#$B60,d0
+	addi.l	#CrowdRecBase,d0
 	moveq	#$10,d1
 	btst	#6,(sflags6).w
 	beq.w	.read
@@ -1125,13 +1133,13 @@ CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered fr
 WriteCrowdRecord	;Write the 16 byte crowd record block of team d1 (CrowdRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	CrowdRecordIO
-ReadTeamRecord	;Read the 16 byte team record block of team d1 ($D20 + team * 16) to a0 (TeamRecordIO)
+ReadTeamRecord	;Read the 16 byte team record block of team d1 (TeamRecBase + team * 16) to a0 (TeamRecordIO)
 	bclr	#6,(sflags6).w
 TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.l	d1,d0
 	asl.w	#4,d0
-	addi.l	#$D20,d0
+	addi.l	#TeamRecBase,d0
 	moveq	#$10,d1
 	btst	#6,(sflags6).w
 	beq.w	.read
