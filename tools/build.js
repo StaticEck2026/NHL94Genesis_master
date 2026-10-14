@@ -2,6 +2,7 @@
 // build.js: the whole NHL 94 build, one line per step, on Windows and Linux (wine).
 //   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/modified_nhl94.bin
 //   node tools/build.js --seg <name> [--verbose]       one segment (tools/segments.json), verified
+// --no-color (or NO_COLOR) turns the colors off; they are also off when the output is not a terminal.
 // retail: CHECKSUM=1 and verified against lst/nhl94.bin. dev: CHECKSUM=0, not verified.
 // The rev / checksum environment variables (as in build94.bat) override the defaults.
 const fs = require('fs');
@@ -16,6 +17,17 @@ const WIN = process.platform === 'win32';
 
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose');
+// ANSI colors: off when stdout is not a terminal, NO_COLOR is set, or --no-color. Windows 10+ cmd and
+// PowerShell take ANSI codes from Node directly.
+const color = process.stdout.isTTY && !('NO_COLOR' in process.env) && !args.includes('--no-color');
+const sgr = (code) => (t) => (color ? `\x1b[${code}m${t}\x1b[0m` : String(t));
+const c = { dim: sgr('2'), cyan: sgr('36'), green: sgr('32'), yellow: sgr('33'), red: sgr('31'), bold: sgr('1') };
+// Values (numbers, $hex, output paths) bold; OK / MATCH green; warnings yellow.
+const paint = (t) => t
+    .replace(/(output\/\S+|\$[0-9A-F]+|\b\d+(?:\.\d+)?s?\b)/g, (m) => c.bold(m))
+    .replace(/\b(MATCH|OK)\b/g, (m) => c.green(m))
+    .replace(/\b([1-9]\d*)(\x1b\[0m)? (warnings|skipped)/g, (m) => c.yellow(m))
+    .replace(/not verified \(dev build\)/, (m) => c.yellow(m));
 const segIdx = args.indexOf('--seg');
 const seg = segIdx >= 0 ? args[segIdx + 1] : null;
 const mode = args.find((a) => a === 'retail' || a === 'dev') || 'retail';
@@ -25,12 +37,13 @@ const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 
 
 const steps = 5;
 let n = 0;
-const step = (name, text) => console.log(`[${++n}/${steps}] ${name.padEnd(10)} ${text}`);
+const tag = (name) => `${c.cyan(`[${++n}/${steps}]`)} ${name.padEnd(10)}`;
+const step = (name, text) => console.log(`${tag(name)} ${paint(text)}`);
 const detail = (text) => { if (verbose && text.trim()) console.log(text.replace(/\s+$/, '').replace(/^/gm, '      ')); };
 function fail(name, text, log) {
-    console.log(`[${++n}/${steps}] ${name.padEnd(10)} FAILED: ${text}`);
+    console.log(`${tag(name)} ${c.red('FAILED')}: ${text}`);
     if (log) console.log(log.replace(/\s+$/, '').replace(/^/gm, '      '));
-    console.log(`BUILD FAILED at ${name}`);
+    console.log(c.red(`BUILD FAILED at ${name}`));
     process.exit(1);
 }
 function run(cmd, argv, opts = {}) {
@@ -119,9 +132,9 @@ if (!seg && mode === 'dev') {
     const r = seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]);
     const first = r.out.split(/\r?\n/).find((l) => l.trim()) || '';
     if (r.status !== 0 || !/^MATCH/.test(first)) {
-        console.log(`[${++n}/${steps}] verify     MISMATCH: ${rel(mod)}`);
+        console.log(`${tag('verify')} ${c.red('MISMATCH')}: ${c.bold(rel(mod))}`);
         console.log(r.out.replace(/\s+$/, '').replace(/^/gm, '      '));
-        console.log('BUILD FAILED at verify');
+        console.log(c.red('BUILD FAILED at verify'));
         process.exit(1);
     }
     step('verify', `MATCH ${rel(mod)}${seg ? ` (${first.replace(/^MATCH:?\s*/, '')})` : ''}`);
