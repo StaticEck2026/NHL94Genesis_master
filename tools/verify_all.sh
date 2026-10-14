@@ -9,7 +9,7 @@ node tools/build.js retail | tee /tmp/top.log
 grep -q '^\[5/5\] verify     MATCH' /tmp/top.log || fail=1
 for s in $(node -e 'console.log(Object.keys(require("./tools/segments.json")).join("\n"))'); do
   r=$(node tools/build.js --seg $s)
-  last=$(echo "$r" | tail -1)
+  last=$(echo "$r" | grep "^\[5/5\] verify")
   case "$last" in
     "[5/5] verify     MATCH"*) echo "$s: ${last#*(}" | sed 's/)$//' ;;
     *) echo "$s: FAILED"; echo "$r"; fail=1 ;;
