@@ -32,7 +32,7 @@ Mod-safe build (the stock ROM stays byte-identical; see docs/ADDING_A_TEAM.md):
 - The build fills $FF up to 1MB, then to 1.5MB, 2MB or 4MB if the image is larger. The header end is `RomEnd`. An include placed after the 1MB fill starts at the 1MB boundary. Content past backup RAM warns; past 4MB the assemble stops.
 - `build94.bat` passes `LONGBRA=0`. If `bra.w Begin` cannot reach, it assembles again with a long jump.
 - `tools/patchchecksum.js` runs after `fixopcodes` and writes the sum ValidationRoutine compares against. The source keeps the retail immediate. `tools/verify_all.sh` prints `ALL MATCH`.
-- `NumTeams` and `NumPlayoffTeams` live in `src/stubinc/equals.inc`. Per-team tables are checked while assembling. A larger league moves the records block and the name log up in save RAM; the stock league does not. `TeamRatings` is aligned after its length check.
+- `NumTeams` and `NumPlayoffTeams` live in `src/stubinc/equals.inc`. Per-team tables are checked while assembling. A larger league moves the records block and the name log up in save RAM; the stock league does not. `TeamRatings` is aligned after its length check. Banner rows go at the new team's index. A 29-team ROM that reuses an existing record reaches the ice.
 
 ## Current segment
 

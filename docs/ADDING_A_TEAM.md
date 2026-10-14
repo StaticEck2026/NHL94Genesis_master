@@ -22,6 +22,8 @@ Each of these is checked while assembling. The build stops if the count is not `
 | Team blocks | `Teamblocksmap` (`TeamBlocks.map.jim`) | Two rows, 11 tiles wide, in the shared banner image. |
 | Team block bitmaps | `TeamBitmaps` (`TeamBlocks94.map.jim`) | The same shape, the other shared image. |
 
+Those two rows go at the new team's index, and the map height grows by 2. A team inserted before the all-stars needs its rows inserted there in both images. Rows added only at the end stay on the last team, so the new index keeps the art that used to be there. The setup banner and the scoreboard name are those tiles. The name in the menu and the abbreviation on the ice come from the team record.
+
 `NoTiles` is the zero long just before `TeamList`. It is the pointer used when a slot has no tiles. It is not a team entry.
 
 The two shared images are measured by `tools/prebuild.js`, which writes `output/teamcounts.inc`. Rebuilding those images, and the ice logos, is not in this repo. The graphics tools for that live in EA-NHL-Tools.
@@ -60,3 +62,5 @@ Leave the backup RAM window alone if the save data should keep working. The buil
 The ROM size is 1MB, 1.5MB, 2MB or 4MB. The header long at the ROM-end field is the last byte of that size. The checksum line prints the old immediate and the sum it wrote; that sum is every long below `ValidationRoutine`, skipping the header long that holds the checksum word.
 
 Boot with `checksum=1`. The red screen is this check failing. `checksum=0` skips it. `tools/verify_all.sh` is the stock check: it prints `ALL MATCH` only when the full ROM and every segment still match the retail image. A ROM with an extra team will not match, and should not be committed over the retail bytes.
+
+A throwaway 29th entry that reused Anaheim's record, with that index as the home team against Los Angeles, assembled, passed the boot check, and reached the ice. The clock ran (10:00 down through 7:52) with LA and ANH on the scoreboard. That ROM was not kept.
