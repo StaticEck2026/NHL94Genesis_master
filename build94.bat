@@ -47,6 +47,14 @@ REM Run the assembler with all flags
   %revFlag% %checksumFlag% ^
   "%workspaceFolder%src\nhl94.asm,%workspaceFolder%output\nhl94.bin,%workspaceFolder%output\nhl94,%workspaceFolder%output\nhl94" ^
   > "%workspaceFolder%output\Build94.log"
+findstr /C:"SHORTCALL" "%workspaceFolder%output\Build94.log" >nul
+if errorlevel 1 goto noshort
+echo.
+echo A routine the retail code calls with a short jsr/jmp (x).w moved past $7FFF:
+findstr /C:"SHORTCALL" "%workspaceFolder%output\Build94.log"
+echo Put the added data after menu94 ^(or after the 1MB pad^), or change those calls to .l.
+echo See docs\EXPANDING_THE_ROM.md.
+:noshort
 endlocal
 findstr /C:" 0 error" "%workspaceFolder%output\Build94.log" >nul
 if errorlevel 1 exit /b 1

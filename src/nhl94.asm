@@ -40,3 +40,4 @@
 	include	checksum94.asm		; $0FFAC0 checksum
 	dcb.b	$100000-*,$FF	;fill the retail 1MB image. Includes for a larger ROM go after this line;
 				;tools/fixrom.js pads the image and sets the header ROM end (docs/EXPANDING_THE_ROM.md)
+	include	shortcalls.inc		; checks only: the routines the retail code calls with .w stay below $8000
