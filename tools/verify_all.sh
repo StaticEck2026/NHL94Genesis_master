@@ -6,12 +6,12 @@ cd "$(dirname "$0")/.."
 rm -rf Extracted; node tools/prebuild.js retail >/tmp/x94.log 2>&1 || { echo "PREBUILD FAIL"; cat /tmp/x94.log; exit 1; }
 fail=0
 node tools/build.js retail | tee /tmp/top.log
-grep -q '^\[5/5\] verify     MATCH' /tmp/top.log || fail=1
+grep -qE '^ +MATCH ' /tmp/top.log || fail=1
 for s in $(node -e 'console.log(Object.keys(require("./tools/segments.json")).join("\n"))'); do
   r=$(node tools/build.js --seg $s)
-  last=$(echo "$r" | grep "^\[5/5\] verify")
+  last=$(echo "$r" | grep -E "^ +MATCH ")
   case "$last" in
-    "[5/5] verify     MATCH"*) echo "$s: ${last#*(}" | sed 's/)$//' ;;
+    *MATCH*) echo "$s: ${last#*(}" | sed 's/)$//' ;;
     *) echo "$s: FAILED"; echo "$r"; fail=1 ;;
   esac
 done

@@ -38,8 +38,9 @@ const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 
 
 let steps = 5;
 let n = 0;
-const tag = (name) => `${c.cyan(`[${++n}/${steps}]`)} ${name.padEnd(10)}`;
-// One plain-language line under each step, for anyone new to the build.
+// Each step is two lines: "[n/5] <step>  <description>", then the result under the description.
+// In a colour terminal the first line is printed (step name yellow) when the step starts and redrawn
+// green or red when it ends; otherwise both lines are printed once, after the step.
 const ABOUT = {
     prebuild: 'check the retail ROM and extract graphics/sound assets into Extracted/',
     assemble: 'SNASM68k turns src/*.asm into a raw ROM image',
@@ -47,12 +48,30 @@ const ABOUT = {
     fixrom: 'pad to a valid ROM size, write the header end address and the checksum',
     verify: 'compare byte-for-byte with the retail ROM',
 };
-const about = (name) => { if (ABOUT[name]) console.log(c.dim(`      ${ABOUT[name]}`)); };
-const step = (name, text) => { console.log(`${tag(name)} ${paint(text)}`); about(name); };
-const detail = (text) => { if (verbose && text.trim()) console.log(text.replace(/\s+$/, '').replace(/^/gm, '      ')); };
-function fail(name, text, log) {
-    console.log(`${tag(name)} ${c.red('FAILED')}: ${text}`);
-    if (log) console.log(log.replace(/\s+$/, '').replace(/^/gm, '      '));
+const INDENT = ' '.repeat(`[0/0] ${''.padEnd(10)} `.length);
+const live = color;
+let current = null;
+let dirty = false;
+const header = (name, paintName) => `${c.cyan(`[${n}/${steps}]`)} ${paintName(name.padEnd(10))} ${c.dim(ABOUT[name] || '')}`;
+function begin(name) {
+    n++;
+    current = name;
+    dirty = false;
+    if (live) console.log(header(name, c.yellow));
+}
+function finish(name, paintName) {
+    if (current !== name) begin(name);
+    if (!live) console.log(header(name, (t) => t));
+    else if (!dirty) process.stdout.write(`\x1b[1A\r\x1b[2K${header(name, paintName)}\n`);
+    else console.log(header(name, paintName));
+    current = null;
+}
+const step = (name, text) => { finish(name, c.green); console.log(INDENT + paint(text)); };
+const detail = (text) => { if (verbose && text.trim()) { dirty = true; console.log(text.replace(/\s+$/, '').replace(/^/gm, INDENT)); } };
+function fail(name, text, log, label = 'FAILED') {
+    finish(name, c.red);
+    console.log(`${INDENT}${c.red(label)}: ${text}`);
+    if (log) console.log(log.replace(/\s+$/, '').replace(/^/gm, INDENT));
     console.log(c.red(`BUILD FAILED at ${name}`));
     process.exit(1);
 }
@@ -76,6 +95,7 @@ if (args.includes('--segacd')) {
     fs.mkdirSync(BUILD, { recursive: true });
     fs.mkdirSync(CD, { recursive: true });
     const exe = path.join(ROOT, 'assembler', 'Assembler.exe');
+    begin('assemble');
     const t0 = Date.now();
     for (const f of frags) {
         const out = path.join(CD, `${f.name}.bin`);
@@ -93,13 +113,11 @@ if (args.includes('--segacd')) {
         detail(`${f.name}: ${sum[0]} -> ${rel(out)}`);
     }
     step('assemble', `${frags.length} fragments, 0 errors in ${((Date.now() - t0) / 1000).toFixed(1)}s -> output/segacd/`);
+    begin('verify');
     const r = node('verifySegacd.js', []);
     const matches = (r.out.match(/ MATCH /g) || []).length;
     if (r.status !== 0) {
-        console.log(`${tag('verify')} ${c.red(/missing .*cdbin/.test(r.out) ? 'FAILED' : 'MISMATCH')}: ${r.out.trim().split(/\r?\n/).pop()}`);
-        if (verbose) console.log(r.out.replace(/\s+$/, '').replace(/^/gm, '      '));
-        console.log(c.red('BUILD FAILED at verify'));
-        process.exit(1);
+        fail('verify', r.out.trim().split(/\r?\n/).pop(), verbose ? r.out : '', /missing .*cdbin/.test(r.out) ? 'FAILED' : 'MISMATCH');
     }
     step('verify', `MATCH ${matches} fragments against cdbin/`);
     detail(r.out);
@@ -123,6 +141,7 @@ const mod = path.join(OUT, final);
 
 // 1. prebuild: ROM check and Extracted/ assets.
 {
+    begin('prebuild');
     const r = node('prebuild.js', ['retail']);
     if (r.status !== 0) fail('prebuild', 'ROM or asset extraction', r.out);
     let count = '?';
@@ -133,6 +152,7 @@ const mod = path.join(OUT, final);
 
 // 2. assemble: SNASM68k, directly on Windows, under wine elsewhere. Its console output is the log.
 {
+    begin('assemble');
     fs.mkdirSync(BUILD, { recursive: true });
     for (const f of [bin, fixed, mod]) fs.rmSync(f, { force: true });
     const src = seg ? `stubinc\\${seg}_stub.asm` : 'nhl94.asm';
@@ -164,6 +184,7 @@ const mod = path.join(OUT, final);
 
 // 3. fixopcodes: rewrite the EA cmp / exg encodings SNASM picks differently; the result becomes output/<final>.
 {
+    begin('fixopcodes');
     const r = node('fixopcodes.js', [lst, bin, ...(seg ? [SEGMENTS[seg]] : [])]);
     const m = r.out.match(/Modified (\d+) instructions/);
     if (r.status !== 0 || !m || !fs.existsSync(fixed)) fail('fixopcodes', 'did not write the fixed binary', r.out);
@@ -177,6 +198,7 @@ const mod = path.join(OUT, final);
 if (seg) {
     step('fixrom', 'skipped (segment)');
 } else {
+    begin('fixrom');
     const r = node('fixrom.js', [lst, mod]);
     const m = r.out.match(/size (\w+) \(end (\w+)\), checksum (\w+) -> (\w+)/);
     if (r.status !== 0 || !m) fail('fixrom', 'size or checksum', r.out);
@@ -190,13 +212,11 @@ if (!seg && mode === 'dev') {
 } else if (!seg && rev) {
     step('verify', `${rel(mod)} not verified (no REV A reference ROM)`);
 } else {
+    begin('verify');
     const r = seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]);
     const first = r.out.split(/\r?\n/).find((l) => l.trim()) || '';
     if (r.status !== 0 || !/^MATCH/.test(first)) {
-        console.log(`${tag('verify')} ${c.red('MISMATCH')}: ${c.bold(rel(mod))}`);
-        console.log(r.out.replace(/\s+$/, '').replace(/^/gm, '      '));
-        console.log(c.red('BUILD FAILED at verify'));
-        process.exit(1);
+        fail('verify', rel(mod), r.out, 'MISMATCH');
     }
     step('verify', `MATCH ${rel(mod)}${seg ? ` (${first.replace(/^MATCH:?\s*/, '')})` : ''}`);
     detail(r.out);
