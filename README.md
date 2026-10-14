@@ -57,3 +57,9 @@ Full ROM builds assemble `src/nhl94.asm`. The listing is `output/nhl94 .lst`. Th
 ## Sega CD
 
 `npm run build:segacd` assembles the transcribed CD fragments in `src/segacd/` and compares them to the disc files in `cdbin/` (not in the repo). It does not change the cartridge build. What the disc changed, and how far the disassembly goes, is `docs/segacd.md`.
+
+## Credits
+
+Thanks to chaos, StaticEck, McMarkis and Drezz for their help with the disassembly.
+
+These disassemblies started with a lot of manual work, especially from chaos, and have since been AI-assisted.
