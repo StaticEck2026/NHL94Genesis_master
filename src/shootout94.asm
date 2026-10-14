@@ -158,7 +158,7 @@ InitShooters	;Shootout: the 6 starters of the home (shootoutteam 0) or away team
 	move.w	(VisTeam).w,d0
 	movea.l	#shootoutteam,a0
 .0
-	movea.l	#$30E,a1
+	movea.l	#TeamList,a1
 	asl.w	#2,d0
 	movea.l	0(a1,d0.w),a1
 	adda.w	6(a1),a1
@@ -187,7 +187,7 @@ ShootoutWonBy	;Shootout: "SHOOTOUT WON BY" (printbig). Called from SetPA
 	move.w	(VisTeam).w,d1
 .0
 	asl.w	#2,d1
-	movea.l	#$30E,a1
+	movea.l	#TeamList,a1
 	movea.l	0(a1,d1.w),a1
 	adda.w	4(a1),a1
 	move.w	#2,(printx).w
@@ -453,7 +453,7 @@ ShootersBackground	;Shootout shooters background and "Shootout" title
 	String	-TXMAP3,0,0
 	movea.l	#ScoutMap,a1
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2
+	movea.w	#NoTiles,a2
 	clr.w	d0
 	clr.w	d1
 	move.w	(a1),d2

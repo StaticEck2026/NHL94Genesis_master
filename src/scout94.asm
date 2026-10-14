@@ -69,7 +69,7 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	;matchup 0 is both team logos with the team ratings, 1-6 the two players at center, left forward, right forward, left defense, right defense
 	;and goalie with their ratings, with marks toward the side that has the advantage. The text player (ScoutTextPlayer)
 	;types the paragraph list. A / C page the matchups (the page also turns by itself about every $10E frames), down types fast, start leaves
-	jsr	(ReadNameLog).l	;read the $80 byte SRAM name list at $DA0 to $FFD45A
+	jsr	(ReadNameLog).l	;read the $80 byte SRAM name list at NameLogBase to namelog
 	jsr	(BuildHotColdLists).l	;hot / cold players for the text
 	clr.w	(advframe).w	;advantage mark frame
 	move.w	#SngScout,-(sp)	;song $7A

@@ -38,4 +38,36 @@
 	include	goalie94.asm		; $0FE1D8  NEW in 94: manual goalie
 	include	title94.asm		; $0FE556  NEW in 94: song select, title, credits
 	include	checksum94.asm		; $0FFAC0 checksum
-	dcb.b	$100000-*,$FF
+; Pad to the next size the cartridge hardware accepts: 1MB, 1.5MB, 2MB or 4MB.
+; Content past the backup RAM window still builds, with a warning. Past 4MB the build stops.
+	IF $400000<*
+		inform	3,"ROM is larger than 4MB"
+	ENDIF
+	IF $200000<*
+		inform	1,"ROM content overlaps backup RAM"
+	ENDIF
+; Finish the 1MB image first. An include after this pad starts at the 1MB boundary,
+; and the pad below then grows the ROM to the next size.
+	IF *<$100000
+		dcb.b	$100000-*,$FF
+	ENDIF
+	IF *<$100001
+RomSize	equ	$100000
+	ENDIF
+	IF $100000<*
+		IF *<$180001
+RomSize	equ	$180000
+		ENDIF
+	ENDIF
+	IF $180000<*
+		IF *<$200001
+RomSize	equ	$200000
+		ENDIF
+	ENDIF
+	IF $200000<*
+		IF *<$400001
+RomSize	equ	$400000
+		ENDIF
+	ENDIF
+	dcb.b	RomSize-*,$FF
+RomEnd	equ	RomSize-1

@@ -65,25 +65,25 @@ ContinuePlayoffs	;Continue playoffs:
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
 NewPO	;New playoff generates tree with same team 1. Called from GoNewPlayoffs. Falls into MakeTree
-	moveq	#$20,d0	;' '   ; 20 = 32 decimal
+	moveq	#PlayoffRows,d0
 	bsr.w	randomd0
 .top
 	addq.w	#1,d0	;adds 1 to d0 (d0 cannot be 0)
-	andi.w	#$1F,d0	;mask d0 with 1F (31 decimal). Makes sure its 31 or less
-	asl.w	#4,d0	;multiply d0 by 16
+	andi.w	#PlayoffRows-1,d0	;row index, 0 through 31
+	asl.w	#4,d0	;row length is PlayoffRowTeams bytes
 	movea.l	#playoffseats,a0
 	adda.w	d0,a0	;use d0 as offset
-	lsr.w	#4,d0	;divide d0 by 16
-	moveq	#$F,d1	;move 15 into d1
+	lsr.w	#4,d0	;back to the row index
+	moveq	#PlayoffRowTeams-1,d1
 	move.w	(Opt1Team).w,d2	;Team 1 on menu
-	cmp.w	#$19,d2	;compares #NumOfTeams-3 to d2 (25 decimal)
-	bls.w	.loop	;branch if d2 less than 19 hex
-	moveq	#$19,d2	;move 19 into d2 (limits team selection; all-star teams use team 25)
+	cmp.w	#NumPlayoffTeams-1,d2	;last playoff team; all-stars clamp to it
+	bls.w	.loop
+	moveq	#NumPlayoffTeams-1,d2
 .loop
 	cmp.b	(a0)+,d2	;compare team at a0+ to d2 (looks at second byte of a0)
 	dbeq	d1,.loop	;iterate through loop until team is found
 	bne.s	.top
-	eori.w	#$F,d1
+	eori.w	#PlayoffRowTeams-1,d1
 	move.w	d1,(potreeteam).w	;which team are you on the initial playoff tree
 	move.w	d0,(postarts).w	;0-31 for which playoff tree to use as frame
 	clr.w	(gamelevel).w	;0-3 for the depth into the playoff tree
@@ -325,8 +325,8 @@ InitializeGameStructures	;Random team pairs for all 8 gsstruct games, none of th
 	adda.w	#gssize,a1
 	dbf	d2,.loop
 	rts
-GetRandomUnusedTeam	;Calls randomd0 when changing options: return d0 = a random team 0-25 not yet set in d3, and set its bit. Called from InitializeGameStructures
-	moveq	#$1A,d0
+GetRandomUnusedTeam	;return d0 = a random playoff team not yet set in d3, and set its bit. d3 holds one bit per team, so this stops working past 32 playoff teams. Called from InitializeGameStructures
+	moveq	#NumPlayoffTeams,d0
 	bsr.w	randomd0
 	bset	d0,d3
 	bne.s	GetRandomUnusedTeam
@@ -774,7 +774,7 @@ ShowThreeStars	;End of game Stars of the Game box. Called from UpdatePA while Re
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),9,$10,'Stars of the Game',-(TXPRI+TXMAP1),3,$F
 	movea.l	#Rinktilelist,a1	;map at offset 4
-	movea.w	#$30A,a2	;a zero long: no tiles
+	movea.w	#NoTiles,a2
 	adda.l	4(a1),a1
 	moveq	#$D,d0
 	moveq	#$5B,d1
@@ -837,7 +837,7 @@ CalcStarScores	;Star score for every roster slot of both teams to ThreeStars (26
 	;GetPeriodTime + d2, the goalie ice time needed. If gsp is 3 and the score is not tied, the scorer of the last goal gets $7FFFFFFF. Called
 	;from ShowThreeStars
 	movea.w	#(ThreeStars-M68K_RAM),a4
-	jsr	(GetPeriodTime).w
+	absjsr	GetPeriodTime
 	move.w	d0,d5
 	add.w	d2,d5
 	movea.w	#(tmstruct-M68K_RAM),a2

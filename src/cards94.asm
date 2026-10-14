@@ -326,6 +326,10 @@ TeamPalettes	;Matchup and player card palettes: 56 of 16 colors, two per team (2
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASEB.pal	;ASE other side
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWA.pal	;ASW matchup logo palette
 	incbin	..\Extracted\NHL94\Graphics\Pals\MatchupPalASWB.pal	;ASW other side
+TeamPalettesEnd
+	IF (TeamPalettesEnd-TeamPalettes)<>(NumTeams*64)
+		inform	3,"TeamPalettes needs two palettes per team"
+	ENDIF
 FeaturedPictures	;The featured player pictures
 	;of each team (TeamList order): a list of picture.l (NoPicSkater1 ... Card<player>) and roster index.w, 0 ends
 	dc.l	.ANH,.BOS,.BUF,.CGY
@@ -335,6 +339,10 @@ FeaturedPictures	;The featured player pictures
 	dc.l	.PHI,.PIT,.QUE,.SJ
 	dc.l	.STL,.TB,.TOR,.VAN
 	dc.l	.WSH,.WPG,.ASE,.ASW
+.listend
+	IF (.listend-FeaturedPictures)<>(NumTeams*4)
+		inform	3,"FeaturedPictures needs one entry per team"
+	ENDIF
 .FLA
 	dc.l	NoPicGoalie2
 	dc.w	0
@@ -942,7 +950,7 @@ AppendNumber	;Write d0 (0 ... 999, no leading zeros) as a String at a1, padded t
 GetRecordValue	;d0 = record d0 of player d1 of team d0 from save RAM (ReadPlayerRecord into $FFFF0000); d1 = 1 when the player is a goalie
 	movem.l	d2-d7/a0-a6,-(sp)
 	move.w	d0,-(sp)
-	movea.l	#$30E,a2
+	movea.l	#TeamList,a2
 	asl.w	#2,d0
 	movea.l	0(a2,d0.w),a2
 	adda.w	(a2),a2
@@ -962,7 +970,7 @@ GetRecordValue	;d0 = record d0 of player d1 of team d0 from save RAM (ReadPlayer
 	bsr.w	ReadPlayerRecord
 	move.b	(a0),d0
 	ext.w	d0
-	movea.l	#$30E,a5
+	movea.l	#TeamList,a5
 	asl.w	#2,d4
 	movea.l	0(a5,d4.w),a5
 	adda.w	$A(a5),a5
@@ -1104,14 +1112,14 @@ PlayerRecordIO	;Read (sflags6 bit 6 clear) or write a save RAM record block (Rea
 WritePlayerRecord	;Write the 4 byte player record
 	bset	#6,(sflags6).w
 	bra.s	PlayerRecordIO
-ReadCrowdRecord	;Read the 16 byte crowd record block of team d1 from save RAM ($B60 + team * 16) to a0. Called from
+ReadCrowdRecord	;Read the 16 byte crowd record block of team d1 from save RAM (CrowdRecBase + team * 16) to a0. Called from
 	;LoadCrowdRec and PrintCrowdMeter
 	bclr	#6,(sflags6).w
 CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered from ReadCrowdRecord and WriteCrowdRecord
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.l	d1,d0
 	asl.w	#4,d0
-	addi.l	#$B60,d0
+	addi.l	#CrowdRecBase,d0
 	moveq	#$10,d1
 	btst	#6,(sflags6).w
 	beq.w	.read
@@ -1125,13 +1133,13 @@ CrowdRecordIO	;The crowd record block: read or write (sflags6 bit 6). Entered fr
 WriteCrowdRecord	;Write the 16 byte crowd record block of team d1 (CrowdRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	CrowdRecordIO
-ReadTeamRecord	;Read the 16 byte team record block of team d1 ($D20 + team * 16) to a0 (TeamRecordIO)
+ReadTeamRecord	;Read the 16 byte team record block of team d1 (TeamRecBase + team * 16) to a0 (TeamRecordIO)
 	bclr	#6,(sflags6).w
 TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.l	d1,d0
 	asl.w	#4,d0
-	addi.l	#$D20,d0
+	addi.l	#TeamRecBase,d0
 	moveq	#$10,d1
 	btst	#6,(sflags6).w
 	beq.w	.read
@@ -1145,15 +1153,15 @@ TeamRecordIO	;A save RAM record block: read or write (sflags6 bit 6)
 WriteTeamRecord	;Write the team record block (TeamRecordIO)
 	bset	#6,(sflags6).w
 	bra.s	TeamRecordIO
-WriteNameLog	;Write the user name log ($80 bytes at namelog) to save RAM $DA0 (NameLogIO)
+WriteNameLog	;Write the user name log ($80 bytes at namelog) to save RAM at NameLogBase (NameLogIO)
 	bset	#6,(sflags6).w
 	bra.w	NameLogIO
-ReadNameLog	;Read the user name log from save RAM $DA0 to namelog. Called from GameSetUp
+ReadNameLog	;Read the user name log from save RAM at NameLogBase to namelog. Called from GameSetUp
 	bclr	#6,(sflags6).w
 NameLogIO	;A user record block: read or write (sflags6 bit 6)
 	movem.l	d0-d7/a0-a6,-(sp)
-	move.l	#$80,d1
-	move.l	#$DA0,d0
+	move.l	#NameLogBytes,d1
+	move.l	#NameLogBase,d0
 	movea.l	#namelog,a0
 	btst	#6,(sflags6).w
 	beq.w	.read
@@ -1674,7 +1682,7 @@ DrawPlayerCard	;Draw a player card: picture (DrawPictureBox), name, "Records" an
 	move.w	(VisTeam).w,d0
 .4
 	move.w	d0,(TempWord2).w
-	movea.l	#$30E,a2
+	movea.l	#TeamList,a2
 	asl.w	#2,d0
 	movea.l	0(a2,d0.w),a2
 	adda.w	(a2),a2
@@ -2057,7 +2065,7 @@ AppendTeamName	;Append the city name of team d0 (TeamList block Strings) to a1 (
 	movem.l	d0/a0-a3,-(sp)
 	ext.w	d0
 	asl.w	#2,d0
-	movea.l	#$30E,a0
+	movea.l	#TeamList,a0
 	movea.l	0(a0,d0.w),a0
 	move.w	4(a0),d0
 	ext.l	d0
@@ -2110,7 +2118,7 @@ PrintStartingLine	;Player card "Starting Line": the line slots the player starts
 	move.w	(VisTeam).w,d2
 	bsr.w	GetTeamStruct
 .1
-	movea.l	#$30E,a0
+	movea.l	#TeamList,a0
 	asl.w	#2,d2
 	ext.l	d2
 	adda.l	d2,a0
@@ -2489,7 +2497,7 @@ DrawPlayerPicture	;Draw the player picture (NoPicSkater1 ... NoPicGoalie2, Card<
 	addq.w	#1,d2
 	tst.l	(a0)
 	bne.s	.loop
-	movea.l	#$30E,a0
+	movea.l	#TeamList,a0
 	asl.w	#2,d1
 	movea.l	0(a0,d1.w),a0
 	movea.l	a0,a6

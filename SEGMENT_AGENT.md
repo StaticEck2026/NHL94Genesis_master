@@ -26,6 +26,14 @@ routine's origin: 94G for 94 code, else 93G, else 92G; SNES-only code goes in a 
 Work in small steps: every change is built and checked byte for byte against the reference ROM, then committed and pushed to main
 (no force push, no PRs). Keep `docs/HANDOFF.md` current after each push.
 
+Mod-safe build (the stock ROM stays byte-identical; see docs/ADDING_A_TEAM.md):
+- `absjsr` / `absjmp` in `src/macros/genesis.mac` emit a short absolute call when the target is below $8000 and a long one otherwise. The target has to be defined already. A forward call stays `jsr` / `jmp (name).l`.
+- `NoTiles` is the zero long before `TeamList`. Loads of the team list use those labels.
+- The build fills $FF up to 1MB, then to 1.5MB, 2MB or 4MB if the image is larger. The header end is `RomEnd`. An include placed after the 1MB fill starts at the 1MB boundary. Content past backup RAM warns; past 4MB the assemble stops.
+- `build94.bat` passes `LONGBRA=0`. If `bra.w Begin` cannot reach, it assembles again with a long jump.
+- `tools/patchchecksum.js` runs after `fixopcodes` and writes the sum ValidationRoutine compares against. The source keeps the retail immediate. `tools/verify_all.sh` prints `ALL MATCH`.
+- `NumTeams` and `NumPlayoffTeams` live in `src/stubinc/equals.inc`. Per-team tables are checked while assembling. A larger league moves the records block and the name log up in save RAM; the stock league does not. `TeamRatings` is aligned after its length check. Banner rows go at the new team's index. A 29-team ROM that reuses an existing record reaches the ice.
+
 ## Current segment
 
 None. Every ROM map row is matched, every `seg:` script matches its ROM map range, and the full build (`npm.cmd run build:retail`, `output/modified_nhl94.bin`) is byte-identical to `lst/nhl94.bin` (1048576 bytes), re-verified after the file reorganization. See the last History entry.
@@ -68,6 +76,8 @@ A MATCH of 0 bytes is a failure. The byte count must be the confirmed range.
 Full build check (`npm.cmd run build:retail`): delete `output/nhl94.bin` and `output/modified_nhl94.bin` first. A failed assembly writes no `nhl94.bin`, fixopcodes then fails with ENOENT, and an old `modified_nhl94.bin` stays behind and can look like a pass. Read `output/Build94.log` for errors (an undefined symbol is reported there, not as a MISMATCH). Then compare `output/modified_nhl94.bin` to `lst/nhl94.bin`: the same length (1048576) and every byte equal. Only a compare made this session counts; do not carry "byte-identical" forward from History or from Current segment.
 
 Run the full build after every segment once `src/nhl94.asm` includes it, and after every global rename. A `seg:` MATCH only proves the names the stub equates; a name another file still uses under the old spelling breaks only the full build.
+
+`tools/verify_all.sh` builds the full ROM and every segment and prints `ALL MATCH`. The full ROM's checksum compare is patched after `fixopcodes`; segment bins are not. A ROM that has grown is not compared to the retail image. Its size is the next of 1MB, 1.5MB, 2MB and 4MB, the header end is the last byte, and the patched checksum is the sum of the longs below ValidationRoutine.
 
 `tools/sync.js` keeps the repo and GitHub in step (`npm run sync`; the `.claude/settings.json` hooks run it at session start, pull only, and after every turn). It commits uncommitted work on the current branch (on `main` it first moves it to a new `autosave/<date>` branch), fast-forwards branches that are behind, and pushes branches that are ahead, never with `--force`. Commits titled `Autosave uncommitted work on ...` are from it.
 
@@ -407,7 +417,7 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 - Text codes: `stubinc/equals.inc` adds `TXMAP1-3`, `TXHF`, `TXVF`, `TXPAL1-3`, `TXPRI` for the print/printz/printbigz position byte (`String -(TXPRI+TXMAP1),x,y,...`) and `CC_SetMap` ... `CC_SetMapAndPosition` ($FF-$F8) for printsmall/printz2 control codes (`String CC_SetX,4,CC_SetY,2,...`). Inline Strings after jsr printz/printz2/printbigz use them; tables read by other routines keep raw bytes.
 - Sound: `stubinc/equals.inc` adds `SFX_*` game sound numbers (0-$2F, 92/93 names; +0-3 variants for pass/shot/check/puckwall/puckice) used at the sfx / song call sites.
   94 also has `SngTitle` ($78), `SngEOG` ($79), `SngScout` ($7A).
-- Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
+- Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `NumTeams` is `ASW+1` and `NumPlayoffTeams` is `ASE`. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
 - VDP commands: `ports.inc` adds `VRAM_W`, `CRAM_W`, `VSRAM_W` (long control words; add `(addr&$3FFF)<<16 + addr>>14`): `move.l #VSRAM_W+(2<<16),Vctrl-Vdata(a0)`.
 - Original names: where NHL92Genesis `src/ram.asm` (EA original source) has a name it is used: `pflags3`, `pf3oside`, `aggress`, `SFXsiren` ... `SFXoooh` (92 names, 94 values), `SngTitle`, `SngEOG`, `Vdata` / `Vctrl` (`Vctrl-Vdata(a0)`). Names 92 lacks follow its style (`SFXhomewin`, `SFX0D`, `SngScout`).
 

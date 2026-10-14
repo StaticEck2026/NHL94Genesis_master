@@ -79,5 +79,8 @@ ScoresMap = $B3E74		;#x at $8106
 vcountwait = $80BA		;bsr.w / Bcc.w at $816A
 waitx = $11176			;bsr.w / Bcc.w at $9DE2
 
+NoTiles = $30A
+TeamList = $30E
+
 ; Main segment code
 	include	stats94.asm

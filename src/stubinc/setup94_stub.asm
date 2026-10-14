@@ -93,5 +93,8 @@ SPFgoal	=	405
 SPFpuck	=	394
 SPAglide	=	$50C
 
+NoTiles = $30A
+TeamList = $30E
+
 ; Main segment code
 	include	setup94.asm

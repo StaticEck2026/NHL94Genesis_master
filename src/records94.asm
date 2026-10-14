@@ -68,7 +68,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	beq.w	.0
 	move.w	(VisTeam).w,d0
 .0
-	movea.l	#$30E,a1	;TeamList
+	movea.l	#TeamList,a1
 	asl.w	#2,d0
 	movea.l	0(a1,d0.w),a1
 	adda.w	4(a1),a1
@@ -743,8 +743,8 @@ WriteNameRecord	;Write the name record (ReadSRAM / WriteSRAM)
 .2
 	addq.l	#4,d0
 	dbf	d7,.loop
-	move.w	#$1B,d7
-	move.l	#$B60,d0
+	move.w	#NumTeams-1,d7
+	move.l	#CrowdRecBase,d0
 	moveq	#$10,d1
 	movea.l	#ThreeStars,a0
 	move.w	(namelogsel).w,d6
@@ -785,9 +785,9 @@ WriteNameRecord	;Write the name record (ReadSRAM / WriteSRAM)
 	beq.w	.9
 	jsr	(WriteSRAM).l
 .9
-	addi.l	#$10,d0
+	addi.l	#CrowdRecBytes,d0
 	dbf	d7,.loop2
-	move.l	#$D20,d0
+	move.l	#TeamRecBase,d0
 	move.w	(namelogsel).w,d3
 	asl.w	#4,d3
 	ext.l	d3
@@ -1389,7 +1389,7 @@ CalcWinPercents	;Record Holders: for the 8 user record blocks at ThreeStars, the
 	rts
 ReadTeamRecords	;Record Holders: read the records (ReadSRAM)
 	movem.l	d0-d7/a0-a6,-(sp)
-	move.l	#$D20,d0
+	move.l	#TeamRecBase,d0
 	move.l	#$80,d1
 	movea.l	#ThreeStars,a0
 	jsr	(ReadSRAM).l

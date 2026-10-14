@@ -1111,7 +1111,7 @@ EASNLogo	;Draw the EASN logo map at x 1, y $19 on the vertical ice rink if no po
 	String	-(TXPRI+TXMAP1),1,$19
 	movea.l	#EASNmap,a1
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2	;no tiles
+	movea.w	#NoTiles,a2
 	clr.w	d0
 	clr.w	d1
 	move.w	(a1),d2	;width and height from the map header
@@ -1196,7 +1196,7 @@ linebar	;Draw the energy bar of line d0 for team a2 at printx/printy (bitmap fro
 	clr.w	d0
 	movea.l	#EnergyBarMap,a1
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2	;no tiles
+	movea.w	#NoTiles,a2
 	move.w	(a1),d2
 	moveq	#1,d3
 	move.w	(energybarchars).w,d4
@@ -1421,7 +1421,7 @@ Intermission	;end of period junk (zamboni/stats). Opens the pause menu screen (i
 .2
 	bset	#sfpz,(sflags).w	;sfpz
 	movea.l	#SetupPauseScreen,a1
-	jsr	(InitMenuState).w
+	absjsr	InitMenuState
 	bsr.w	GetShifter
 	move.w	d1,(TickerNum).w
 .top
@@ -1533,7 +1533,7 @@ SetScore	;add to score for game in a0. After period 3 a game within one goal goe
 	rts
 .getscore	;d0 = scoring team, d1 = other team. Adds the scoring team's (bits 4-6) and the other team's (bits 0-2) sctab rows as weights. Return d0 = goals 0-3
 	asl.w	#2,d0
-	movea.w	#$30E,a1	;TeamList
+	movea.w	#TeamList,a1
 	movea.l	0(a1,d0.w),a1
 	adda.w	8(a1),a1
 	move.b	(a1),d0
@@ -1543,7 +1543,7 @@ SetScore	;add to score for game in a0. After period 3 a game within one goal goe
 	move.l	0(a1,d0.w),(nibblebuffer).w
 	move.l	4(a1,d0.w),(nibblebuffer+4).w
 	asl.w	#2,d1
-	movea.w	#$30E,a1	;TeamList
+	movea.w	#TeamList,a1
 	movea.l	0(a1,d1.w),a1
 	adda.w	8(a1),a1
 	move.b	(a1),d0
@@ -1629,7 +1629,7 @@ NewTicker3	;Display ticker score for game d3 (a0 = gstruct entry), skip if d3 is
 .tn	;print team d0 name and score d1 on the next row
 	move.w	4(sp),(printx).w
 	addq.w	#1,(printy).w
-	movea.w	#$30E,a1	;TeamList
+	movea.w	#TeamList,a1
 	asl.w	#2,d0
 	movea.l	0(a1,d0.w),a1
 	adda.w	4(a1),a1	;team name
@@ -1720,7 +1720,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	clr.w	(tmstruct+tmgoalie).w
 	clr.w	(AwShots+tmgoalie).w
 	jsr	(clearTeamStats).l
-	jsr	(restoreteams).w
+	absjsr	restoreteams
 	st	(c1playernum).w
 	st	(c2playernum).w
 	clr.w	(cont1team).w
@@ -1787,7 +1787,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	move.w	(vcount).w,(oldvcount).w
 	move.w	#$B4,-(sp)	;180 frames after the clock stops
 .0
-	jsr	(DoGameFrame).w
+	absjsr	DoGameFrame
 	btst	#gmclock,(gmode).w	;gmclock
 	beq.w	.1
 	subq.w	#1,(sp)
@@ -1827,8 +1827,8 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	bsr.w	setplayercolors
 	bsr.w	SetHor
 	bsr.w	setvideo
-	jsr	(SetupPauseScreen).w	;pause menu screen
-	jsr	(DrawMenuScreen).w
+	absjsr	SetupPauseScreen	;pause menu screen
+	absjsr	DrawMenuScreen
 	move.w	#$18,(palcount).w
 	move.w	#SngEOG,-(sp)	;song $79
 	bsr.w	song

@@ -2847,7 +2847,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	cmpi.w	#2,(gsp).w	;Check if period is 3rd or OT
 	blt.w	.playdatamove
 	bgt.w	.chklead	;branch if OT
-	jsr	(GetPeriodTime).w	;Find period length
+	absjsr	GetPeriodTime	;Find period length
 	lsr.w	#1,d0	;divide by 2 (5 min length = 2:30)
 	cmp.w	(gameclock).w,d0	;compare to game clock
 	bgt.w	.playdatamove	;branch if d0 greater than gameclock (bug)

@@ -59,5 +59,7 @@ ReadNameLog = $F9C68		;bsr.w / bra.w / Bcc.w.
 AppendUserName = $FA014		;bsr.w / bra.w / Bcc.w.
 AppendTeamName = $FA880		;bsr.w / bra.w / Bcc.w.
 
+TeamList = $30E
+
 ; Main segment code
 	include	records94.asm

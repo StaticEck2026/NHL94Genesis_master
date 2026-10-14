@@ -89,6 +89,13 @@ Teamblocksmap		;the team blocks (setupTeamBlocksMap, DrawTeamBlocks, DrawTeamBlo
 TeamBitmaps		;dobitmap entries (DrawTeamBitmap)
 	incbin	..\Extracted\NHL94\Graphics\TeamBlocks94.map.jim
 	even
+	include	..\output\teamcounts.inc
+	IF TeamblocksEntries<>NumTeams
+		inform	3,"Teamblocksmap needs one entry per team"
+	ENDIF
+	IF TeamBitmapsEntries<>NumTeams
+		inform	3,"TeamBitmaps needs one entry per team"
+	ENDIF
 ;TeamBitmaps+8: the tiles (LoadSetupTiles)
 EASNmap		;the EASN logo (EASNLogo)
 	incbin	..\Extracted\NHL94\Graphics\EASN.map.jim

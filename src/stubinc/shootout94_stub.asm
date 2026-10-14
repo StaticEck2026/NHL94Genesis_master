@@ -43,5 +43,8 @@ GAttribOverall = $19570		;#x, retail long
 ScoutMap = $54E24		;#x
 vcountwait = $80BA		;jsr / jmp (x).l
 
+NoTiles = $30A
+TeamList = $30E
+
 ; Main segment code
 	include	shootout94.asm

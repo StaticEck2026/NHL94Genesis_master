@@ -756,6 +756,11 @@ GetTeamRating	;d0 = the TeamRatings byte of team $28(a2). Called from PrintTeamR
 TeamRatings	;GetTeamRating values, one byte per team (TeamList order)
 	dc.b	$33,$4C,$49,$4B,$4E,$43,$4B,$43,$34,$42,$4A,$49,$44,$42
 	dc.b	$4A,$37,$45,$4B,$47,$38,$45,$38,$48,$47,$48,$46,$5B,$59
+TeamRatingsEnd
+	IF (TeamRatingsEnd-TeamRatings)<>NumTeams
+		inform	3,"TeamRatings needs one byte per team"
+	ENDIF
+	even
 ShortenMsgTimer	;Cap msgtimer at 2, unless a second pad is on (cont2team) and a3 is not the puck carrier. Called from doinput
 	movem.l	d0,-(sp)
 	tst.w	(cont2team).w

@@ -109,7 +109,32 @@ if (!romPath) {
 
 // 2. Extracted/ assets: extract again if missing or incomplete.
 const why = extractedState();
+function mapTeamEntries(file) {
+    const buf = fs.readFileSync(file);
+    const off = buf.readUInt32BE(4);
+    const width = buf.readUInt16BE(off);
+    const height = buf.readUInt16BE(off + 2);
+    const words = width * height;
+    if (off + 4 + words * 2 > buf.length || width !== 11 || height % 2 !== 0) {
+        throw new Error(`${path.relative(ROOT, file)} is not 11 tiles wide with one two-row entry per team`);
+    }
+    return height / 2;
+}
+
+function writeTeamCounts() {
+    const dir = path.join(EXTRACTED, 'NHL94', 'Graphics');
+    const text = [
+        '; Entry counts measured from the team block maps. One entry is two rows.',
+        `TeamblocksEntries equ ${mapTeamEntries(path.join(dir, 'TeamBlocks.map.jim'))}`,
+        `TeamBitmapsEntries equ ${mapTeamEntries(path.join(dir, 'TeamBlocks94.map.jim'))}`,
+        '',
+    ].join('\n');
+    fs.mkdirSync(path.join(ROOT, 'output'), { recursive: true });
+    fs.writeFileSync(path.join(ROOT, 'output', 'teamcounts.inc'), text);
+}
+
 if (!why) {
+    writeTeamCounts();
     console.log('prebuild: ROM OK, Extracted/ assets complete.');
     process.exit(0);
 }
@@ -124,4 +149,5 @@ if (after) {
 }
 const summary = out.split(/\r?\n/).filter((l) => /^ROM:|^Extracted \d+ (assets|slices)/.test(l));
 for (const l of summary) console.log('prebuild: ' + l);
+writeTeamCounts();
 console.log('prebuild: Extracted/ assets complete.');

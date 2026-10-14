@@ -40,12 +40,25 @@ if "%checksum%"=="0" (
     set checksumFlag="/e CHECKSUM=1"
 )
 
-REM Run the assembler with all flags
+REM Run the assembler with all flags. LONGBRA=0 keeps the short branch to Begin.
+REM If that branch cannot reach, assemble again with a long jump.
+set "longFlag=/e LONGBRA=0"
+:assemble
 "%workspaceFolder%assembler\Assembler.exe" ^
   /p /m /g ^
   /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz+ /o omq- /o oaq+ /o osq+ ^
-  %revFlag% %checksumFlag% ^
+  %revFlag% %checksumFlag% %longFlag% ^
   "%workspaceFolder%src\nhl94.asm,%workspaceFolder%output\nhl94.bin,%workspaceFolder%output\nhl94,%workspaceFolder%output\nhl94" ^
   > "%workspaceFolder%output\Build94.log"
-
+findstr /C:"is out of range" "%workspaceFolder%output\Build94.log" >nul
+if errorlevel 1 goto assembled
+echo %longFlag% | findstr /C:"LONGBRA=1" >nul
+if not errorlevel 1 goto assembled
+echo Begin is out of range. Assembling again with a long jump.
+set "longFlag=/e LONGBRA=1"
+goto assemble
+:assembled
 endlocal
+findstr /C:" 0 error" "%workspaceFolder%output\Build94.log" >nul
+if errorlevel 1 exit /b 1
+exit /b 0

@@ -84,6 +84,29 @@ PLAYER MACRO
     dc.w $\2,$\3,$\4,$\5
     ENDM
 
+; Absolute jsr / jmp. The 68000 short absolute form only reaches addresses below $8000,
+; so a target at or above that has to be the long form. SNASM decides the size while it
+; expands the macro, and it cannot do that for a target that is not defined yet
+; ("Expression must evaluate"). Define the routine before the call. A forward call
+; stays written as jsr (name).l or jmp (name).l.
+absjsr	MACRO
+	IF \1<$8000
+		jsr	(\1).w
+	ENDIF
+	IF \1>=$8000
+		jsr	(\1).l
+	ENDIF
+	ENDM
+
+absjmp	MACRO
+	IF \1<$8000
+		jmp	(\1).w
+	ENDIF
+	IF \1>=$8000
+		jmp	(\1).l
+	ENDIF
+	ENDM
+
 ; PIX macro for
 PIX     MACRO
         ; First parameter

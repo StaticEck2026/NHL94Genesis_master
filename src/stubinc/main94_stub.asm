@@ -18,6 +18,7 @@ IRQ7 = $15E6C			;(an rte). Vectors $60-$70 and $7C
 VBjsr = $76B2			;Vector $78
 ValidationRoutine = $FFAC0	;jsr (x).l at $300
 Begin = $76B8			;bra.w at $306, displacement $73B0 at $308
+RomEnd = $000FFFFF		;header ROM end. The full build sets this from the padded size
 
 ; Main segment code
 	include	main94.asm
