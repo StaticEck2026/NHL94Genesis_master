@@ -728,7 +728,7 @@ PeriodOver	;what to do if period over. Branched to from puckfaceoff when the clo
 	bsr.w	forceblack
 IntermissionStart	;reset the clock, song $79, ticker scores, playoff stats at the end
 	;(AddPOStats), Intermission, then StartPer or GameOver. Also jumped to from StartGame
-	absjsr	ResetClock
+	jsr	(ResetClock).w
 	move.w	d0,-(sp)
 	move.w	(vcount).w,d0
 .loop
@@ -751,7 +751,7 @@ IntermissionStart	;reset the clock, song $79, ticker scores, playoff stats at th
 	bsr.w	Intermission
 	cmpi.w	#4,(gsp).w
 	beq.w	GameOver
-	absjmp	StartPer
+	jmp	(StartPer).w
 GameOver	;EncodePW (save the password), then in playoff mode PlayoffStatsScreen (the playoff stats) and the playoff screen. Falls into ExitToOpening
 	bsr.w	EncodePW
 	tst.w	(OptPlayMode).w
@@ -783,7 +783,7 @@ Opening3	bsr.w	PlayoffScreen
 	bne.w	.1
 	jsr	(ScoutingReport).l	;skipped in shootouts, so no global label here (.1 below is local to Opening3)
 .1
-	absjmp	StartGame
+	jmp	(StartGame).w
 PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver and Opening2. Runs its own vblank and
 	;scrolls the tree a page ($70 pixels) at a time. Returns when start is pressed (PlayoffScreenExit)
 	tst.w	(OptPlayMode).w

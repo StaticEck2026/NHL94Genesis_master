@@ -345,7 +345,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	addq.w	#1,(zamx).w
 .nz
 	moveq	#1,d7
-	absjsr	updatecrowdf
+	jsr	(updatecrowdf).w		;4EB8: target below $8000
 	jsr	(RunArenaAnim).l
 	clr.w	(pausepad).w
 	bclr	#1,(sflags).w
@@ -382,7 +382,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	moveq	#$FFFFFF88,d0
 .menu
 	movem.w	d0,-(sp)
-	absjsr	HandleMenuInput
+	jsr	(HandleMenuInput).w		;4EB8: target below $8000
 	bne.w	.resume
 	addq.w	#2,sp
 	bset	#7,d1

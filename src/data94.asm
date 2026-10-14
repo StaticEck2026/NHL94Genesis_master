@@ -837,7 +837,7 @@ CalcStarScores	;Star score for every roster slot of both teams to ThreeStars (26
 	;GetPeriodTime + d2, the goalie ice time needed. If gsp is 3 and the score is not tied, the scorer of the last goal gets $7FFFFFFF. Called
 	;from ShowThreeStars
 	movea.w	#(ThreeStars-M68K_RAM),a4
-	absjsr	GetPeriodTime
+	jsr	(GetPeriodTime).w
 	move.w	d0,d5
 	add.w	d2,d5
 	movea.w	#(tmstruct-M68K_RAM),a2
