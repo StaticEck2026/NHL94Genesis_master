@@ -5,7 +5,7 @@
   "scripts": {
     "assets": "node tools/prebuild.js retail",
     "extractassets": "node tools/extractAssets94.js lst/nhl94.bin",
-    "verify:retail": "node tools/verifyRom.js output/modified_nhl94.bin lst/nhl94.bin",
+    "verify:retail": "node tools/verifyRom.js output/nhl94.bin lst/nhl94.bin",
     "build:retail": "node tools/build.js retail",
     "build:dev": "node tools/build.js dev",
     "build:segacd": "buildcd.bat && node tools/verifySegacd.js",

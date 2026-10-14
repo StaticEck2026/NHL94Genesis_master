@@ -10,10 +10,10 @@ Read `SEGMENT_AGENT.md` (the Current rules) and `docs/HANDOFF.md` before editing
 
 ```
 [1/5] prebuild   ROM OK, 475 assets
-[2/5] assemble   0 errors, 0 warnings, 69719 lines in 0.31s (REV=0 CHECKSUM=1) -> output/nhl94.bin
+[2/5] assemble   0 errors, 0 warnings, 69719 lines in 0.31s (REV=0 CHECKSUM=1) -> output/build/nhl94.raw.bin
 [3/5] fixopcodes 473 opcodes fixed
 [4/5] fixrom     size $00100000, header end $000FFFFF, checksum $8AB9F121
-[5/5] verify     MATCH output/modified_nhl94.bin
+[5/5] verify     MATCH output/nhl94.bin
 ```
 
 ### Build steps explained
@@ -24,7 +24,7 @@ Read `SEGMENT_AGENT.md` (the Current rules) and `docs/HANDOFF.md` before editing
 4. **fixrom**: pad to a valid ROM size, write the header end address and the checksum.
 5. **verify**: compare byte-for-byte with the retail ROM.
 
-A failing step prints `FAILED`, the relevant log lines (`output/Build94.log` for the assembler) and `BUILD FAILED at <step>`, and exits 1. `tools/verify_all.sh` builds the full ROM and every segment and prints `ALL MATCH`.
+A failing step prints `FAILED`, the relevant log lines (`output/build/Build_nhl94.log` for the assembler) and `BUILD FAILED at <step>`, and exits 1. `tools/verify_all.sh` builds the full ROM and every segment and prints `ALL MATCH`.
 
 `checksum=1` runs ValidationRoutine at boot. The fixrom step writes the sum it compares against, so a changed ROM still boots with the check on. `checksum=0` skips the check. The checksum segment is left on the retail immediate so it still matches.
 

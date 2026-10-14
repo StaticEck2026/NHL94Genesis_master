@@ -158,7 +158,7 @@ async function main() {
         console.log(`Found ${matches.length} instructions to modify`);
 
         if (matches.length === 0) {
-            // Still write modified_<name>.bin: verifySegment.js reads that file, not the raw assembler output
+            // Still write modified_<name>: tools/build.js takes that file as the result
             console.log('No modifications needed.');
         }
 

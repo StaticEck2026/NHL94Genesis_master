@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // build.js: the whole NHL 94 build, one line per step, on Windows and Linux (wine).
-//   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/modified_nhl94.bin
+//   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/nhl94.bin (nhl94-revA.bin, nhl94-dev.bin)
 //   node tools/build.js --seg <name> [--verbose]       one segment (tools/segments.json), verified
 // --no-color (or NO_COLOR) turns the colors off; they are also off when the output is not a terminal.
 // retail: CHECKSUM=1 and verified against lst/nhl94.bin. dev: CHECKSUM=0, not verified.
@@ -27,7 +27,7 @@ const paint = (t) => t
     .replace(/(output\/\S+|\$[0-9A-F]+|\b\d+(?:\.\d+)?s?\b)/g, (m) => c.bold(m))
     .replace(/\b(MATCH|OK)\b/g, (m) => c.green(m))
     .replace(/\b([1-9]\d*)(\x1b\[0m)? (warnings|skipped)/g, (m) => c.yellow(m))
-    .replace(/not verified \(dev build\)/, (m) => c.yellow(m));
+    .replace(/not verified \([^)]*\)/, (m) => c.yellow(m));
 const segIdx = args.indexOf('--seg');
 const seg = segIdx >= 0 ? args[segIdx + 1] : null;
 const mode = args.find((a) => a === 'retail' || a === 'dev') || 'retail';
@@ -66,10 +66,15 @@ if (seg !== null && !SEGMENTS[seg]) {
     process.exit(1);
 }
 const name = seg || 'nhl94';
-const bin = path.join(OUT, `${name}.bin`);
-const lst = path.join(OUT, `${name} .lst`);
-const mod = path.join(OUT, `modified_${name}.bin`);
-const logPath = path.join(OUT, seg ? `Build_${seg}.log` : 'Build94.log');
+// Intermediate files go in output/build/: the raw assembler image, its listing and the log.
+// The one result is output/<final>: nhl94.bin (retail), nhl94-revA.bin, nhl94-dev.bin, or <seg>.bin.
+const BUILD = path.join(OUT, 'build');
+const bin = path.join(BUILD, `${name}.raw.bin`);
+const lst = path.join(BUILD, `${name} .lst`);
+const fixed = path.join(BUILD, `modified_${name}.raw.bin`);
+const logPath = path.join(BUILD, `Build_${name}.log`);
+const final = seg ? `${seg}.bin` : `nhl94${rev ? '-revA' : ''}${mode === 'dev' ? '-dev' : ''}.bin`;
+const mod = path.join(OUT, final);
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 // 1. prebuild: ROM check and Extracted/ assets.
@@ -84,13 +89,13 @@ const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 // 2. assemble: SNASM68k, directly on Windows, under wine elsewhere. Its console output is the log.
 {
-    fs.mkdirSync(OUT, { recursive: true });
-    for (const f of [bin, mod]) fs.rmSync(f, { force: true });
+    fs.mkdirSync(BUILD, { recursive: true });
+    for (const f of [bin, fixed, mod]) fs.rmSync(f, { force: true });
     const src = seg ? `stubinc\\${seg}_stub.asm` : 'nhl94.asm';
-    const o = `..\\output\\${name}`;
+    const o = `..\\output\\build\\${name}`;
     const asmArgs = ['/p', '/m', '/g', '/o', 'd-', '/o', 's-', '/o', 'r+', '/o', 'l+', '/o', 'l.', '/o', 'ow+', '/o', 'op-',
         '/o', 'os+', '/o', 'oz+', '/o', 'omq-', '/o', 'oaq+', '/o', 'osq+',
-        '/e', `REV=${rev}`, '/e', `CHECKSUM=${checksum}`, `${src},${o}.bin,${o},${o}`];
+        '/e', `REV=${rev}`, '/e', `CHECKSUM=${checksum}`, `${src},${o}.raw.bin,${o},${o}`];
     const exe = path.join(ROOT, 'assembler', 'Assembler.exe');
     const r = WIN ? run(exe, asmArgs, { cwd: path.join(ROOT, 'src') })
         : run('wine', [exe, ...asmArgs], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } });
@@ -113,11 +118,12 @@ const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
     detail(r.out);
 }
 
-// 3. fixopcodes: rewrite the EA cmp / exg encodings SNASM picks differently; writes modified_<name>.bin.
+// 3. fixopcodes: rewrite the EA cmp / exg encodings SNASM picks differently; the result becomes output/<final>.
 {
     const r = node('fixopcodes.js', [lst, bin, ...(seg ? [SEGMENTS[seg]] : [])]);
     const m = r.out.match(/Modified (\d+) instructions/);
-    if (r.status !== 0 || !m || !fs.existsSync(mod)) fail('fixopcodes', 'did not write the fixed binary', r.out);
+    if (r.status !== 0 || !m || !fs.existsSync(fixed)) fail('fixopcodes', 'did not write the fixed binary', r.out);
+    fs.renameSync(fixed, mod);
     const skipped = (r.out.match(/Skipping/g) || []).length;
     step('fixopcodes', `${m[1]} opcodes fixed${skipped ? `, ${skipped} skipped` : ''}`);
     detail(r.out);
@@ -137,6 +143,8 @@ if (seg) {
 // 5. verify against the retail ROM.
 if (!seg && mode === 'dev') {
     step('verify', `${rel(mod)} not verified (dev build)`);
+} else if (!seg && rev) {
+    step('verify', `${rel(mod)} not verified (no REV A reference ROM)`);
 } else {
     const r = seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]);
     const first = r.out.split(/\r?\n/).find((l) => l.trim()) || '';

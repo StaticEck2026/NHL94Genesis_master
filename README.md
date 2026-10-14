@@ -45,7 +45,7 @@ If the ROM is missing (or is a different dump), the build stops with the full pa
 
 `npm run assets` runs only this step. `npm run extractassets` still forces a fresh extraction. `tools/build.js` runs it as step 1 of every build; `tools/verify_all.sh` also deletes `Extracted/` first so it is always a fresh extract.
 
-Full ROM builds assemble `src/nhl94.asm`. The listing is `output/nhl94 .lst`. The opcode-corrected output is `output/modified_nhl94.bin`.
+Full ROM builds assemble `src/nhl94.asm`. The listing is `output/build/nhl94 .lst` and the raw image `output/build/nhl94.raw.bin`. The finished ROM is `output/nhl94.bin` (`nhl94-revA.bin` with `rev=1`, `nhl94-dev.bin` for a dev build); a segment is `output/<name>.bin`.
 
 | Script | Flags | Result |
 | --- | --- | --- |
