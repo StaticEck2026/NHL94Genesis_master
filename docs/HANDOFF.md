@@ -51,6 +51,8 @@ Follow 92G (EA source): ~31% of its locals are number-only (.0, .1 ...), the res
   Tools on the box: /workspace/tools_ll/ll.py (rename/list), prop.py (copy parent local names).
 
 ## Current state / Next
+- Mod-safe build (branch feature/mod-safe-build): `absjsr` / `absjmp` in src/macros/genesis.mac pick jsr/jmp (target).w below $8000 and .l otherwise. The 12 retail short calls (StartGame, StartPer, ResetClock, GetPeriodTime twice, restoreteams, DoGameFrame, updatecrowdf, SetupPauseScreen, InitMenuState, DrawMenuScreen, HandleMenuInput) use them. A target that is not defined yet cannot be sized (SNASM: "Expression must evaluate"); write jsr/jmp (name).l for a forward call. buildseg.bat no longer uses `cd ... || exit`, which made wine skip the assemble. Full ROM and every segment MATCH.
+
 - Comment review: done in 93, 94, 95 and NHLPA93SNES.
 - Name pass (full body read), records in docs/name_review_93.md / _94.md / _95.md:
   - Phase A (93): DONE, all modules. Renames propagated to 94/95/NHLPA93SNES.

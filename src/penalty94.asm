@@ -1421,7 +1421,7 @@ Intermission	;end of period junk (zamboni/stats). Opens the pause menu screen (i
 .2
 	bset	#sfpz,(sflags).w	;sfpz
 	movea.l	#SetupPauseScreen,a1
-	jsr	(InitMenuState).w
+	absjsr	InitMenuState
 	bsr.w	GetShifter
 	move.w	d1,(TickerNum).w
 .top
@@ -1720,7 +1720,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	clr.w	(tmstruct+tmgoalie).w
 	clr.w	(AwShots+tmgoalie).w
 	jsr	(clearTeamStats).l
-	jsr	(restoreteams).w
+	absjsr	restoreteams
 	st	(c1playernum).w
 	st	(c2playernum).w
 	clr.w	(cont1team).w
@@ -1787,7 +1787,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	move.w	(vcount).w,(oldvcount).w
 	move.w	#$B4,-(sp)	;180 frames after the clock stops
 .0
-	jsr	(DoGameFrame).w
+	absjsr	DoGameFrame
 	btst	#gmclock,(gmode).w	;gmclock
 	beq.w	.1
 	subq.w	#1,(sp)
@@ -1827,8 +1827,8 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	bsr.w	setplayercolors
 	bsr.w	SetHor
 	bsr.w	setvideo
-	jsr	(SetupPauseScreen).w	;pause menu screen
-	jsr	(DrawMenuScreen).w
+	absjsr	SetupPauseScreen	;pause menu screen
+	absjsr	DrawMenuScreen
 	move.w	#$18,(palcount).w
 	move.w	#SngEOG,-(sp)	;song $79
 	bsr.w	song

@@ -29,7 +29,7 @@ set "REV_FLAG=/e REV=0"
 
 echo Building: %ROM_NAME%
 
-cd /d "%WORKSPACE%src" || exit /b 1
+cd /d "%WORKSPACE%src"
 
 "%WORKSPACE%assembler\Assembler.exe" ^
   /p /m /g ^
