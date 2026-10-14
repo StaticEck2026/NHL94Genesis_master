@@ -48,6 +48,8 @@ const ABOUT = {
     fixopcodes: "patch the instructions where SNASM picks a different encoding than EA's original assembler",
     fixrom: 'pad to a valid ROM size, write the header end address and the checksum',
     verify: 'compare byte-for-byte with the retail ROM',
+    output: 'delete built ROMs and intermediates in output/',
+    Extracted: 'delete extracted graphics/sound assets (rebuilt by the next build)',
 };
 const live = color;
 // Braille spinner and check marks need a UTF-8 terminal; old Windows consoles get ASCII.
@@ -120,6 +122,24 @@ const node = (script, argv) => run(process.execPath, [path.join(__dirname, scrip
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 (async () => {
+    if (args.includes('--clean')) {
+        steps = 2;
+        const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((a, e) => {
+            const f = path.join(d, e.name);
+            if (e.isDirectory()) { const r = walk(f); return [a[0] + r[0], a[1] + r[1]]; }
+            return [a[0] + 1, a[1] + fs.statSync(f).size];
+        }, [0, 0]);
+        for (const dir of ['output', 'Extracted']) {
+            begin(dir);
+            const full = path.join(ROOT, dir);
+            if (!fs.existsSync(full)) { step(dir, 'already clean'); continue; }
+            const [files, bytes] = walk(full);
+            try { fs.rmSync(full, { recursive: true, force: true }); } catch (e) { fail(dir, e.message); }
+            step(dir, `removed ${files} files, ${(bytes / 1048576).toFixed(1)} MB`);
+        }
+        console.log(c.green('CLEAN'));
+        return;
+    }
 // --segacd: the transcribed Sega CD fragments (src/segacd/, options per fragment in tools/segacd.json),
 // compared with the disc files in cdbin/ by tools/verifySegacd.js. Does not touch the cartridge build.
 if (args.includes('--segacd')) {
