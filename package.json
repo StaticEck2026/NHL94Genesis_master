@@ -11,7 +11,7 @@
     "build:segacd": "node tools/build.js --segacd",
     "sync": "node tools/sync.js",
     "seg": "node tools/build.js --seg",
-    "clean": "node -e \"require('fs').rmSync('output',{recursive:true,force:true});console.log('removed output/')\""
+    "clean": "node -e \"const fs=require('fs');for(const d of ['output','Extracted'])fs.rmSync(d,{recursive:true,force:true});console.log('removed output/ and Extracted/')\""
   },
   "devDependencies": {
     "crc-32": "^1.2.2"
