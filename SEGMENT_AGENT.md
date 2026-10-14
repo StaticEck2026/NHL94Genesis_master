@@ -26,13 +26,10 @@ routine's origin: 94G for 94 code, else 93G, else 92G; SNES-only code goes in a 
 Work in small steps: every change is built and checked byte for byte against the reference ROM, then committed and pushed to main
 (no force push, no PRs). Keep `docs/HANDOFF.md` current after each push.
 
-Mod-safe build (the stock ROM stays byte-identical; see docs/ADDING_A_TEAM.md):
-- `absjsr` / `absjmp` in `src/macros/genesis.mac` emit a short absolute call when the target is below $8000 and a long one otherwise. The target has to be defined already. A forward call stays `jsr` / `jmp (name).l`.
-- `NoTiles` is the zero long before `TeamList`. Loads of the team list use those labels.
-- The build fills $FF up to 1MB, then to 1.5MB, 2MB or 4MB if the image is larger. The header end is `RomEnd`. An include placed after the 1MB fill starts at the 1MB boundary. Content past backup RAM warns; past 4MB the assemble stops.
-- `build94.bat` passes `LONGBRA=0`. If `bra.w Begin` cannot reach, it assembles again with a long jump.
-- `tools/patchchecksum.js` runs after `fixopcodes` and writes the sum ValidationRoutine compares against. The source keeps the retail immediate. `tools/verify_all.sh` prints `ALL MATCH`.
-- `NumTeams` and `NumPlayoffTeams` live in `src/stubinc/equals.inc`. Per-team tables are checked while assembling. A larger league moves the records block and the name log up in save RAM; the stock league does not. `TeamRatings` is aligned after its length check. Banner rows go at the new team's index. A 29-team ROM that reuses an existing record reaches the ice.
+What main is:
+- main is a faithful disassembly of the retail game. It keeps only good-practice changes that emit identical bytes: equates and labels instead of hardcoded values, assemble-time checks, and build tooling (the computed checksum and ROM size in `tools/fixrom.js`, `src/shortcalls.inc`, the CHECKSUM/REV flags).
+- Mod-specific fixes (long calls instead of the retail short ones, save-RAM moves, mapper code) do not go on main. They are documented in `docs/EXPANDING_THE_ROM.md` or live on mod branches.
+- `NumTeams` / `NumPlayoffTeams` in `src/stubinc/equals.inc` and the per-team length checks stay; `NoTiles` and `TeamList` replace the `#$30A` / `#$30E` loads.
 
 ## Current segment
 
