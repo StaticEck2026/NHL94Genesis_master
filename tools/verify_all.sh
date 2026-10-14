@@ -13,7 +13,7 @@ log=$(ls -t output/Build*.log | head -1)
 grep -qP '^[1-9]\d* error' "$log" && { echo "TOP ERRORS in $log"; fail=1; }
 if [ -s output/$top.bin ]; then
   node tools/fixopcodes.js "output/$top .lst" output/$top.bin >/dev/null 2>&1
-  node tools/patchchecksum.js "output/$top .lst" output/modified_$top.bin || fail=1
+  node tools/fixrom.js "output/$top .lst" output/modified_$top.bin || fail=1
   topr=$(node tools/verifyRom.js output/modified_$top.bin $ref 2>&1 | grep -iE 'match|differ' | head -2)
   echo "$topr"
   case "$topr" in

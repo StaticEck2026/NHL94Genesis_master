@@ -22,7 +22,7 @@
 		dc.w	$0000				; 06	$18E	check sum data (installed by checsum program) (2 bytes)
 	ENDIF
 	dc.b	'J               '	; 07	$190	I/O peripheral info. (J=Control Pad) (16 bytes)
-	dc.l	$00000000,RomEnd	; 08	$1A0	cartridge size (start and end address) (8 bytes)
+	dc.l	$00000000,$000FFFFF	; 08	$1A0	cartridge size (start and end address) (8 bytes). 1 MB; tools/fixrom.js sets it for a larger image
 	dc.l	$00FF0000,$00FFFFFF	; 09	$1A8	RAM size (start and end address) (8 bytes)
 	dc.b	'RA',$F8,$20		; 10	$1B0	external RAM info. (12 bytes): backup RAM, odd bytes (93: 12 spaces)
 	dc.l	$00200001,$00203FFF	; 		$1B4	backup RAM start and end address

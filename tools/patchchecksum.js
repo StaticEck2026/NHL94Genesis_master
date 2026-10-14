@@ -51,4 +51,6 @@ function main() {
     console.log(`checksum ${hex(old)} -> ${hex(sum)} at ${hex(imm)} (routine ${hex(routine)})`);
 }
 
-main();
+module.exports = { parseListing, sumRom, HEADER_LONG };
+
+if (require.main === module) main();
