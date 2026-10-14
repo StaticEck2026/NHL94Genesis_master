@@ -7,23 +7,8 @@ cd "$1"; bat=$2; top=$3; ref=$4
 export NHL_PREBUILD_DONE=1
 rm -rf Extracted; node tools/prebuild.js retail >/tmp/x94.log 2>&1 || { echo "PREBUILD FAIL"; cat /tmp/x94.log; exit 1; }
 fail=0
-rm -f output/$top.bin output/modified_$top.bin
-wine cmd /c "set rev=0&& set checksum=1&& $bat" >/tmp/top.log 2>&1
-log=$(ls -t output/Build*.log | head -1)
-grep -qP '^[1-9]\d* error' "$log" && { echo "TOP ERRORS in $log"; fail=1; }
-if [ -s output/$top.bin ]; then
-  node tools/fixopcodes.js "output/$top .lst" output/$top.bin >/dev/null 2>&1
-  node tools/fixrom.js "output/$top .lst" output/modified_$top.bin || fail=1
-  topr=$(node tools/verifyRom.js output/modified_$top.bin $ref 2>&1 | grep -iE 'match|differ' | head -2)
-  echo "$topr"
-  case "$topr" in
-    MATCH:*) ;;
-    *) fail=1 ;;
-  esac
-else
-  echo "TOP NO BIN"
-  fail=1
-fi
+node tools/build.js retail | tee /tmp/top.log
+grep -q '^\[5/5\] verify     MATCH' /tmp/top.log || fail=1
 for s in $(node -e 'for(const k in require("./package.json").scripts) if(/^seg:/.test(k)&&!/-data$/.test(k)) console.log(k)'); do
   cmd=$(node -e "console.log(require('./package.json').scripts['$s'])")
   seg=$(echo "$cmd" | grep -oP 'buildseg.bat \K\S+' | sed 's/.*\\//')

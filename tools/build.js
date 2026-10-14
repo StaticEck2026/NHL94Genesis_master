@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+// build.js: the whole NHL 94 build, one line per step, on Windows and Linux (wine).
+//   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/modified_nhl94.bin
+//   node tools/build.js --seg <name> [--verbose]       one segment (tools/segments.json), verified
+// retail: CHECKSUM=1 and verified against lst/nhl94.bin. dev: CHECKSUM=0, not verified.
+// The rev / checksum environment variables (as in build94.bat) override the defaults.
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const ROOT = path.join(__dirname, '..');
+const OUT = path.join(ROOT, 'output');
+const REF = 'lst/nhl94.bin';
+const SEGMENTS = require('./segments.json');
+const WIN = process.platform === 'win32';
+
+const args = process.argv.slice(2);
+const verbose = args.includes('--verbose');
+const segIdx = args.indexOf('--seg');
+const seg = segIdx >= 0 ? args[segIdx + 1] : null;
+const mode = args.find((a) => a === 'retail' || a === 'dev') || 'retail';
+const env = (k) => process.env[k] ?? process.env[k.toUpperCase()] ?? process.env[k.toLowerCase()];
+const rev = env('rev') === '1' ? 1 : 0;
+const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 1) : (mode === 'dev' && !seg ? 0 : 1);
+
+const steps = 5;
+let n = 0;
+const step = (name, text) => console.log(`[${++n}/${steps}] ${name.padEnd(10)} ${text}`);
+const detail = (text) => { if (verbose && text.trim()) console.log(text.replace(/\s+$/, '').replace(/^/gm, '      ')); };
+function fail(name, text, log) {
+    console.log(`[${++n}/${steps}] ${name.padEnd(10)} FAILED: ${text}`);
+    if (log) console.log(log.replace(/\s+$/, '').replace(/^/gm, '      '));
+    console.log(`BUILD FAILED at ${name}`);
+    process.exit(1);
+}
+function run(cmd, argv, opts = {}) {
+    const r = spawnSync(cmd, argv, { cwd: ROOT, encoding: 'latin1', maxBuffer: 256 << 20, ...opts });
+    return { status: r.error ? -1 : r.status, out: (r.stdout || '') + (r.stderr || '') + (r.error ? String(r.error) : '') };
+}
+const node = (script, argv) => run(process.execPath, [path.join(__dirname, script), ...argv]);
+
+if (seg !== null && !SEGMENTS[seg]) {
+    console.error(`unknown segment '${seg}'. Known: ${Object.keys(SEGMENTS).join(', ')}`);
+    process.exit(1);
+}
+const name = seg || 'nhl94';
+const bin = path.join(OUT, `${name}.bin`);
+const lst = path.join(OUT, `${name} .lst`);
+const mod = path.join(OUT, `modified_${name}.bin`);
+const logPath = path.join(OUT, seg ? `Build_${seg}.log` : 'Build94.log');
+const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
+
+// 1. prebuild: ROM check and Extracted/ assets.
+{
+    const r = node('prebuild.js', ['retail']);
+    if (r.status !== 0) fail('prebuild', 'ROM or asset extraction', r.out);
+    let count = '?';
+    try { count = JSON.parse(fs.readFileSync(path.join(ROOT, 'Extracted', '.extract-complete.json'), 'utf8')).files.length; } catch (e) { /* keep ? */ }
+    step('prebuild', `ROM OK, ${count} assets${/extracting/.test(r.out) ? ' (extracted again)' : ''}`);
+    detail(r.out);
+}
+
+// 2. assemble: SNASM68k, directly on Windows, under wine elsewhere. Its console output is the log.
+{
+    fs.mkdirSync(OUT, { recursive: true });
+    for (const f of [bin, mod]) fs.rmSync(f, { force: true });
+    const src = seg ? `stubinc\\${seg}_stub.asm` : 'nhl94.asm';
+    const o = `..\\output\\${name}`;
+    const asmArgs = ['/p', '/m', '/g', '/o', 'd-', '/o', 's-', '/o', 'r+', '/o', 'l+', '/o', 'l.', '/o', 'ow+', '/o', 'op-',
+        '/o', 'os+', '/o', 'oz+', '/o', 'omq-', '/o', 'oaq+', '/o', 'osq+',
+        '/e', `REV=${rev}`, '/e', `CHECKSUM=${checksum}`, `${src},${o}.bin,${o},${o}`];
+    const exe = path.join(ROOT, 'assembler', 'Assembler.exe');
+    const r = WIN ? run(exe, asmArgs, { cwd: path.join(ROOT, 'src') })
+        : run('wine', [exe, ...asmArgs], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } });
+    fs.writeFileSync(logPath, r.out, 'latin1');
+    const lines = r.out.split(/\r\n|\n|\r/);
+    const sum = r.out.match(/(\d+) error\(s\) from (\d+) lines in ([\d.]+) seconds/);
+    const warnings = lines.filter((l) => /warning/i.test(l)).length;
+    const short = lines.filter((l) => /SHORTCALL /.test(l));
+    if (short.length) {
+        fail('assemble', 'a routine called with a short jsr/jmp (x).w moved past $7FFF',
+            short.join('\n') + '\nPut the added data after menu94 (or after the 1MB pad), or change those calls to .l.\nSee docs/EXPANDING_THE_ROM.md.');
+    }
+    if (!sum) fail('assemble', `no assembler summary in ${rel(logPath)} (exit ${r.status})`, lines.slice(-20).join('\n'));
+    const errors = Number(sum[1]);
+    if (errors > 0 || !fs.existsSync(bin)) {
+        const bad = lines.filter((l) => /\.(asm|inc|mac)\(\d+|error|fatal|not recognised|undefined/i.test(l) && !/error\(s\) from/.test(l)).slice(0, 40);
+        fail('assemble', `${errors} error(s), see ${rel(logPath)}`, bad.join('\n'));
+    }
+    step('assemble', `${errors} errors, ${warnings} warnings, ${sum[2]} lines in ${sum[3]}s (REV=${rev} CHECKSUM=${checksum}) -> ${rel(bin)}`);
+    detail(r.out);
+}
+
+// 3. fixopcodes: rewrite the EA cmp / exg encodings SNASM picks differently; writes modified_<name>.bin.
+{
+    const r = node('fixopcodes.js', [lst, bin, ...(seg ? [SEGMENTS[seg]] : [])]);
+    const m = r.out.match(/Modified (\d+) instructions/);
+    if (r.status !== 0 || !m || !fs.existsSync(mod)) fail('fixopcodes', 'did not write the fixed binary', r.out);
+    const skipped = (r.out.match(/Skipping/g) || []).length;
+    step('fixopcodes', `${m[1]} opcodes fixed${skipped ? `, ${skipped} skipped` : ''}`);
+    detail(r.out);
+}
+
+// 4. fixrom: pad to the cartridge size, header ROM end, boot checksum. Segments are not a ROM.
+if (seg) {
+    step('fixrom', 'skipped (segment)');
+} else {
+    const r = node('fixrom.js', [lst, mod]);
+    const m = r.out.match(/size (\w+) \(end (\w+)\), checksum (\w+) -> (\w+)/);
+    if (r.status !== 0 || !m) fail('fixrom', 'size or checksum', r.out);
+    step('fixrom', `size $${m[1].toUpperCase()}, header end $${m[2].toUpperCase()}, checksum $${m[4].toUpperCase()}${m[3] !== m[4] ? ` (was $${m[3].toUpperCase()})` : ''}`);
+    detail(r.out);
+}
+
+// 5. verify against the retail ROM.
+if (!seg && mode === 'dev') {
+    step('verify', `${rel(mod)} not verified (dev build)`);
+} else {
+    const r = seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]);
+    const first = r.out.split(/\r?\n/).find((l) => l.trim()) || '';
+    if (r.status !== 0 || !/^MATCH/.test(first)) {
+        console.log(`[${++n}/${steps}] verify     MISMATCH: ${rel(mod)}`);
+        console.log(r.out.replace(/\s+$/, '').replace(/^/gm, '      '));
+        console.log('BUILD FAILED at verify');
+        process.exit(1);
+    }
+    step('verify', `MATCH ${rel(mod)}${seg ? ` (${first.replace(/^MATCH:?\s*/, '')})` : ''}`);
+    detail(r.out);
+}

@@ -6,7 +6,7 @@
 
 - `tools/fixrom.js` runs after `fixopcodes`. It pads the image with $FF to the next size of 1MB, 1.5MB, 2MB or 4MB, writes the header ROM end ($1A4), then writes the boot checksum (the `cmpi.l` immediate in `ValidationRoutine`). A stock build stays 1MB and byte-identical.
 - `src/nhl94.asm` fills to 1MB. Includes placed after that fill start at $100000, so new data does not move any retail code.
-- `src/shortcalls.inc` (included last, emits nothing) stops the build if a routine the retail code calls with a short `jsr`/`jmp (x).w` moves past $7FFF. `build94.bat` then prints the routine, the files that call it, and the fix below.
+- `src/shortcalls.inc` (included last, emits nothing) stops the build if a routine the retail code calls with a short `jsr`/`jmp (x).w` moves past $7FFF. `tools/build.js` then stops at the assemble step and prints the routine, the files that call it, and the fix below.
 - `NumTeams` / `NumPlayoffTeams` (`src/stubinc/equals.inc`) drive the option limits, the random team range and the playoff clamp, and every per-team table checks its length while assembling.
 - `CHECKSUM=0` skips the boot check (`build:dev`); `REV` picks retail or Rev A.
 
@@ -67,9 +67,6 @@ Also check: the save RAM section above (a 29th team needs the records block move
 
 ## Build and test
 
-1. `node tools/prebuild.js retail` and `export NHL_PREBUILD_DONE=1`.
-2. `wine cmd /c "set rev=0&& set checksum=1&& build94.bat"` (`WINEDEBUG=-all`). The log must say `0 error`.
-3. `node tools/fixopcodes.js "output/nhl94 .lst" output/nhl94.bin`
-4. `node tools/fixrom.js "output/nhl94 .lst" output/modified_nhl94.bin`
+`node tools/build.js retail` (Windows, or Linux with wine) runs prebuild, assemble, fixopcodes and fixrom, then compares with retail. A mod reaches step 4 (size, header end, checksum) and then reports MISMATCH at step 5, which is expected; `output/modified_nhl94.bin` is the ROM to test. `node tools/build.js dev` skips the compare and the boot check.
 
 Boot with `checksum=1`; a red screen means the boot checksum is wrong. `tools/verify_all.sh` is the stock check and prints `ALL MATCH` only when the full ROM and every segment still match retail. A modded ROM will not match, and must not be committed to `main`.
