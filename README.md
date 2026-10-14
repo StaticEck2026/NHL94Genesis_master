@@ -31,7 +31,7 @@ Segment builds use `npm run seg -- <name>` (`tools/build.js --seg`; orgs in `too
 `npm run extractassets` runs `tools/extractAssets94.js` against `lst/nhl94.bin`. Builds do this automatically when `Extracted/` is missing or incomplete (below).
 
 ## Build pre-step: ROM check and automatic asset extraction
-Every build entry point (`npm run build:*`, `npm run seg`, and the batch files, all through `tools/build.js`) first runs `node tools/prebuild.js`. It:
+Every build entry point (`npm run build:retail`, `build:dev` and `seg`, all through `tools/build.js`) first runs `node tools/prebuild.js`. It:
 
 1. checks that the ROM the build needs is in place and is exactly the right version (SHA-1 and size);
 2. checks that `Extracted/` is complete: the extractor writes `Extracted/.extract-complete.json` last, listing every file it wrote (with its size), the ROM it read and the extractor's own SHA-1;

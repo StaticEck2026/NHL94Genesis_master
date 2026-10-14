@@ -1,10 +1,8 @@
-// prebuild.js: run before every build (step 1 of tools/build.js: npm run build:*, npm run seg, build94.bat, buildseg.bat).
+// prebuild.js: run before every build (step 1 of tools/build.js for npm run build:* and npm run seg; the Sega CD build does not use it).
 // Usage: node tools/prebuild.js [retail]
 // The ROM must be present (and the right version); then makes sure Extracted/ is complete, and runs
 // the extractor if it is not. If the ROM is missing or wrong, stops with the path, file name, SHA-1
 // and size it must have.
-// The batch files skip this step when NHL_PREBUILD_DONE is set (the npm scripts set it after
-// running it; tools/verify_all.sh runs it with Linux node, since there is no node under wine).
 
 const GAME = 'NHL 94 (Sega Genesis)';
 const EXTRACTOR = 'tools/extractAssets94.js';

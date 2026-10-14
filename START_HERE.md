@@ -6,7 +6,7 @@ Read `SEGMENT_AGENT.md` (the Current rules) and `docs/HANDOFF.md` before editing
 
 ## Build
 
-`npm run build:retail` (or `node tools/build.js retail`) runs the whole build and prints one line per step; `npm run build:dev` (`node tools/build.js dev`) builds with `CHECKSUM=0` and skips the verify. Linux needs wine and wine32 (`build.js` runs the assembler under wine); Windows runs it directly. `build94.bat` calls the same script. Add `--verbose` for each step's full output. `rev=1` in the environment builds REV A.
+`npm run build:retail` (or `node tools/build.js retail`) runs the whole build and prints one line per step; `npm run build:dev` (`node tools/build.js dev`) builds with `CHECKSUM=0` and skips the verify. Linux needs wine and wine32 (`build.js` runs the assembler under wine); Windows runs it directly. Add `--verbose` for each step's full output. `rev=1` in the environment builds REV A.
 
 ```
 [1/5] prebuild   ROM OK, 475 assets

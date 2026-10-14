@@ -5,7 +5,7 @@
 //   node tools/build.js --segacd [--verbose]           Sega CD fragments, compared with cdbin/
 // --no-color (or NO_COLOR) turns the colors off; they are also off when the output is not a terminal.
 // retail: CHECKSUM=1 and verified against lst/nhl94.bin. dev: CHECKSUM=0, not verified.
-// The rev / checksum environment variables (as in build94.bat) override the defaults.
+// The rev / checksum environment variables (set rev=1 / set checksum=0 on Windows, rev=1 node ... on Linux) override the defaults.
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
