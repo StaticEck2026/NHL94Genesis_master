@@ -2,7 +2,7 @@
 ;	holds the players, colors, name, lines, scouting report and scoring odds. The playoff seeds and
 ;	the credits come after the teams.
 
-	dc.l	0	;not part of TeamList
+NoTiles	dc.l	0	;a zero long, for a slot with no tiles. Not part of TeamList
 
 TeamList	;List Pointer Table Start. Team number = index (ANH 0 ... WPG 25, ASE 26, ASW 27)
 	dc.l	Anaheim	;0 ANH

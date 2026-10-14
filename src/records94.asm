@@ -68,7 +68,7 @@ NameEntryScreen	;"NAME ENTRY" screen for the user records (own vblank VBlank_Set
 	beq.w	.0
 	move.w	(VisTeam).w,d0
 .0
-	movea.l	#$30E,a1	;TeamList
+	movea.l	#TeamList,a1
 	asl.w	#2,d0
 	movea.l	0(a1,d0.w),a1
 	adda.w	4(a1),a1

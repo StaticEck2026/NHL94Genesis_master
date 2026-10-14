@@ -774,7 +774,7 @@ ShowThreeStars	;End of game Stars of the Game box. Called from UpdatePA while Re
 	bsr.w	printz
 	String	-(TXPRI+TXMAP1),9,$10,'Stars of the Game',-(TXPRI+TXMAP1),3,$F
 	movea.l	#Rinktilelist,a1	;map at offset 4
-	movea.w	#$30A,a2	;a zero long: no tiles
+	movea.w	#NoTiles,a2
 	adda.l	4(a1),a1
 	moveq	#$D,d0
 	moveq	#$5B,d1

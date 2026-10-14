@@ -1190,7 +1190,7 @@ HotColdIcon	;The icon by the name of player iconplayer of team a2 at x iconx, y 
 	movea.l	a0,a2
 	adda.l	(a2)+,a0
 	adda.l	(a2)+,a1
-	movea.w	#$30A,a2
+	movea.w	#NoTiles,a2
 	clr.w	d0
 	clr.w	d1
 	move.w	(a1),d2

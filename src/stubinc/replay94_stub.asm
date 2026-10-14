@@ -65,5 +65,7 @@ SPAboardback	=	$185A
 SPAinjuryfall	=	$145C
 SPAinjury1	=	$1AF4
 
+NoTiles = $30A
+
 ; Main segment code
 	include	replay94.asm

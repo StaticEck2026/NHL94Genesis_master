@@ -70,5 +70,7 @@ SPAboardfront	=	$1776
 SPAboardback	=	$185A
 SPAglide	=	$50C
 
+NoTiles = $30A
+
 ; Main segment code
 	include	title94.asm

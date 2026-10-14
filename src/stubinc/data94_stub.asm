@@ -95,5 +95,7 @@ PeriodStatsScreen = $FD90C		;dc.l in the menu lists, retail value
 GameStatisticsScreen = $FDC5A		;dc.l in the menu lists, retail value
 ManualGoalieMenu = $FE1D8		;dc.l in the menu lists, retail value
 
+NoTiles = $30A
+
 ; Main segment code
 	include	data94.asm

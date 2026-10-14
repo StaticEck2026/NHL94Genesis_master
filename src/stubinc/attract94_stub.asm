@@ -33,5 +33,8 @@ TeamBitmaps = $AFE12		;movea.l #x
 Teamblocksmap = $ABA14		;movea.l #x
 EASportsMap = $B425A		;movea.l #x. hidden in the string
 
+NoTiles = $30A
+TeamList = $30E
+
 ; Main segment code
 	include	attract94.asm

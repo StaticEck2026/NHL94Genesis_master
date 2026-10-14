@@ -664,7 +664,7 @@ setteams	;Use hometeam/visteam to set team structures (InitTeamStructure for eac
 InitTeamStructure	;Set up team struct a2 for team d0: store the team number at $28, the team data address
 	;at $1E (tmdata), and copy the line sets to $16A (two layouts by OptLine)
 	move.w	d0,Xvel(a2)
-	movea.w	#$30E,a0	;TeamList
+	movea.w	#TeamList,a0
 	asl.w	#2,d0
 	move.l	0(a0,d0.w),$1E(a2)
 	tst.w	(OptLine).w
@@ -996,7 +996,7 @@ DrawTreeArrow	;Draw tree arrow d0 from the arrows map (Arrowsmap) at printx/prin
 	movea.l	a0,a1
 	adda.l	(a0),a0
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2
+	movea.w	#NoTiles,a2
 	clr.w	d1
 	moveq	#2,d2
 	moveq	#$17,d3
@@ -1018,7 +1018,7 @@ DrawTeamBlocks	;Draw team block d1 (team*2) from the TeamBlocks map (Teamblocksm
 .nohi
 	movea.l	#Teamblocksmap,a1
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2
+	movea.w	#NoTiles,a2
 	clr.w	d0
 	move.w	(a1),d2
 	moveq	#2,d3

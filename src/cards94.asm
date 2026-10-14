@@ -942,7 +942,7 @@ AppendNumber	;Write d0 (0 ... 999, no leading zeros) as a String at a1, padded t
 GetRecordValue	;d0 = record d0 of player d1 of team d0 from save RAM (ReadPlayerRecord into $FFFF0000); d1 = 1 when the player is a goalie
 	movem.l	d2-d7/a0-a6,-(sp)
 	move.w	d0,-(sp)
-	movea.l	#$30E,a2
+	movea.l	#TeamList,a2
 	asl.w	#2,d0
 	movea.l	0(a2,d0.w),a2
 	adda.w	(a2),a2
@@ -962,7 +962,7 @@ GetRecordValue	;d0 = record d0 of player d1 of team d0 from save RAM (ReadPlayer
 	bsr.w	ReadPlayerRecord
 	move.b	(a0),d0
 	ext.w	d0
-	movea.l	#$30E,a5
+	movea.l	#TeamList,a5
 	asl.w	#2,d4
 	movea.l	0(a5,d4.w),a5
 	adda.w	$A(a5),a5
@@ -1674,7 +1674,7 @@ DrawPlayerCard	;Draw a player card: picture (DrawPictureBox), name, "Records" an
 	move.w	(VisTeam).w,d0
 .4
 	move.w	d0,(TempWord2).w
-	movea.l	#$30E,a2
+	movea.l	#TeamList,a2
 	asl.w	#2,d0
 	movea.l	0(a2,d0.w),a2
 	adda.w	(a2),a2
@@ -2057,7 +2057,7 @@ AppendTeamName	;Append the city name of team d0 (TeamList block Strings) to a1 (
 	movem.l	d0/a0-a3,-(sp)
 	ext.w	d0
 	asl.w	#2,d0
-	movea.l	#$30E,a0
+	movea.l	#TeamList,a0
 	movea.l	0(a0,d0.w),a0
 	move.w	4(a0),d0
 	ext.l	d0
@@ -2110,7 +2110,7 @@ PrintStartingLine	;Player card "Starting Line": the line slots the player starts
 	move.w	(VisTeam).w,d2
 	bsr.w	GetTeamStruct
 .1
-	movea.l	#$30E,a0
+	movea.l	#TeamList,a0
 	asl.w	#2,d2
 	ext.l	d2
 	adda.l	d2,a0
@@ -2489,7 +2489,7 @@ DrawPlayerPicture	;Draw the player picture (NoPicSkater1 ... NoPicGoalie2, Card<
 	addq.w	#1,d2
 	tst.l	(a0)
 	bne.s	.loop
-	movea.l	#$30E,a0
+	movea.l	#TeamList,a0
 	asl.w	#2,d1
 	movea.l	0(a0,d1.w),a0
 	movea.l	a0,a6

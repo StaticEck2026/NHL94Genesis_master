@@ -90,5 +90,8 @@ EnergyBarMap = $AB920		;#x.
 EASNmap = $B3530		;#x.
 waitxsr = $111D0		;bsr.w / Bcc.w.
 
+NoTiles = $30A
+TeamList = $30E
+
 ; Main segment code
 	include	penalty94.asm

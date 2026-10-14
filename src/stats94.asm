@@ -109,8 +109,8 @@ DisplayGameInfo	;Print game d3 of gsstruct (16 bytes each; not the current game 
 	jsr	(PrintStringFromList).l
 	addq.w	#2,(printy).w
 	rts
-PrintGameInfo	;Print team d0's name (TeamList, $30E) at x 6 and score d1 (2 digits) at x $18
-	movea.w	#$30E,a1
+PrintGameInfo	;Print team d0's name (TeamList) at x 6 and score d1 (2 digits) at x $18
+	movea.w	#TeamList,a1
 	asl.w	#2,d0
 	movea.l	0(a1,d0.w),a1
 	adda.w	4(a1),a1
@@ -445,7 +445,7 @@ DrawTeamScreen	;Line editor background: bitmap (ScoutMap), frame, "Line Editor" 
 	String	-TXMAP3,0,0
 	movea.l	#ScoutMap,a1
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2
+	movea.w	#NoTiles,a2
 	clr.w	d0
 	clr.w	d1
 	move.w	(a1),d2
@@ -1862,7 +1862,7 @@ SetupScreen	;Common start of the stats screens: blank, 40 cell mode, the framer 
 	String	-(TXPRI+TXMAP3),0,0
 	movea.l	#ScoutMap,a1
 	adda.l	4(a1),a1
-	movea.w	#$30A,a2
+	movea.w	#NoTiles,a2
 	clr.w	d0
 	clr.w	d1
 	move.w	(a1),d2
