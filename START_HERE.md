@@ -16,6 +16,14 @@ Read `SEGMENT_AGENT.md` (the Current rules) and `docs/HANDOFF.md` before editing
 [5/5] verify     MATCH output/modified_nhl94.bin
 ```
 
+### Build steps explained
+
+1. **prebuild**: check the retail ROM and extract graphics/sound assets into `Extracted/`.
+2. **assemble**: SNASM68k turns `src/*.asm` into a raw ROM image.
+3. **fixopcodes**: patch the instructions where SNASM picks a different encoding than EA's original assembler.
+4. **fixrom**: pad to a valid ROM size, write the header end address and the checksum.
+5. **verify**: compare byte-for-byte with the retail ROM.
+
 A failing step prints `FAILED`, the relevant log lines (`output/Build94.log` for the assembler) and `BUILD FAILED at <step>`, and exits 1. `tools/verify_all.sh` builds the full ROM and every segment and prints `ALL MATCH`.
 
 `checksum=1` runs ValidationRoutine at boot. The fixrom step writes the sum it compares against, so a changed ROM still boots with the check on. `checksum=0` skips the check. The checksum segment is left on the retail immediate so it still matches.

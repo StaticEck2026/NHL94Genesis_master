@@ -38,7 +38,16 @@ const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 
 const steps = 5;
 let n = 0;
 const tag = (name) => `${c.cyan(`[${++n}/${steps}]`)} ${name.padEnd(10)}`;
-const step = (name, text) => console.log(`${tag(name)} ${paint(text)}`);
+// One plain-language line under each step, for anyone new to the build.
+const ABOUT = {
+    prebuild: 'check the retail ROM and extract graphics/sound assets into Extracted/',
+    assemble: 'SNASM68k turns src/*.asm into a raw ROM image',
+    fixopcodes: "patch the instructions where SNASM picks a different encoding than EA's original assembler",
+    fixrom: 'pad to a valid ROM size, write the header end address and the checksum',
+    verify: 'compare byte-for-byte with the retail ROM',
+};
+const about = (name) => { if (ABOUT[name]) console.log(c.dim(`      ${ABOUT[name]}`)); };
+const step = (name, text) => { console.log(`${tag(name)} ${paint(text)}`); about(name); };
 const detail = (text) => { if (verbose && text.trim()) console.log(text.replace(/\s+$/, '').replace(/^/gm, '      ')); };
 function fail(name, text, log) {
     console.log(`${tag(name)} ${c.red('FAILED')}: ${text}`);

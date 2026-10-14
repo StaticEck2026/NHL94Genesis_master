@@ -58,6 +58,10 @@ Full ROM builds assemble `src/nhl94.asm`. The listing is `output/nhl94 .lst`. Th
 
 `npm run build:segacd` assembles the transcribed CD fragments in `src/segacd/` and compares them to the disc files in `cdbin/` (not in the repo). It does not change the cartridge build. What the disc changed, and how far the disassembly goes, is `docs/segacd.md`.
 
+## Build steps explained
+
+`tools/build.js` prints one line per step with a short note under it: prebuild (check the ROM, extract assets), assemble (SNASM68k), fixopcodes (patch the encodings SNASM picks differently from EA's assembler), fixrom (ROM size, header end, checksum) and verify (byte-for-byte against retail). Details in `START_HERE.md`.
+
 ## Credits
 
 Thanks to chaos, StaticEck, McMarkis and Drezz for their help with the disassembly.
