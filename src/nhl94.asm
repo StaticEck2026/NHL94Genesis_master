@@ -46,6 +46,11 @@
 	IF $200000<*
 		inform	1,"ROM content overlaps backup RAM"
 	ENDIF
+; Finish the 1MB image first. An include after this pad starts at the 1MB boundary,
+; and the pad below then grows the ROM to the next size.
+	IF *<$100000
+		dcb.b	$100000-*,$FF
+	ENDIF
 	IF *<$100001
 RomSize	equ	$100000
 	ENDIF
