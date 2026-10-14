@@ -183,7 +183,7 @@ const mod = path.join(OUT, final);
     if (r.status !== 0) fail('prebuild', 'ROM or asset extraction', r.out);
     let count = '?';
     try { count = JSON.parse(fs.readFileSync(path.join(ROOT, 'Extracted', '.extract-complete.json'), 'utf8')).files.length; } catch (e) { /* keep ? */ }
-    step('prebuild', `ROM OK, ${count} assets${/extracting/.test(r.out) ? ' (extracted again)' : ''}`);
+    step('prebuild', `ROM OK, ${count} assets extracted`);
     detail(r.out);
 }
 
