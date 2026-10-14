@@ -288,3 +288,15 @@ LineDataBase equ $1EF6
 	IF 32<NumPlayoffTeams
 		inform	3,"The playoff draw only keeps 32 team bits"
 	ENDIF
+; Cartridge backup RAM (odd byte of each word at SaveRamBase). The power-on mirror in M68K_RAM
+; is SaveMirrorBytes; checksum bytes sit at the end of that mirror.
+SaveRamBase equ $200000
+SaveMirrorBytes equ $2000
+SaveMirrorLast equ SaveMirrorBytes-1
+SaveSumDb equ SaveChecksumSum-2
+SaveChecksumByte equ $1FFE
+SaveChecksumSum equ $1FFF
+SaveRamMapPort equ $A130F1
+	IF LineDataBase>SaveMirrorBytes
+		inform	3,"Save mirror too small for the save layout"
+	ENDIF
