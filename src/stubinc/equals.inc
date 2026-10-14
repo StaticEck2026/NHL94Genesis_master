@@ -259,31 +259,18 @@ NumTeams equ ASW+1
 NumPlayoffTeams equ ASE
 PlayoffRows equ 32
 PlayoffRowTeams equ 16
-; Crowd records are NumTeams blocks of CrowdRecBytes at CrowdRecBase. The stock league
-; ends on the records block. A larger league starts that block after the crowd records,
-; and starts the name log after the records block. Line data stays where it is.
+; Save RAM layout (retail addresses). Crowd records are NumTeams blocks of CrowdRecBytes at
+; CrowdRecBase and must end before the records block; see docs/EXPANDING_THE_ROM.md.
 CrowdRecBase equ $B60
 CrowdRecBytes equ 16
 CrowdRecEnd equ CrowdRecBase+NumTeams*CrowdRecBytes
-	IF CrowdRecEnd<$D21
 TeamRecBase equ $D20
-	ENDIF
-	IF $D20<CrowdRecEnd
-TeamRecBase equ CrowdRecEnd
-	ENDIF
 RecordsBytes equ $80
-RecordsEnd equ TeamRecBase+RecordsBytes
-	IF RecordsEnd<$DA1
 NameLogBase equ $DA0
-	ENDIF
-	IF $DA0<RecordsEnd
-NameLogBase equ RecordsEnd
-	ENDIF
 NameLogBytes equ $80
-NameLogEnd equ NameLogBase+NameLogBytes
 LineDataBase equ $1EF6
-	IF LineDataBase<NameLogEnd
-		inform	3,"The name log runs into the line data"
+	IF TeamRecBase<CrowdRecEnd
+		inform	3,"The crowd records run into the records block (see docs/EXPANDING_THE_ROM.md)"
 	ENDIF
 	IF 32<NumPlayoffTeams
 		inform	3,"The playoff draw only keeps 32 team bits"
