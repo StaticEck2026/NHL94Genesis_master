@@ -67,6 +67,8 @@ Also check: the save RAM section above (a 29th team needs the records block move
 
 ## Build and test
 
-`node tools/build.js retail` (Windows, or Linux with wine) runs prebuild, assemble, fixopcodes and fixrom, then compares with retail. A mod reaches step 4 (size, header end, checksum) and then reports MISMATCH at step 5, which is expected; `output/nhl94.bin` is the ROM to test. `node tools/build.js dev` skips the compare and the boot check.
+`npm run build:retail` (`node tools/build.js retail`; Windows, or Linux with wine) runs prebuild, assemble, fixopcodes and fixrom, then compares with retail. A mod reaches step 4 (size, header end, checksum) and then reports MISMATCH at step 5, which is expected; `output/nhl94.bin` is the ROM to test. `npm run build:dev` skips the compare and the boot check. Add `--verbose` (`npm run build:retail -- --verbose`) to see the full assembler and tool output under each step.
+
+`npm run clean` deletes `output/` and `Extracted/`. Prebuild only extracts assets that are missing, so after you change a source image or asset (for example the team block images), run clean before building or the build keeps using the stale copy in `Extracted/`.
 
 Boot with `checksum=1`; a red screen means the boot checksum is wrong. `tools/verify_all.sh` is the stock check and prints `ALL MATCH` only when the full ROM and every segment still match retail. A modded ROM will not match, and must not be committed to `main`.
