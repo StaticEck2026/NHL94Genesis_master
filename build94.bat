@@ -41,21 +41,31 @@ if "%checksum%"=="0" (
 )
 
 REM Run the assembler with all flags. LONGBRA=0 keeps the short branch to Begin.
-REM If that branch cannot reach, assemble again with a long jump.
+REM If that branch cannot reach, assemble again with a long jump. SRAMTOGGLE=0 keeps
+REM retail save I/O; if the ROM overlaps backup RAM, assemble again with SRAMTOGGLE=1.
 set "longFlag=/e LONGBRA=0"
+set "sramFlag=/e SRAMTOGGLE=0"
 :assemble
 "%workspaceFolder%assembler\Assembler.exe" ^
   /p /m /g ^
   /o d- /o s- /o r+ /o l+ /o l. /o ow+ /o op- /o os+ /o oz+ /o omq- /o oaq+ /o osq+ ^
-  %revFlag% %checksumFlag% %longFlag% ^
+  %revFlag% %checksumFlag% %longFlag% %sramFlag% ^
   "%workspaceFolder%src\nhl94.asm,%workspaceFolder%output\nhl94.bin,%workspaceFolder%output\nhl94,%workspaceFolder%output\nhl94" ^
   > "%workspaceFolder%output\Build94.log"
 findstr /C:"is out of range" "%workspaceFolder%output\Build94.log" >nul
-if errorlevel 1 goto assembled
+if errorlevel 1 goto check_sram
 echo %longFlag% | findstr /C:"LONGBRA=1" >nul
-if not errorlevel 1 goto assembled
+if not errorlevel 1 goto check_sram
 echo Begin is out of range. Assembling again with a long jump.
 set "longFlag=/e LONGBRA=1"
+goto assemble
+:check_sram
+findstr /C:"ROM content overlaps backup RAM" "%workspaceFolder%output\Build94.log" >nul
+if errorlevel 1 goto assembled
+echo %sramFlag% | findstr /C:"SRAMTOGGLE=1" >nul
+if not errorlevel 1 goto assembled
+echo ROM overlaps backup RAM. Assembling again with save-chip map toggle.
+set "sramFlag=/e SRAMTOGGLE=1"
 goto assemble
 :assembled
 endlocal

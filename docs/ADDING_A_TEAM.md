@@ -48,7 +48,7 @@ The records block itself is eight 16-byte records (`RecordsBytes`). It is not on
 
 `src/nhl94.asm` fills `$FF` up to 1MB before it chooses a larger size. Put the new includes after that fill. On a stock image they start at the 1MB boundary. The pad then grows the ROM to 1.5MB, 2MB or 4MB, and the header end is the last byte of that pad.
 
-Leave the backup RAM window alone if the save data should keep working. The build warns when the image passes that window, and it still builds. Past 4MB the assemble stops.
+Leave the backup RAM window alone if the save data should keep working. The build warns when the image passes that window, and it still builds. Past 4MB the assemble stops. When that warning appears, `build94.bat` runs again with `SRAMTOGGLE=1` so `ReadSRAM` / `WriteSRAM` flip the backup-RAM map at `$A130F1` (see `docs/PLAN_DYNAMIC_SAVE_SRAM.md`). Team save offsets still come from `equals.inc` (`CrowdRecBase`, `TeamRecBase`, `NameLogBase`).
 
 `absjsr` and `absjmp` keep calls working when a routine moves from below `$8000` to above it. The target has to be defined before the call. A forward call is written `jsr (name).l` or `jmp (name).l`. If the startup branch to `Begin` can no longer reach, `build94.bat` assembles a second time with a long jump.
 
