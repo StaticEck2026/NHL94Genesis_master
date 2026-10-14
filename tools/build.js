@@ -2,6 +2,7 @@
 // build.js: the whole NHL 94 build, one line per step, on Windows and Linux (wine).
 //   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/nhl94.bin (nhl94-revA.bin, nhl94-dev.bin)
 //   node tools/build.js --seg <name> [--verbose]       one segment (tools/segments.json), verified
+//   node tools/build.js --segacd [--verbose]           Sega CD fragments, compared with cdbin/
 // --no-color (or NO_COLOR) turns the colors off; they are also off when the output is not a terminal.
 // retail: CHECKSUM=1 and verified against lst/nhl94.bin. dev: CHECKSUM=0, not verified.
 // The rev / checksum environment variables (as in build94.bat) override the defaults.
@@ -35,7 +36,7 @@ const env = (k) => process.env[k] ?? process.env[k.toUpperCase()] ?? process.env
 const rev = env('rev') === '1' ? 1 : 0;
 const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 1) : (mode === 'dev' && !seg ? 0 : 1);
 
-const steps = 5;
+let steps = 5;
 let n = 0;
 const tag = (name) => `${c.cyan(`[${++n}/${steps}]`)} ${name.padEnd(10)}`;
 // One plain-language line under each step, for anyone new to the build.
@@ -61,6 +62,50 @@ function run(cmd, argv, opts = {}) {
 }
 const node = (script, argv) => run(process.execPath, [path.join(__dirname, script), ...argv]);
 
+const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
+
+// --segacd: the transcribed Sega CD fragments (src/segacd/, options per fragment in tools/segacd.json),
+// compared with the disc files in cdbin/ by tools/verifySegacd.js. Does not touch the cartridge build.
+if (args.includes('--segacd')) {
+    steps = 2;
+    ABOUT.assemble = 'SNASM68k assembles each src/segacd/*.asm fragment with its own options';
+    ABOUT.verify = 'compare each fragment with its bytes on the disc (cdbin/)';
+    const frags = require('./segacd.json');
+    const BUILD = path.join(OUT, 'build');
+    const CD = path.join(OUT, 'segacd');
+    fs.mkdirSync(BUILD, { recursive: true });
+    fs.mkdirSync(CD, { recursive: true });
+    const exe = path.join(ROOT, 'assembler', 'Assembler.exe');
+    const t0 = Date.now();
+    for (const f of frags) {
+        const out = path.join(CD, `${f.name}.bin`);
+        fs.rmSync(out, { force: true });
+        const a = ['/p', '/m', '/g', ...f.options, `segacd\\${f.name}.asm,..\\output\\segacd\\${f.name}.bin,..\\output\\build\\${f.name},..\\output\\build\\${f.name}`];
+        const r = WIN ? run(exe, a, { cwd: path.join(ROOT, 'src') })
+            : run('wine', [exe, ...a], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } });
+        const logPath = path.join(BUILD, `Build_${f.name}.log`);
+        fs.writeFileSync(logPath, r.out, 'latin1');
+        const sum = r.out.match(/(\d+) error\(s\) from/);
+        if (!sum || Number(sum[1]) > 0 || !fs.existsSync(out)) {
+            const lines = r.out.split(/\r\n|\n|\r/);
+            fail('assemble', `${f.name} (see ${rel(logPath)})`, lines.filter((l) => /\.(asm|inc|mac)\(\d+|error|not recognised|undefined/i.test(l) && !/error\(s\) from/.test(l)).slice(0, 40).join('\n') || lines.slice(-20).join('\n'));
+        }
+        detail(`${f.name}: ${sum[0]} -> ${rel(out)}`);
+    }
+    step('assemble', `${frags.length} fragments, 0 errors in ${((Date.now() - t0) / 1000).toFixed(1)}s -> output/segacd/`);
+    const r = node('verifySegacd.js', []);
+    const matches = (r.out.match(/ MATCH /g) || []).length;
+    if (r.status !== 0) {
+        console.log(`${tag('verify')} ${c.red(/missing .*cdbin/.test(r.out) ? 'FAILED' : 'MISMATCH')}: ${r.out.trim().split(/\r?\n/).pop()}`);
+        if (verbose) console.log(r.out.replace(/\s+$/, '').replace(/^/gm, '      '));
+        console.log(c.red('BUILD FAILED at verify'));
+        process.exit(1);
+    }
+    step('verify', `MATCH ${matches} fragments against cdbin/`);
+    detail(r.out);
+    process.exit(0);
+}
+
 if (seg !== null && !SEGMENTS[seg]) {
     console.error(`unknown segment '${seg}'. Known: ${Object.keys(SEGMENTS).join(', ')}`);
     process.exit(1);
@@ -75,7 +120,6 @@ const fixed = path.join(BUILD, `modified_${name}.raw.bin`);
 const logPath = path.join(BUILD, `Build_${name}.log`);
 const final = seg ? `${seg}.bin` : `nhl94${rev ? '-revA' : ''}${mode === 'dev' ? '-dev' : ''}.bin`;
 const mod = path.join(OUT, final);
-const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 // 1. prebuild: ROM check and Extracted/ assets.
 {

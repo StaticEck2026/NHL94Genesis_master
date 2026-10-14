@@ -8,7 +8,7 @@
     "verify:retail": "node tools/verifyRom.js output/nhl94.bin lst/nhl94.bin",
     "build:retail": "node tools/build.js retail",
     "build:dev": "node tools/build.js dev",
-    "build:segacd": "buildcd.bat && node tools/verifySegacd.js",
+    "build:segacd": "node tools/build.js --segacd",
     "sync": "node tools/sync.js",
     "seg": "node tools/build.js --seg"
   },

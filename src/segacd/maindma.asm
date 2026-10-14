@@ -1,6 +1,6 @@
 ; MAIN.BIN $272-$4FF ($FF0272-$FF04FF). Emitted by tools/emit_m68k.py.
 ; Word-RAM blit and VDP DMA. Continues the call at the end of maincd.asm.
-; Assemble with /o oz- (see buildcd.bat).
+; Assemble with /o oz- (see tools/segacd.json; npm run build:segacd).
 
 X_FF051C	equ	$FF051C
 X_FF069C	equ	$FF069C

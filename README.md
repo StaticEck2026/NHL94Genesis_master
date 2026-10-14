@@ -56,7 +56,7 @@ Full ROM builds assemble `src/nhl94.asm`. The listing is `output/build/nhl94 .ls
 
 ## Sega CD
 
-`npm run build:segacd` assembles the transcribed CD fragments in `src/segacd/` and compares them to the disc files in `cdbin/` (not in the repo). It does not change the cartridge build. What the disc changed, and how far the disassembly goes, is `docs/segacd.md`.
+`npm run build:segacd` (`node tools/build.js --segacd`) assembles the 41 transcribed CD fragments in `src/segacd/` into `output/segacd/` and compares them to the disc files in `cdbin/` (not in the repo), on Windows or Linux with wine. It does not change the cartridge build. What the disc changed, and how far the disassembly goes, is `docs/segacd.md`.
 
 ## Build steps explained
 

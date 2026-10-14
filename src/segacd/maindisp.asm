@@ -1,6 +1,6 @@
 ; MAIN.BIN $1E90-$2D29 ($FF1E90-$FF2D29). Emitted by tools/emit_m68k.py.
 ; Installs a VBlank handler, calls MAINCODE, then sets up the VDP and tiles.
-; Assemble with /o oz- (see buildcd.bat).
+; Assemble with /o oz- (see tools/segacd.json; npm run build:segacd).
 
 X_FF1E04	equ	$FF1E04
 X_FF2D2A	equ	$FF2D2A
