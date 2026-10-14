@@ -72,4 +72,10 @@ Start	;($200). Power on: the Sega hardware init, then the checksum, then the gam
 	ENDIF
 	;no KillCrowd here
 
-	bra.w	Begin	;last instruction of the startup code; team data follows
+	;Short branch while Begin is in range. The build passes LONGBRA=0, and assembles again
+	;with LONGBRA=1 (a long jump) when that branch cannot reach.
+	IF LONGBRA=1
+		jmp	(Begin).l
+	ELSE
+		bra.w	Begin	;last instruction of the startup code; team data follows
+	ENDIF
