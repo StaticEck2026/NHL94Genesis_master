@@ -8,7 +8,7 @@
 // The rev / checksum environment variables (set rev=1 / set checksum=0 on Windows, rev=1 node ... on Linux) override the defaults.
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'output');
@@ -39,8 +39,9 @@ const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 
 let steps = 5;
 let n = 0;
 // Each step is two lines: "[n/5] <step>  <description>", then the result under the description.
-// In a colour terminal the first line is printed (step name yellow) when the step starts and redrawn
-// green or red when it ends; otherwise both lines are printed once, after the step.
+// In a colour terminal the step line shows a spinner and a yellow step name while it runs, and is
+// redrawn with a green check or a red cross when it ends (cut to the terminal width so it never
+// wraps). Otherwise both lines are printed once, after the step.
 const ABOUT = {
     prebuild: 'check the retail ROM and extract graphics/sound assets into Extracted/',
     assemble: 'SNASM68k turns src/*.asm into a raw ROM image',
@@ -48,41 +49,77 @@ const ABOUT = {
     fixrom: 'pad to a valid ROM size, write the header end address and the checksum',
     verify: 'compare byte-for-byte with the retail ROM',
 };
-const INDENT = ' '.repeat(`[0/0] ${''.padEnd(10)} `.length);
 const live = color;
+// Braille spinner and check marks need a UTF-8 terminal; old Windows consoles get ASCII.
+const utf8 = WIN ? Boolean(process.env.WT_SESSION || process.env.TERM_PROGRAM || process.env.ConEmuANSI)
+    : /utf-?8/i.test(process.env.LC_ALL || process.env.LC_CTYPE || process.env.LANG || '');
+const SPIN = utf8 ? ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] : ['|', '/', '-', '\\'];
+const OK = utf8 ? '✓' : 'OK';
+const BAD = utf8 ? '✗' : 'X';
+const MARK = Math.max(OK.length, BAD.length, 1);
+const INDENT = ' '.repeat(`[0/0] ${live ? ' '.repeat(MARK + 1) : ''}${''.padEnd(10)} `.length);
 let current = null;
 let dirty = false;
-const header = (name, paintName) => `${c.cyan(`[${n}/${steps}]`)} ${paintName(name.padEnd(10))} ${c.dim(ABOUT[name] || '')}`;
+let timer = null;
+let frame = 0;
+function header(name, paintName, mark) {
+    const head = `[${n}/${steps}] ${live ? `${mark.padEnd(MARK)} ` : ''}${name.padEnd(10)} `;
+    let desc = ABOUT[name] || '';
+    const width = live ? (process.stdout.columns || 80) - 1 : Infinity;
+    if (head.length + desc.length > width) desc = desc.slice(0, Math.max(0, width - head.length - 1)) + (width > head.length ? '…'.slice(0, utf8 ? 1 : 0) : '');
+    const markPart = live ? `${paintName(mark.padEnd(MARK))} ` : '';
+    return `${c.cyan(`[${n}/${steps}]`)} ${markPart}${paintName(name.padEnd(10))} ${c.dim(desc)}`;
+}
+const draw = (text) => process.stdout.write(`\r\x1b[2K${text}`);
+function stopSpin() { if (timer) { clearInterval(timer); timer = null; } }
 function begin(name) {
     n++;
     current = name;
     dirty = false;
-    if (live) console.log(header(name, c.yellow));
+    if (!live) return;
+    frame = 0;
+    draw(header(name, c.yellow, SPIN[0]));
+    timer = setInterval(() => { frame = (frame + 1) % SPIN.length; draw(header(name, c.yellow, SPIN[frame])); }, 80);
 }
-function finish(name, paintName) {
+function finish(name, paintName, mark) {
     if (current !== name) begin(name);
-    if (!live) console.log(header(name, (t) => t));
-    else if (!dirty) process.stdout.write(`\x1b[1A\r\x1b[2K${header(name, paintName)}\n`);
-    else console.log(header(name, paintName));
+    stopSpin();
+    if (!live) console.log(header(name, (t) => t, ''));
+    else if (!dirty) draw(`${header(name, paintName, mark)}\n`);
+    else console.log(header(name, paintName, mark));
     current = null;
 }
-const step = (name, text) => { finish(name, c.green); console.log(INDENT + paint(text)); };
-const detail = (text) => { if (verbose && text.trim()) { dirty = true; console.log(text.replace(/\s+$/, '').replace(/^/gm, INDENT)); } };
+const step = (name, text) => { finish(name, c.green, OK); console.log(INDENT + paint(text)); };
+function detail(text) {
+    if (!verbose || !text.trim()) return;
+    if (live && current && !dirty) { stopSpin(); process.stdout.write('\n'); }
+    dirty = true;
+    console.log(text.replace(/\s+$/, '').replace(/^/gm, INDENT));
+}
 function fail(name, text, log, label = 'FAILED') {
-    finish(name, c.red);
+    finish(name, c.red, BAD);
     console.log(`${INDENT}${c.red(label)}: ${text}`);
     if (log) console.log(log.replace(/\s+$/, '').replace(/^/gm, INDENT));
     console.log(c.red(`BUILD FAILED at ${name}`));
     process.exit(1);
 }
+// Child processes run async (spawn) so the spinner keeps turning while the assembler works.
 function run(cmd, argv, opts = {}) {
-    const r = spawnSync(cmd, argv, { cwd: ROOT, encoding: 'latin1', maxBuffer: 256 << 20, ...opts });
-    return { status: r.error ? -1 : r.status, out: (r.stdout || '') + (r.stderr || '') + (r.error ? String(r.error) : '') };
+    return new Promise((resolve) => {
+        const chunks = [];
+        let p;
+        try { p = spawn(cmd, argv, { cwd: ROOT, ...opts }); } catch (e) { resolve({ status: -1, out: String(e) }); return; }
+        p.stdout.on('data', (d) => chunks.push(d));
+        p.stderr.on('data', (d) => chunks.push(d));
+        p.on('error', (e) => resolve({ status: -1, out: Buffer.concat(chunks).toString('latin1') + String(e) }));
+        p.on('close', (code) => resolve({ status: code, out: Buffer.concat(chunks).toString('latin1') }));
+    });
 }
 const node = (script, argv) => run(process.execPath, [path.join(__dirname, script), ...argv]);
 
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
+(async () => {
 // --segacd: the transcribed Sega CD fragments (src/segacd/, options per fragment in tools/segacd.json),
 // compared with the disc files in cdbin/ by tools/verifySegacd.js. Does not touch the cartridge build.
 if (args.includes('--segacd')) {
@@ -101,8 +138,8 @@ if (args.includes('--segacd')) {
         const out = path.join(CD, `${f.name}.bin`);
         fs.rmSync(out, { force: true });
         const a = ['/p', '/m', '/g', ...f.options, `segacd\\${f.name}.asm,..\\output\\segacd\\${f.name}.bin,..\\output\\build\\${f.name},..\\output\\build\\${f.name}`];
-        const r = WIN ? run(exe, a, { cwd: path.join(ROOT, 'src') })
-            : run('wine', [exe, ...a], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } });
+        const r = await (WIN ? run(exe, a, { cwd: path.join(ROOT, 'src') })
+            : run('wine', [exe, ...a], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } }));
         const logPath = path.join(BUILD, `Build_${f.name}.log`);
         fs.writeFileSync(logPath, r.out, 'latin1');
         const sum = r.out.match(/(\d+) error\(s\) from/);
@@ -114,7 +151,7 @@ if (args.includes('--segacd')) {
     }
     step('assemble', `${frags.length} fragments, 0 errors in ${((Date.now() - t0) / 1000).toFixed(1)}s -> output/segacd/`);
     begin('verify');
-    const r = node('verifySegacd.js', []);
+    const r = await node('verifySegacd.js', []);
     const matches = (r.out.match(/ MATCH /g) || []).length;
     if (r.status !== 0) {
         fail('verify', r.out.trim().split(/\r?\n/).pop(), verbose ? r.out : '', /missing .*cdbin/.test(r.out) ? 'FAILED' : 'MISMATCH');
@@ -142,7 +179,7 @@ const mod = path.join(OUT, final);
 // 1. prebuild: ROM check and Extracted/ assets.
 {
     begin('prebuild');
-    const r = node('prebuild.js', ['retail']);
+    const r = await node('prebuild.js', ['retail']);
     if (r.status !== 0) fail('prebuild', 'ROM or asset extraction', r.out);
     let count = '?';
     try { count = JSON.parse(fs.readFileSync(path.join(ROOT, 'Extracted', '.extract-complete.json'), 'utf8')).files.length; } catch (e) { /* keep ? */ }
@@ -161,8 +198,8 @@ const mod = path.join(OUT, final);
         '/o', 'os+', '/o', 'oz+', '/o', 'omq-', '/o', 'oaq+', '/o', 'osq+',
         '/e', `REV=${rev}`, '/e', `CHECKSUM=${checksum}`, `${src},${o}.raw.bin,${o},${o}`];
     const exe = path.join(ROOT, 'assembler', 'Assembler.exe');
-    const r = WIN ? run(exe, asmArgs, { cwd: path.join(ROOT, 'src') })
-        : run('wine', [exe, ...asmArgs], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } });
+    const r = await (WIN ? run(exe, asmArgs, { cwd: path.join(ROOT, 'src') })
+        : run('wine', [exe, ...asmArgs], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } }));
     fs.writeFileSync(logPath, r.out, 'latin1');
     const lines = r.out.split(/\r\n|\n|\r/);
     const sum = r.out.match(/(\d+) error\(s\) from (\d+) lines in ([\d.]+) seconds/);
@@ -185,7 +222,7 @@ const mod = path.join(OUT, final);
 // 3. fixopcodes: rewrite the EA cmp / exg encodings SNASM picks differently; the result becomes output/<final>.
 {
     begin('fixopcodes');
-    const r = node('fixopcodes.js', [lst, bin, ...(seg ? [SEGMENTS[seg]] : [])]);
+    const r = await node('fixopcodes.js', [lst, bin, ...(seg ? [SEGMENTS[seg]] : [])]);
     const m = r.out.match(/Modified (\d+) instructions/);
     if (r.status !== 0 || !m || !fs.existsSync(fixed)) fail('fixopcodes', 'did not write the fixed binary', r.out);
     fs.renameSync(fixed, mod);
@@ -199,7 +236,7 @@ if (seg) {
     step('fixrom', 'skipped (segment)');
 } else {
     begin('fixrom');
-    const r = node('fixrom.js', [lst, mod]);
+    const r = await node('fixrom.js', [lst, mod]);
     const m = r.out.match(/size (\w+) \(end (\w+)\), checksum (\w+) -> (\w+)/);
     if (r.status !== 0 || !m) fail('fixrom', 'size or checksum', r.out);
     step('fixrom', `size $${m[1].toUpperCase()}, header end $${m[2].toUpperCase()}, checksum $${m[4].toUpperCase()}${m[3] !== m[4] ? ` (was $${m[3].toUpperCase()})` : ''}`);
@@ -213,7 +250,7 @@ if (!seg && mode === 'dev') {
     step('verify', `${rel(mod)} not verified (no REV A reference ROM)`);
 } else {
     begin('verify');
-    const r = seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]);
+    const r = await (seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]));
     const first = r.out.split(/\r?\n/).find((l) => l.trim()) || '';
     if (r.status !== 0 || !/^MATCH/.test(first)) {
         fail('verify', rel(mod), r.out, 'MISMATCH');
@@ -221,3 +258,4 @@ if (!seg && mode === 'dev') {
     step('verify', `MATCH ${rel(mod)}${seg ? ` (${first.replace(/^MATCH:?\s*/, '')})` : ''}`);
     detail(r.out);
 }
+})();
