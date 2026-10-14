@@ -826,10 +826,10 @@ TakeTopStarScore	;Take the highest of the 52 star scores at ThreeStars
 	subi.w	#(ThreeStars-M68K_RAM),d0
 	lsr.w	#2,d0	;entry number
 	movea.w	#(tmstruct-M68K_RAM),a2
-	cmp.w	#$1A,d0
+	cmp.w	#RosterSlots,d0
 	blt.w	.home
-	subi.w	#$1A,d0
-	adda.w	#tmsize,a2	;26-51: away team (tmsize)
+	subi.w	#RosterSlots,d0
+	adda.w	#tmsize,a2	;second team roster block (tmsize)
 .home
 	movem.l	(sp)+,d1-d2/a1/a4
 	rts
@@ -855,7 +855,7 @@ CalcStarScores	;Star score for every roster slot of both teams to ThreeStars (26
 	clr.w	d0
 	btst	#7,2(a0)
 	beq.w	.slot
-	addi.w	#$1A,d0	;away goal: second 26 entries
+	addi.w	#RosterSlots,d0	;away goal: second RosterSlots entries
 .slot
 	add.b	3(a0),d0
 	asl.w	#2,d0

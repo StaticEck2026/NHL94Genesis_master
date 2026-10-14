@@ -2622,7 +2622,7 @@ BuildCardPlayerLists	;Build the player card order of both teams: home at homecar
 	bsr.w	BuildCardPlayerList
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-BuildCardPlayerList	;Player card order of team a0 into a1: the 6 starters (TeamList line at +6) first, the other players of the 26 after them
+BuildCardPlayerList	;Player card order of team a0 into a1: the 6 starters (TeamList line at +6) first, the other roster slots after them
 	movea.l	$1E(a0),a0
 	adda.w	6(a0),a0
 	movea.l	a1,a2
@@ -2642,6 +2642,6 @@ BuildCardPlayerList	;Player card order of team a0 into a1: the 6 starters (TeamL
 	move.b	d0,(a1)+
 .1
 	addq.w	#1,d0
-	cmp.w	#$1A,d0
+	cmp.w	#RosterSlots,d0
 	blt.s	.loop
 	rts

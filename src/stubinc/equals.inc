@@ -257,6 +257,8 @@ ASW equ 27
 ; all-star number: a new playoff team is inserted before ASE and both all-star numbers move up.
 NumTeams equ ASW+1
 NumPlayoffTeams equ ASE
+; Roster slots per team (skaters in card lists, three-stars tables, etc.), not the league count.
+RosterSlots equ 26
 PlayoffRows equ 32
 PlayoffRowTeams equ 16
 ; Save RAM layout (retail addresses). Crowd records are NumTeams blocks of CrowdRecBytes at
