@@ -2,6 +2,13 @@
 
 > **Work in progress:** this disassembly is unfinished and unpolished, and is being actively worked on. Expect labels, file layout and docs to change.
 
+Current status:
+
+- The file split is the main open job; it's not decided yet whether it ends up traditional like 93 or broken out like 95.
+- Labels need work too.
+- All sound effects and music are now playable and we have Diehter Ruhle's list, so sound and music names can be fixed properly.
+- Frame lists and animation names still need proper labels.
+
 Bitwise rebuild of NHL 94 for the Sega Genesis.
 
 The listing is `lst/nhl94.bin.lst`. The ROM it was generated from is `lst/nhl94.bin`. That file is the reference for every segment verify. Do not use a different ROM.
