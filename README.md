@@ -6,7 +6,7 @@ Current status:
 
 - The file split is the main open job; it's not decided yet whether it ends up traditional like 93 or broken out like 95.
 - Labels need work too.
-- All sound effects and music are now playable and we have Diehter Ruhle's list, so sound and music names can be fixed properly.
+- All sound effects and music are now playable and we have Dieter Ruehle's list, so sound and music names can be fixed properly.
 - Frame lists and animation names still need proper labels.
 
 Bitwise rebuild of NHL 94 for the Sega Genesis.
