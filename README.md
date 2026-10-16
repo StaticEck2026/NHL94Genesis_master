@@ -1,5 +1,7 @@
 # NHL 94 Genesis
 
+> **Work in progress:** this disassembly is unfinished and unpolished, and is being actively worked on. Expect labels, file layout and docs to change.
+
 Bitwise rebuild of NHL 94 for the Sega Genesis.
 
 The listing is `lst/nhl94.bin.lst`. The ROM it was generated from is `lst/nhl94.bin`. That file is the reference for every segment verify. Do not use a different ROM.
