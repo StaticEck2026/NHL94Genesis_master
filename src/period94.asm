@@ -424,7 +424,7 @@ PeriodStatsScreen	;"Period Stats" menu item (menu lists): both team logos
 .13
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
-GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' totals (DisplayTeamStatsScreen). There are more rows than the screen:
+StatsReport	;(was GameStatisticsScreen) "Game Statistics" menu item (menu lists): both teams' totals (DisplayStats). There are more rows than the screen:
 	;up / down scroll them (matchupvis the most, $70 or $30 without penalties, OptPen), start exits (ExitStatsScreen)
 	moveq	#9,d0
 	moveq	#$1A,d1
@@ -449,7 +449,7 @@ GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' tota
 	bne.w	.0
 	move.w	#$30,(matchupvis).w	;11 rows
 .0
-	bsr.w	DisplayTeamStatsScreen
+	bsr.w	DisplayStats
 	bsr.w	PrintStatScrollArrows
 .loop
 	jsr	(vcountwait).l
@@ -505,18 +505,18 @@ SetStatScroll	;Plane A vertical scroll (VSRAM 0) = VertLineScrolling - $50, with
 	move.w	d0,(a0)
 	move.w	(sp)+,(disflags).w
 	rts
-StatScrollRow	;d3 = VertLineScrolling / 16 (GameStatisticsScreen, at a scroll step)
+StatScrollRow	;d3 = VertLineScrolling / 16 (StatsReport, at a scroll step)
 	move.w	(VertLineScrolling).w,d3
 	lsr.w	#4,d3
 	bra.w	rtsStatScroll
-StatScrollRowEnd	;d3 = VertLineScrolling / 16 + 6 (GameStatisticsScreen, at a scroll step)
+StatScrollRowEnd	;d3 = VertLineScrolling / 16 + 6 (StatsReport, at a scroll step)
 	move.w	(VertLineScrolling).w,d3
 	lsr.w	#4,d3
 	addq.w	#6,d3
 	bra.w	rtsStatScroll
 rtsStatScroll	;rts of StatScrollRow / StatScrollRowEnd
 	rts
-PrintStatScrollArrows	;GameStatisticsScreen scroll arrows (printz2): up ($7B) when VertLineScrolling > 0, down ($7D) when it is below matchupvis
+PrintStatScrollArrows	;StatsReport scroll arrows (printz2): up ($7B) when VertLineScrolling > 0, down ($7D) when it is below matchupvis
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printsmallz).l
 	String	CC_SetFont,1
@@ -543,7 +543,7 @@ PrintStatScrollArrows	;GameStatisticsScreen scroll arrows (printz2): up ($7B) wh
 	String	CC_SetFont
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-DisplayTeamStatsScreen	;Team logos (PutTeamBlock), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
+DisplayStats	;(was DisplayTeamStatsScreen) Team logos (PutTeamBlock), then each TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are
 	;off, OptPen) centred, with the home value at x $22 and the visitors' at x 9 (PrintStatValue); SetStatScroll first
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,7
@@ -730,7 +730,7 @@ TeamStatTextTblNoPen	;The rows without the power play ones, used when penalties 
 	dc.w	$000A
 	dc.b	'Passing',0
 	dc.w	$14,$12
-rtsStatTables	;rts after the stat tables (GameStatisticsScreen scroll step)
+rtsStatTables	;rts after the stat tables (StatsReport scroll step)
 	rts
 updatePPTeamTime	;One more second of power play time ($352 of the team struct) for the team on the power play
 	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime

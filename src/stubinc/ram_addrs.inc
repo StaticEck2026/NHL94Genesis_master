@@ -441,7 +441,7 @@ shootoutteam equ $FFFFD594
 matchup equ $FFFFD598
 scoutunused equ $FFFFD59A	;cleared by ScoutingReport, never read
 matchuphome equ $FFFFD59C
-matchupvis equ $FFFFD59E	;the visitors player of the matchup; also the scroll limit of GameStatisticsScreen
+matchupvis equ $FFFFD59E	;the visitors player of the matchup; also the scroll limit of StatsReport
 homerating equ $FFFFD5A0
 visrating equ $FFFFD5A2
 advframe equ $FFFFD5A4

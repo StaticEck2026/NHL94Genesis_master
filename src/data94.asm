@@ -1760,7 +1760,7 @@ PauseText	;Pause menu item list (PauseMode)
 	String	'    Edit Lines    '
 	dc.l	LineEditor
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen
+	dc.l	StatsReport
 	String	'   Player Stats   '
 	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
@@ -1797,7 +1797,7 @@ PauseText2	;Pause menu item list without Timeout (PauseMode)
 	String	'    Edit Lines    '
 	dc.l	LineEditor
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen
+	dc.l	StatsReport
 	String	'   Player Stats   '
 	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
@@ -1881,7 +1881,7 @@ IntermissionText	;Intermission menu for gsp 1-3
 	String	'   Resume Game    '
 	dc.l	rtss2
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen
+	dc.l	StatsReport
 	String	'   Player Stats   '
 	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
@@ -1914,7 +1914,7 @@ ExitGameText	;Intermission menu for gsp 4
 	String	'    Exit Game     '
 	dc.l	rtss2
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen
+	dc.l	StatsReport
 	String	'   Player Stats   '
 	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '
@@ -1941,7 +1941,7 @@ ExitGameTextPO	;Intermission menu for gsp 4 in the playoffs
 	String	'    Exit Game     '
 	dc.l	rtss2
 	String	'    Game Stats    '
-	dc.l	GameStatisticsScreen
+	dc.l	StatsReport
 	String	'   Player Stats   '
 	dc.l	PlayerStatsScreen
 	String	' Scoring Summary  '

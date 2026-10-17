@@ -92,7 +92,7 @@ PlayerCards = $FA07E		;dc.l in the menu lists, retail value
 RecordHoldersScreen = $FBC14		;dc.l in the menu lists, retail value
 ShootoutShooters = $FC620		;dc.l in the menu lists, retail value
 PeriodStatsScreen = $FD90C		;dc.l in the menu lists, retail value
-GameStatisticsScreen = $FDC5A		;dc.l in the menu lists, retail value
+StatsReport = $FDC5A		;dc.l in the menu lists, retail value
 ManualGoalieMenu = $FE1D8		;dc.l in the menu lists, retail value
 
 NoTiles = $30A
