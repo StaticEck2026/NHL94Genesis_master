@@ -19,7 +19,7 @@ Five calls, all `jsr $371D2`:
 | File | Argument | What happens |
 | --- | --- | --- |
 | `$D312` | immediate `$7A` | Scouting. `$7A` is `SngScout`. It is above `$77`, so this call does not store a track |
-| `$245D2` | immediate `$79` | End of game. `$79` is `fmtune_eog`. Same: no track is stored |
+| `$245D2` | immediate `$79` | End of game. `$79` is `fmtune_intermission`. Same: no track is stored |
 | `$10B24`, `$10CE6` | word at `$1A56A` | `$10B24` is `songplay.asm`. After `song` returns it copies `$1745E` to `$19364`, `MSCPLAY1`s that word once, and sets `$1745C` to `$FFFF` |
 | `$10BD6` | word at `$1AD70` | `song` only. No `MSCPLAY1` at this site |
 

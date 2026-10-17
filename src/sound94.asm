@@ -896,7 +896,7 @@ SongPointerTable	;the songs $30-$7A of SoundStreamTable (stop_current_song reads
 	dc.l	fmtune_id_76_cmdstream	;song $76
 	dc.l	fmtune_id_77_cmdstream	;song $77
 	dc.l	fmtune_title_cmdstream	;song $78
-	dc.l	fmtune_eog_cmdstream	;song $79
+	dc.l	fmtune_intermission_cmdstream	;song $79
 	dc.l	fmtune_scouting_cmdstream	;song $7A
 sfx_beep1_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_beep1_cmdstream.bin	;sound $1 (SFXbeep1)
@@ -1260,10 +1260,10 @@ fmtune_title_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_title_cmdstream94.bin	;song $78: ExitToOpening, newTitleScreen. One stream that loops to its start
 	even
 	dc.l	fmtune_title_cmdstream	;loop pointer
-fmtune_eog_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_eog_cmdstream94.bin	;song $79: IntermissionStart, StartHL2
+fmtune_intermission_cmdstream
+	incbin	..\Extracted\NHL94\Sound\fmtune_intermission_cmdstream94.bin	;song $79: IntermissionStart, StartHL2
 	even
-	dc.l	fmtune_eog_cmdstream+4	;loop pointer (past the first event)
+	dc.l	fmtune_intermission_cmdstream+4	;loop pointer (past the first event)
 fmtune_scouting_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_scouting_cmdstream94.bin	;song $7A: ScoutingReport
 	even
