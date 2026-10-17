@@ -231,9 +231,9 @@ wallcollduringcheck	;during a check, a skater a2 (not a goalie) near the wall: t
 	movem.l	d0-d7,-(sp)
 	move.w	(a2),d2	;Xpos of checking player
 	move.w	Ypos(a2),d3	;Ypos of checking player
-	move.w	$4A(a2),(wcradiusx).w	;moves radiusX into FFBD22 (width of graphic)
+	move.w	radiusx(a2),(wcradiusx).w	;moves radiusX into FFBD22 (width of graphic)
 	addi.w	#$17,(wcradiusx).l	;add $17 to BD22
-	move.w	$4C(a2),(wcradiusy).w	;moves radiusY into FFBD24 (height of graphic)
+	move.w	radiusy(a2),(wcradiusy).w	;moves radiusY into FFBD24 (height of graphic)
 	addi.w	#$17,(wcradiusy).l	;add $17 to BD24
 	movem.l	a0-a6,-(sp)
 	exg	a2,a3	;swap a2 and a3
@@ -252,8 +252,8 @@ setSlotBit	;Sflags6 bit 5 (the slot) = the puck carrier is in the slot in front 
 	move.w	(puckc).w,d0	;move puckc SCnum into d0
 	asl.w	#7,d0	;mult by 128 decimal
 	adda.w	d0,a0	;move to start of puckc SCstruct
-	move.w	$14(a0),d0	;Ypos
-	btst	#7,$62(a0)	;pfgoal - which goal shooting at
+	move.w	Ypos(a0),d0	;Ypos
+	btst	#pfgoal,$62(a0)	;pfgoal - which goal shooting at
 	bne.w	.checkpos	;jump if top goal
 	neg.w	d0	;negative d0
 .checkpos
@@ -1480,9 +1480,9 @@ PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the play
 .0
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(forceblack).l
-	bclr	#0,(disflags).w
+	bclr	#dfok,(disflags).w
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	move.w	(VSPRITES).w,d0
 	jsr	(Vmaddr).l
 	move.l	#0,(a0)
@@ -1493,7 +1493,7 @@ PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the play
 	jsr	(Vmaddr).l
 	move.l	#0,(a0)
 	move.w	(sp)+,(disflags).w
-	bclr	#1,(disflags).w
+	bclr	#df32c,(disflags).w
 	bsr.w	CountGoalies
 	bsr.w	CountPlayers
 	move.w	(smallfontchars).w,d4
@@ -1562,7 +1562,7 @@ PlayerCards	;"Player Cards" menu item (menu lists), with save RAM only: the play
 	beq.w	.3
 	bra.w	.2
 .1
-	btst	#1,(sflags).w
+	btst	#sfpj,(sflags).w
 	beq.w	.3
 .2
 	move.w	(cont2team).w,d0

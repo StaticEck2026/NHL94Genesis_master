@@ -56,7 +56,7 @@ Set4WayPlayer	;unused: put player a3's number ($52) in the home or away nibble o
 	beq.w	.x
 	movem.l	d0-d2,-(sp)
 	move.w	#1,d0
-	btst	#6,pflags(a3)
+	btst	#pfteam,pflags(a3)
 	beq.w	.chkpad3
 	move.w	#2,d0
 .chkpad3

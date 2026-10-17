@@ -123,7 +123,7 @@ NextShooter	;Shootout: the next shooter (BA_Team, BA_Goalie_SCnum, StartShootout
 	move.w	(homeshootnum).w,d0
 	add.w	d0,d0
 	move.w	0(a0,d0.w),(BA_Skater_Offset).w
-	bclr	#2,(SortCords+(puckscnum*SCstruct)+pflags).w
+	bclr	#pfnc,(SortCords+(puckscnum*SCstruct)+pflags).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 CountShootoutGoals	;Shootout: count the goals and end it when one team cannot catch up (EndShootout, high ROM). Called from EndPenaltyShotPlay

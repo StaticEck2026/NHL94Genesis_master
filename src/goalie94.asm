@@ -13,7 +13,7 @@ ManualGoalieMenu	;"x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	eori.w	#1,(goaliemode2).w
 	bra.w	.g1
 .0
-	btst	#1,(sflags).w
+	btst	#sfpj,(sflags).w
 	beq.w	.g1
 	eori.w	#1,(goaliemode2).w
 	bra.w	.chkso
@@ -25,7 +25,7 @@ ManualGoalieMenu	;"x Manual Goalie" menu item (menu lists; PrintMenuItem prints
 	btst	#2,(BA_PS_flags).w
 	beq.w	.x
 .so
-	btst	#1,(sflags).w
+	btst	#sfpj,(sflags).w
 	bne.w	.p2
 	cmpi.w	#2,(OptNOP).w
 	bne.w	.4
@@ -161,7 +161,7 @@ ArenaFrames8	;ArenaAnims frame list: (frame, time) byte pairs, $FF loops, $FE en
 	dc.b	1,$A,2,$A,3,$A,4,$A,5,$A,6,$A,7,$A,8,$A
 	dc.b	9,$A,$A,$A,$B,$A,$C,$A,$D,$A,$E,$A,$F,$7F,$FE,0
 SetCameraTop	;Unreferenced. Sflags bit 6, xc1 = 0, yc1 = $160
-	bset	#6,(sflags).w
+	bset	#sfslock,(sflags).w
 	move.w	#0,(xc1).w
 	move.w	#$160,(yc1).w
 	rts

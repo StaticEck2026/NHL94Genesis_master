@@ -593,7 +593,7 @@ resetplstuff	;reset team variables/and players on both teams. Called from puckfa
 	movem.l	(sp)+,d0-d2/a0-a3
 	rts
 .top
-	bclr	#4,tmflags(a2)	;clear team offside bit
+	bclr	#tmfoside,tmflags(a2)	;clear team offside bit
 	moveq	#5,d2
 	movea.w	tmsort(a2),a3	;tmsort
 .loop
@@ -741,7 +741,7 @@ IntermissionStart	;reset the clock, song $79, ticker scores, playoff stats at th
 	cmp.w	(vcount).w,d0
 	beq.s	.loop2
 	move.w	(sp)+,d0
-	move.w	#SngEOG,-(sp)
+	move.w	#SngIntermission,-(sp)
 	bsr.w	song
 	bsr.w	UpdateScores
 	cmpi.w	#4,(gsp).w
@@ -903,7 +903,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;the text as code
 .nopage
 	move.w	#$18,(palcount).w	;after the string
-	move.w	#SngEOG,-(sp)
+	move.w	#SngIntermission,-(sp)
 	bsr.w	song
 	clr.w	d0
 	clr.w	d4

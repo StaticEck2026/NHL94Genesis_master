@@ -5,7 +5,7 @@
 ChooseSong	;SongNum = byte SongIndex of the 6 song bytes of team HmTeam, or one of the 8 of RandomSongs at random
 	;when 0; $FFFF with gmode bit 4. Called from StartPer, checkgoal, puckshootout and LeadSong
 	movem.l	d0-d1/a0-a1,-(sp)
-	btst	#4,(gmode).w
+	btst	#gmhl,(gmode).w
 	beq.w	.0
 	move.w	#$FFFF,d1
 	bra.w	.1
@@ -69,7 +69,7 @@ ReadLineData	;Read the $100 bytes at save RAM LineDataBase to databuffer; sflags
 	move.l	#LineDataBase,d0
 	movea.l	#databuffer,a0
 	jsr	(ReadSRAM).l
-	bclr	#4,(sflags).w
+	bclr	#sfwrap,(sflags).w
 	move.w	#$FFFF,(lastsfx).w
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
@@ -81,7 +81,7 @@ WriteLineData	;Write databuffer back to save RAM at LineDataBase (WriteSRAM, Mak
 	movea.l	#databuffer,a0
 	jsr	(WriteSRAM).l
 	jsr	(MakeSRAMChecksum).l
-	bclr	#4,(sflags).w
+	bclr	#sfwrap,(sflags).w
 	move.w	#$FFFF,(lastsfx).w
 	move.l	#M68K_RAM,(recbpr).w
 	movem.l	(sp)+,d0-d1/a0
@@ -109,7 +109,7 @@ PSandSOpassdir	;Penalty shot / shootout: passdir = sopathdir (the end of the ska
 	;passdirlist for the bottom net. Called from shotdiradj
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	(sopathdir).w,d0
-	btst	#7,pflags(a3)	;check what net shooting at
+	btst	#pfgoal,pflags(a3)	;check what net shooting at
 	bne.w	.0	;branch if top net
 	movea.l	#passdirlist,a0
 	add.w	d0,d0
@@ -198,7 +198,7 @@ SkatePath	;Shootout skate path: d0 / d1 = the point (mirrored for the bottom net
 	beq.w	.x
 	move.w	(sopathx).w,d0
 	move.w	(sopathy).w,d1
-	btst	#7,pflags(a3)
+	btst	#pfgoal,pflags(a3)
 	bne.w	.0
 	neg.w	d0
 	neg.w	d1
@@ -262,7 +262,7 @@ ShootoutShootCheck	;Shootout, skater a3 has the puck (gmode2 bit 1): Z set (d0 i
 .0
 	move.w	(sopathx).w,d0
 	move.w	(sopathy).w,d1
-	btst	#7,pflags(a3)
+	btst	#pfgoal,pflags(a3)
 	bne.w	.1
 	neg.w	d0
 	neg.w	d1
@@ -571,7 +571,7 @@ DrawPlayoffSprite	;The PlayoffSprite sprite at playoffspritex / playoffspritey i
 	rts
 HiScoreScreen	;vb2, the bitmap and HiScoreImg, then wait up to $50 * 4 frames or a button (waitx). Called from Begin (attract mode)
 	move.l	#vb2,(vbint).w
-	bclr	#1,(disflags).w
+	bclr	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
 	move.w	#$A000,(VmMap2).w
 	move.w	#7,(Map2col1).w
@@ -636,7 +636,7 @@ GetTeamStruct	;a2 = HmShots, or AwShots when team d2 is not $28 of HmShots. Call
 	rts
 CountButtonPress	;Not in gmode bit 0: add 1 to homepresses (awaypresses for d4), and to the next long unless TempWord1 is 8 or $54(a3). Called from doinput_ispc
 	movem.l	d1-d7/a0,-(sp)
-	btst	#0,(gmode).w
+	btst	#gmclock,(gmode).w
 	bne.w	.x
 	move.w	(TempWord1).w,d1
 	movea.l	#homepresses,a0
@@ -744,7 +744,7 @@ ReadGoaliePulled	;Z clear when the team of a3 pulled its goalie ($26 of the team
 	;assdefo, asspuckc and assnearest
 	movem.l	a1,-(sp)
 	movea.l	#tmstruct,a1
-	btst	#6,pflags(a3)	;check if home or away 0=home 1=away
+	btst	#pfteam,pflags(a3)	;check if home or away 0=home 1=away
 	beq.w	.chkgoalie
 	movea.l	#AwShots,a1
 .chkgoalie
@@ -754,8 +754,8 @@ ReadGoaliePulled	;Z clear when the team of a3 pulled its goalie ($26 of the team
 EndOneTimer	;End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA SPAglide, then assexit (goalie) or Setplass. Called from assonetimer and checkgoal (.setass)
 	movem.l	d0/a0,-(sp)
 	bclr	#pf3onetimer,pflags3(a3)
-	bclr	#5,pflags(a3)
-	bclr	#1,pflags2(a3)
+	bclr	#pfalock,pflags(a3)
+	bclr	#pf2aip,pflags2(a3)
 	clr.w	(onetimerflags).w
 	st	(onetimerplayer).w
 	move.w	d1,-(sp)
@@ -779,7 +779,7 @@ newTitleScreen	;the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, Title
 	move.w	(VDP_CNTR).l,(seed).w
 	move.w	(VDP_CNTR).l,(seed+2).w
 	move.l	#VBlank_TitleScreen,(vbint).l
-	bset	#1,(disflags).w
+	bset	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
 	move.w	#$A000,(VmMap2).w
 	move.w	#7,(Map2col1).w
@@ -972,7 +972,7 @@ CreditsWait	;Credits: wait for vcount, run the clampcounter count down; start (o
 	rts
 VBlank_TitleScreen	;newTitleScreen vblank: line scroll table (SortCords) and Vscroll, sprites, cramfade, CreditsScrollStep, p_music_vblank
 	movem.l	d0-d7/a0-a6,-(sp)
-	btst	#2,(disflags).w
+	btst	#dfng,(disflags).w
 	bne.w	.1
 	movea.w	#(SortCords-M68K_RAM),a0
 	move.w	(VSCRLPM).w,d1
@@ -1096,19 +1096,19 @@ LeadSong	;Not in a shootout (gmode2 bit 1), scores not level: once (sflags2 bit 
 	sub.w	OldZpos(a3),d0
 	beq.w	LeadSongExit
 	bpl.w	.0
-	btst	#6,(sflags2).w
+	btst	#sf2pwrtm,(sflags2).w
 	bne.w	.1
 	bsr.w	ClearLeadSong
-	bset	#6,(sflags2).w
+	bset	#sf2pwrtm,(sflags2).w
 	bra.w	.1
 .0
 	exg	a2,a3
-	btst	#6,(sflags2).w
+	btst	#sf2pwrtm,(sflags2).w
 	beq.w	.1
 	bsr.w	ClearLeadSong
-	bclr	#6,(sflags2).w
+	bclr	#sf2pwrtm,(sflags2).w
 .1
-	bset	#5,(sflags2).w
+	bset	#sf2pwrplay,(sflags2).w
 	bne.w	LeadSongExit
 	cmpa.w	#$C6CE,a3
 	bne.w	.2
@@ -1124,7 +1124,7 @@ LeadSong	;Not in a shootout (gmode2 bit 1), scores not level: once (sflags2 bit 
 	jsr	(ChooseSong).l
 	bra.s	.loop
 ClearLeadSong	;Clear sflags2 bit 5
-	bclr	#5,(sflags2).w
+	bclr	#sf2pwrplay,(sflags2).w
 	rts
 LeadSongExit	;LeadSong exit
 	move.w	(sp)+,(sflags2).w
@@ -1237,12 +1237,12 @@ chgplayer	;The pad d4 takes the nearest free skater to where the puck is going (
 .t1
 	movea.w	#(c1playernum-M68K_RAM),a1
 .top
-	tst.w	$34(a0)	;position
+	tst.w	position(a0)	;position
 	ble.w	.next	;cant switch to goalie
-	btst	#2,$63(a0)	;#pf2unav
+	btst	#pf2unav,$63(a0)	;#pf2unav
 	bne.w	.next	;this player is unavailable for some reason
 	movem.w	d1,-(sp)
-	move.w	$52(a0),d1	;SCnum
+	move.w	SCnum(a0),d1	;SCnum
 	cmp.w	0(a1,d4.w),d1
 	movem.w	(sp)+,d1
 	beq.w	.0
@@ -1262,17 +1262,17 @@ chgplayer	;The pad d4 takes the nearest free skater to where the puck is going (
 	movem.l	(sp)+,d0
 	bne.w	.next
 .1
-	btst	#5,$62(a0)	;#pfalock
+	btst	#pfalock,$62(a0)	;#pfalock
 	bne.w	.next	;player is locked
 	movem.w	(sp),d0-d1
 	sub.w	(a0),d0	;Xpos
 	muls.w	d0,d0
-	sub.w	$14(a0),d1	;Ypos
+	sub.w	Ypos(a0),d1	;Ypos
 	muls.w	d1,d1
 	add.l	d1,d0
 	cmp.l	d5,d0
 	bhi.w	.next
-	move.w	$52(a0),d1	;Scnum
+	move.w	SCnum(a0),d1	;Scnum
 	cmp.w	0(a1,d3.w),d1
 	beq.w	.next	;this is current player
 	move.l	d0,d5

@@ -157,7 +157,7 @@ StartPer	;start a period: reset stack, rink and clock, face off, run the game lo
 	jsr	(song).l
 	cmpi.w	#2,(gsp).w
 	bge.w	Gameloop
-	bset	#7,(sflags3).w		;set for periods 1 and 2 only
+	bset	#sf3fosong,(sflags3).w		;set for periods 1 and 2 only
 
 Gameloop	;Main loop for game
 	bsr.w	DoGameFrame
@@ -232,7 +232,7 @@ CheckLateGameSong	;Called once per second. 3rd period: choose and play a song on
 		;random trigger time set by ResetClock
 	cmpi.w	#2,(gsp).w		;3rd period only
 	bne.w	.x
-	btst	#4,(gmode).w
+	btst	#gmhl,(gmode).w
 	bne.w	.x
 	move.w	(gameclock).w,d0
 	cmp.w	(periodendtime).w,d0
@@ -303,7 +303,7 @@ clockcont	;monitor period clock and initiate various clock activated events
 	bne.w	rtss8
 	tst.w	(gameclock).w
 	bne.w	rtss8
-	bset	#3,(disflags).w		;dfclock: clock needs update
+	bset	#dfclock,(disflags).w		;dfclock: clock needs update
 	jsr	(stop_current_song).l
 	move.w	#SFXhorn,-(sp)		;horn
 	jsr	(sfx).l
@@ -322,19 +322,19 @@ clockcont_0	;End of period. Also entered from puckfaceoff
 	beq.w	.sc			;bosgames 7 skips the series check
 
 	;Stanley Cup if the winning team already has 3 series wins
-	moveq	#$10,d3			;gssize
+	moveq	#gssize,d3			;gssize
 	mulu.w	(gamenum).w,d3
 	movea.w	#(gsstruct-M68K_RAM),a0	;game structs (games stored for playoffs and box scores)
 	adda.w	d3,a0
 	clr.w	d3
-	btst	#0,$E(a0)		;gsftf, gsflags(a0): teams are flipped
+	btst	#gsftf,gsflags(a0)		;gsftf, gsflags(a0): teams are flipped
 	beq.w	.nf
 	eori.w	#2,d3			;gspobwins-gspotwins
 .nf	move.w	(HmGoals).w,d1
 	sub.w	(AwGoals).w,d1
 	bpl.w	.ns1
 	eori.w	#2,d3			;gspobwins-gspotwins
-.ns1	cmpi.w	#3,4(a0,d3.w)		;gspotwins(a0,d3)
+.ns1	cmpi.w	#3,gspotwins(a0,d3.w)		;gspotwins(a0,d3)
 	bne.w	.t3
 
 .sc	move.l	#8,d0			;stanley cup assignment
@@ -357,8 +357,8 @@ clockcont_0	;End of period. Also entered from puckfaceoff
 	dbf	d2,.t2
 .eog	jsr	(ClearPenaltyBuffer).l	;end of game
 	addi.w	#$3E8,(crowdlevel).w	;1000
-	bset	#0,(gmode).w		;gmclock: stop clock
-	bset	#6,(gmode).w		;set at end of game
+	bset	#gmclock,(gmode).w		;gmclock: stop clock
+	bset	#gmeog,(gmode).w		;set at end of game
 	jsr	(ClearPenalties).l
 	move.w	#4,d0			;PenEOG
 	jmp	AddPenalty2
@@ -400,22 +400,22 @@ EndDemoOnPress	;Any button on the pad just read (d1) ends the demo
 
 startpause1	;pause initiated by cont 1
 	clr.w	(pausepad).w		;pausing pad number (0 = pad 1 or 2)
-	bclr	#1,(sflags).w		;sfpj
+	bclr	#sfpj,(sflags).w		;sfpj
 	bra.w	startpause
 startpause2	;pause initiated by cont 2
 	clr.w	(pausepad).w
-	bset	#1,(sflags).w		;sfpj
+	bset	#sfpj,(sflags).w		;sfpj
 startpause	;set sfpz: pause at the end of this frame
-	bset	#0,(sflags).w		;sfpz
+	bset	#sfpz,(sflags).w		;sfpz
 	rts
 
 startpause3	;pause initiated by cont 3 (4 way play). Also from doinput
 	move.w	#3,(pausepad).w
-	bclr	#1,(sflags).w		;sfpj
+	bclr	#sfpj,(sflags).w		;sfpj
 	bra.s	startpause
 startpause4	;pause initiated by cont 4 (4 way play). Also from doinput
 	move.w	#4,(pausepad).w
-	bset	#1,(sflags).w		;sfpj
+	bset	#sfpj,(sflags).w		;sfpj
 	bra.s	startpause
 
 Pausemode	;Game is in pause mode now
@@ -434,7 +434,7 @@ Pausemode	;Game is in pause mode now
 	beq.w	.chk2
 	movea.l	#PauseMenuItems,a0		;third item list
 	bra.w	.0
-.chk2	btst	#2,tmflags(a2)		;tmflags
+.chk2	btst	#tmftimeout,tmflags(a2)		;tmflags
 	beq.w	.0
 	movea.l	#PauseText2,a0		;alternate item list
 .0	bsr.w	InitMenuState
@@ -448,7 +448,7 @@ Pausemode	;Game is in pause mode now
 	;restore graphics and return from pause mode
 	jsr	(forceblack).l
 	move.w	(sp)+,(sflags).w
-	btst	#7,(sflags).w		;sfhor
+	btst	#sfhor,(sflags).w		;sfhor
 	beq.w	.clr
 	jsr	(ReloadRefHorTiles).l
 	jsr	(SetHor).l

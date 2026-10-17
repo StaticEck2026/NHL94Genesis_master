@@ -145,7 +145,7 @@ ScrollArrowTable	;DrawScrollArrows Strings: none, up, down (only 3 entries)
 	String	' ',$FB,$FF,$FA,$13,'}',$F9
 LineEditor	;"Line Editor" screen for team a2: line slot cursor (TestList), C picks a player for the slot from the
 	;list, start runs the exit menu (LineEditorExit). OptLine (manual lines off) limits the cursor. Menu item handler
-	bset	#0,tmflags(a2)
+	bset	#tmflcc,tmflags(a2)
 	moveq	#0,d0
 	moveq	#$1C,d1
 	bsr.w	SetupScreen
@@ -751,7 +751,7 @@ UpdatePlayerListScroll	;Set VertLineScrolling = d0. Stop on a page boundary ($80
 	bsr.w	DisplayPlayerListDown
 .2
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	movea.l	#VDP_DATA,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FF90,d0
@@ -1046,7 +1046,7 @@ UpdateScoringScroll	;Set VertLineScrolling = d0. Stop on an entry boundary (32 l
 	bsr.w	DrawScoringRowDown
 .2
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	movea.l	#VDP_DATA,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	moveq	#$FFFFFFB0,d0
@@ -1222,7 +1222,7 @@ UpdatePenaltyScroll	;Set VertLineScrolling = d0. Stop on an entry boundary (24 l
 	bsr.w	DisplayPenaltyLineDown
 .2
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	movea.l	#VDP_DATA,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FFB0,d0
@@ -1446,7 +1446,7 @@ UpdateStatsListScroll	;Stats screen per frame: scroll 0 ... SelectedPlayerIdx, s
 	bsr.w	DrawStatsRowDown
 SetStatsListScrollReg	;VSRAM = VertLineScrolling - $68
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	movea.l	#VDP_DATA,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FF98,d0
@@ -1836,10 +1836,10 @@ PrintCrowdDB	;Print crowd level d0 as sqrt(d0 * 4) + 65 " dB"
 SetupScreen	;Common start of the stats screens: blank, 40 cell mode, the framer and small font tiles, the background bitmap (ScoutMap) from row d0, d1 rows high
 	movem.l	d0-d1/a2,-(sp)
 	bsr.w	forceblack
-	bclr	#0,(disflags).w
+	bclr	#dfok,(disflags).w
 	move.w	(disflags).w,-(sp)
 .noint
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	move.w	(VSPRITES).w,d0
 	bsr.w	Vmaddr
 	move.l	#0,(a0)
@@ -1851,7 +1851,7 @@ SetupScreen	;Common start of the stats screens: blank, 40 cell mode, the framer 
 	bsr.w	Vmaddr
 	move.l	#0,(a0)
 	move.w	(sp)+,(disflags).w
-	bclr	#1,(disflags).w
+	bclr	#df32c,(disflags).w
 	move.w	(framercset).w,d4
 	movea.l	#FramerMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
@@ -1904,7 +1904,7 @@ ExitStatsScreen	;Leave a stats screen: blank, then ReloadRinkGraphics
 ReloadRinkGraphics	;after the forceblack: back to 32 cell mode and reload the rink (Rinktiles or RevRinkTiles in a reverse angle
 	;replay), font, framer, EASN and team graphics. Falls out through setplayercolors. Also called from the replay code
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	move.w	(VSCRLPM).w,d0
 	bsr.w	Vmaddr
 	move.l	#0,(a0)
@@ -1915,7 +1915,7 @@ ReloadRinkGraphics	;after the forceblack: back to 32 cell mode and reload the ri
 	move.w	#VDPR_MODE4,Vctrl-Vdata(a0)
 	move.w	#5,(Map3col1).w
 	move.w	(sp)+,(disflags).w
-	bset	#1,(disflags).w
+	bset	#df32c,(disflags).w
 	move.w	(rinkvrcset).w,d4
 	movea.l	#Rinktiles,a2	;load rink address
 	btst	#4,(sflags4).w	;check if reverse angle replay
@@ -1940,7 +1940,7 @@ TimeoutMenu	;Pause menu "Timeout" for team a2: switch the menu to PauseText2, sh
 	subq.w	#1,(menuitem).w
 	subq.w	#1,(menuitem+2).w
 	move.l	#PauseText2,(menulist).l
-	bset	#2,tmflags(a2)
+	bset	#tmftimeout,tmflags(a2)
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),5,$C
 	moveq	#$16,d0

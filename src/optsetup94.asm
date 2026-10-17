@@ -57,7 +57,7 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 	move.w	(VisTeam).w,(logoteam).w
 	bsr.w	DrawVisBlock	;visitors team block
 	move.w	#$18,(palcount).w	;24
-	bclr	#2,(disflags).w	;dfng: fade in graphics now
+	bclr	#dfng,(disflags).w	;dfng: fade in graphics now
 .loop
 	cmpi.w	#4,(OptPlayMode).w	;Shootout: line changes Off, penalties Off, user records Off
 	bne.w	.0
@@ -72,7 +72,7 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 .1
 	btst	#sbut,d1	;sbut
 	bne.w	SetupStart	;start the game
-	btst	#1,d1	;dbut: next line, past the lines that do not apply (Demo: Goalies, User Records; Shootout: Per. Length, nothing after Goalies; no SRAM: User Records)
+	btst	#dbut,d1	;dbut: next line, past the lines that do not apply (Demo: Goalies, User Records; Shootout: Per. Length, nothing after Goalies; no SRAM: User Records)
 	beq.w	.9
 	tst.w	(OptNOP).w
 	bne.w	.2
@@ -117,7 +117,7 @@ GameSetUp	;Game setup screen, called from PeriodOver. Builds the screen (setopti
 	bsr.w	FixModeOptions
 	bra.w	.loop
 .9
-	btst	#0,d1	;ubut: previous line, the same skips
+	btst	#ubut,d1	;ubut: previous line, the same skips
 	beq.w	.15
 	tst.w	(OptNOP).w
 	bne.w	.10

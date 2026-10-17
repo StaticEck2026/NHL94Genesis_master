@@ -348,20 +348,20 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	jsr	(updatecrowdf).w		;4EB8: target below $8000
 	jsr	(RunArenaAnim).l
 	clr.w	(pausepad).w
-	bclr	#1,(sflags).w
+	bclr	#sfpj,(sflags).w
 	bsr.w	ReadJoy1
 	bsr.w	ProcessInputWithRepeat
 	tst.w	d1
 	bne.w	.key
 	clr.w	(pausepad).w
-	bset	#1,(sflags).w
+	bset	#sfpj,(sflags).w
 	bsr.w	ReadJoy2
 	bsr.w	ProcessInputWithRepeat
 	tst.w	d1
 	bne.w	.key
 	tst.w	(FourWayPlay).w
 	beq.w	.vid
-	bclr	#1,(sflags).w
+	bclr	#sfpj,(sflags).w
 	move.w	#3,(pausepad).w
 	bsr.w	ReadJoy3
 	bsr.w	ProcessInputWithRepeat
@@ -369,7 +369,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	bne.w	.key
 	tst.w	(FourWayPlay).w
 	beq.w	.vid
-	bset	#1,(sflags).w
+	bset	#sfpj,(sflags).w
 	move.w	#4,(pausepad).w
 	bsr.w	ReadJoy4
 	bsr.w	ProcessInputWithRepeat
@@ -1151,7 +1151,7 @@ printsmallz	;String macro follows the call
 ; yy = y coord to print at
 printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font (setupfontchars) when sflags6 bit 3 is set
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	movem.l	d0-d3/a0/a2-a3,-(sp)
 	movea.w	#(smallfontchars-M68K_RAM),a3
 	btst	#3,(sflags6).w

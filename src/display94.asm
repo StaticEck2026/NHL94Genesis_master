@@ -18,7 +18,7 @@ VBlank	;Main vblank code for game play (vbint target, set by setupice and setupi
 	bne.w	.c
 	btst	#2,(gmode2).w
 	bne.w	.0
-	btst	#0,(gmode).w	;gmclock: game clock stopped
+	btst	#gmclock,(gmode).w	;gmclock: game clock stopped
 	bne.w	.c
 .0
 	btst	#1,(gmode2).w	;penalty shot / shootout clock
@@ -45,7 +45,7 @@ VBlank	;Main vblank code for game play (vbint target, set by setupice and setupi
 	beq.s	.c
 	subi.w	#$AAA,(shootoutjiffy).w
 	bcc.s	.c
-	bset	#3,(disflags).w
+	bset	#dfclock,(disflags).w
 	btst	#7,(gmode2).w
 	bne.s	.c
 	subq.w	#1,(shootoutclock).w
@@ -124,7 +124,7 @@ setvideo	;this is not vblank code but sets up ram for vblank transfers. Called o
 updatescroll	; Using hpos and vpos set scroll cords; queue rink map rows on the dma list (a5) when vertical
 	;scrolling needs new rows. Called from setvideo. Takes the rows from Rinktilelist, or RevRinkTilelist in a reverse angle replay
 	;(sflags4 bit 4)
-	btst	#7,(sflags).w	;sfhor
+	btst	#sfhor,(sflags).w	;sfhor
 	bne.w	rtss2
 	moveq	#-$40,d0	;-192+128 (#$FFFFFFC0)
 	sub.w	(Hpos).w,d0
@@ -218,7 +218,7 @@ showref	;draw ref graphics. a5 = dma list, a6 = sprite table, d6 = link counter.
 checkfo	;check for face off sprites. 3 entries of fofdata2: word frame, word flags. Called from setvideo
 	btst	#sfpz,(sflags).w	;sfpz
 	bne.w	rtss2
-	btst	#4,(disflags).w	;face off flag
+	btst	#dffaceoff,(disflags).w	;face off flag
 	beq.w	rtss2
 	movea.w	#(fofdata2-M68K_RAM),a3
 	moveq	#2,d0
@@ -451,7 +451,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 showclock	;put the game clock on screen. Called from setvideo and PauseMode. On the horizontal rink the clock is printed (printz / print
 	;with .digits; not in a shootout, gmode2 bit 0). On the vertical rink (.3) it goes in the dma list, only when
 	;dfclock is set; with gmode2 bit 1 (penalty shot / shootout) shootoutclock is shown instead of gameclock. a5 = dma list
-	btst	#7,(sflags).w	;sfhor
+	btst	#sfhor,(sflags).w	;sfhor
 	beq.w	.3
 	btst	#0,(gmode2).w	;shootout
 	bne.w	.x
@@ -509,9 +509,9 @@ showclock	;put the game clock on screen. Called from setvideo and PauseMode. On 
 	String	'8'
 	String	'9'
 .3	;Returns unless dfclock is set
-	bclr	#3,(disflags).w	;dfclock
+	bclr	#dfclock,(disflags).w	;dfclock
 	beq.w	rtss2
-	btst	#3,(sflags2).w
+	btst	#sf2replay,(sflags2).w
 	bne.w	rtss2
 	cmpi.w	#4,(gsp).w	;no clock update when gsp = 4
 	beq.w	rtss2
@@ -601,7 +601,7 @@ checksso	;do graphics for sso structure: arrows for the players when they are of
 	move.w	(a0),d0
 	btst	#0,(gmode2).w
 	bne.w	.0
-	btst	#3,(sflags2).w
+	btst	#sf2replay,(sflags2).w
 	bne.w	.0
 	btst	#2,(BA_PS_flags).w
 	beq.w	.7

@@ -204,7 +204,7 @@ const assets = [
     { name: 'fmtune_id_76_cmdstream.bin', folder: 'NHL94/Sound', start: 0x000442BE, end: 0x00044B12 }, // song $76: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
     { name: 'fmtune_id_77_cmdstream.bin', folder: 'NHL94/Sound', start: 0x00044B12, end: 0x0004507A }, // song $77: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
     { name: 'fmtune_title_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x0004507A, end: 0x00046D88 }, // song $78 (93 $35): ExitToOpening, newTitleScreen. 94: one stream that loops to its start (93: intro, loop body)
-    { name: 'fmtune_eog_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x00046D8C, end: 0x000490DE }, // song $79 (93 $36): IntermissionStart, StartHL2 (penalty94) (differs from 93)
+    { name: 'fmtune_intermission_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x00046D8C, end: 0x000490DE }, // song $79 (93 $36): IntermissionStart, StartHL2 (penalty94) (differs from 93)
     { name: 'fmtune_scouting_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x000490E2, end: 0x0004B5BC }, // song $7A (93 $37): ScoutingReport (scout94) (differs from 93)
     { name: 'ScoutTextScript.bin', folder: 'NHL94/Text', start: 0x0004B5C0, end: 0x0004B7A0 }, // unk_4B5C0
     { name: 'GameSetUp94-1.map.jim', folder: 'NHL94/Graphics', start: 0x0004B7A0, end: 0x0004DEEE }, // unk_4B7A0

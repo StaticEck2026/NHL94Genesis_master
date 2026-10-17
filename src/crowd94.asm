@@ -20,11 +20,11 @@ LoadCrowdRec	;CrowdRecord = the arena record of HomeTeam from save RAM (ReadCrow
 	rts
 Crowd_Noise	;The crowd meter each frame: crowd noise on / off (sflags5 bit 7) from CwdExciteLvl against
 	;CrowdRecord / CrowdAvg, and every $14 ticks CurCrowdMeter (sqrt(level * 4) + 65 dB) and CrowdPeak. Called from setvideo
-	btst	#7,(sflags).w	;screen is in horizontal mode
+	btst	#sfhor,(sflags).w	;screen is in horizontal mode
 	bne.w	.ex1
 	btst	#0,(gmode2).w
 	bne.w	.ex1
-	btst	#0,(sflags3).w	;check if game paused
+	btst	#sf3llcs,(sflags3).w	;check if game paused
 	bne.w	.ex2
 	btst	#7,(sflags5).w
 	bne.w	.chkoff
@@ -155,8 +155,8 @@ checkcornercoll	;210 = blue line to the end of the rink, corner radius 64. Corne
 	bsr.w	cornercollb
 .exit
 	movem.w	(sp)+,d2-d5
-	move.w	$4E(a3),d0	;wallcos(a3)
-	or.w	$50(a3),d0	;wallsin(a3)
+	move.w	Wallcos(a3),d0	;wallcos(a3)
+	or.w	Wallsin(a3),d0	;wallsin(a3)
 	bne.w	.rtss3
 	move.w	#$100,d0	;now check side walls
 	clr.w	d1
@@ -207,7 +207,7 @@ AttributeCalc	;Attribute d3 of player a3 * 5 plus his hot / cold value / 3, limi
 	movem.l	d0-d2/a1,-(sp)
 	move.w	(TempWord2).w,d1	;BF14 goes to d1
 	movea.l	#tmstruct,a1	;Start of Home Team struct
-	btst	#6,pflags(a3)	;Check if home or away
+	btst	#pfteam,pflags(a3)	;Check if home or away
 	beq.w	.attribmath
 .away
 	;shift to start of Away Team struct

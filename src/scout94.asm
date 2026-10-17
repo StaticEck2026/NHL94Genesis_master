@@ -524,7 +524,7 @@ GetMatchupPlayers	;matchuphome / matchupvis = the home / visitors player of the 
 	rts
 GetMatchupPlayer	;Return d0 = the roster index of team a0's player for matchup: the first line of the team's line sets, slot
 	;MatchupLineSlots[matchup] (matchupslot; 0 goalie, 1 left defense, 2 right defense, 3 left wing, 4 center, 5 right wing)
-	movea.l	$1E(a0),a0	;tmdata
+	movea.l	tmdata(a0),a0	;tmdata
 	adda.w	6(a0),a0	;LineSets
 	move.w	(matchup).w,d0
 	movea.l	#MatchupLineSlots,a1
@@ -591,7 +591,7 @@ EvenAdvTxt	String	'   '	;Even teams
 GetTeamNickname	;The text player's '=' (a2 = HmShots) and '*' (AwShots): return a1 = the team nickname String, or 'Home' / 'Visitors' when it is empty (the all star teams)
 	movem.l	d0/a0/a2,-(sp)
 	movea.l	a2,a1
-	movea.l	$1E(a1),a1	;tmdata
+	movea.l	tmdata(a1),a1	;tmdata
 	adda.w	4(a1),a1	;city
 	adda.w	(a1),a1	;abbreviation
 	adda.w	(a1),a1	;nickname
@@ -609,7 +609,7 @@ VisitorsTxt	String	'Visitors'
 GetTeamArena	;The text player's '^' (a2 = HmShots) and ';' (AwShots): return a1 = the team arena String
 	movem.l	d0/a0/a2,-(sp)
 	movea.l	a2,a1
-	movea.l	$1E(a1),a1	;tmdata
+	movea.l	tmdata(a1),a1	;tmdata
 	adda.w	4(a1),a1	;city
 	adda.w	(a1),a1
 	adda.w	(a1),a1

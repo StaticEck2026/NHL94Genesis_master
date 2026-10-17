@@ -5,7 +5,7 @@
 EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skaters of player slots 1-5 (homeshootgoals > awayshootgoals) or
 	;7-$B are set up (setplayer) above or below the view and get assscore (assinsert 7)
 	movem.l	d0-d7/a0-a6,-(sp)
-	bset	#2,(sflags2).w
+	bset	#sf2drec,(sflags2).w
 	jsr	(freezewindow).l
 	move.w	#$60,(shootoutdelay).w
 	movea.l	#SortCords,a3
@@ -34,9 +34,9 @@ EndShootout	;Shootout over (CountShootoutGoals): freezewindow, then the 5 skater
 	move.w	#0,(a3)
 	move.w	#7,d0	;assscore
 	jsr	(assinsert).l
-	bclr	#5,pflags(a3)
-	bclr	#1,pflags2(a3)
-	bclr	#2,pflags(a3)
+	bclr	#pfalock,pflags(a3)
+	bclr	#pf2aip,pflags2(a3)
+	bclr	#pfnc,pflags(a3)
 	movem.w	(sp)+,d2-d3
 .2
 	adda.l	#$80,a3
@@ -49,7 +49,7 @@ ClampPositionBox	;Unreferenced. Clamp $44 / $46(a3) to the box for position $34(
 	move.w	position(a3),d7
 	subq.w	#1,d7
 	movea.l	#PositionBoxes,a0
-	btst	#7,pflags(a3)
+	btst	#pfgoal,pflags(a3)
 	beq.w	.0
 	movea.l	#PositionBoxesTop,a0
 .0
@@ -115,9 +115,9 @@ AddArenaAnimSprite	;Add the frame arenaframe of the arena animation (sprite list
 	beq.w	.x2
 	btst	#4,(sflags4).w	;check if reverse angle replay
 	bne.w	.x2	;branch if so
-	btst	#3,(sflags2).w
+	btst	#sf2replay,(sflags2).w
 	bne.w	.x2
-	btst	#7,(sflags).w
+	btst	#sfhor,(sflags).w
 	bne.w	.x2
 	movea.l	(arenaspritelist).w,a1
 	adda.l	4(a1),a1
@@ -497,7 +497,7 @@ GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' tota
 	bsr.w	StatScrollRowEnd
 SetStatScroll	;Plane A vertical scroll (VSRAM 0) = VertLineScrolling - $50, with disflags bit 2 set while it writes
 	move.w	(disflags).w,-(sp)
-	bset	#2,(disflags).w
+	bset	#dfng,(disflags).w
 	movea.l	#VDP_DATA,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FFB0,d0
@@ -734,10 +734,10 @@ rtsStatTables	;rts after the stat tables (GameStatisticsScreen scroll step)
 	rts
 updatePPTeamTime	;One more second of power play time ($352 of the team struct) for the team on the power play
 	;(sflags2 bit 5, bit 6 the visitors). Called from updatepentime
-	btst	#5,(sflags2).w	;check if PP
+	btst	#sf2pwrplay,(sflags2).w	;check if PP
 	beq.w	.x	;branch if not
 	movea.l	#tmstruct,a2	;move home team struct into a2
-	btst	#6,(sflags2).w	;check who's on PP
+	btst	#sf2pwrtm,(sflags2).w	;check who's on PP
 	beq.w	.0	;branch if home (team 1)
 	movea.l	#AwShots,a2	;move away team struct into a2
 .0
