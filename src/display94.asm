@@ -601,7 +601,7 @@ checksso							;do graphics for sso structure: arrows for the players when they 
 	move.w	#SPFarrow,d3			;frame numbers are 6 higher than 92
 	bsr.w	.ca
 	adda.w	#$1C,a0					;ffosize
-	adda.w	#$14,a3					;ssosize
+	adda.w	#ssosize,a3				;ssosize
 	move.w	#SPFarrow+3,d3
 	bsr.w	.ca
 	tst.w	(cont3team).w
@@ -645,7 +645,7 @@ checksso							;do graphics for sso structure: arrows for the players when they 
 	beq.w	.nhor
 	exg	d0,d1
 	neg.w	d0
-	subi.w	#$C5,d1					;horoff
+	subi.w	#horoff,d1				;horoff
 	bra.w	.hord
 .nhor
 	sub.w	(Hpos).w,d0

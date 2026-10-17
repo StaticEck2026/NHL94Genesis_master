@@ -107,7 +107,7 @@ checkplcoll							;check collision with other players. d2/d3 = x/y cords, a3 = s
 	move.b	1(a1,d1.w),d4			;next higher object number
 	move.w	0(a2,d4.w),d5			;y pos of next higher object
 	sub.w	d3,d5
-	cmp.w	#$10,d5					;#collrad*2
+	cmp.w	#collrad*2,d5			;#collrad*2
 	bgt.w	.cl						;no higher sprite coll
 	bsr.w	checkcx
 	addq.w	#1,d1
@@ -120,7 +120,7 @@ checkplcoll							;check collision with other players. d2/d3 = x/y cords, a3 = s
 	move.b	-1(a1,d1.w),d4			;next lower object number
 	move.w	d3,d5
 	sub.w	0(a2,d4.w),d5			;y pos of next lower object
-	cmp.w	#$10,d5					;#collrad*2
+	cmp.w	#collrad*2,d5			;#collrad*2
 	bgt.w	.ex
 	bsr.w	checkcx
 	subq.w	#1,d1
@@ -147,14 +147,14 @@ checkcx								;d4 = obj. # * 2 for possible collision so check x range and dist
 	move.w	Ypos(a2),d0				;Ypos
 .nhor
 	sub.w	d2,d0					;subtract d2 from d0
-	cmp.w	#$FFF0,d0				;compare delta Xpos to -collrad*2
+	cmp.w	#-collrad*2,d0			;compare delta Xpos to -collrad*2
 	blt.w	.exit					;branch if less than
-	cmp.w	#$10,d0					;compare delta Xpos to collrad*2
+	cmp.w	#collrad*2,d0			;compare delta Xpos to collrad*2
 	bgt.w	.exit					;branch if greater than
 	muls.w	d5,d5					;delta y^2
 	muls.w	d0,d0					;delta x^2
 	add.l	d5,d0
-	cmp.l	#$100,d0				;compare d0 to (collrad*2)*(collrad*2)
+	cmp.l	#(collrad*2)*(collrad*2),d0	;compare d0 to (collrad*2)*(collrad*2)
 	bgt.w	.exit					;branch if outside of radius
 	move.w	#0,(evalue).w			;evalue = elasticity value
 	move.b	pflags(a3),d6			;move pflags into d6

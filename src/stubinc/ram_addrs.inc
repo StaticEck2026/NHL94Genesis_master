@@ -275,6 +275,12 @@ PenRoughingPS	equ	$36
 PenChargingPS	equ	$38
 PenCrossChkPS	equ	$3A
 PenSlashingPS	equ	$3C
+; Sprite object counts and sizes (92 names)
+collrad	equ	8						;collision radius of an object (objects collide within collrad*2)
+horoff	equ	197						;subtracted from the screen y in the horizontal rink view
+ssosize	equ	$14						;bytes per sso object
+ssonum	equ	4						;screen objects not tied to the rink scroll (2 arrows + 2 scoreboard logos)
+ffonum	equ	7						;objects tied to the rink scroll (93 had 5)
 Pencntdwn equ $FFFFC3E6
 Penaltytimer equ $FFFFC3E8
 PBnum equ $FFFFC3EA

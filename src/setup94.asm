@@ -266,7 +266,7 @@ defaultsprites						;allocate vram and assign char area for graphic structures. 
 									;setupice_highlight
 	movea.l	#.listsso,a2
 	movea.w	#(sso-M68K_RAM),a3
-	moveq	#3,d0					;#ssonum-1 into d0
+	moveq	#ssonum-1,d0			;#ssonum-1 into d0
 .ssotop
 	move.w	#$FFFF,oldframe(a3)		;screen objects not locked to scroll of screen
 	move.w	(a2)+,(a3)
@@ -275,11 +275,11 @@ defaultsprites						;allocate vram and assign char area for graphic structures. 
 	move.w	(a2)+,attribute(a3)
 	move.w	d4,VRchar(a3)
 	add.w	(a2)+,d4
-	adda.w	#$14,a3					;#ssosize
+	adda.w	#ssosize,a3				;#ssosize
 	dbf	d0,.ssotop
 	movea.l	#.listffo,a2
 	movea.l	#pads,a3				;ffo
-	moveq	#6,d0					;#ffonum-1
+	moveq	#ffonum-1,d0			;#ffonum-1
 .ffotop
 	st	oldframe(a3)				;objects tied to screen scrolling (not players/net/puck)
 	move.w	(a2)+,(a3)
