@@ -201,11 +201,11 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	move.w	#$10E,(matchuptimer).l
 .2
 	bsr.w	PrintAdvantageMarks	;advantage marks
-	btst	#7,d1	;sbut
+	btst	#sbut,d1	;sbut
 	bne.w	.exit	;start leaves
 	cmpi.w	#$10E,(matchuptimer).w
 	beq.w	.3	;timer ran out: next matchup
-	btst	#5,d1	;cbut
+	btst	#cbut,d1	;cbut
 	beq.w	.4
 	move.w	#$7FFF,(screentimer).w
 	move.l	#$8CA0,(scoutwait).w
@@ -215,7 +215,7 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	bsr.w	PageMatchup
 	bra.w	.6
 .4
-	btst	#6,d1	;abut
+	btst	#abut,d1	;abut
 	beq.w	.5
 	move.w	#$7FFF,(screentimer).w
 	move.l	#$8CA0,(scoutwait).w
@@ -225,7 +225,7 @@ ScoutingReport	;pregame MATCHUPS screen, called from Opening2. Draws the Ron Bar
 	bra.w	.6
 .5
 	clr.w	(asv).w
-	btst	#1,d1	;dbut
+	btst	#dbut,d1	;dbut
 	beq.w	.6
 	st	(asv).w	;down: type the rest without delays
 .6

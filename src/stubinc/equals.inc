@@ -12,6 +12,33 @@ VBLANK_PENDING equ 7
 FIFO_FULL equ 8
 FIFO_EMPTY equ 9
 ; ----------------------------------
+; ------------- game equates named like NHLPA93Genesis ram93.asm -------------
+MaxSprites equ 64		;max sprites during game (64 because 32 col mode)
+
+;joystick button equates (bit numbers)
+ubut equ 0		;up
+dbut equ 1		;down
+lbut equ 2		;left
+rbut equ 3		;right
+bbut equ 4		;b button
+cbut equ 5		;c button
+abut equ 6		;a button
+sbut equ 7		;start button
+osflag equ 20000		;flag for off screen graphic ($4E20)
+
+goalline equ 176		;distance from blue line to goalline
+Blueline equ $58		;distance from center line to blueline
+Sideline equ $88		;distance from center to side boards
+replaystart equ $FFFF0000		;start of ram area for replay frames, also the start of RAM
+scsize equ 7		;2 to this power indicates ram needed for each sortobj
+jps equ 24		;jiffys per second
+jiffy equ $10000/jps
+maxros equ 26		;roster slots per team in the team structure
+ifcgl equ 0		;iflags: crossed goalline
+ifdir equ 1		;iflags: 1=must cross top line
+ifok equ 2		;iflags: icing
+tmflcc equ 0		;tmflags: line change on
+; ----------------------------------
 
 
 
@@ -20,7 +47,7 @@ FIFO_EMPTY equ 9
 ; Included by every *_stub.asm and by nhl94.asm. Names are the NHLPA93Genesis names; the value is 94's.
 
 Sortobjs equ 16		;number of sorted graphics objects
-SCstruct equ $80		;ram for each sortobj (SortCords entry)
+SCstruct equ 1<<scsize		;ram for each sortobj (SortCords entry)
 puckscnum equ 14		;puck is sort obj number 14
 
 ;the sort object structure (SCstruct bytes each)

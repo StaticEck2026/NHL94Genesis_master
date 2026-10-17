@@ -105,7 +105,7 @@ checkcornercoll	;210 = blue line to the end of the rink, corner radius 64. Corne
 	;for object a3 at d2 / d3 (wcradiusx / wcradiusy); a hit goes to Called from
 	;wallcollduringcheck.
 	bclr	#pf3wall,pflags3(a3)	;clear the wall collision bit
-	move.w	#$88,d4	;sideline
+	move.w	#Sideline,d4	;sideline
 	sub.w	(wcradiusx).w,d4	;BD22 = wcradiusx
 	move.w	#$12A,d5	;ywall
 	sub.w	(wcradiusy).w,d5	;BD24 = wcradiusy
