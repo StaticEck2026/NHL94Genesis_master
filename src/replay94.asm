@@ -2,8 +2,10 @@
 ;	banner, moves the camera and restores the frames. It then updates every player and animation
 ;	each frame and keeps the scroll window on the play. New in 94: the reverse angle replay.
 
-ReplayMode	;Instant replay play-back control and display code. Called from the pause menu.
-	;Tracking: a d-pad press picks the nearest object in that direction and the camera follows it
+ReplayMode							;Instant replay play-back control and display code.
+									;Called from the pause menu.
+									;Tracking: a d-pad press picks the nearest object in that direction and
+									;the camera follows it
 	bclr	#0,(sflags5).w
 	bsr.w	forceblack
 	move.w	(disflags).w,-(sp)
@@ -169,7 +171,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	bsr.w	UpdateCameraPos
 	jsr	(setvideo).l
 	bra.w	.top
-.dirtab	;scroll step per d-pad direction 0-7: x, y
+.dirtab								;scroll step per d-pad direction 0-7: x, y
 	dc.w	0,2, 2,2
 	dc.w	2,0, 2,-2
 	dc.w	0,-2, -2,-2
@@ -279,7 +281,8 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	jsr	(setvideo).l
 	move.w	#$18,(palcount).w
 	rts
-getpzjoy	;read the joystick of the pad that paused. pads 3 and 4 when FourWayPlay (pausepad = 3 or 4)
+getpzjoy							;read the joystick of the pad that paused. pads 3 and 4 when FourWayPlay
+									;(pausepad = 3 or 4)
 	tst.w	(FourWayPlay).w
 	bne.w	.0
 .loop
@@ -292,7 +295,7 @@ getpzjoy	;read the joystick of the pad that paused. pads 3 and 4 when FourWayPla
 	cmpi.w	#3,(pausepad).w
 	beq.w	ReadJoy3
 	bra.w	ReadJoy4
-ShowReplayIcon	;Show the replay icon and start the $F0 frame replayicontimer timer
+ShowReplayIcon						;Show the replay icon and start the $F0 frame replayicontimer timer
 	move.w	#$F0,(replayicontimer).w
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),2,2
@@ -303,21 +306,21 @@ ShowReplayIcon	;Show the replay icon and start the $F0 frame replayicontimer tim
 	move.w	(rinkvrcset).w,d4
 	move.w	#0,d5
 	movea.l	#Rinktilelist,a1
-	btst	#4,(sflags4).w	;check if reverse angle replay
-	beq.w	.0	;branch if not
+	btst	#4,(sflags4).w			;check if reverse angle replay
+	beq.w	.0						;branch if not
 	movea.l	#RevRinkTilelist,a1
 .0
 	adda.l	4(a1),a1
 	movea.w	#NoTiles,a2
 	bra.w	dobitmap
-EraseReplayIcon	;Erase the 8 x 4 replay icon (replayicontimer timer ran out)
+EraseReplayIcon						;Erase the 8 x 4 replay icon (replayicontimer timer ran out)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,2
-	move.w	#8,d0			;8 wide
-	move.w	#4,d1			;4 high
+	move.w	#8,d0					;8 wide
+	move.w	#4,d1					;4 high
 	move.w	#$7FF,d2
 	jmp	eraser
-ShowReplayBanner	;Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
+ShowReplayBanner					;Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer timer
 	st	(replayicontimer).w
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),2,0
@@ -331,15 +334,16 @@ ShowReplayBanner	;Show ReplayMap at 0,0 (16 x 11) and stop the replayicontimer t
 	adda.l	4(a1),a1
 	movea.w	#NoTiles,a2
 	bra.w	dobitmap
-EraseReplayBanner	;Erase the 16 x 11 area ShowReplayBanner drew
+EraseReplayBanner					;Erase the 16 x 11 area ShowReplayBanner drew
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP3),2,2
-	move.w	#$10,d0			;16 wide
-	move.w	#$B,d1			;11 high
+	move.w	#$10,d0					;16 wide
+	move.w	#$B,d1					;11 high
 	move.w	#$7FF,d2
 	jmp	eraser
-suba4	;a4 = current replay frame. Back up 1 frame and set video parameters for display.
-	;d7 = delay between frames, or zero at the end of the replay
+suba4								;a4 = current replay frame. Back up 1 frame and set video parameters for
+									;display.
+									;d7 = delay between frames, or zero at the end of the replay
 	cmpa.l	#M68K_RAM,a4
 	bne.w	.1
 	btst	#sfwrap,(sflags).w
@@ -354,7 +358,8 @@ suba4	;a4 = current replay frame. Back up 1 frame and set video parameters for d
 	bsr.w	RestoreReplayFrame
 	clr.w	d7
 	rts
-adda4	;Step forward 1 frame. First handles a reverse angle switch (sflags4 bit 6)
+adda4								;Step forward 1 frame. First handles a reverse
+									;angle switch (sflags4 bit 6)
 	bclr	#6,(sflags4).w
 	beq.w	.1
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -402,18 +407,19 @@ adda4	;Step forward 1 frame. First handles a reverse angle switch (sflags4 bit 6
 	cmpa.l	(recbpr).w,a4
 	movem.l	(sp)+,a4
 	beq.w	rtss8
-adda42	;adda4 without the sf2drec look-ahead: stop at the record point, else show the frame and
-	;fall into adda43
+adda42								;adda4 without the sf2drec look-ahead: stop at the record point, else show
+									;the frame and fall into adda43
 	cmpa.l	(recbpr).w,a4
 	beq.w	rtss8
 	bsr.w	RestoreReplayFrame
-adda43	;a4 += replay frame size ($62), wrapping from replayend to M68K_RAM
+adda43								;a4 += replay frame size ($62), wrapping from replayend to M68K_RAM
 	adda.w	#$62,a4
 	cmpa.l	#replayend,a4
 	bne.w	rtss8
 	movea.l	#M68K_RAM,a4
 	rts
-UpdateCameraPos	;Camera struct a5 = object a3 x/y (negated for the reverse angle), Hpos/Vpos clamped
+UpdateCameraPos						;Camera struct a5 = object a3 x/y (negated for the reverse angle),
+									;Hpos/Vpos clamped
 	movem.l	d0-d2,-(sp)
 	move.w	(a3),d0
 	btst	#7,(sflags4).w
@@ -448,17 +454,18 @@ UpdateCameraPos	;Camera struct a5 = object a3 x/y (negated for the reverse angle
 	movem.l	(sp)+,d0-d2
 	rts
 ; set flag for reverse replay setup if needed
-RevReplayAdj	;Set sflags4 bit 7 for a reverse angle replay, then fall into RestoreReplayFrame
-	btst	#4,(sflags4).w	;check if reverse angle replay
-	beq.w	RestoreReplayFrame	;branch if not
-	bset	#7,(sflags4).w	;set bit 7
+RevReplayAdj						;Set sflags4 bit 7 for a reverse angle replay, then fall into
+									;RestoreReplayFrame
+	btst	#4,(sflags4).w			;check if reverse angle replay
+	beq.w	RestoreReplayFrame		;branch if not
+	bset	#7,(sflags4).w			;set bit 7
 ; a4 = current replay frame address to convert into normal coordinates
-RestoreReplayFrame	;a4 = current replay frame address to convert into normal cordinates,
-	;then the other replay variables. Flips x/y and frames for the reverse angle
+RestoreReplayFrame					;a4 = current replay frame address to convert into normal cordinates, then
+									;the other replay variables. Flips x/y and frames for the reverse angle
 	movem.l	d0-d2/a0/a6,-(sp)
 	movea.l	#revframetbl,a6
 	movea.l	a4,a0
-	moveq	#$F,d1	;16 objects to convert (12 players/2 nets/puck/puck shadow)
+	moveq	#$F,d1					;16 objects to convert (12 players/2 nets/puck/puck shadow)
 	movea.w	#(SortCords-M68K_RAM),a3
 .top
 	move.w	2(a0),d2
@@ -467,11 +474,11 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	beq.w	.chkrevx
 	ori.w	#$FC00,d2
 .chkrevx
-	btst	#4,(sflags4).w	;check if reverse angle
-	beq.w	.p	;branch if not
+	btst	#4,(sflags4).w			;check if reverse angle
+	beq.w	.p						;branch if not
 	neg.w	d2
 .p
-	move.w	d2,(a3)	;update Xpos
+	move.w	d2,(a3)					;update Xpos
 	move.l	(a0),d2
 	asr.l	#4,d2
 	asr.w	#6,d2
@@ -479,42 +486,42 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	beq.w	.chkrevy
 	ori.w	#$FC00,d2
 .chkrevy
-	btst	#4,(sflags4).w	;check if reverse angle
-	beq.w	.p1	;branch if not
+	btst	#4,(sflags4).w			;check if reverse angle
+	beq.w	.p1						;branch if not
 	neg.w	d2
-	cmp.w	#0,d1	;check if last object (puck shadow)
-	bne.w	.p1	;branch if not
-	addq.w	#2,d2	;update puck shadow Xpos
+	cmp.w	#0,d1					;check if last object (puck shadow)
+	bne.w	.p1						;branch if not
+	addq.w	#2,d2					;update puck shadow Xpos
 .p1
-	move.w	d2,Ypos(a3)	;update Ypos
+	move.w	d2,Ypos(a3)				;update Ypos
 	move.w	(a0),d2
 	asr.w	#4,d2
 	andi.w	#$3FF,d2
-	btst	#4,(sflags4).w	;check if reverse angle
-	beq.w	.2	;branch if not
+	btst	#4,(sflags4).w			;check if reverse angle
+	beq.w	.2						;branch if not
 	asl.w	#1,d2
-	move.w	0(a6,d2.w),d2	;look up table to adjust d2
-	cmpi.w	#$F,SCnum(a3)	;check if puck shadow
-	bne.w	.0	;branch if not
+	move.w	0(a6,d2.w),d2			;look up table to adjust d2
+	cmpi.w	#$F,SCnum(a3)			;check if puck shadow
+	bne.w	.0						;branch if not
 	cmp.w	#SPFpuck,d2
 	beq.w	.0
-	move.w	#$FC00,Ypos(a3)	;update Ypos of puck shadow
+	move.w	#$FC00,Ypos(a3)			;update Ypos of puck shadow
 .0
-	cmp.w	#1,d2	;check if frame is before frame 1 (out of range)
-	blt.w	.1	;branch if so
-	cmp.w	#$34E,d2	;check if frame is >= 846 (last frame +1)
-	bge.w	.1	;branch if so
-	bra.w	.2	;branch if valid object frame
+	cmp.w	#1,d2					;check if frame is before frame 1 (out of range)
+	blt.w	.1						;branch if so
+	cmp.w	#$34E,d2				;check if frame is >= 846 (last frame +1)
+	bge.w	.1						;branch if so
+	bra.w	.2						;branch if valid object frame
 .1
 	move.w	(a0),d2
 	asr.w	#4,d2
 	andi.w	#$3FF,d2
 .2
 	move.w	d2,6(a3)
-	cmp.w	#SPFbglass,d2	;check if frame is before glass shatter frames
-	blt.w	.3	;branch if so
-	cmp.w	#SPFbglass+5,d2	;check if frame is after glass shatter frames
-	bge.w	.3	;branch if so
+	cmp.w	#SPFbglass,d2			;check if frame is before glass shatter frames
+	blt.w	.3						;branch if so
+	cmp.w	#SPFbglass+5,d2			;check if frame is after glass shatter frames
+	bge.w	.3						;branch if so
 	btst	#4,(sflags4).w
 	beq.w	.3
 	move.w	#$190,Ypos(a3)
@@ -524,18 +531,18 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	andi.w	#$1800,d2
 	andi.w	#$E7FF,attribute(a3)
 	or.w	d2,attribute(a3)
-	btst	#4,(sflags4).w	;check if reverse angle replay
-	beq.w	.4	;branch if not
-	move.w	frame(a3),d2	;move frame into d2
-	cmp.w	#SPFfight,d2	;check if frame is before old fight frames
-	blt.w	.4	;branch if so
-	cmp.w	#SPFPen,d2	;check if frame is after old fight frames
-	bge.w	.4	;branch if so
-	bchg	#3,attribute(a3)	;change X flip attribute for object
+	btst	#4,(sflags4).w			;check if reverse angle replay
+	beq.w	.4						;branch if not
+	move.w	frame(a3),d2			;move frame into d2
+	cmp.w	#SPFfight,d2			;check if frame is before old fight frames
+	blt.w	.4						;branch if so
+	cmp.w	#SPFPen,d2				;check if frame is after old fight frames
+	bge.w	.4						;branch if so
+	bchg	#3,attribute(a3)		;change X flip attribute for object
 .4
 	addq.w	#4,a0
 	adda.w	#SCstruct,a3
-	dbf	d1,.top	;loop to next object
+	dbf	d1,.top						;loop to next object
 	moveq	#5,d2
 	movea.w	#(SortCords-M68K_RAM),a3
 .loop
@@ -612,7 +619,7 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	bclr	#7,(sflags4).w
 	movem.l	(sp)+,d0-d2/a0/a6
 	rts
-ClampReplayView	;Clamp Hpos to -$3C..$3C and Vpos to -$C8..$100
+ClampReplayView						;Clamp Hpos to -$3C..$3C and Vpos to -$C8..$100
 	move.w	d0,-(sp)
 	move.w	#$3C,d0
 	cmp.w	(Hpos).w,d0
@@ -636,11 +643,11 @@ ClampReplayView	;Clamp Hpos to -$3C..$3C and Vpos to -$C8..$100
 	rts
 ; called every frame to save replay events
 ; d7 = elapsed frames
-updatereplay	;called every frame to save replay events, d7 = elapsed frames
-	btst	#gmhl,(gmode).w	;check if highlight
-	bne.w	rtss8	;exit if so
+updatereplay						;called every frame to save replay events, d7 = elapsed frames
+	btst	#gmhl,(gmode).w			;check if highlight
+	bne.w	rtss8					;exit if so
 	btst	#sf2drec,(sflags2).w	;check if replay record disabled
-	beq.w	.0	;branch if not
+	beq.w	.0						;branch if not
 	tst.w	(replaydelay).w
 	beq.w	.rec
 	subq.w	#1,(replaydelay).w
@@ -722,58 +729,59 @@ rtss8
 	rts
 ; this routine calls all collision/animation/assignment code for all players
 ; d7 = elapse frames since last call
-updateplayers	;this routine calls all collision/animation/assignment code for all players. d7 = elapsed frames
-	btst	#sfhor,(sflags).w	;check if screen is in horiz mode
-	bne.w	.checkcrowd	;jump if horiz mode
+updateplayers						;this routine calls all collision/animation/assignment code for all
+									;players. d7 = elapsed frames
+	btst	#sfhor,(sflags).w		;check if screen is in horiz mode
+	bne.w	.checkcrowd				;jump if horiz mode
 	ori.w	#$F,(PadControlBits).w
-	cmpi.w	#5,(puckz).w	;check puckz with 5
-	bgt.w	.gt	;branch if greater
+	cmpi.w	#5,(puckz).w			;check puckz with 5
+	bgt.w	.gt						;branch if greater
 .clrcnt
-	clr.w	(PuckZCntr).w	;clear counter
+	clr.w	(PuckZCntr).w			;clear counter
 	bra.w	.checkcrowd
 .gt
 	move.w	(TmpPuckZ).w,d0
 	cmp.w	(puckz).w,d0
-	beq.w	.pzeq	;branch if puckz equal to TmpPuckZ
+	beq.w	.pzeq					;branch if puckz equal to TmpPuckZ
 	move.w	(puckz).w,(TmpPuckZ).w
 	bra.s	.clrcnt
 .pzeq
-	addq.w	#1,(PuckZCntr).w	;add 1 to counter
-	cmpi.w	#$10,(PuckZCntr).w	;compare counter to 10 (16 decmial)
-	blt.w	.checkcrowd	;branch if less than
-	clr.w	(PuckZCntr).w	;clear counter
-	subq.w	#1,(puckz).w	;subtract 1 from puckz
+	addq.w	#1,(PuckZCntr).w		;add 1 to counter
+	cmpi.w	#$10,(PuckZCntr).w		;compare counter to 10 (16 decmial)
+	blt.w	.checkcrowd				;branch if less than
+	clr.w	(PuckZCntr).w			;clear counter
+	subq.w	#1,(puckz).w			;subtract 1 from puckz
 .checkcrowd
-	bclr	#6,(sflags7).w	;Bit 6 = Crowd Meter bit
+	bclr	#6,(sflags7).w			;Bit 6 = Crowd Meter bit
 	move.w	(CurCrowdMeter).w,d0	;Move cur crowd meter to d0
-	cmp.w	(CrowdRecord).w,d0	;compare with crowd record
-	blt.w	.nobreak	;branch if less than
-	bset	#6,(sflags7).w	;set Crowd Meter bit
+	cmp.w	(CrowdRecord).w,d0		;compare with crowd record
+	blt.w	.nobreak				;branch if less than
+	bset	#6,(sflags7).w			;set Crowd Meter bit
 .nobreak
-	jsr	(SetSflags8Bit1).l	;turn on bit 1 of sflags8
+	jsr	(SetSflags8Bit1).l			;turn on bit 1 of sflags8
 	tst.w	(puckc).w
-	bmi.w	.scload	;branch if no puck carrier
+	bmi.w	.scload					;branch if no puck carrier
 	bclr	#7,(sflags8).w
 	bclr	#1,(sflags6).w
-	move.w	(puckc).w,d0	;move puckc SCnum into d0
+	move.w	(puckc).w,d0			;move puckc SCnum into d0
 	asl.w	#7,d0
-	movea.l	#SortCords,a3	;start of player SCstructs
-	adda.w	d0,a3	;add offset to a3
+	movea.l	#SortCords,a3			;start of player SCstructs
+	adda.w	d0,a3					;add offset to a3
 	btst	#pf3break,pflags3(a3)	;checks if there is a breakaway
-	beq.w	.scload	;branch if no breakaway
-	bclr	#4,(gmode2).w	;clear if breakaway
+	beq.w	.scload					;branch if no breakaway
+	bclr	#4,(gmode2).w			;clear if breakaway
 .scload
 	movea.w	#(SortCords-M68K_RAM),a3
 .top
-	move.l	(a3),OldXpos(a3)	;Xpos, oldXpos
+	move.l	(a3),OldXpos(a3)		;Xpos, oldXpos
 	move.l	Ypos(a3),OldYpos(a3)	;Ypos, oldYpos
 	move.l	Zpos(a3),OldZpos(a3)	;Zpos, oldZpos
 	btst	#pf3fall,pflags3(a3)	;falling down?
-	beq.w	.top2	;branch if not
-	clr.w	Xvel(a3)	;clear Xvel
-	clr.w	Yvel(a3)	;clear Yvel
-	tst.w	SPAnum(a3)	;check animation index
-	bne.w	.0	;branch if index not 0
+	beq.w	.top2					;branch if not
+	clr.w	Xvel(a3)				;clear Xvel
+	clr.w	Yvel(a3)				;clear Yvel
+	tst.w	SPAnum(a3)				;check animation index
+	bne.w	.0						;branch if index not 0
 	jsr	(PlaceBoardFall).l
 	bra.w	.top2
 .0
@@ -836,117 +844,118 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	beq.w	.top2
 	move.w	#$88,(a3)
 .top2
-	tst.w	position(a3)	;check if on ice
-	bmi.w	.nf1	;branch if not on ice
+	tst.w	position(a3)			;check if on ice
+	bmi.w	.nf1					;branch if not on ice
 	move.w	SCnum(a3),d0
-	cmp.w	(puckc).w,d0	;check if player has puck
-	beq.w	.top3	;branch if puck carrier
+	cmp.w	(puckc).w,d0			;check if player has puck
+	beq.w	.top3					;branch if puck carrier
 	bclr	#pf3break,pflags3(a3)	;clear breakaway bit
 	bclr	#pf3oside,pflags3(a3)	;clear offsides bit
 .top3
 	bsr.w	updateanim
-	sub.b	d7,nopuck(a3)	;no puck control
+	sub.b	d7,nopuck(a3)			;no puck control
 	bpl.w	.np
-	clr.b	nopuck(a3)	;clear upper byte of nopuck
+	clr.b	nopuck(a3)				;clear upper byte of nopuck
 .np
-	sub.b	d7,nopuck+1(a3)	;subtract # of frames from nopuck+1
+	sub.b	d7,nopuck+1(a3)			;subtract # of frames from nopuck+1
 	bpl.w	.np2
-	clr.b	nopuck+1(a3)	;clear lower byte of nopuck
+	clr.b	nopuck+1(a3)			;clear lower byte of nopuck
 .np2
 	btst	#sf3icetime,(sflags3).w	;check if penalty timer is up
 	beq.w	.11
 	clr.w	d0
-	move.b	pnum(a3),d0	;player offset on roster
+	move.b	pnum(a3),d0				;player offset on roster
 	bmi.w	.11
 	add.w	d0,d0
 	addi.w	#$136,d0
 	jsr	(loadTeamStruct).l
-	addq.w	#1,0(a2,d0.w)	;add 1 to TOI for player
+	addq.w	#1,0(a2,d0.w)			;add 1 to TOI for player
 .11
 	cmpi.w	#SPAinjuryfall,SPA(a3)	;check animation
 	beq.w	.done
-	cmpi.w	#SPAinjury1,SPA(a3)	;check animation
+	cmpi.w	#SPAinjury1,SPA(a3)		;check animation
 	beq.w	.done
 	moveq	#$11,d4
 	tst.w	(PalMode).w
 	beq.w	.notoside
 	moveq	#$16,d4
 .notoside
-	mulu.w	d7,d4	;update velocity
-	tst.w	Zpos(a3)	;Zpos
-	bne.w	.y2	;no deceleration
+	mulu.w	d7,d4					;update velocity
+	tst.w	Zpos(a3)				;Zpos
+	bne.w	.y2						;no deceleration
 	moveq	#6,d2
-	btst	#pfdoff,pflags(a3)	;pfdoff - player deceleration
+	btst	#pfdoff,pflags(a3)		;pfdoff - player deceleration
 	beq.w	.off
-	moveq	#9,d2	;this value used when player receiving pass. Also the puck will use this when "normal"
+	moveq	#9,d2					;this value used when player receiving pass. Also the puck will use this
+									;when "normal"
 .off
-	move.w	Xvel(a3),d0	;Xvel
+	move.w	Xvel(a3),d0				;Xvel
 	beq.w	.x2
-	asr.w	d2,d0	;shift d0 right d2 times
-	bne.w	.x1	;branch if d0 not zero
-	moveq	#1,d0	;make d0 1 if it was 0
+	asr.w	d2,d0					;shift d0 right d2 times
+	bne.w	.x1						;branch if d0 not zero
+	moveq	#1,d0					;make d0 1 if it was 0
 .x1
-	sub.w	d0,Xvel(a3)	;Xvel
+	sub.w	d0,Xvel(a3)				;Xvel
 .x2
-	move.w	Yvel(a3),d0	;Yvel
-	beq.w	.y2	;branch if d0 is 0
-	asr.w	d2,d0	;shift d0 to the right d2 times
-	bne.w	.y1	;branch if d0 not 0
-	moveq	#1,d0	;make d0 1 if it was 0
+	move.w	Yvel(a3),d0				;Yvel
+	beq.w	.y2						;branch if d0 is 0
+	asr.w	d2,d0					;shift d0 to the right d2 times
+	bne.w	.y1						;branch if d0 not 0
+	moveq	#1,d0					;make d0 1 if it was 0
 .y1
-	sub.w	d0,Yvel(a3)	;sub d0 from Yvel
+	sub.w	d0,Yvel(a3)				;sub d0 from Yvel
 .y2
-	move.w	Xvel(a3),d0	;Xvel
-	beq.w	.x3	;branch if d0 is 0
-	muls.w	d4,d0	;mult d0 by d4
-	add.l	d0,(a3)	;add to Xpos
+	move.w	Xvel(a3),d0				;Xvel
+	beq.w	.x3						;branch if d0 is 0
+	muls.w	d4,d0					;mult d0 by d4
+	add.l	d0,(a3)					;add to Xpos
 .x3
-	move.w	Yvel(a3),d0	;Yvel
-	beq.w	.y3	;branch if d0 is 0
-	muls.w	d4,d0	;mult d0 by d4
-	add.l	d0,Ypos(a3)	;add to Ypos
+	move.w	Yvel(a3),d0				;Yvel
+	beq.w	.y3						;branch if d0 is 0
+	muls.w	d4,d0					;mult d0 by d4
+	add.l	d0,Ypos(a3)				;add to Ypos
 .y3
-	tst.w	Zpos(a3)	;check Zpos
-	bmi.w	.done	;branch if negative
-	bne.w	.z1	;branch if not 0
-	tst.w	Zvel(a3)	;check Zvel
-	beq.w	.done	;branch if 0
+	tst.w	Zpos(a3)				;check Zpos
+	bmi.w	.done					;branch if negative
+	bne.w	.z1						;branch if not 0
+	tst.w	Zvel(a3)				;check Zvel
+	beq.w	.done					;branch if 0
 .z1
-	asl.w	#1,d4	;mult d4 by 2
-	sub.w	d4,Zvel(a3)	;sub d4 from Zvel
-	asl.w	#1,d4	;mult d4 by 2
-	sub.w	d4,Zvel(a3)	;sub d4 from Zvel
-	lsr.w	#2,d4	;divide d4 by 4
-	move.w	Zvel(a3),d0	;move Zvel into d0
-	muls.w	d4,d0	;mult d0 by d4
-	add.l	d0,Zpos(a3)	;add d0 to Zpos
-	bpl.w	.done	;branch if d0+Zpos is positive
-	clr.l	Zpos(a3)	;clear Zpos
-	neg.w	Zvel(a3)	;negate Zvel
-	asr.w	Zvel(a3)	;divide Zvel by 2
-	moveq	#5,d0	;move 5 into d0
-	sub.b	Zvel(a3),d0	;sub Zvel from d0
-	bpl.w	.chkpuck	;branch if result is positive
-	clr.w	d0	;clear d0
+	asl.w	#1,d4					;mult d4 by 2
+	sub.w	d4,Zvel(a3)				;sub d4 from Zvel
+	asl.w	#1,d4					;mult d4 by 2
+	sub.w	d4,Zvel(a3)				;sub d4 from Zvel
+	lsr.w	#2,d4					;divide d4 by 4
+	move.w	Zvel(a3),d0				;move Zvel into d0
+	muls.w	d4,d0					;mult d0 by d4
+	add.l	d0,Zpos(a3)				;add d0 to Zpos
+	bpl.w	.done					;branch if d0+Zpos is positive
+	clr.l	Zpos(a3)				;clear Zpos
+	neg.w	Zvel(a3)				;negate Zvel
+	asr.w	Zvel(a3)				;divide Zvel by 2
+	moveq	#5,d0					;move 5 into d0
+	sub.b	Zvel(a3),d0				;sub Zvel from d0
+	bpl.w	.chkpuck				;branch if result is positive
+	clr.w	d0						;clear d0
 .chkpuck
-	cmp.w	#3,d0	;compare d0 to 3
-	bhi.w	.done	;branch if higher than 3
-	addi.w	#SFXpuckice,d0	;','   ; #SFXpuckice
+	cmp.w	#3,d0					;compare d0 to 3
+	bhi.w	.done					;branch if higher than 3
+	addi.w	#SFXpuckice,d0			;','   ; #SFXpuckice
 	move.w	d0,-(sp)
 	bsr.w	sfx
 .done
-	move.w	SCnum(a3),d6	;SCnum
-	cmp.w	(puckc).w,d6	;check if puck carrier
-	bne.w	.tp	;not puck carrier
+	move.w	SCnum(a3),d6			;SCnum
+	cmp.w	(puckc).w,d6			;check if puck carrier
+	bne.w	.tp						;not puck carrier
 	btst	#pf2fight,pflags2(a3)	;pf2fight - check if fighting
 	bne.w	.tp
-	btst	#sfhor,(sflags).w	;#sfhor - check if in horiz mode
+	btst	#sfhor,(sflags).w		;#sfhor - check if in horiz mode
 	bne.w	.tp
-	moveq	#-2,d4	;-2 - pad index for puck carrier
+	moveq	#-2,d4					;-2 - pad index for puck carrier
 	bsr.w	setpads
 .tp
 	btst	#sf2faceoff,(sflags2).w	;sf2faceoff- check for faceoff
-	bne.w	.tp2	;branch if faceoff
+	bne.w	.tp2					;branch if faceoff
 	tst.w	(holdreset).w
 	beq.w	.tp2
 	subq.w	#1,(holdreset).w
@@ -957,24 +966,24 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	move.w	#$1111,(bholdtimer).w
 	move.w	#$1111,(bholdtimer34).w
 .tp2
-	cmp.w	(c1playernum).w,d6	;check if cont 1 is puck carrier
+	cmp.w	(c1playernum).w,d6		;check if cont 1 is puck carrier
 	bne.w	.t0
 	bsr.w	ReadJoy1
-	clr.w	d4	;pad index for cont 1 player
+	clr.w	d4						;pad index for cont 1 player
 	move.w	#$FFFF,(joypuckcarrier).w
-	bsr.w	doinput	;B button
+	bsr.w	doinput					;B button
 	bra.w	.t1
 .t0
-	cmp.w	(c2playernum).w,d6	;check if cont 2 is puck carrier
+	cmp.w	(c2playernum).w,d6		;check if cont 2 is puck carrier
 	bne.w	.t1
 	bsr.w	ReadJoy2
-	moveq	#2,d4	;pad index for cont 2 player
+	moveq	#2,d4					;pad index for cont 2 player
 	move.w	#$FFFF,(joypuckcarrier).w
-	bsr.w	doinput	;B button
+	bsr.w	doinput					;B button
 .t1
-	cmp.w	#$B,d6	;check if SCnum 0-11 were puck carrier (players)
-	bgt.w	.t1cont	;jump if not
-	tst.w	(cont3team).w	;check if there is 3 controllers?
+	cmp.w	#$B,d6					;check if SCnum 0-11 were puck carrier (players)
+	bgt.w	.t1cont					;jump if not
+	tst.w	(cont3team).w			;check if there is 3 controllers?
 	beq.w	.13
 	cmp.w	(c3playernum).w,d6
 	bne.w	.13
@@ -993,7 +1002,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	move.w	(aholdtimer34).w,(aholdtimer).w
 	move.w	(PadControlBits).w,-(sp)
 	move.w	(PadControlBits34).w,(PadControlBits).w
-	bsr.w	doinput	;B button
+	bsr.w	doinput					;B button
 	move.w	(PadControlBits).w,(PadControlBits34).w
 	move.w	(sp)+,(PadControlBits).w
 	move.w	(aholdtimer).w,(aholdtimer34).w
@@ -1007,7 +1016,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	move.w	(cont1team).w,(cont3team).w
 	move.w	(sp)+,(cont1team).w
 .13
-	tst.w	(cont4team).w	;check if there is 4 controllers?
+	tst.w	(cont4team).w			;check if there is 4 controllers?
 	beq.w	.t1cont
 	cmp.w	(c4playernum).w,d6
 	bne.w	.t1cont
@@ -1026,7 +1035,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	move.w	(aholdtimer34).w,(aholdtimer).w
 	move.w	(PadControlBits).w,-(sp)
 	move.w	(PadControlBits34).w,(PadControlBits).w
-	bsr.w	doinput	;B button
+	bsr.w	doinput					;B button
 	move.w	(PadControlBits).w,(PadControlBits34).w
 	move.w	(sp)+,(PadControlBits).w
 	move.w	(aholdtimer).w,(aholdtimer34).w
@@ -1040,103 +1049,105 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	move.w	(cont2team).w,(cont4team).w
 	move.w	(sp)+,(cont2team).w
 .t1cont
-	move.w	assnum(a3),d0	;assnum
+	move.w	assnum(a3),d0			;assnum
 	clr.w	d1
-	move.b	asslist(a3,d0.w),d1	;asslist of SCstruct
-	asl.w	#2,d1	;mult by 4
+	move.b	asslist(a3,d0.w),d1		;asslist of SCstruct
+	asl.w	#2,d1					;mult by 4
 	movea.l	#asstab,a0
-	movea.l	0(a0,d1.w),a0	;get address of assignment to use for jmp
+	movea.l	0(a0,d1.w),a0			;get address of assignment to use for jmp
 	jsr	(loadTeamStruct).l
-	jsr	(a0)	;call assignment for this player
-	clr.w	Wallcos(a3)	;clear wallcos
-	clr.w	Wallsin(a3)	;clear wallsin
-	move.w	(a3),d2	;Xpos
-	move.w	Ypos(a3),d3	;Ypos
-	cmp.w	OldXpos(a3),d2	;compare to oldXpos
-	bne.w	.cc	;branch if not equal
-	cmp.w	OldYpos(a3),d3	;compare to oldYpos
-	beq.w	.nf	;branch if equal
+	jsr	(a0)						;call assignment for this player
+	clr.w	Wallcos(a3)				;clear wallcos
+	clr.w	Wallsin(a3)				;clear wallsin
+	move.w	(a3),d2					;Xpos
+	move.w	Ypos(a3),d3				;Ypos
+	cmp.w	OldXpos(a3),d2			;compare to oldXpos
+	bne.w	.cc						;branch if not equal
+	cmp.w	OldYpos(a3),d3			;compare to oldYpos
+	beq.w	.nf						;branch if equal
 .cc
-	jsr	(checkcoll).l	;check for collisions
+	jsr	(checkcoll).l				;check for collisions
 .nf
-	move.w	d7,d0	;move d7 into d0 (elapsed frames)
-	asl.w	#1,d0	;mult by 2
-	sub.w	d0,impact(a3)	;reduce impact at a constant rate
-	bpl.w	.nf1	;branch if positive
-	clr.w	impact(a3)	;clear impact if negative or zero
+	move.w	d7,d0					;move d7 into d0 (elapsed frames)
+	asl.w	#1,d0					;mult by 2
+	sub.w	d0,impact(a3)			;reduce impact at a constant rate
+	bpl.w	.nf1					;branch if positive
+	clr.w	impact(a3)				;clear impact if negative or zero
 .nf1
 	move.w	impact(a3),limpact(a3)	;move impact into limpact
-	adda.w	#SCstruct,a3	;SCstruct size
+	adda.w	#SCstruct,a3			;SCstruct size
 	cmpi.w	#$F,SCnum-SCstruct(a3)	;compare Sortobjs-1 to SCnum-SCstruct
-	blt.w	.top	;loop for all Sort objects
+	blt.w	.top					;loop for all Sort objects
 	rts
 ; frame switch control on struct a3
-updateanim	;frame switch control on struct a3
-	tst.w	SPA(a3)	;test SPA
-	bne.w	.ia	;branch if not 0
-	bclr	#pfalock,pflags(a3)	;clear anim lock
-	bclr	#pf2aip,pflags2(a3)	;clear anim in progress
+updateanim							;frame switch control on struct a3
+	tst.w	SPA(a3)					;test SPA
+	bne.w	.ia						;branch if not 0
+	bclr	#pfalock,pflags(a3)		;clear anim lock
+	bclr	#pf2aip,pflags2(a3)		;clear anim in progress
 	rts
 .ia
-	movea.l	#SPAlist,a0	;animation data tables
-	adda.w	SPA(a3),a0	;add SPA to a0 address
-	move.w	$10(a0),d1	;16 dec - attributes for anim
-	move.w	facedir(a3),d0	;facedir into d0
-	btst	#sfhor,(sflags).w	;check if horizontal mode
-	beq.w	.nhor	;branch if not
-	cmpi.w	#$C,SCnum(a3)	;compare to 12 (check if a player, not the puck or nets)
-	bge.w	.nhor	;branch if greater than (puck or nets)
-	subq.w	#2,d0	;direction adjust for horizontal rink
+	movea.l	#SPAlist,a0				;animation data tables
+	adda.w	SPA(a3),a0				;add SPA to a0 address
+	move.w	$10(a0),d1				;16 dec - attributes for anim
+	move.w	facedir(a3),d0			;facedir into d0
+	btst	#sfhor,(sflags).w		;check if horizontal mode
+	beq.w	.nhor					;branch if not
+	cmpi.w	#$C,SCnum(a3)			;compare to 12 (check if a player, not the puck or nets)
+	bge.w	.nhor					;branch if greater than (puck or nets)
+	subq.w	#2,d0					;direction adjust for horizontal rink
 	andi.w	#7,d0
 .nhor
-	btst	#3,attribute(a3)	;x flip flag
-	beq.w	.nox	;branch if no flip
-	neg.w	d0	;negate d0
-	addq.w	#8,d0	;add 8 to d0 for flipping
-	andi.w	#7,d0	;pass first 3 bits
+	btst	#3,attribute(a3)		;x flip flag
+	beq.w	.nox					;branch if no flip
+	neg.w	d0						;negate d0
+	addq.w	#8,d0					;add 8 to d0 for flipping
+	andi.w	#7,d0					;pass first 3 bits
 .nox
-	asl.w	#1,d0	;mult by 2
-	adda.w	0(a0,d0.w),a0	;add a0 + d0 offset to a0 - This moves the SPF value into a0
-	move.w	SPAnum(a3),d0	;SPANum into d0 (index into animation)
-	move.w	0(a0,d0.w),d2	;a0 + d0 offset into d2 - this is the new SPF frame of this animation
-	tst.w	SPAcnt(a3)	;check if SPAcnt is 0 (time for a new frame)
-	bmi.w	.1	;branch if so (SPAcnt is negative)
-	sub.w	d7,SPAcnt(a3)	;sub frames elasped from SPAcnt
-	bpl.w	.cframe	;branch if SPAcnt is positive
-	addq.w	#4,SPAnum(a3)	;add 4 to SPAnum (set for next index)
-	addq.w	#4,d0	;add 4 to d0 (currently holds current index)
-	tst.w	-2(a0,d0.w)	;test -2 offset from a0 + d0 (this is the frame time for the previous frame)
-	bpl.w	.1	;branch if positive (not the end of the animation)
-	clr.w	d0	;clear d0
-	clr.w	SPAnum(a3)	;clear SPANum
-	bclr	#pfalock,pflags(a3)	;clear animation lock
-	bclr	#pf2aip,pflags2(a3)	;clear animation in progress
+	asl.w	#1,d0					;mult by 2
+	adda.w	0(a0,d0.w),a0			;add a0 + d0 offset to a0 - This moves the SPF value into a0
+	move.w	SPAnum(a3),d0			;SPANum into d0 (index into animation)
+	move.w	0(a0,d0.w),d2			;a0 + d0 offset into d2 - this is the new SPF frame of this animation
+	tst.w	SPAcnt(a3)				;check if SPAcnt is 0 (time for a new frame)
+	bmi.w	.1						;branch if so (SPAcnt is negative)
+	sub.w	d7,SPAcnt(a3)			;sub frames elasped from SPAcnt
+	bpl.w	.cframe					;branch if SPAcnt is positive
+	addq.w	#4,SPAnum(a3)			;add 4 to SPAnum (set for next index)
+	addq.w	#4,d0					;add 4 to d0 (currently holds current index)
+	tst.w	-2(a0,d0.w)				;test -2 offset from a0 + d0 (this is the frame
+	;time for the previous frame)
+	bpl.w	.1						;branch if positive (not the end of the animation)
+	clr.w	d0						;clear d0
+	clr.w	SPAnum(a3)				;clear SPANum
+	bclr	#pfalock,pflags(a3)		;clear animation lock
+	bclr	#pf2aip,pflags2(a3)		;clear animation in progress
 	bclr	#pf3fall,pflags3(a3)	;clear fall down flag
-	btst	#0,d1	;check if anim attribute loops
-	bne.w	.1	;loop
-	clr.w	SPA(a3)	;clear SPA
+	btst	#0,d1					;check if anim attribute loops
+	bne.w	.1						;loop
+	clr.w	SPA(a3)					;clear SPA
 .1
-	move.w	2(a0,d0.w),d0	;move frame time for animation frame into d0
-	bpl.w	.0	;branch if positive
-	neg.w	d0	;make d0 negative (this is the case if final frame)
+	move.w	2(a0,d0.w),d0			;move frame time for animation frame into d0
+	bpl.w	.0						;branch if positive
+	neg.w	d0						;make d0 negative (this is the case if final frame)
 .0
-	move.w	d0,SPAcnt(a3)	;move d0 into SPAcnt
+	move.w	d0,SPAcnt(a3)			;move d0 into SPAcnt
 .cframe
-	sub.b	d7,glitch(a3)	;sub frames elapsed from glitch - limit minimum time between frame switches
-	bpl.w	.rtss	;branch if glitch is positive still
-	clr.b	glitch(a3)	;clear glitch
-	cmp.w	frame(a3),d2	;compare frame to d2
-	beq.w	.rtss	;branch if equal
-	move.w	d2,frame(a3)	;move d2 into frame
-	move.b	#4,glitch(a3)	;move 4 into glitch - /60 sec min frame switch time
+	sub.b	d7,glitch(a3)			;sub frames elapsed from glitch - limit minimum
+	;time between frame switches
+	bpl.w	.rtss					;branch if glitch is positive still
+	clr.b	glitch(a3)				;clear glitch
+	cmp.w	frame(a3),d2			;compare frame to d2
+	beq.w	.rtss					;branch if equal
+	move.w	d2,frame(a3)			;move d2 into frame
+	move.b	#4,glitch(a3)			;move 4 into glitch - /60 sec min frame switch time
 .rtss
 	rts
-freezewindow	;lock scrolling to the current position
+freezewindow						;lock scrolling to the current position
 	move.w	(Vpos).w,(yc1).w
 	move.w	(Hpos).w,(xc1).w
 	bset	#sfslock,(sflags).w
 	rts
-checkwindow	;set Hpos and Vpos according to how the screen should follow the puck
+checkwindow							;set Hpos and Vpos according to how the screen should follow the puck
 	move.w	(yc1).w,d2
 	move.w	(xc1).w,d3
 	btst	#sfslock,(sflags).w

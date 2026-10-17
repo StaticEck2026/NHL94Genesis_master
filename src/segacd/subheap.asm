@@ -4,10 +4,10 @@
 ;	$24FB4 is the HOCKEY.SEG object. $FF8000 is the sub CPU gate array, used
 ;	by the routine EngineIdle calls when a free block is at least $8000.
 
-GateCall	equ	$25546		;link a6,#-4, a5 = $FF8000
-MoveBlock	equ	$260DE		;three long arguments
-AllocAlign	equ	$26656		;tiny lea / jmp thunk
-SegHead		equ	$24FB4		;HOCKEY.SEG object
+GateCall	equ	$25546				;link a6,#-4, a5 = $FF8000
+MoveBlock	equ	$260DE				;three long arguments
+AllocAlign	equ	$26656				;tiny lea / jmp thunk
+SegHead		equ	$24FB4				;HOCKEY.SEG object
 
 	org	$262A8
 

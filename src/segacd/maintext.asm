@@ -52,7 +52,7 @@ LFF305A	move.l	a4,-(sp)
 	rts
 ; DoDrawTextCommand
 	dc.b	$91,$44,$6F,$44,$72,$61,$77,$54,$65,$78,$74,$43,$6F,$6D,$6D,$61	; .DoDrawTextComma
-	dc.b	$6E,$64,$00,$00	; nd..
+	dc.b	$6E,$64,$00,$00			; nd..
 ; DoMoviePlayBack
 	link	a6,#$0
 	movem.l	d5-d7/a4,-(sp)
@@ -81,7 +81,7 @@ LFF30BC	jsr	X_FF3456(pc)
 	rts
 ; DoMoviePlayBack
 	dc.b	$8F,$44,$6F,$4D,$6F,$76,$69,$65,$50,$6C,$61,$79,$42,$61,$63,$6B	; .DoMoviePlayBack
-	dc.b	$00,$00	; ..
+	dc.b	$00,$00					; ..
 ; MAINCODE
 	link	a6,#$0
 	move.l	d7,-(sp)
@@ -119,7 +119,7 @@ LFF3126	pea.l	X_FF3144(pc)
 	dc.b	$20,$44,$6F,$6E,$65,$00,$43,$6F,$6D,$6D,$61,$6E,$64,$3A,$20,$25	;  Done.Command: %
 	dc.b	$64,$00,$4D,$41,$49,$4E,$43,$50,$55,$20,$72,$65,$61,$64,$79,$20	; d.MAINCPU ready 
 	dc.b	$74,$6F,$20,$68,$61,$6E,$64,$6C,$65,$20,$63,$6F,$6D,$6D,$61,$6E	; to handle comman
-	dc.b	$64,$73,$00,$00	; ds..
+	dc.b	$64,$73,$00,$00			; ds..
 ; ReDraw
 	link	a6,#$0
 	unlk	a6
@@ -359,7 +359,7 @@ LFF3472	tst.w	(a4)
 	rts
 ; GetCommandFromSub
 	dc.b	$91,$47,$65,$74,$43,$6F,$6D,$6D,$61,$6E,$64,$46,$72,$6F,$6D,$53	; .GetCommandFromS
-	dc.b	$75,$62,$00,$00	; ub..
+	dc.b	$75,$62,$00,$00			; ub..
 ; Set1MFlag
 	link	a6,#$0
 	movea.l	#$A12010,a0

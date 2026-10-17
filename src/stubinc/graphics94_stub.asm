@@ -6,7 +6,7 @@
 ; .region data
 	org	$4B5C0
 
-	include	stubinc\equals.inc	;NumTeams, for the team-block entry checks
+	include	stubinc\equals.inc		;NumTeams, for the team-block entry checks
 
 ; Main segment data
 	include	graphics94.asm

@@ -2,8 +2,9 @@
 ;	by event, sets each channel's volume and pitch, and sets up the Z80. The pad readers run from
 ;	its vertical blank routine. The Z80 program and the sound data follow it.
 
-p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute every output channel, send the buffer
-	;and stop the PCM channel. Called from Begin and the game screens
+p_turnoff							;(audio stop). Silence everything: free all slots, key off and mute every
+									;output channel, send the buffer
+									;and stop the PCM channel. Called from Begin and the game screens
 	movem.l	d0-d7/a0-a2,-(sp)
 	bsr.w	ClearAllTrackAndSFXSlots
 	move.b	#$77,(Z80_command_buffer).w	;key off channels 0-2, 4-6
@@ -11,24 +12,27 @@ p_turnoff	;(audio stop). Silence everything: free all slots, key off and mute ev
 	moveq	#6,d0
 	movea.w	#(per_channel_attenuation_table-M68K_RAM),a0	;7 volume bytes
 .loop
-	move.b	#$7F,(a0)+	;$7F = silent
+	move.b	#$7F,(a0)+				;$7F = silent
 	dbf	d0,.loop
 	bsr.w	UploadCommandBufferToZ80
 	bsr.w	StopPCMChannel
 	movem.l	(sp)+,d0-d7/a0-a2
-rtsfx	;The shared rts; play_sfx_or_music_track and ProcessOneMusicTrack branch to it
+rtsfx								;The shared rts; play_sfx_or_music_track and
+									;ProcessOneMusicTrack branch to it
 	rts
-play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowest pointer. $30 and up are
-	;songs: the song already playing is stopped first (stop_current_song). Takes the event stream from the long pointer table
-	;SoundStreamTable and also sets each voice volume (+4) to $7F. Called from sfx and song
+play_sfx_or_music_track				;Start sound d0 (0-$7A) in the track slot with the lowest pointer.
+									;$30 and up are songs: the song already playing is stopped first
+									;(stop_current_song). Takes the event stream from the long pointer table
+									;SoundStreamTable and also sets each voice volume (+4) to $7F. Called from
+									;sfx and song
 	cmp.w	#$7A,d0
-	bhi.s	rtsfx	;out of range
+	bhi.s	rtsfx					;out of range
 	movem.l	d0-d3/a0-a2,-(sp)
 	cmp.w	#$30,d0
 	blt.w	.0
-	bsr.w	stop_current_song	;song: stop the current song
+	bsr.w	stop_current_song		;song: stop the current song
 .0
-	lea	(fm_track_slots).w,a1	;8 x 6 bytes
+	lea	(fm_track_slots).w,a1		;8 x 6 bytes
 	moveq	#7,d3
 .loop
 	move.l	(a1),d1
@@ -40,17 +44,17 @@ play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowes
 	addq.w	#6,a1
 	dbf	d3,.loop2
 	tst.w	(a2)
-	bpl.w	.x	;no free slot (lowest pointer is in use): do nothing
+	bpl.w	.x						;no free slot (lowest pointer is in use): do nothing
 	asl.w	#2,d0
 	lea	(SoundStreamTable).l,a0
 	movea.l	0(a0,d0.w),a0
 	move.l	a0,(a2)
 	clr.w	4(a2)
-	move.b	(a0),5(a2)	;first delay
+	move.b	(a0),5(a2)				;first delay
 	lea	(fm_voice_usage_table).w,a0
 	asl.w	#3,d2
 	adda.w	d2,a0
-	moveq	#7,d0	;the 8 midi channels of this track
+	moveq	#7,d0					;the 8 midi channels of this track
 .loop3
 	clr.w	(a0)
 	clr.b	2(a0)
@@ -61,11 +65,13 @@ play_sfx_or_music_track	;Start sound d0 (0-$7A) in the track slot with the lowes
 .x
 	movem.l	(sp)+,d0-d3/a0-a2
 	rts
-stop_current_song	;Stop the song in progress: free the first slot whose pointer is at or past the first song ($30, SongPointerTable)
-	;and key off its channels. Called from play_sfx_or_music_track, DoGameFrame and others
+stop_current_song					;Stop the song in progress: free the first slot whose pointer is at or
+									;past the first song ($30, SongPointerTable)
+									;and key off its channels. Called from play_sfx_or_music_track,
+									;DoGameFrame and others
 	movem.l	d0-d3/a0-a3,-(sp)
 	move	sr,-(sp)
-	move	#$2700,sr	;no interrupts while the slots change
+	move	#$2700,sr				;no interrupts while the slots change
 	lea	(fm_track_slots).w,a1
 	moveq	#7,d3
 	movea.l	(SongPointerTable).l,a0
@@ -73,10 +79,10 @@ stop_current_song	;Stop the song in progress: free the first slot whose pointer 
 	cmpa.l	(a1),a0
 	addq.w	#6,a1
 	dble	d3,.find
-	bgt.w	.0	;none: no song playing
+	bgt.w	.0						;none: no song playing
 	clr.l	(Z80_command_buffer).w
 	clr.b	(Z80_command_buffer+4).w
-	move.l	#-1,-6(a1)	;free the slot
+	move.l	#-1,-6(a1)				;free the slot
 	moveq	#5,d1
 	lea	(fm_channel_structs).w,a2	;6 x 8 bytes
 .kill
@@ -97,8 +103,10 @@ stop_current_song	;Stop the song in progress: free the first slot whose pointer 
 	move	(sp)+,sr
 	movem.l	(sp)+,d0-d3/a0-a3
 	rts
-ReadJoyData	;read the pads every vblank. With FourWayPlay, pads 1-4 through the 4 way adaptor (ReadPad4Way1 ...
-	;ReadPad4Way4) to pad4way1-pad4way4, else pads 1 and 2 (ReadPad1, ReadPad2)
+ReadJoyData							;read the pads every vblank. With FourWayPlay, pads 1-4 through the 4 way
+									;adaptor (ReadPad4Way1 ...
+									;ReadPad4Way4) to pad4way1-pad4way4, else pads 1 and 2 (ReadPad1,
+									;ReadPad2)
 	movem.l	d1/a0,-(sp)
 	tst.w	(FourWayPlay).w
 	beq.w	.0
@@ -119,7 +127,8 @@ ReadJoyData	;read the pads every vblank. With FourWayPlay, pads 1-4 through the 
 .x
 	movem.l	(sp)+,d1/a0
 	rts
-ReadPad4Way1	;4 way play pad 1: take the Z80 bus (ResetZ80Bus if it is not granted), select pad 1 on port 2 and read it on port 1 (ReadPad4WayPort1)
+ReadPad4Way1						;4 way play pad 1: take the Z80 bus (ResetZ80Bus if it is not granted),
+									;select pad 1 on port 2 and read it on port 1 (ReadPad4WayPort1)
 	move.w	#$100,(IO_Z80BUS).l
 	move.w	#$64,d0
 .loop
@@ -130,7 +139,8 @@ ReadPad4Way1	;4 way play pad 1: take the Z80 bus (ResetZ80Bus if it is not grant
 .0
 	move.b	#$C,(IO_CT2_DATA+1).l
 	bra.w	ReadPad4WayPort1
-ReadPad4Way2	;4 way play pad 2: take the Z80 bus (ResetZ80Bus if it is not granted), select pad 2 on port 2 and read it on port 1 (ReadPad4WayPort1)
+ReadPad4Way2						;4 way play pad 2: take the Z80 bus (ResetZ80Bus if it is not granted),
+									;select pad 2 on port 2 and read it on port 1 (ReadPad4WayPort1)
 	move.w	#$100,(IO_Z80BUS).l
 	move.w	#$64,d0
 .loop
@@ -141,7 +151,8 @@ ReadPad4Way2	;4 way play pad 2: take the Z80 bus (ResetZ80Bus if it is not grant
 .0
 	move.b	#$1C,(IO_CT2_DATA+1).l
 	bra.w	ReadPad4WayPort1
-ReadPad4Way3	;4 way play pad 3: take the Z80 bus (ResetZ80Bus if it is not granted), select pad 3 on port 2 and read it on port 1 (ReadPad4WayPort1)
+ReadPad4Way3						;4 way play pad 3: take the Z80 bus (ResetZ80Bus if it is not granted),
+									;select pad 3 on port 2 and read it on port 1 (ReadPad4WayPort1)
 	move.w	#$100,(IO_Z80BUS).l
 	move.w	#$64,d0
 .loop
@@ -152,7 +163,8 @@ ReadPad4Way3	;4 way play pad 3: take the Z80 bus (ResetZ80Bus if it is not grant
 .0
 	move.b	#$2C,(IO_CT2_DATA+1).l
 	bra.w	ReadPad4WayPort1
-ReadPad4Way4	;4 way play pad 4: take the Z80 bus (ResetZ80Bus if it is not granted), select pad 4 on port 2 and read it on port 1 (ReadPad4WayPort1)
+ReadPad4Way4						;4 way play pad 4: take the Z80 bus (ResetZ80Bus if it is not granted),
+									;select pad 4 on port 2 and read it on port 1 (ReadPad4WayPort1)
 	move.w	#$100,(IO_Z80BUS).l
 	move.w	#$64,d0
 .loop
@@ -162,18 +174,18 @@ ReadPad4Way4	;4 way play pad 4: take the Z80 bus (ResetZ80Bus if it is not grant
 	bsr.w	ResetZ80Bus
 .0
 	move.b	#$3C,(IO_CT2_DATA+1).l
-ReadPad4WayPort1	;Read the pad on port 1; branched to from ReadPad4Way1 ... ReadPad4Way4
+ReadPad4WayPort1					;Read the pad on port 1; branched to from ReadPad4Way1 ... ReadPad4Way4
 	movem.l	d1/a0,-(sp)
 	lea	(IO_CT1_DATA+1).l,a0
 	bra.w	ReadPad3Button
-ReadPad2	;Read pad 2 (port 2). Falls into ReadPadA0
+ReadPad2							;Read pad 2 (port 2). Falls into ReadPadA0
 	movem.l	d1/a0,-(sp)
 	lea	(IO_CT2_DATA+1).l,a0
 	bra.s	ReadPadA0
-ReadPad1	;Read pad 1 (port 1)
+ReadPad1							;Read pad 1 (port 1)
 	movem.l	d1/a0,-(sp)
 	lea	(IO_CT1_DATA+1).l,a0
-ReadPadA0	;Take the Z80 bus (ResetZ80Bus if it is not granted), then ReadPad3Button
+ReadPadA0							;Take the Z80 bus (ResetZ80Bus if it is not granted), then ReadPad3Button
 	move.w	#$100,(IO_Z80BUS).l
 	move.w	#$64,d0
 .loop
@@ -181,7 +193,8 @@ ReadPadA0	;Take the Z80 bus (ResetZ80Bus if it is not granted), then ReadPad3But
 	beq.s	ReadPad3Button
 	dbf	d0,.loop
 	bsr.w	ResetZ80Bus
-ReadPad3Button	;Read a 3 button pad at a0 (TH low, then high), release the bus and return d0 = the buttons, the directions through PadDirTable
+ReadPad3Button						;Read a 3 button pad at a0 (TH low, then high), release the bus and return
+									;d0 = the buttons, the directions through PadDirTable
 	moveq	#0,d0
 	move.b	#0,(a0)
 	nop
@@ -205,18 +218,20 @@ ReadPad3Button	;Read a 3 button pad at a0 (TH low, then high), release the bus a
 	not.b	d0
 	movem.l	(sp)+,d1/a0
 	rts
-PadDirTable	;Direction nibble table for ReadPad3Button: remaps the nibble when opposite directions are pressed together
+PadDirTable							;Direction nibble table for ReadPad3Button: remaps the nibble when
+									;opposite directions are pressed together
 	dc.b	0,1,2,1,4,5,6,6,8,9,$A,$A,8,9,$A,0
-ResetZ80Bus	;Reset the Z80 and wait for its bus
+ResetZ80Bus							;Reset the Z80 and wait for its bus
 	move.w	#$100,(IO_Z80RES).l
 	move.w	#$100,(IO_Z80BUS).l
 .loop
 	btst	#0,(IO_Z80BUS).l
 	bne.s	.loop
 	rts
-p_music_vblank	;(vblank handler). Read the pads (ReadJoyData), clear the change bits, run the 8 track slots (d7 = track
-	;7-0), send the buffer if anything changed and age the channels. 50 Hz block: with PALflag bit 0 set the slots run
-	;again every 6th frame. Called from the vblank handlers
+p_music_vblank						;(vblank handler). Read the pads (ReadJoyData), clear the change bits, run
+									;the 8 track slots (d7 = track 7-0), send the buffer if anything changed
+									;and age the channels. 50 Hz block: with PALflag bit 0 set the slots run
+									;again every 6th frame. Called from the vblank handlers
 	bsr.w	ReadJoyData
 	clr.b	(music_needs_z80_update).w
 	clr.l	(Z80_command_buffer).w	;key off/on, volume, frequency bits
@@ -236,25 +251,27 @@ p_music_vblank	;(vblank handler). Read the pads (ReadJoyData), clear the change 
 	bra.s	.loop
 .0
 	tst.b	(music_needs_z80_update).w
-	beq.w	.1	;nothing changed
+	beq.w	.1						;nothing changed
 	bsr.w	UploadCommandBufferToZ80
 .1
 	movea.w	#(fm_channel_structs-M68K_RAM),a0
 	moveq	#5,d0
 .loop3
-	addq.b	#1,5(a0)	;age
+	addq.b	#1,5(a0)				;age
 	bne.w	.next
-	subq.b	#1,5(a0)	;hold at $FF
+	subq.b	#1,5(a0)				;hold at $FF
 .next
 	addq.w	#8,a0
 	dbf	d0,.loop3
 	rts
-z80_bus_release_delay	;Z80 busy: give the bus back, wait, then falls into UploadCommandBufferToZ80 to retry
+z80_bus_release_delay				;Z80 busy: give the bus back, wait, then falls into
+									;UploadCommandBufferToZ80 to retry
 	clr.w	(IO_Z80BUS).l
 	moveq	#$64,d0
 .delay
 	dbf	d0,.delay
-UploadCommandBufferToZ80	;Copy the 33 byte command buffer (Z80_command_buffer) to Z80 RAM $02 once the Z80 is idle (Z80 RAM $97 = 0, $96 = $7D)
+UploadCommandBufferToZ80			;Copy the 33 byte command buffer (Z80_command_buffer) to Z80 RAM $02 once
+									;the Z80 is idle (Z80 RAM $97 = 0, $96 = $7D)
 	move.w	#$100,(IO_Z80BUS).l
 .loop
 	btst	#0,(IO_Z80BUS).l
@@ -273,10 +290,12 @@ UploadCommandBufferToZ80	;Copy the 33 byte command buffer (Z80_command_buffer) t
 	move.b	(a1)+,(a0)+
 	dbf	d0,.copy
 	clr.w	(IO_Z80BUS).l
-rtscmd10	;The shared rts; handle_command_10 branches to it
+rtscmd10							;The shared rts; handle_command_10 branches to it
 	rts
-ProcessOneMusicTrack	;Count down track slot a5 (track d7) and run every event that is due through command_jump_table. A 0
-	;status ends the stream; a non-negative long at +2 is a loop pointer. Called from p_music_vblank
+ProcessOneMusicTrack				;Count down track slot a5 (track d7) and run every event that is due
+									;through command_jump_table. A 0
+									;status ends the stream; a non-negative long at +2 is a loop pointer.
+									;Called from p_music_vblank
 	subq.w	#1,4(a5)
 	bpl.w	rtsfx
 .event
@@ -295,13 +314,14 @@ ProcessOneMusicTrack	;Count down track slot a5 (track d7) and run every event th
 	bra.s	.event
 .cmd
 	move.b	1(a0),d0
-	andi.w	#$70,d0	;status bits 6-4
+	andi.w	#$70,d0					;status bits 6-4
 	lsr.w	#3,d0
 	lea	command_jump_table(pc),a2
 	adda.w	0(a2,d0.w),a2
 	jsr	(a2)
 	bra.s	ProcessOneMusicTrack
-command_jump_table	;Event handlers by status bits 6-4, as offsets from the table, including handle_command_30
+command_jump_table					;Event handlers by status bits 6-4, as offsets from the table, including
+									;handle_command_30
 	dc.w	handle_command_00-command_jump_table
 	dc.w	handle_command_10-command_jump_table
 	dc.w	handle_command_skip-command_jump_table
@@ -310,7 +330,9 @@ command_jump_table	;Event handlers by status bits 6-4, as offsets from the table
 	dc.w	handle_command_skip-command_jump_table
 	dc.w	handle_command_60-command_jump_table
 	dc.w	handle_command_skip-command_jump_table
-handle_command_00	;Event $0x: key off note +2 on channel +1 bits 3-0 of track d7. Also entered from handle_command_10 (volume 0). Falls into ReleaseChannelAndNote
+handle_command_00					;Event $0x: key off note +2 on channel +1 bits 3-0 of track d7. Also
+									;entered from handle_command_10 (volume 0). Falls into
+									;ReleaseChannelAndNote
 	move.b	1(a0),d0
 	andi.w	#$F,d0
 	asl.w	#3,d0
@@ -327,7 +349,8 @@ handle_command_00	;Event $0x: key off note +2 on channel +1 bits 3-0 of track d7
 	btst	#0,6(a2)
 	dbne	d1,.find
 	beq.w	rtsfx
-ReleaseChannelAndNote	;Key off channel struct a2 if it is on. The PCM patches ($60 up) stop the PCM channel (StopPCMChannel)
+ReleaseChannelAndNote				;Key off channel struct a2 if it is on. The PCM patches ($60 up) stop the
+									;PCM channel (StopPCMChannel)
 	bclr	#0,6(a2)
 	beq.w	rtsfx
 	cmpi.b	#$60,3(a2)
@@ -336,7 +359,8 @@ ReleaseChannelAndNote	;Key off channel struct a2 if it is on. The PCM patches ($
 	bset	d0,(Z80_command_buffer).w
 	st	(music_needs_z80_update).w
 	rts
-StopPCMChannel	;Clear Z80 RAM $8E (Z80_RAM+$8E, the PCM rate byte written by UpdateChannelFrequencyAndVolume): stops the PCM channel
+StopPCMChannel						;Clear Z80 RAM $8E (Z80_RAM+$8E, the PCM rate byte written by
+									;UpdateChannelFrequencyAndVolume): stops the PCM channel
 	move.w	#$100,(IO_Z80BUS).l
 .loop
 	btst	#0,(IO_Z80BUS).l
@@ -344,11 +368,13 @@ StopPCMChannel	;Clear Z80 RAM $8E (Z80_RAM+$8E, the PCM rate byte written by Upd
 	clr.b	(Z80_RAM+$8E).l
 	clr.w	(IO_Z80BUS).l
 	rts
-handle_command_10	;Event $1x: key on note +2 at volume +3 on channel +1 bits 3-0 of track d7 (volume 0 = key off). An FM
-	;patch takes a free channel or the oldest one; a PCM patch ($60 up) sets the sample start / end (pcm_sample_table) in Z80 RAM
-	;$23-$28. Then the volume (SetChannelVolume) and the frequency (UpdateChannelFrequencyAndVolume)
+handle_command_10					;Event $1x: key on note +2 at volume +3 on channel +1 bits 3-0 of track d7
+									;(volume 0 = key off). An FM patch takes a free channel or the oldest one;
+									;a PCM patch ($60 up) sets the sample start / end (pcm_sample_table) in
+									;Z80 RAM $23-$28. Then the volume (SetChannelVolume) and the frequency
+									;(UpdateChannelFrequencyAndVolume)
 	tst.b	3(a0)
-	beq.s	handle_command_00	;volume 0: key off
+	beq.s	handle_command_00		;volume 0: key off
 	movea.w	#(fm_channel_struct6-M68K_RAM),a2
 	lea	(fm_voice_usage_table).w,a3
 	move.b	1(a0),d0
@@ -359,7 +385,7 @@ handle_command_10	;Event $1x: key on note +2 at volume +3 on channel +1 bits 3-0
 	asl.w	#3,d0
 	move.b	3(a3,d0.w),d0
 	cmp.b	#$60,d0
-	bge.w	.pcm	;PCM patch
+	bge.w	.pcm					;PCM patch
 	subq.w	#8,a2
 	moveq	#4,d1
 	bra.w	.setold
@@ -423,7 +449,7 @@ handle_command_10	;Event $1x: key on note +2 at volume +3 on channel +1 bits 3-0
 	ext.w	d0
 	subi.w	#$60,d0
 	asl.w	#3,d0
-	lea	pcm_sample_table(pc),a1	;PCM sample start, end longs by patch - $60
+	lea	pcm_sample_table(pc),a1		;PCM sample start, end longs by patch - $60
 	move.l	4(a1,d0.w),d1
 	move.l	0(a1,d0.w),d0
 	move.w	#$100,(IO_Z80BUS).l
@@ -445,11 +471,12 @@ handle_command_10	;Event $1x: key on note +2 at volume +3 on channel +1 bits 3-0
 	move.b	#0,$97(a1)
 	clr.w	(IO_Z80BUS).l
 	bsr.w	SetChannelVolume
-UpdateChannelFrequencyAndVolume	;Set the frequency of channel struct a2 from its note and the pitch bend of its key (a3 =
-	;voice table, word +0 = bend). Called from handle_command_60 and handle_command_10
+UpdateChannelFrequencyAndVolume		;Set the frequency of channel struct a2 from its note and the pitch bend
+									;of its key (a3 = voice table, word +0 = bend). Called from
+									;handle_command_60 and handle_command_10
 	clr.l	d3
 	move.b	1(a2),d3
-	divu.w	#$C,d3	;d3 = octave, high word = note in the octave
+	divu.w	#$C,d3					;d3 = octave, high word = note in the octave
 	move.w	d3,-(sp)
 	swap	d3
 	add.w	d3,d3
@@ -466,13 +493,13 @@ UpdateChannelFrequencyAndVolume	;Set the frequency of channel struct a2 from its
 	move.b	3(a2),d1
 	asl.w	#5,d1
 	lea	(fm_instrument_patches).l,a4	;32 bytes per patch
-	move.b	$1E(a4,d1.w),d1	;byte $1E = pitch bend scale
+	move.b	$1E(a4,d1.w),d1			;byte $1E = pitch bend scale
 	ext.w	d1
 .0
 	muls.w	d1,d3
 	asr.l	#2,d3
 	asr.w	#7,d3
-	addi.w	#$C0,d3	;centre of .bendtab
+	addi.w	#$C0,d3					;centre of .bendtab
 	add.w	d3,d3
 	lea	.bendtab(pc),a4
 	mulu.w	0(a4,d3.w),d2
@@ -507,9 +534,9 @@ UpdateChannelFrequencyAndVolume	;Set the frequency of channel struct a2 from its
 	clr.w	(IO_Z80BUS).l
 .x
 	rts
-.fnum	;frequency number of each note in the octave
+.fnum								;frequency number of each note in the octave
 	dc.w	$0146,$0159,$016E,$0184,$019B,$01B3,$01CD,$01E8,$0205,$0224,$0245,$0268
-.bendtab	;385 factors, entry $C0 = $8000 (no bend)
+.bendtab							;385 factors, entry $C0 = $8000 (no bend)
 	dc.w	$4000,$403B,$4076,$40B2,$40EE,$412A,$4166,$41A3,$41E0,$421D
 	dc.w	$425A,$4297,$42D5,$4313,$4351,$438F,$43CE,$440D,$444C,$448B
 	dc.w	$44CA,$450A,$454A,$458A,$45CA,$460B,$464C,$468D,$46CE,$4710
@@ -549,8 +576,10 @@ UpdateChannelFrequencyAndVolume	;Set the frequency of channel struct a2 from its
 	dc.w	$EAC0,$EB9A,$EC74,$ED4F,$EE2A,$EF07,$EFE4,$F0C2,$F1A1,$F281
 	dc.w	$F361,$F443,$F525,$F608,$F6EC,$F7D0,$F8B6,$F99C,$FA83,$FB6B
 	dc.w	$FC54,$FD3E,$FE28,$FF13,$FF13
-SetChannelVolume	;Set the volume of channel struct a2: note volume (+2) * the voice volume (voice table +4) / 128. FM: attenuation from
-	;.veltab (volume / 8); PCM: Z80 RAM $83 (Z80_RAM+$83, at least 3). Called from handle_command_10 and handle_command_30
+SetChannelVolume					;Set the volume of channel struct a2: note volume (+2) * the voice volume
+									;(voice table +4) / 128. FM: attenuation from
+									;.veltab (volume / 8); PCM: Z80 RAM $83 (Z80_RAM+$83, at least 3). Called
+									;from handle_command_10 and handle_command_30
 	movem.l	d0,-(sp)
 	clr.w	d0
 	move.b	2(a2),d0
@@ -572,7 +601,7 @@ SetChannelVolume	;Set the volume of channel struct a2: note volume (+2) * the vo
 	st	(music_needs_z80_update).w
 	movem.l	(sp)+,d0
 	rts
-.veltab	;attenuation by volume / 8
+.veltab								;attenuation by volume / 8
 	dc.b	$1A,$18,$16,$14,$12,$10,$0E,$0C,$0A,$08,$06,$04,$03,$02,$01,$00
 .0
 	move.w	#$100,(IO_Z80BUS).l
@@ -588,7 +617,8 @@ SetChannelVolume	;Set the volume of channel struct a2: note volume (+2) * the vo
 	clr.w	(IO_Z80BUS).l
 	movem.l	(sp)+,d0
 	rts
-handle_command_40	;Event $4x: set the patch of channel +1 bits 3-0 of track d7 to +2 (voice table +3)
+handle_command_40					;Event $4x: set the patch of channel +1 bits 3-0 of track d7 to +2 (voice
+									;table +3)
 	lea	(fm_voice_usage_table).w,a3
 	move.b	1(a0),d0
 	andi.w	#$F,d0
@@ -597,7 +627,8 @@ handle_command_40	;Event $4x: set the patch of channel +1 bits 3-0 of track d7 t
 	asl.w	#3,d0
 	move.b	2(a0),3(a3,d0.w)
 	rts
-handle_command_60	;Event $6x: set the pitch bend of channel +1 bits 3-0 of track d7 to word +2 - $2000, and update the frequency of every channel with that key
+handle_command_60					;Event $6x: set the pitch bend of channel +1 bits 3-0 of track d7 to word
+									;+2 - $2000, and update the frequency of every channel with that key
 	lea	(fm_voice_usage_table).w,a3
 	move.b	1(a0),d0
 	andi.w	#$F,d0
@@ -617,8 +648,9 @@ handle_command_60	;Event $6x: set the pitch bend of channel +1 bits 3-0 of track
 	addq.w	#8,a2
 	dbf	d0,.loop
 	rts
-handle_command_30	;event $3x, controller +2 = +3 on channel +1 bits 3-0 of track d7. Only controller 7
-	;(volume) is used: set the voice volume (voice table +5) and update the volume of every channel with that key (SetChannelVolume)
+handle_command_30					;event $3x, controller +2 = +3 on channel +1 bits 3-0 of track d7. Only
+									;controller 7 (volume) is used: set the voice volume (voice table +5) and
+									;update the volume of every channel with that key (SetChannelVolume)
 	cmpi.b	#7,2(a0)
 	beq.w	.0
 	rts
@@ -641,10 +673,12 @@ handle_command_30	;event $3x, controller +2 = +3 on channel +1 bits 3-0 of track
 	addq.w	#8,a2
 	dbf	d0,.loop
 	rts
-handle_command_skip	;Events $2x, $5x and $7x: ignored
+handle_command_skip					;Events $2x, $5x and $7x: ignored
 	rts
-p_initialZ80	;(initialization). Free all slots, load the Z80 program (Z80_Program_Code, $295 bytes) into Z80 RAM, build 29
-	;tables of 256 bytes below Z80 RAM $2000 (Z80_RAM+$2000; (x - $80) * 8 / n + $80 for n = 8-$24), then reset and start the Z80. Called from Begin
+p_initialZ80						;(initialization). Free all slots, load the Z80 program (Z80_Program_Code,
+									;$295 bytes) into Z80 RAM, build 29
+									;tables of 256 bytes below Z80 RAM $2000 (Z80_RAM+$2000; (x - $80) * 8 / n
+									;+ $80 for n = 8-$24), then reset and start the Z80. Called from Begin
 	movem.l	d0-d2/a0-a2,-(sp)
 	bsr.w	ClearAllTrackAndSFXSlots
 	move.w	#$100,(IO_Z80RES).l
@@ -654,7 +688,7 @@ p_initialZ80	;(initialization). Free all slots, load the Z80 program (Z80_Progra
 	bne.s	.loop
 	movea.l	#Z80_Program_Code,a1
 	movea.l	#Z80_RAM,a2
-	move.w	#$294,d0	;$295 bytes
+	move.w	#$294,d0				;$295 bytes
 .loop2
 	move.b	(a1)+,(a2)+
 	dbf	d0,.loop2
@@ -684,7 +718,8 @@ p_initialZ80	;(initialization). Free all slots, load the Z80 program (Z80_Progra
 	clr.b	(music_needs_z80_update).w
 	movem.l	(sp)+,d0-d2/a0-a2
 	rts
-ClearAllTrackAndSFXSlots	;Free the 8 track slots and reset the 6 channel structs (output channels 0, 1, 2, 4, 5, 6). Called from p_turnoff and p_initialZ80
+ClearAllTrackAndSFXSlots			;Free the 8 track slots and reset the 6 channel structs (output channels
+									;0, 1, 2, 4, 5, 6). Called from p_turnoff and p_initialZ80
 	lea	(fm_track_slots).w,a0
 	moveq	#7,d0
 	moveq	#-1,d1
@@ -708,44 +743,47 @@ ClearAllTrackAndSFXSlots	;Free the 8 track slots and reset the 6 channel structs
 	dbf	d0,.chan
 	rts
 
-;	The Z80 driver, the PCM samples and the FM patches are unchanged from 93; the pointer
-;	tables are written with the labels; each sound and song event stream is its own file (loop pointers written as dc.l).
-Z80_Program_Code	;First byte of the Z80 program (movea.l in p_initialZ80); the rest of the Z80 blob and the data
-	;after it are the incbins below. p_initialZ80 copies $295 bytes from here into pcm_sample_table
+;	The Z80 driver, the PCM samples and the FM patches are unchanged from 93; the pointer tables are written
+;	with the labels; each sound and song event stream is its own file (loop pointers written as dc.l).
+Z80_Program_Code					;First byte of the Z80 program (movea.l in p_initialZ80); the rest of the
+									;Z80 blob and the data after it are the incbins below. p_initialZ80 copies
+									;$295 bytes from here into pcm_sample_table
 	dc.b	$18
-	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93.bin	;the Z80 driver after its first byte, up to the ld bc of the FM patch bank address
-	dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80	;Z80 ld bc,$8000+(fm_instrument_patches&$7FFF): bank window address of the FM patches
+	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93.bin	;the Z80 driver after its first byte, up to the ld bc
+														;of the FM patch bank address
+	;Z80 ld bc,$8000+(fm_instrument_patches&$7FFF): bank window address of the FM patches
+	dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80
 	dc.b	$09,$3E,fm_instrument_patches>>15	;Z80 add hl,bc / ld a,bank (32K bank) of the FM patches
 	incbin	..\Extracted\NHL94\Sound\z80_snd_drv93_end.bin	;rest of the Z80 driver
-	dc.b	$FF			;pad: retail leftover byte
-pcm_sample_table	;(sample address, 0) for PCM patches $60-$6E (lea in handle_command_10)
+	dc.b	$FF						;pad: retail leftover byte
+pcm_sample_table					;(sample address, 0) for PCM patches $60-$6E (lea in handle_command_10)
 	dc.l	sfx_puckget_pcm,0		;patch $60
-	dc.l	sfx_pass_pcm,0		;patch $61
+	dc.l	sfx_pass_pcm,0			;patch $61
 	dc.l	sfx_shotbh_pcm,0		;patch $62
 	dc.l	sfx_shotfh_pcm,0		;patch $63
 	dc.l	sfx_check2_pcm,0		;patch $64
-	dc.l	sfx_check_pcm,0		;patch $65
-	dc.l	sfx_playerwall_pcm,0		;patch $66
+	dc.l	sfx_check_pcm,0			;patch $65
+	dc.l	sfx_playerwall_pcm,0	;patch $66
 	dc.l	sfx_hithigh_pcm,0		;patch $67
-	dc.l	0,0		;patch $68
-	dc.l	0,0		;patch $69
+	dc.l	0,0						;patch $68
+	dc.l	0,0						;patch $69
 	dc.l	sfx_hithigh_pcm,0		;patch $6A
 	dc.l	sfx_crowdboo_pcm,0		;patch $6B
-	dc.l	sfx_oooh_pcm,0		;patch $6C
-	dc.l	sfx_crowdcheer_pcm,0		;patch $6D
+	dc.l	sfx_oooh_pcm,0			;patch $6C
+	dc.l	sfx_crowdcheer_pcm,0	;patch $6D
 	dc.l	sfx_bglass_pcm,0		;patch $6E
 sfx_shotbh_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_shotbh_pcm.bin	;sample 2: shotbh
 	even
 sfx_pass_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_pass_pcm.bin	;sample 1: pass
-	dc.b	$FF			;pad: retail leftover byte
+	dc.b	$FF						;pad: retail leftover byte
 sfx_oooh_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_oooh_pcm.bin	;sample 12: oooh, sfx_oooh2, sfx_bglass
 	even
 sfx_crowdboo_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_crowdboo_pcm.bin	;sample 11: crowdboo
-	dc.b	$FF			;pad: retail leftover byte
+	dc.b	$FF						;pad: retail leftover byte
 sfx_check_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_check_pcm.bin	;sample 5: check1, check3
 	even
@@ -754,15 +792,16 @@ sfx_crowdcheer_pcm
 	even
 sfx_bglass_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_bglass_pcm.bin	;sample 14: sfx_bglass
-	dc.b	$FF			;pad: retail leftover byte
+	dc.b	$FF						;pad: retail leftover byte
 sfx_playerwall_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_playerwall_pcm.bin	;sample 6: playerwall, sfx_playerwall2-23
 	even
 sfx_check2_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_check2_pcm.bin	;sample 4: check2, check4
-	dc.b	$FF			;pad: retail leftover byte
+	dc.b	$FF						;pad: retail leftover byte
 sfx_hithigh_pcm
-	incbin	..\Extracted\NHL94\Sound\sfx_hithigh_pcm.bin	;samples 7 and 10: hithigh, hitlow, check1-4, songs $32 and $35-$37
+	incbin	..\Extracted\NHL94\Sound\sfx_hithigh_pcm.bin	;samples 7 and 10: hithigh, hitlow, check1-4,
+															;songs $32 and $35-$37
 	even
 sfx_shotfh_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_shotfh_pcm.bin	;sample 3: shotfh
@@ -770,30 +809,32 @@ sfx_shotfh_pcm
 sfx_puckget_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_puckget_pcm.bin	;sample 0: puckget
 	even
-fm_instrument_patches	;32 FM patches x 32 bytes, byte $1E = pitch bend scale (UpdateChannelFrequencyAndVolume)
-	incbin	..\Extracted\NHL94\Sound\fm_instrument_patches.bin	;32 FM patches x 32 bytes (byte $1E = pitch bend scale)
+fm_instrument_patches				;32 FM patches x 32 bytes, byte $1E = pitch bend scale
+									;(UpdateChannelFrequencyAndVolume)
+	incbin	..\Extracted\NHL94\Sound\fm_instrument_patches.bin	;32 FM patches x 32 bytes (byte $1E = pitch
+																;bend scale)
 	even
-SoundStreamTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_music_track)
-	dc.l	sfx_siren_cmdstream	;sound $0
-	dc.l	sfx_beep1_cmdstream	;sound $1
-	dc.l	sfx_beep2_cmdstream	;sound $2
+SoundStreamTable					;event stream of sounds 0-$7A as long pointers (play_sfx_or_music_track)
+	dc.l	sfx_siren_cmdstream		;sound $0
+	dc.l	sfx_beep1_cmdstream		;sound $1
+	dc.l	sfx_beep2_cmdstream		;sound $2
 	dc.l	sfx_whistle_cmdstream	;sound $3
-	dc.l	sfx_horn_cmdstream	;sound $4
+	dc.l	sfx_horn_cmdstream		;sound $4
 	dc.l	sfx_shotwiff_cmdstream	;sound $5
-	dc.l	sfx_stdef_cmdstream	;sound $6
+	dc.l	sfx_stdef_cmdstream		;sound $6
 	dc.l	sfx_puckget_cmdstream	;sound $7
-	dc.l	sfx_oooh_cmdstream	;sound $8
+	dc.l	sfx_oooh_cmdstream		;sound $8
 	dc.l	sfx_hithigh_cmdstream	;sound $9
 	dc.l	sfx_hitlow_cmdstream	;sound $A
 	dc.l	sfx_crowdcheer_cmdstream	;sound $B
 	dc.l	sfx_crowdboo_cmdstream	;sound $C
-	dc.l	sfx_oooh2_cmdstream	;sound $D
+	dc.l	sfx_oooh2_cmdstream		;sound $D
 	dc.l	sfx_bglass_cmdstream	;sound $E
 	dc.l	sfx_homewin_cmdstream	;sound $F
-	dc.l	sfx_pass1_cmdstream	;sound $10
-	dc.l	sfx_pass2_cmdstream	;sound $11
-	dc.l	sfx_pass3_cmdstream	;sound $12
-	dc.l	sfx_pass4_cmdstream	;sound $13
+	dc.l	sfx_pass1_cmdstream		;sound $10
+	dc.l	sfx_pass2_cmdstream		;sound $11
+	dc.l	sfx_pass3_cmdstream		;sound $12
+	dc.l	sfx_pass4_cmdstream		;sound $13
 	dc.l	sfx_shotbh1_cmdstream	;sound $14
 	dc.l	sfx_shotbh2_cmdstream	;sound $15
 	dc.l	sfx_shotbh3_cmdstream	;sound $16
@@ -822,7 +863,7 @@ SoundStreamTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_mus
 	dc.l	sfx_puckice2_cmdstream	;sound $2D
 	dc.l	sfx_puckice3_cmdstream	;sound $2E
 	dc.l	sfx_puckice4_cmdstream	;sound $2F
-SongPointerTable	;the songs $30-$7A of SoundStreamTable (stop_current_song reads the first)
+SongPointerTable					;the songs $30-$7A of SoundStreamTable (stop_current_song reads the first)
 	dc.l	fmtune_id_30_cmdstream	;song $30
 	dc.l	fmtune_id_31_cmdstream	;song $31
 	dc.l	fmtune_id_32_cmdstream	;song $32
@@ -964,7 +1005,7 @@ sfx_puckwall4_cmdstream
 sfx_whistle_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_whistle_cmdstream.bin	;sound $3
 	even
-	dc.b	$FF,$FF			;pad: retail leftover bytes
+	dc.b	$FF,$FF					;pad: retail leftover bytes
 sfx_shotwiff_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_shotwiff_cmdstream.bin	;sound $5
 	even
@@ -1053,7 +1094,8 @@ fmtune_id_33_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_33_cmdstream.bin	;song $33: ChooseSong, TeamSongs BUF
 	even
 fmtune_id_34_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_34_cmdstream.bin	;song $34: ChooseSong, TeamSongs BUF, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_34_cmdstream.bin	;song $34: ChooseSong, TeamSongs BUF,
+																;RandomSongs
 	even
 fmtune_id_35_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_35_cmdstream.bin	;song $35: ChooseSong, TeamSongs CGY
@@ -1089,13 +1131,15 @@ fmtune_id_3F_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_3F_cmdstream.bin	;song $3F: ChooseSong, TeamSongs EDM
 	even
 fmtune_id_40_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_40_cmdstream.bin	;song $40: ChooseSong, TeamSongs HFD, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_40_cmdstream.bin	;song $40: ChooseSong, TeamSongs HFD,
+																;RandomSongs
 	even
 fmtune_id_41_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_41_cmdstream.bin	;song $41: ChooseSong, TeamSongs HFD
 	even
 fmtune_id_42_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_42_cmdstream.bin	;song $42: ChooseSong, TeamSongs HFD, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_42_cmdstream.bin	;song $42: ChooseSong, TeamSongs HFD,
+																;RandomSongs
 	even
 fmtune_id_43_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_43_cmdstream.bin	;song $43: ChooseSong, TeamSongs LA
@@ -1116,7 +1160,8 @@ fmtune_id_48_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_48_cmdstream.bin	;song $48: ChooseSong, TeamSongs NYI
 	even
 fmtune_id_49_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_49_cmdstream.bin	;song $49: ChooseSong, TeamSongs NYI, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_49_cmdstream.bin	;song $49: ChooseSong, TeamSongs NYI,
+																;RandomSongs
 	even
 fmtune_id_4A_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_4A_cmdstream.bin	;song $4A: ChooseSong, TeamSongs DAL
@@ -1146,13 +1191,16 @@ fmtune_id_52_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_52_cmdstream.bin	;song $52: ChooseSong, TeamSongs NJ
 	even
 fmtune_id_53_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_53_cmdstream.bin	;song $53: ChooseSong, TeamSongs NYR / ASE / ASW
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_53_cmdstream.bin	;song $53: ChooseSong, TeamSongs NYR / ASE /
+																;ASW
 	even
 fmtune_id_54_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_54_cmdstream.bin	;song $54: ChooseSong, TeamSongs NYR / ASE / ASW
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_54_cmdstream.bin	;song $54: ChooseSong, TeamSongs NYR / ASE /
+																;ASW
 	even
 fmtune_id_55_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_55_cmdstream.bin	;song $55: ChooseSong, TeamSongs NYR / ASE / ASW
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_55_cmdstream.bin	;song $55: ChooseSong, TeamSongs NYR / ASE /
+																;ASW
 	even
 fmtune_id_56_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_56_cmdstream.bin	;song $56: ChooseSong, TeamSongs PHI
@@ -1161,19 +1209,22 @@ fmtune_id_57_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_57_cmdstream.bin	;song $57: ChooseSong, TeamSongs PHI
 	even
 fmtune_id_58_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_58_cmdstream.bin	;song $58: ChooseSong, TeamSongs PHI, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_58_cmdstream.bin	;song $58: ChooseSong, TeamSongs PHI,
+																;RandomSongs
 	even
 fmtune_id_59_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_59_cmdstream.bin	;song $59: ChooseSong, TeamSongs PIT
 	even
 fmtune_id_5A_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_5A_cmdstream.bin	;song $5A: ChooseSong, TeamSongs (25 teams: all but CGY, PHI and SJ)
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_5A_cmdstream.bin	;song $5A: ChooseSong, TeamSongs (25 teams:
+																;all but CGY, PHI and SJ)
 	even
 fmtune_id_5B_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_5B_cmdstream.bin	;song $5B: ChooseSong, TeamSongs PIT
 	even
 fmtune_id_5C_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_5C_cmdstream.bin	;song $5C: ChooseSong, TeamSongs PIT, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_5C_cmdstream.bin	;song $5C: ChooseSong, TeamSongs PIT,
+																;RandomSongs
 	even
 fmtune_id_5D_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_5D_cmdstream.bin	;song $5D: ChooseSong, TeamSongs QUE
@@ -1191,7 +1242,8 @@ fmtune_id_61_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_61_cmdstream.bin	;song $61: ChooseSong, TeamSongs SJ
 	even
 fmtune_id_62_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_62_cmdstream.bin	;song $62: ChooseSong, not in TeamSongs or RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_62_cmdstream.bin	;song $62: ChooseSong, not in TeamSongs or
+																;RandomSongs
 	even
 fmtune_id_63_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_63_cmdstream.bin	;song $63: ChooseSong, TeamSongs SJ
@@ -1200,7 +1252,8 @@ fmtune_id_64_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_64_cmdstream.bin	;song $64: ChooseSong, TeamSongs SJ
 	even
 fmtune_id_65_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_65_cmdstream.bin	;song $65: ChooseSong, TeamSongs CHI / SJ, RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_65_cmdstream.bin	;song $65: ChooseSong, TeamSongs CHI / SJ,
+																;RandomSongs
 	even
 fmtune_id_66_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_66_cmdstream.bin	;song $66: ChooseSong, RandomSongs
@@ -1239,7 +1292,8 @@ fmtune_id_71_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_71_cmdstream.bin	;song $71: ChooseSong, TeamSongs WSH
 	even
 fmtune_id_72_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_72_cmdstream.bin	;song $72: ChooseSong, not in TeamSongs or RandomSongs
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_72_cmdstream.bin	;song $72: ChooseSong, not in TeamSongs or
+																;RandomSongs
 	even
 fmtune_id_73_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_73_cmdstream.bin	;song $73: ChooseSong, TeamSongs WSH
@@ -1248,16 +1302,20 @@ fmtune_id_74_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_id_74_cmdstream.bin	;song $74: ChooseSong, TeamSongs WSH
 	even
 fmtune_id_75_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_75_cmdstream.bin	;song $75: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_75_cmdstream.bin	;song $75: ChooseSong, TeamSongs ANH / FLA /
+																;OTW / WPG
 	even
 fmtune_id_76_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_76_cmdstream.bin	;song $76: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_76_cmdstream.bin	;song $76: ChooseSong, TeamSongs ANH / FLA /
+																;OTW / WPG
 	even
 fmtune_id_77_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_id_77_cmdstream.bin	;song $77: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
+	incbin	..\Extracted\NHL94\Sound\fmtune_id_77_cmdstream.bin	;song $77: ChooseSong, TeamSongs ANH / FLA /
+																;OTW / WPG
 	even
 fmtune_title_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_title_cmdstream94.bin	;song $78: ExitToOpening, newTitleScreen. One stream that loops to its start
+	incbin	..\Extracted\NHL94\Sound\fmtune_title_cmdstream94.bin	;song $78: ExitToOpening, newTitleScreen.
+	;One stream that loops to its start
 	even
 	dc.l	fmtune_title_cmdstream	;loop pointer
 fmtune_eop_cmdstream

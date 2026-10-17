@@ -1,7 +1,8 @@
 ;	New in 94: the shootout. This file draws the shootout mode box, sets the shooting order,
 ;	counts the goals, shows the winner and runs the screen where the shooters are chosen.
 
-ShootoutModeBox	;Shootout "SHOOTOUT MODE" box: the shooter " vs." the goalie and both teams' shootout goals. Jumped to from PenaltyShotBox
+ShootoutModeBox						;Shootout "SHOOTOUT MODE" box: the shooter " vs." the goalie and both
+									;teams' shootout goals. Jumped to from PenaltyShotBox
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	#$FFFF,d0
 	jsr	(prefmes).l
@@ -69,24 +70,24 @@ ShootoutModeBox	;Shootout "SHOOTOUT MODE" box: the shooter " vs." the goalie and
 	jsr	(print).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ShootoutModeBigTxt	dc.b	0	;ShootoutModeBox big text
+ShootoutModeBigTxt	dc.b	0		;ShootoutModeBox big text
 	dc.b	$16,$BF,4,3
-	dc.b	$53	;S
-	dc.b	$48	;H
-	dc.b	$4F	;O
-	dc.b	$4F	;O
-	dc.b	$54	;T
-	dc.b	$4F	;O
-	dc.b	$55	;U
-	dc.b	$54	;T
+	dc.b	$53						;S
+	dc.b	$48						;H
+	dc.b	$4F						;O
+	dc.b	$4F						;O
+	dc.b	$54						;T
+	dc.b	$4F						;O
+	dc.b	$55						;U
+	dc.b	$54						;T
 	dc.b	$20
-	dc.b	$4D	;M
-	dc.b	$4F	;O
-	dc.b	$44	;D
-	dc.b	$45	;E
+	dc.b	$4D						;M
+	dc.b	$4F						;O
+	dc.b	$44						;D
+	dc.b	$45						;E
 	dc.b	$BF,4,5,0
 
-ClearShootout	;Clear the player structs (SortCords) and the shootout state.
+ClearShootout						;Clear the player structs (SortCords) and the shootout state.
 	movea.l	#SortCords,a0
 	move.w	#$3FF,d0
 .loop
@@ -105,7 +106,8 @@ ClearShootout	;Clear the player structs (SortCords) and the shootout state.
 	bsr.w	InitShooters
 	clr.w	(shootoutteam).w
 	rts
-NextShooter	;Shootout: the next shooter (BA_Team, BA_Goalie_SCnum, StartShootoutPath), or the end (ExitToOpening).
+NextShooter							;Shootout: the next shooter (BA_Team, BA_Goalie_SCnum, StartShootoutPath),
+									;or the end (ExitToOpening).
 	btst	#3,(gmode2).w
 	beq.w	.0
 	jmp	ExitToOpening
@@ -126,7 +128,8 @@ NextShooter	;Shootout: the next shooter (BA_Team, BA_Goalie_SCnum, StartShootout
 	bclr	#pfnc,(SortCords+(puckscnum*SCstruct)+pflags).w
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-CountShootoutGoals	;Shootout: count the goals and end it when one team cannot catch up (EndShootout, high ROM). Called from EndPenaltyShotPlay
+CountShootoutGoals					;Shootout: count the goals and end it when one team cannot catch up
+									;(EndShootout, high ROM). Called from EndPenaltyShotPlay
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#0,(shootoutteam+1).w
 	beq.w	.switch
@@ -150,7 +153,8 @@ CountShootoutGoals	;Shootout: count the goals and end it when one team cannot ca
 .x
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-InitShooters	;Shootout: the 6 starters of the home (shootoutteam 0) or away team as the shooter list below homeshootnum / shootoutteam
+InitShooters						;Shootout: the 6 starters of the home (shootoutteam 0) or away team as the
+									;shooter list below homeshootnum / shootoutteam
 	movea.l	#homeshootnum,a0
 	move.w	(HomeTeam).w,d0
 	tst.w	(shootoutteam).w
@@ -170,7 +174,7 @@ InitShooters	;Shootout: the 6 starters of the home (shootoutteam 0) or away team
 	move.w	d1,-(a0)
 	dbf	d0,.loop
 	rts
-ShootoutWonBy	;Shootout: "SHOOTOUT WON BY" (printbig). Called from SetPA
+ShootoutWonBy						;Shootout: "SHOOTOUT WON BY" (printbig). Called from SetPA
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP1),1,$D
@@ -194,7 +198,8 @@ ShootoutWonBy	;Shootout: "SHOOTOUT WON BY" (printbig). Called from SetPA
 	jsr	(printbig).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-ShootoutShooters	;Shootout shooters menu item (menu lists): pick the 3 shooters of each team
+ShootoutShooters					;Shootout shooters menu item (menu lists): pick
+									;the 3 shooters of each team
 	btst	#0,(gmode2).w
 	beq.w	ShootersExit
 	moveq	#0,d0
@@ -211,11 +216,12 @@ ShootoutShooters	;Shootout shooters menu item (menu lists): pick the 3 shooters 
 	bsr.w	ResetShooterScroll
 	bsr.w	PrintShooterSlots
 	move.w	#0,(TestList).w
-ShootersRedraw	;Shootout shooters: redraw (ShootersBackground, PrintShooterBox, PrintShooterNames)
+ShootersRedraw						;Shootout shooters: redraw (ShootersBackground,
+									;PrintShooterBox, PrintShooterNames)
 	bsr.w	ShootersBackground
 	bsr.w	PrintShooterNames
 	bsr.w	PrintShooterBox
-ShootersLoop	;Shootout shooters: the input loop
+ShootersLoop						;Shootout shooters: the input loop
 	jsr	(vcountwait).l
 	jsr	(getpzjoy).l
 	jsr	(ProcessInputWithRepeat).l
@@ -236,9 +242,9 @@ ShootersLoop	;Shootout shooters: the input loop
 	btst	#5,d1
 	bne.w	ShooterSelectList
 	bra.s	ShootersLoop
-ShootersExit	;Leave (ExitStatsScreen)
+ShootersExit						;Leave (ExitStatsScreen)
 	jmp	ExitStatsScreen
-ShooterSelectList	;Shootout shooters: "{Select Player}" list
+ShooterSelectList					;Shootout shooters: "{Select Player}" list
 	move.w	#$C000,d7
 	movea.l	#homeshooters,a0
 	cmpa.l	#tmstruct,a2
@@ -347,7 +353,7 @@ ShooterSelectList	;Shootout shooters: "{Select Player}" list
 	asl.w	#1,d2
 	move.w	d0,0(a0,d2.w)
 	bra.w	ShootersRedraw
-PrintShooterList	;Shootout shooters: the player list rows (getNameandAttrib)
+PrintShooterList					;Shootout shooters: the player list rows (getNameandAttrib)
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),$16,1
 .loop
@@ -400,37 +406,39 @@ PrintShooterList	;Shootout shooters: the player list rows (getNameandAttrib)
 	addq.w	#1,d2
 	dbf	d1,.loop3
 	rts
-ShooterOverallTxt	dc.b	0	;PrintShooterList data
+ShooterOverallTxt	dc.b	0		;PrintShooterList data
 	dc.b	$12,$20,$20,$20,$20
-	dc.b	$4F	;O
-	dc.b	$76	;v
-	dc.b	$65	;e
-	dc.b	$72	;r
-	dc.b	$61	;a
-	dc.b	$6C	;l
-	dc.b	$6C	;l
+	dc.b	$4F						;O
+	dc.b	$76						;v
+	dc.b	$65						;e
+	dc.b	$72						;r
+	dc.b	$61						;a
+	dc.b	$6C						;l
+	dc.b	$6C						;l
 	dc.b	$20,$20,$20,$20
-	dc.b	$5D	;]
+	dc.b	$5D						;]
 	dc.b	$1F
-	dc.b	$3A	;:
+	dc.b	$3A						;:
 	dc.b	0,$A
-ShooterOverallTxt2	dc.b	0	;PrintShooterList data
+ShooterOverallTxt2	dc.b	0		;PrintShooterList data
 	dc.b	$12,$20,$20,$20,$20
-	dc.b	$4F	;O
-	dc.b	$76	;v
-	dc.b	$65	;e
-	dc.b	$72	;r
-	dc.b	$61	;a
-	dc.b	$6C	;l
-	dc.b	$6C	;l
+	dc.b	$4F						;O
+	dc.b	$76						;v
+	dc.b	$65						;e
+	dc.b	$72						;r
+	dc.b	$61						;a
+	dc.b	$6C						;l
+	dc.b	$6C						;l
 	dc.b	$20,$20,$20,$20
-	dc.b	$5D	;]
+	dc.b	$5D						;]
 	dc.b	$1B,$F,0,$A
-ShootersPick	;Shootout shooters: C on a slot; the same slot (TestList) goes back to the loop, else select it (ShootersSelect)
+ShootersPick						;Shootout shooters: C on a slot; the same slot (TestList) goes back to the
+									;loop, else select it (ShootersSelect)
 	cmp.w	(TestList).w,d0
 	beq.w	ShootersLoop
 	bra.w	ShootersSelect
-ShootersMove	;Shootout shooters: move the slot cursor by d0, wrapping in 0 ... 4 (not on slot 5)
+ShootersMove						;Shootout shooters: move the slot cursor by d0, wrapping in 0 ... 4 (not
+									;on slot 5)
 	cmpi.w	#5,(TestList).w
 	beq.w	ShootersLoop
 	add.w	(TestList).w,d0
@@ -441,12 +449,13 @@ ShootersMove	;Shootout shooters: move the slot cursor by d0, wrapping in 0 ... 4
 	bra.w	ShootersSelect
 .0
 	move.w	#4,d0
-ShootersSelect	;Shootout shooters: TestList = d0, redraw the names and the player box, back to the loop
+ShootersSelect						;Shootout shooters: TestList = d0, redraw the names and the player box,
+									;back to the loop
 	move.w	d0,(TestList).w
 	bsr.w	PrintShooterNames
 	bsr.w	PrintShooterBox
 	bra.w	ShootersLoop
-ShootersBackground	;Shootout shooters background and "Shootout" title
+ShootersBackground					;Shootout shooters background and "Shootout" title
 	bsr.w	ClearShooterScreen
 	movem.l	d0-d5/a0-a2,-(sp)
 	jsr	(printz).l
@@ -475,18 +484,19 @@ ShootersBackground	;Shootout shooters background and "Shootout" title
 	move.w	#$2C,d0
 .0
 	jmp	PutTeamBlock
-ClearShooterScreen	;Shootout shooters: erase the screen
+ClearShooterScreen					;Shootout shooters: erase the screen
 	jsr	(printz).l
 	String	-(TXPRI+TXMAP2),0,0
 	moveq	#$28,d0
 	moveq	#$A,d1
 	move.w	#$7FF,d2
 	jmp	eraser
-ResetShooterScroll	;Shootout shooters: clear the list scroll words palfadenew+$5A and palfadenew+$7A
+ResetShooterScroll					;Shootout shooters: clear the list scroll words
+									;palfadenew+$5A and palfadenew+$7A
 	clr.w	(palfadenew+$5A).w
 	clr.w	(palfadenew+$7A).w
 	rts
-PrintShooterSlots	;Shootout shooters: "Shooters" 1. 2. 3.
+PrintShooterSlots					;Shootout shooters: "Shooters" 1. 2. 3.
 	jsr	(printsmallz).l
 	String	CC_SetMap,2,CC_SetX,0,CC_SetY,$A
 	jsr	(printsmallz).l
@@ -507,7 +517,7 @@ PrintShooterSlots	;Shootout shooters: "Shooters" 1. 2. 3.
 	jsr	(printsmallz).l
 	String	CC_SetX,$1A,CC_SetY,$C,'Goalie'
 	rts
-PrintShooterBox	;Shootout shooters: the selected player box
+PrintShooterBox						;Shootout shooters: the selected player box
 	jsr	(printsmallz).l
 	String	CC_SetMapAndPosition,4,2,8,7,CC_SetFont,1
 	moveq	#$18,d0
@@ -530,7 +540,7 @@ PrintShooterBox	;Shootout shooters: the selected player box
 	jsr	(printsmall).l
 	clr.w	(printfontset).w
 	rts
-PrintShooterNames	;Shootout shooters: the shooters' names (FormatPlayerNameShort)
+PrintShooterNames					;Shootout shooters: the shooters' names (FormatPlayerNameShort)
 	movem.l	d0-d7/a0-a6,-(sp)
 .0
 	jsr	(printsmallz).l

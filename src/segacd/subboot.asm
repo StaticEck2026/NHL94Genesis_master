@@ -8,13 +8,13 @@
 	org	$21300
 
 SubBoot	move.l	$6038.w,$B090		;keep the BIOS vector the game will call through
-	jmp	$262A8			;C runtime (link a6). Does not return here
+	jmp	$262A8						;C runtime (link a6). Does not return here
 
 ; Reached again after that runtime if it jumps back, or entered on its own.
 RestoreBios	move.l	$B090,$6038.w
 .waitbios	btst.b	#7,$FF800E		;main CPU flag
 	bne.s	.waitbios
-	move.w	#$2E,$FF8020		;sub status word
+	move.w	#$2E,$FF8020			;sub status word
 	bset.b	#6,$FF800F
 .wait6	btst.b	#6,$FF800E
 	beq.s	.wait6
@@ -23,12 +23,12 @@ RestoreBios	move.l	$B090,$6038.w
 .wait6b	btst.b	#6,$FF800E
 	bne.s	.wait6b
 	bclr.b	#7,$FF800F
-	bset.b	#5,$FF800F		;BIOS call in progress
-	move.l	#$1B000,d0		;HOCKEY.BIN entry (file offset $1B000)
+	bset.b	#5,$FF800F				;BIOS call in progress
+	move.l	#$1B000,d0				;HOCKEY.BIN entry (file offset $1B000)
 	move.l	#$92,d1
 	move.l	#$4F,d2
-	move.w	#0,d7			;BIOS function 0
+	move.w	#0,d7					;BIOS function 0
 	jsr	$6044.w
-	adda.w	#$C,sp			;BIOS function 0 takes 3 long arguments
+	adda.w	#$C,sp					;BIOS function 0 takes 3 long arguments
 	bclr.b	#5,$FF800F
-	jmp	$1B000			;into the game
+	jmp	$1B000						;into the game
