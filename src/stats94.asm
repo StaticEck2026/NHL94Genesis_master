@@ -106,7 +106,7 @@ DisplayGameInfo	;Print game d3 of gsstruct (16 bytes each; not the current game 
 	subq.w	#1,d0
 	movea.l	#PerLabels,a1
 	move.w	#$1C,(printx).w
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	addq.w	#2,(printy).w
 	rts
 PrintGameInfo	;Print team d0's name (TeamList) at x 6 and score d1 (2 digits) at x $18
@@ -136,7 +136,7 @@ DrawScrollArrows	;ShowScores up / down arrows (ScrollArrowTable). Saves d0-d1/a1
 	add.b	d1,d0
 	add.b	d1,d0
 	lea	ScrollArrowTable(pc),a1
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	movem.l	(sp)+,d0-d1/a1
 	rts
 ScrollArrowTable	;DrawScrollArrows Strings: none, up, down (only 3 entries)
@@ -391,7 +391,7 @@ DrawLineIcon	;Line editor: draw line d5 (its name from linelist, then its player
 	move.w	d5,d0
 	movea.l	#linelist,a1
 	move.w	#$8000,(printa).w
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	jsr	(printsmallz).l
 	String	' Line'
 	move.w	(a0),(printx).w	
@@ -899,7 +899,7 @@ AttribStatus	;Player d0's status word at $66(a2): Ice, Bench, injured, or penalt
 	moveq	#3,d0
 .st
 	lea	StatusTextTbl(pc),a1
-	jmp	PrintStringFromList
+	jmp	Fprintsmall
 .pen
 	btst	#$C,d0
 	bne.s	.inj
@@ -914,7 +914,7 @@ AttribStatus	;Player d0's status word at $66(a2): Ice, Bench, injured, or penalt
 	moveq	#5,d0
 .t
 	lea	StatusTextTbl(pc),a1
-	jmp	PrintStringFromList
+	jmp	Fprintsmall
 StatusTextTbl	;AttribStatus Strings
 	String	'Ice     '
 	String	'Bench   '
@@ -949,7 +949,7 @@ AttribHanded	;Bit 0 of the sum: Righty / Lefty (HandedTextTbl)
 	andi.w	#1,d0
 	eori.w	#1,d0
 	lea	HandedTextTbl(pc),a1
-	jmp	PrintStringFromList
+	jmp	Fprintsmall
 HandedTextTbl	;AttribHanded Strings
 	String	'Righty  '
 	String	'Lefty   '
@@ -1110,7 +1110,7 @@ DrawScoringRow	;Print ScoreSum entry d3: time, team (bit 7 of byte 2 = away), go
 	lea	GoalTypeTbl(pc),a1
 	move.b	2(a0,d3.w),d0
 	andi.w	#$7F,d0
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	move.w	#$10,(printx).w
 	move.b	3(a0,d3.w),d0
 	bsr.w	PrintScorerName
@@ -1316,7 +1316,7 @@ DrawScrollArrowsPenalty	;Summary screen up / down arrows (ScrollArrowTbl). Saves
 	add.b	d1,d0
 	add.b	d1,d0
 	lea	ScrollArrowTbl(pc),a1
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	movem.l	(sp)+,d0-d1/a1
 	rts
 ScrollArrowTbl	;None, up, down, both
@@ -1493,7 +1493,7 @@ DrawStatsList	;Stats screen: column headers (sort column highlighted), the title
 	lea	StatSortTitles(pc),a1
 	moveq	#1,d0
 	add.w	(DispAttribCtr).w,d0
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	clr.w	(printfontset).w
 	movea.w	#(Satt-M68K_RAM),a3
 	clr.l	d6
@@ -1727,7 +1727,7 @@ DrawStatsListArrows	;Stats screen up / down arrows (ScrollArrowTbl2). Saves d0-d
 	add.b	d1,d0
 	add.b	d1,d0
 	lea	ScrollArrowTbl2(pc),a1
-	jsr	(PrintStringFromList).l
+	jsr	(Fprintsmall).l
 	movem.l	(sp)+,d0-d1/a1
 	rts
 ScrollArrowTbl2	;None, up, down, both

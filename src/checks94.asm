@@ -3208,11 +3208,11 @@ puckfaceoff2
 	bsr.w	printsmallz
 	String	CC_AddX,1,CC_AddY,$FE
 	movea.l	#linelist,a1
-	bsr.w	PrintStringFromList
+	bsr.w	Fprintsmall
 	addq.w	#4,(printx).w
 	move.w	d1,d0
 	movea.l	#linelist,a1
-	bsr.w	PrintStringFromList
+	bsr.w	Fprintsmall
 .setdroptime
 	move.w	#$78,d0
 	bsr.w	randomd0

@@ -640,7 +640,7 @@ SetLCmode2	;a2 = team struct. Draw the line change box
 	bsr.w	print
 	move.w	d0,-(sp)
 	movea.l	#linelist,a1
-	bsr.w	PrintStringFromList
+	bsr.w	Fprintsmall
 	move.w	(sp)+,d0
 	bsr.w	linebar
 	subq.w	#5,(printx).w

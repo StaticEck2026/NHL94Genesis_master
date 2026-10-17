@@ -993,7 +993,7 @@ SetHor	;switch graphics to horizontal ice rink graphics mode
 ;	loadTeamStruct, SetupTeamForIntermission, RestoreTeamEnergy,
 ;	reenergizeteam, Intermission, InitScores, UpdateScores, SetScore, sctab,
 ;	NewTicker, NewTicker2, NewTicker3, NewTicker3pt2, GameLabels,
-;	ClearTickerArea, SetTickerAreaPosition, PrintStringFromList,
+;	ClearTickerArea, SetTickerAreaPosition, Fprintsmall,
 ;	AdvanceStringPtr, DoHiLights, StartHL and StartHL2.
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp / cmpi;
 ;	fixopcodes.js patches the cmp encoding after assembly.
@@ -1028,7 +1028,7 @@ printscores1	;Draw scoreboard. Vertical rink: period box and the score box (team
 	move.w	#4,d0
 	movea.l	#PerLabels2,a1
 .1
-	bsr.w	PrintStringFromList
+	bsr.w	Fprintsmall
 	bsr.w	EASNLogo
 	btst	#sf3llcs,(sflags3).w	;sf3llcs: lower line change box is up
 	bne.w	.ex
@@ -1605,7 +1605,7 @@ NewTicker3	;Display ticker score for game d3 (a0 = gstruct entry), skip if d3 is
 	clr.w	d0	;not playoffs: 'EA Hockey Night'
 .0
 	lea	GameLabels(pc),a1
-	bsr.w	PrintStringFromList
+	bsr.w	Fprintsmall
 	move.w	gsper(a0),d0	;gsper
 	subq.w	#1,d0
 	movea.l	#PerLabels,a1
@@ -1661,7 +1661,7 @@ SetTickerAreaPosition	;Set printx/printy/printm for the ticker box (x 3, y $17; 
 	moveq	#$1A,d0
 	moveq	#5,d1
 	rts
-PrintStringFromList	;Print string d0 of the String list a1 with printsmall
+Fprintsmall	;92 Fprint, but printing with printsmall (92 used print). Print string d0 of the String list a1 with printsmall
 	bsr.w	AdvanceStringPtr
 	bra.w	printsmall
 AdvanceStringPtr	;Return a1 = string d0 of the String list a1

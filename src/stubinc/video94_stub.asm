@@ -22,7 +22,7 @@ RunArenaAnim = $FE2C8		;jsr / jmp (x).l
 updatecrowdf = $7A9E		;jsr (x).w
 
 FramerMap = $55B7E		;#x
-PrintStringFromList = $13508		;bsr.w / Bcc.w
+Fprintsmall = $13508		;bsr.w / Bcc.w
 bfasciicon = $1916A		;#x
 BigFontMap = $A9A10		;#x
 SmallFontMap = $AAC52		;#x
