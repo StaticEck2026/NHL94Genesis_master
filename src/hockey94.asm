@@ -360,14 +360,14 @@ clockcont_0	;End of period. Also entered from puckfaceoff
 	bset	#gmclock,(gmode).w		;gmclock: stop clock
 	bset	#gmeog,(gmode).w		;set at end of game
 	jsr	(ClearPenalties).l
-	move.w	#4,d0			;PenEOG
+	move.w	#PenEOG,d0
 	jmp	AddPenalty2
 
 .eop	cmpi.w	#3,(gsp).w		;end of OT?
 	bne.w	.eop_ex
 	tst.w	(OptPlayMode).w
 	beq.s	.eog			;gsp 3 with OptPlayMode 0 ends the game
-.eop_ex	move.w	#2,d0			;PenEOP
+.eop_ex	move.w	#PenEOP,d0
 	jmp	AddPenalty2
 
 demoread	;monitor joystick if in demo mode (called every game loop)
