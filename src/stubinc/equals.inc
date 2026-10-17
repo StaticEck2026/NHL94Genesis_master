@@ -1,16 +1,7 @@
-;	Shared equates. These name the video chip status bits, hardware constants and game values
+;	Shared equates. These name hardware constants and game values
 ;	that every module uses.
 
 PAL_MODE equ 0
-DMA_IN_PROGRESS equ 1
-HBLANKING equ 2
-VBLANKING equ 3
-ODD_FRAME equ 4
-SPRITE_COLLISION equ 5
-SPRITE_OVERFLOW equ 6
-VBLANK_PENDING equ 7
-FIFO_FULL equ 8
-FIFO_EMPTY equ 9
 ; ----------------------------------
 ; ------------- game equates named like NHLPA93Genesis ram93.asm -------------
 MaxSprites equ 64		;max sprites during game (64 because 32 col mode)
