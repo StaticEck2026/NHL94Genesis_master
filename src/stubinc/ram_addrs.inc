@@ -235,6 +235,37 @@ HomeTeam equ $FFFFC330
 VisTeam equ $FFFFC332
 TeamBlockMap equ $FFFFC334	;Map word buffer for CopyTeamBlockMapData and PutTeamBlock
 PenBuf equ $FFFFC3A4
+; Penalty numbers (word offsets into Penaltylist) for AddPenalty
+PenEOP	equ	$2
+PenEOG	equ	$4
+PenOOP	equ	$6
+PenGhold	equ	$8
+PenWhistle	equ	$A
+PenIcing	equ	$C
+PenGoal	equ	$E
+PenOffsides	equ	$10
+PenRoughing2	equ	$12
+PenNoText	equ	$14
+PenCharging	equ	$16
+PenSlashing	equ	$18
+PenRoughing	equ	$1A
+PenCrossChk	equ	$1C
+PenHooking	equ	$1E
+PenTripping	equ	$20
+PenInterference	equ	$22
+PenHolding	equ	$24
+PenFighting	equ	$26
+PenFighting2	equ	$28
+PenInst	equ	$2A
+PenDelay	equ	$2C
+PenHookingPS	equ	$2E
+PenTrippingPS	equ	$30
+PenGhold2	equ	$32
+PenInterferencePS	equ	$34
+PenRoughingPS	equ	$36
+PenChargingPS	equ	$38
+PenCrossChkPS	equ	$3A
+PenSlashingPS	equ	$3C
 Pencntdwn equ $FFFFC3E6
 Penaltytimer equ $FFFFC3E8
 PBnum equ $FFFFC3EA

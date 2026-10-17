@@ -418,7 +418,7 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	bne.w	rtss2
 	move.b	(HVcount).l,d0	;HVcount
 	andi.w	#2,d0
-	addi.w	#$16,d0	;#PenCharging
+	addi.w	#PenCharging,d0
 	jsr	(PenShotChk).l	;penalty shot on a breakaway
 	bra.w	AddPenalty
 .down
@@ -429,7 +429,7 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	bne.w	.dn2
 	move.b	(HVcount).l,d0	;HVcount
 	andi.w	#2,d0
-	addi.w	#$1A,d0	;#PenRoughing2
+	addi.w	#PenRoughing,d0
 	jsr	(PenShotChk).l	;penalty shot on a breakaway
 	bsr.w	AddPenalty
 .dn2
@@ -1524,7 +1524,7 @@ wallcollb	;Check for puck over wall. a3 = object, d0/d1 = cos/sin of the wall. N
 	asl.w	#scsize,d0	;#scsize
 	movea.w	#(SortCords-M68K_RAM),a3	;#sortcords
 	adda.w	d0,a3
-	move.l	#6,d0	;#PenOOP
+	move.l	#PenOOP,d0
 	bsr.w	AddPenalty2
 	movea.l	(sp)+,a3
 	rts

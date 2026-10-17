@@ -465,7 +465,7 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	bset	#4,(BA_PS_flags).w	;set bit 4
 	bra.w	.nofo
 .mbfo2
-	move.l	#8,d0	;PenGhold
+	move.l	#PenGhold,d0
 	bsr.w	AddPenalty2	;blow whistle for FO
 .nofo
 	sub.b	d7,temp1(a3)	;sub d7 from temp1
@@ -3644,7 +3644,7 @@ a2touchpuck
 	move.l	a3,-(sp)	;push on stack
 	movea.w	#(SortCords-M68K_RAM),a3
 	adda.w	d0,a3	;a3 now player struct
-	move.w	#$C,d0	;#PenIcing
+	move.w	#PenIcing,d0
 	bsr.w	AddPenalty
 	movea.l	(sp)+,a3
 	rts
