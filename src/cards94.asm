@@ -257,7 +257,7 @@ setSlotBit	;Sflags6 bit 5 (the slot) = the puck carrier is in the slot in front 
 	bne.w	.checkpos	;jump if top goal
 	neg.w	d0	;negative d0
 .checkpos
-	cmp.w	#$58,d0	;'X'   ; compare to blueline
+	cmp.w	#Blueline,d0	;'X'   ; compare to blueline
 	blt.w	.restore	;branch if not in off zone
 	cmpi.w	#$47,(a0)	;'G' ; compare X position to $47
 	bgt.w	.restore	;branch if greater than 47

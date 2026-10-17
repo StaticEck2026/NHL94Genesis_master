@@ -193,7 +193,7 @@ getBAplayerInfo	;d0 = SCnum (0-5 home team, 6-11 away team) of the player on the
 	move.w	d0,(BA_Sktr_SCnum).w
 	movea.l	#SortCords,a1
 	move.w	d0,d3
-	asl.w	#7,d3	;scsize
+	asl.w	#scsize,d3	;scsize
 	move.w	#0,(BA_Team).w
 	btst	#6,$62(a1,d3.w)	;pfteam
 	beq.w	.0	;branch if home
@@ -202,7 +202,7 @@ getBAplayerInfo	;d0 = SCnum (0-5 home team, 6-11 away team) of the player on the
 	move.w	#0,(BA_Skater_Offset).w
 	move.b	$66(a1,d3.w),(BA_Skater_Offset+1).w	;store BA player's team position offset
 	move.w	d1,(BA_Goalie_SCnum).w
-	asl.w	#7,d1	;scsize
+	asl.w	#scsize,d1	;scsize
 	move.w	#0,(BA_Goalie_Offset).w
 	move.b	$66(a1,d1.w),(BA_Goalie_Offset+1).w	;store goalie's team position offset
 	move.w	#0,(BA_Checker_Offset).w
@@ -234,7 +234,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	move.l	a3,-(sp)
 	clr.w	d1
 	move.b	1(a0),d1
-	asl.w	#7,d1	;scsize
+	asl.w	#scsize,d1	;scsize
 	movea.w	#(SortCords-M68K_RAM),a3
 	adda.w	d1,a3
 	tst.w	position(a3)	;position
@@ -268,7 +268,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 	move.b	(a0),(a4)+	;penalty
 	clr.w	d1
 	move.b	1(a0),d1
-	asl.w	#7,d1	;scsize
+	asl.w	#scsize,d1	;scsize
 	movea.w	#(SortCords-M68K_RAM),a3
 	adda.w	d1,a3
 	clr.w	d0
@@ -301,7 +301,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 .3
 	move.w	d2,tmpdst(a2,d0.w)
 	andi.w	#$EFFF,d2
-	moveq	#$34,d1	;(MaxRos-1)*2+2
+	moveq	#(maxros-1)*2+2,d1	;(MaxRos-1)*2+2
 .ctop
 	subq.w	#2,d1	;same time on the other team
 	bmi.w	.nocoin
@@ -355,7 +355,7 @@ InProgress	;ref in progress-- update graphics and stats and penalty information.
 coinsearch	;a2 = team. Clears tmpdst bit 5, counts players kept off the ice by penalties (coincidental and bit 4
 	;times do not count, at most 2) and sets tmap. Called twice from InProgress
 	moveq	#6,d1
-	moveq	#$32,d0	;(MaxRos-1)*2
+	moveq	#(maxros-1)*2,d0	;(MaxRos-1)*2
 .loop
 	tst.w	tmpdst(a2,d0.w)
 	ble.w	.nap
@@ -438,7 +438,7 @@ Stop4Pen	;a0 = penaltylist penalty +2. Stop the clock, set the face off spot fro
 	movea.w	#(SortCords-M68K_RAM),a3
 	move.b	-1(a0),d1
 	ext.w	d1
-	asl.w	#7,d1	;scsize
+	asl.w	#scsize,d1	;scsize
 	adda.w	d1,a3
 	move.w	#$258,d1	;600
 	btst	#pfgoal,pflags(a3)	;pfgoal
@@ -496,7 +496,7 @@ limitfo	;limit face off to 5-20 feet from walls of rink. Checks every player in 
 .lf
 	move.b	1(a0),d0
 	andi.w	#$7F,d0
-	asl.w	#7,d0	;scsize
+	asl.w	#scsize,d0	;scsize
 	movea.w	#(SortCords-M68K_RAM),a1
 	move.w	#$58,d1
 	btst	#pfgoal,pflags(a1,d0.w)	;pfgoal
@@ -722,8 +722,8 @@ PenGoalStuff	;do this stuff after a goal. a1 = scored on team, a2 = scoring team
 	bset	#0,(DelayedPen).w
 	addq.w	#1,tmap(a1)	;tmap
 	addq.w	#1,tmPwrGoals(a2)	;tmPwrGoals
-	bset	#0,(tmstruct+tmflags).w	;home tmflags: tmflcc
-	bset	#0,(AwShots+tmflags).w	;visitors tmflags: tmflcc
+	bset	#tmflcc,(tmstruct+tmflags).w	;home tmflags: tmflcc
+	bset	#tmflcc,(AwShots+tmflags).w	;visitors tmflags: tmflcc
 .ex
 	movem.l	(sp)+,d0-d2/a0
 	rts
@@ -740,7 +740,7 @@ updatepentime	;update the time remaining on all penalized players, once a second
 	bne.w	rtss2
 	sub.w	d7,(Penaltytimer).w
 	bpl.w	rtss2
-	addi.w	#$18,(Penaltytimer).w	;jps
+	addi.w	#jps,(Penaltytimer).w	;jps
 	bset	#6,(sflags3).w	;one second tick
 	bsr.w	chkatop
 	jsr	(updatePPTeamTime).l
@@ -840,8 +840,8 @@ releasepl	;player's penalty time is up so let him out (if appropriate). a2 = tea
 	lsr.w	#1,d3
 	move.w	tmap(a2),d1	;tmap
 	addq.w	#1,tmap(a2)
-	bset	#0,(tmstruct+tmflags).w	;home tmflags: tmflcc
-	bset	#0,(AwShots+tmflags).w	;visitors tmflags: tmflcc
+	bset	#tmflcc,(tmstruct+tmflags).w	;home tmflags: tmflcc
+	bset	#tmflcc,(AwShots+tmflags).w	;visitors tmflags: tmflcc
 	movea.l	#priolist,a0
 	tst.w	tmgoalie(a2)	;tmgoalie
 	bpl.w	.1
@@ -1297,7 +1297,7 @@ ChkShotStat	;determine if shot taken, add to appropriate stats: crowd, team, sho
 	addi.w	#$A,(CwdExciteLvl).w
 	move.w	(shotplayer).w,d0
 .addShot
-	asl.w	#7,d0	;scsize
+	asl.w	#scsize,d0	;scsize
 	movea.w	#(SortCords-M68K_RAM),a3
 	adda.w	d0,a3
 	bsr.w	loadTeamStruct
@@ -1361,7 +1361,7 @@ SetupTeamForIntermission	;Reset the bench, then for each team refill energy and 
 	rts
 RestoreTeamEnergy	;a2 = team: max energy (tmpde $1000) for every player. The skip needs tmpdst to be both -3 and -4, so it never happens.
 	;Called from the menu code before ReplayMode
-	moveq	#$32,d0	;(MaxRos-1)*2
+	moveq	#(maxros-1)*2,d0	;(MaxRos-1)*2
 .loop
 	cmpi.w	#$FFFD,$66(a2,d0.w)
 	bne.w	.0
@@ -1376,7 +1376,7 @@ RestoreTeamEnergy	;a2 = team: max energy (tmpde $1000) for every player. The ski
 	rts
 reenergizeteam	;Set all players to max energy on team a2 except those at tmpdst -4; players marked -3 in tmpdst go to
 	;the bench (-2). Called from SetupTeamForIntermission and StartHL2 .setteam
-	moveq	#$32,d0	;(MaxRos-1)*2
+	moveq	#(maxros-1)*2,d0	;(MaxRos-1)*2
 .loop
 	cmpi.w	#$FFFC,$66(a2,d0.w)
 	beq.w	.nb
@@ -1431,7 +1431,7 @@ Intermission	;end of period junk (zamboni/stats). Opens the pause menu screen (i
 	bsr.w	NewTicker3
 	move.w	#$96,d0	;150 frames
 	bsr.w	waitxsr
-	btst	#7,d1	;sbut
+	btst	#sbut,d1	;sbut
 	bne.w	.clrh
 	bsr.w	ClearTickerArea
 	move.w	#$3C,d0	;60 frames
@@ -1710,7 +1710,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	String	'Highlight from game:'	;the text as code
 	move.w	#$B4,d0	;180 frames
 	bsr.w	waitxsr
-	btst	#7,d1	;sbut
+	btst	#sbut,d1	;sbut
 	bne.w	.nhl1
 	st	(zamx).w
 	clr.w	(CwdExciteLvl).w
@@ -1794,15 +1794,15 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	bmi.w	.endhl
 .1
 	bsr.w	orjoy
-	btst	#5,d1	;cbut
+	btst	#cbut,d1	;cbut
 	bne.w	.2
-	btst	#7,d1	;sbut
+	btst	#sbut,d1	;sbut
 	beq.s	.0
 .2
 	move.w	(HmGoals).w,d0	;tied: random winner
 	cmp.w	(AwGoals).w,d0
 	bne.w	.endhl
-	move.w	(VDP_CNTR).l,d0	;hvcount
+	move.w	(HVcount).l,d0	;hvcount
 	andi.w	#1,d0
 	add.w	d0,(HmGoals).w
 	eori.w	#1,d0
@@ -1875,7 +1875,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	move.w	$A(a0),d0
 	cmp.w	$C(a0),d0
 	bne.w	.rr0
-	move.w	(VDP_CNTR).l,d0	;hvcount
+	move.w	(HVcount).l,d0	;hvcount
 	andi.w	#1,d0
 	add.w	d0,$A(a0)
 	eori.w	#1,d0

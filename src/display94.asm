@@ -25,7 +25,7 @@ VBlank	;Main vblank code for game play (vbint target, set by setupice and setupi
 	bne.w	.soclock
 	tst.w	(gameclock).w
 	beq.w	.c
-	subi.w	#$AAA,(gameclock+2).w	;jiffy. gameclock+2 = gameclock+2
+	subi.w	#jiffy,(gameclock+2).w	;jiffy. gameclock+2 = gameclock+2
 	bcc.w	.c
 	bset	#dfclock,(disflags).w	;dfclock
 	subq.w	#1,(gameclock).w
@@ -307,7 +307,7 @@ showzam	;zamboni. a5 = dma list, a6 = sprite table, d6 = link counter. Draws fra
 .ftab	dc.w	5,6,7,8,7,8,7,8,7,8,7,6,5	;frame by (x-$DA)/4
 SetSframe	;draw one sprite frame. a0 = framelist, d0/d1 = x/y cords, d2 = frame to setup (from 0), d3 = start char in vram, a6 = sprite table,
 	;d6 = link counter. Called from showzam and the screen code
-	cmp.w	#$40,d6	;MaxSprites
+	cmp.w	#MaxSprites,d6	;MaxSprites
 	bge.w	rtss2
 	movem.l	d0-d5/a0,-(sp)
 	adda.l	4(a0),a0
@@ -330,7 +330,7 @@ SetSframe	;draw one sprite frame. a0 = framelist, d0/d1 = x/y cords, d2 = frame 
 	move.w	(a0),(a6)
 	add.w	d0,(a6)+
 	addq.w	#1,d6
-	cmp.w	#$40,d6	;MaxSprites
+	cmp.w	#MaxSprites,d6	;MaxSprites
 	beq.w	.ex
 	addq.w	#8,a0
 	dbf	d4,.loop
@@ -383,7 +383,7 @@ showcrowd	;draw crowd sprites: up to 3 frames per PBnum nibble, then the two cro
 	beq.w	.chk
 	addi.w	#$1F,d0	;horizontal frames are 31 later
 .chk
-	cmp.w	#$40,d6	;MaxSprites
+	cmp.w	#MaxSprites,d6	;MaxSprites
 	bge.w	rtss2
 	movem.l	d0-d5,-(sp)
 	add.w	d0,d0
@@ -819,7 +819,7 @@ addframe	;a3 = sort cord object. Project it with find3d, then addframe2. a5 = dm
 	move.w	Zpos(a3),d2	;Zpos into d2
 	bmi.w	.exit	;exit if Zpos minus
 	bsr.w	find3d	;get position on screen
-	cmp.w	#$4E20,d1	;#osflag into d1
+	cmp.w	#osflag,d1	;#osflag into d1
 	beq.w	.exit	;exit if Sort Cord is off screen
 	bsr.w	addframe2
 .exit

@@ -84,7 +84,7 @@ restoreteams	;Put both teams' rosters on the bench
 	adda.w	#tmsize,a2		;team 2
 .r	;reset one team struct (a2), falls in for team 2
 	move.w	#6,tmap(a2)		;tmap: no players in pen. box
-	moveq	#$32,d0			;(maxros-1)*2
+	moveq	#(maxros-1)*2,d0			;(maxros-1)*2
 .0	move.w	#$FFFE,tmpdst(a2,d0.w)	;tmpdst: -2 = all players on bench
 	subq.w	#2,d0
 	bpl.s	.0
@@ -141,7 +141,7 @@ StartPer	;start a period: reset stack, rink and clock, face off, run the game lo
 	bset	#sf2drec,(sflags2).w		;sf2drec: don't record
 	bclr	#sfwrap,(sflags).w		;sfwrap: reset replay stuff
 	move.w	#$FFFF,(lastsfx).w
-	move.l	#M68K_RAM,(recbpr).w	;replaystart
+	move.l	#replaystart,(recbpr).w	;replaystart
 	move.w	(vcount).w,(oldvcount).w
 	bsr.w	DoGameFrame		;run two frames before the loop
 	move.w	#$FFFF,(palcount).w
@@ -197,7 +197,7 @@ periodicevents	;Called every time thru game loop with d7 = elapsed frames
 	bne.w	rtss8			;exit if in horizontal mode
 	sub.w	d7,(lldisp).w		;count down for screen updates
 	bpl.w	rtss8
-	addi.w	#$18,(lldisp).w		;jps: only update once per second
+	addi.w	#jps,(lldisp).w		;jps: only update once per second
 	bsr.w	ChkGoalies
 	bsr.w	UpdateCwdExcite
 	bsr.w	CheckLateGameSong
@@ -217,7 +217,7 @@ RestoreBenchEnergy	;Called once per second. Restore energy for players on the be
 	bsr.w	.notinprog
 	lea	tmsize(a2),a2		;team 2 (tmsize)
 .notinprog
-	moveq	#$32,d0			;(maxros-1)*2
+	moveq	#(maxros-1)*2,d0			;(maxros-1)*2
 .b0	cmpi.w	#$FFFE,tmpdst(a2,d0.w)	;tmpdst: -2 = bench, -1 = ice, 0+ = pen box
 	bne.w	.next
 	addi.w	#9,tmpde(a2,d0.w)		;tmpde: energy +9
@@ -282,14 +282,14 @@ updatecrowdf	;this is called every game loop with d7 = elapsed frames
 	move.b	0(a0,d0.w),(crowdframe+1).w
 	clr.w	d1
 	move.b	1(a0,d0.w),d1
-	move.w	(VDP_CNTR).l,d2		;HVcount
+	move.w	(HVcount).l,d2		;HVcount
 	and.w	d1,d2			;random 0..time
 	add.w	d2,d1
 	move.w	d1,(crowdcnt).w		;crowdcnt = time + random
 .cf	clr.b	(crowdframe).w
 	cmpi.w	#$118,(crowdlevel).w	;280
 	bls.w	rtss8
-	move.w	(VDP_CNTR).l,d0		;HVcount
+	move.w	(HVcount).l,d0		;HVcount
 	andi.w	#$7F,d0
 	cmp.w	#$13,d0
 	blt.w	rtss8
@@ -376,7 +376,7 @@ demoread	;monitor joystick if in demo mode (called every game loop)
 	tst.w	(cont2team).w
 	bne.w	rtss8			;not demo
 	jsr	(ReadJoy1).l
-	btst	#7,d1			;sbut
+	btst	#sbut,d1			;sbut
 	bne.w	startpause1		;start on pad 1 pauses
 	bsr.w	EndDemoOnPress
 	jsr	(ReadJoy2).l

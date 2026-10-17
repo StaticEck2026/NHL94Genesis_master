@@ -1795,7 +1795,7 @@ assnearest
 	clr.l	Yvel(a2)	;Calculated future Ypos of the player closest to the puck
 	move.w	(puckc).w,d1	;move puck carrier SCnum into d1
 	bmi.w	.np	;branch if no puck carrier
-	asl.w	#7,d1	;scsize
+	asl.w	#scsize,d1	;scsize
 	movea.w	#(SortCords-M68K_RAM),a1	;Move SortCords into a1
 	adda.w	d1,a1	;use d1 as offset
 	move.b	pflags(a1),d0	;pflags of puck carrier
@@ -2086,9 +2086,9 @@ asspassrec
 	bne.w	.chkpos	;branch if shooting at top
 	neg.w	d0
 .chkpos
-	cmp.w	#$58,d0	;'X'   ; blueline
+	cmp.w	#Blueline,d0	;'X'   ; blueline
 	blt.w	.nozone
-	cmp.w	#$108,d0	;goalline
+	cmp.w	#Blueline+goalline,d0	;goalline
 	bgt.w	.nozone
 	bra.w	.atkzone
 .nozone
@@ -3672,14 +3672,14 @@ a2touchpuck
 	rts
 ; check for icing of puck penalty
 puckIChk
-	btst	#2,(iflags).w	;#ifok
+	btst	#ifok,(iflags).w	;#ifok
 	beq.w	rtss2
-	btst	#0,(iflags).w	;#ifcgl - if crossed goal line
+	btst	#ifcgl,(iflags).w	;#ifcgl - if crossed goal line
 	bne.w	rtss2
 	tst.w	(puckc).w
 	bpl.w	rtss2
-	move.w	#$108,d0	;goalline
-	btst	#1,(iflags).w	;#ifdir - 1 = must cross top line
+	move.w	#Blueline+goalline,d0	;goalline
+	btst	#ifdir,(iflags).w	;#ifdir - 1 = must cross top line
 	bne.w	.0
 	neg.w	d0
 	cmp.w	(pucky).w,d0	;check other goalline
@@ -3693,10 +3693,10 @@ puckIChk
 	bgt.w	.set
 	cmpi.w	#$FFD4,(puckx).w	;FFD4 - edge of crease
 	blt.w	.set
-	bclr	#2,(iflags).w	;#ifok cleared
+	bclr	#ifok,(iflags).w	;#ifok cleared
 	rts
 .set
-	bset	#0,(iflags).w	;#ifcgl
+	bset	#ifcgl,(iflags).w	;#ifcgl
 	rts
 ; stop spinning puck
 ; a3 = puck
@@ -3753,7 +3753,7 @@ puckshadow
 findpc
 	movem.l	d0-d4/a1-a2,-(sp)
 	movea.w	#(puckcross-M68K_RAM),a1
-	move.w	#$88,d1	;sideline - distance from center to side boards
+	move.w	#Sideline,d1	;sideline - distance from center to side boards
 	move.w	#$108,d4	;goaline
 	bsr.w	.calc
 	neg.w	d4	;make d4 negative to check bottom goal line

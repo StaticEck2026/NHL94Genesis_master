@@ -577,7 +577,7 @@ assdefd
 	clr.w	d3	;clear d3
 .de000
 	add.w	d1,d3	;add d1 to d3
-	cmp.w	#$58,d3	;'X'   ; compare top blueline to d3
+	cmp.w	#Blueline,d3	;'X'   ; compare top blueline to d3
 	blt.w	.de0
 	btst	#4,tmflags(a2)	;check if team is offsides
 	bne.w	.de0	;branch if offsides

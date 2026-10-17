@@ -28,19 +28,19 @@ SetMenuPrintX	;printx = the left edge of the menu box: 5 in 32 column mode, else
 HandleMenuInput	;Act on the pad bits d1 for the current menu: down / up move the selection, C runs the item's handler and
 	;redraws the menu (not if the handler set sflags5 bit 1). Returns eq to leave the menu (start, or C on item 0), ne to stay. Called
 	;from PauseMode, and the stats code
-	btst	#7,d1	;sbut
+	btst	#sbut,d1	;sbut
 	bne.w	.flip	;start: Z clear, flipped to eq
-	btst	#1,d1	;dbut
+	btst	#dbut,d1	;dbut
 	beq.w	.up
 	addq.w	#1,(menuitem).w	;next lower item
 	bra.w	UpdateMenuSelection
 .up
-	btst	#0,d1	;ubut
+	btst	#ubut,d1	;ubut
 	beq.w	.sel
 	subq.w	#1,(menuitem).w	;next higher item
 	bra.w	UpdateMenuSelection
 .sel
-	btst	#5,d1	;cbut
+	btst	#cbut,d1	;cbut
 	beq.w	.flip	;nothing: Z set, flipped to ne
 	bsr.w	seta2
 	move.w	(menuitem).w,d0	;find the handler of the selected item
