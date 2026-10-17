@@ -268,7 +268,7 @@ SFXpuckwall1 equ $28		;+0-3
 SFXpuckice equ $2C		;+0-3
 ;song numbers
 SngTitle equ $78
-SngEOG equ $79
+SngIntermission equ $79
 SngScout equ $7A
 
 

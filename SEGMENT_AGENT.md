@@ -411,10 +411,10 @@ The rows are in ROM address order, the same order as the includes in `src/nhl94.
 - VDP: `stubinc/ports.inc` adds `Vctrl-Vdata` (= VDP_CTRL-VDP_DATA, 4) for `4(a0)` with a0 = VDP_DATA, and `VDPR_MODE1` ... `VDPR_DMASRCH` ($8000-$9700) register write words: `move.w #VDPR_WINY+$1C,Vctrl-Vdata(a0)`. SNASM: use `+`, not `|`.
 - Text codes: `stubinc/equals.inc` adds `TXMAP1-3`, `TXHF`, `TXVF`, `TXPAL1-3`, `TXPRI` for the print/printz/printbigz position byte (`String -(TXPRI+TXMAP1),x,y,...`) and `CC_SetMap` ... `CC_SetMapAndPosition` ($FF-$F8) for printsmall/printz2 control codes (`String CC_SetX,4,CC_SetY,2,...`). Inline Strings after jsr printz/printz2/printbigz use them; tables read by other routines keep raw bytes.
 - Sound: `stubinc/equals.inc` adds `SFX_*` game sound numbers (0-$2F, 92/93 names; +0-3 variants for pass/shot/check/puckwall/puckice) used at the sfx / song call sites.
-  94 also has `SngTitle` ($78), `SngEOG` ($79), `SngScout` ($7A).
+  94 also has `SngTitle` ($78), `SngIntermission` ($79), `SngScout` ($7A).
 - Teams: `stubinc/equals.inc` has the team numbers `ANH`=0 ... `WPG`=25, `ASE`=26, `ASW`=27 (TeamList order); playoffseats uses them. `NumTeams` is `ASW+1` and `NumPlayoffTeams` is `ASE`. `.ls` line rows are commented with the linelist names (Sc1, Sc2, Chk, PP1, PP2, PK1, PK2).
 - VDP commands: `ports.inc` adds `VRAM_W`, `CRAM_W`, `VSRAM_W` (long control words; add `(addr&$3FFF)<<16 + addr>>14`): `move.l #VSRAM_W+(2<<16),Vctrl-Vdata(a0)`.
-- Original names: where NHL92Genesis `src/ram.asm` (EA original source) has a name it is used: `pflags3`, `pf3oside`, `aggress`, `SFXsiren` ... `SFXoooh` (92 names, 94 values), `SngTitle`, `SngEOG`, `Vdata` / `Vctrl` (`Vctrl-Vdata(a0)`). Names 92 lacks follow its style (`SFXhomewin`, `SFX0D`, `SngScout`).
+- Original names: where NHL92Genesis `src/ram.asm` (EA original source) has a name it is used: `pflags3`, `pf3oside`, `aggress`, `SFXsiren` ... `SFXoooh` (92 names, 94 values), `SngTitle`, `SngIntermission`, `Vdata` / `Vctrl` (`Vctrl-Vdata(a0)`). Names 92 lacks follow its style (`SFXhomewin`, `SFX0D`, `SngScout`).
 
 ## Naming lineage
 
