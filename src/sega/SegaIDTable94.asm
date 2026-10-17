@@ -13,11 +13,7 @@
 	dc.b	'                '		; 		$170
 	dc.b	'GM T-50656 -00'		; 05	$180	cartridge cat., product no., version no. (14 bytes)
 	IF CHECKSUM=1					; Security check enabled
-		IF REV=0					; RETAIL
-			dc.w	$5512			; 06	$18E	ROM checksum (installed by checksum tool) (2 bytes)
-		ELSE						; REV A
-			dc.w	$0000			; 06	$18E	ROM checksum (installed by checksum tool) (2 bytes)
-		ENDIF
+		dc.w	$5512			; 06	$18E	ROM checksum (installed by checksum tool) (2 bytes)
 	ELSE							; Security check disabled
 		dc.w	$0000				; 06	$18E	ROM checksum (installed by checksum tool) (2 bytes)
 	ENDIF

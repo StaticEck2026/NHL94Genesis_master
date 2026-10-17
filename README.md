@@ -54,12 +54,12 @@ If the ROM is missing (or is a different dump), the build stops with the full pa
 
 `npm run assets` runs only this step. `npm run extractassets` still forces a fresh extraction. `tools/build.js` runs it as step 1 of every build; `tools/verify_all.sh` also deletes `Extracted/` first so it is always a fresh extract.
 
-Full ROM builds assemble `src/nhl94.asm`. The listing is `output/build/nhl94 .lst` and the raw image `output/build/nhl94.raw.bin`. The finished ROM is `output/nhl94.bin` (`nhl94-revA.bin` with `rev=1`, `nhl94-dev.bin` for a dev build); a segment is `output/<name>.bin`.
+Full ROM builds assemble `src/nhl94.asm`. The listing is `output/build/nhl94 .lst` and the raw image `output/build/nhl94.raw.bin`. The finished ROM is `output/nhl94.bin` (`nhl94-dev.bin` for a dev build); a segment is `output/<name>.bin`.
 
 | Script | Flags | Result |
 | --- | --- | --- |
-| `npm run build:retail` | `rev=0`, `checksum=1` | Retail, validation included, verified byte for byte against `lst/nhl94.bin`. |
-| `npm run build:dev` | `rev=0`, `checksum=0` | No validation and no retail verify. Use this while editing. |
+| `npm run build:retail` | `checksum=1` | Retail, validation included, verified byte for byte against `lst/nhl94.bin`. |
+| `npm run build:dev` | `checksum=0` | No validation and no retail verify. Use this while editing. |
 
 `build:dev` (`checksum=0`): `Start` skips `jsr ValidationRoutine` (3 `nop`s instead) and the header checksum at `$18E` is 0, so changed code still boots. With `checksum=1` the validation routine sums the ROM, and any change turns the screen red. `ValidationRoutine` stays in the ROM but is never called.
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // build.js: the whole NHL 94 build, one line per step, on Windows and Linux (wine).
-//   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/nhl94.bin (nhl94-revA.bin, nhl94-dev.bin)
+//   node tools/build.js [retail|dev] [--verbose]       full ROM -> output/nhl94.bin (nhl94-dev.bin)
 //   node tools/build.js --seg <name> [--verbose]       one segment (tools/segments.json), verified
 //   node tools/build.js --segacd [--verbose]           Sega CD fragments, compared with cdbin/
 // --no-color (or NO_COLOR) turns the colors off; they are also off when the output is not a terminal.
 // retail: CHECKSUM=1 and verified against lst/nhl94.bin. dev: CHECKSUM=0, not verified.
-// The rev / checksum environment variables (set rev=1 / set checksum=0 on Windows, rev=1 node ... on Linux) override the defaults.
+// The checksum environment variable (set checksum=0 on Windows, checksum=0 node ... on Linux) overrides the default.
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -33,7 +33,6 @@ const segIdx = args.indexOf('--seg');
 const seg = segIdx >= 0 ? args[segIdx + 1] : null;
 const mode = args.find((a) => a === 'retail' || a === 'dev') || 'retail';
 const env = (k) => process.env[k] ?? process.env[k.toUpperCase()] ?? process.env[k.toLowerCase()];
-const rev = env('rev') === '1' ? 1 : 0;
 const checksum = env('checksum') !== undefined ? (env('checksum') === '0' ? 0 : 1) : (mode === 'dev' && !seg ? 0 : 1);
 
 let steps = 5;
@@ -187,13 +186,13 @@ if (seg !== null && !SEGMENTS[seg]) {
 }
 const name = seg || 'nhl94';
 // Intermediate files go in output/build/: the raw assembler image, its listing and the log.
-// The one result is output/<final>: nhl94.bin (retail), nhl94-revA.bin, nhl94-dev.bin, or <seg>.bin.
+// The one result is output/<final>: nhl94.bin (retail), nhl94-dev.bin, or <seg>.bin.
 const BUILD = path.join(OUT, 'build');
 const bin = path.join(BUILD, `${name}.raw.bin`);
 const lst = path.join(BUILD, `${name} .lst`);
 const fixed = path.join(BUILD, `modified_${name}.raw.bin`);
 const logPath = path.join(BUILD, `Build_${name}.log`);
-const final = seg ? `${seg}.bin` : `nhl94${rev ? '-revA' : ''}${mode === 'dev' ? '-dev' : ''}.bin`;
+const final = seg ? `${seg}.bin` : `nhl94${mode === 'dev' ? '-dev' : ''}.bin`;
 const mod = path.join(OUT, final);
 
 // 1. prebuild: ROM check and Extracted/ assets.
@@ -216,7 +215,7 @@ const mod = path.join(OUT, final);
     const o = `..\\output\\build\\${name}`;
     const asmArgs = ['/p', '/m', '/g', '/o', 'd-', '/o', 's-', '/o', 'r+', '/o', 'l+', '/o', 'l.', '/o', 'ow+', '/o', 'op-',
         '/o', 'os+', '/o', 'oz+', '/o', 'omq-', '/o', 'oaq+', '/o', 'osq+',
-        '/e', `REV=${rev}`, '/e', `CHECKSUM=${checksum}`, `${src},${o}.raw.bin,${o},${o}`];
+        '/e', `CHECKSUM=${checksum}`, `${src},${o}.raw.bin,${o},${o}`];
     const exe = path.join(ROOT, 'assembler', 'Assembler.exe');
     const r = await (WIN ? run(exe, asmArgs, { cwd: path.join(ROOT, 'src') })
         : run('wine', [exe, ...asmArgs], { cwd: path.join(ROOT, 'src'), env: { ...process.env, WINEDEBUG: '-all' } }));
@@ -235,7 +234,7 @@ const mod = path.join(OUT, final);
         const bad = lines.filter((l) => /\.(asm|inc|mac)\(\d+|error|fatal|not recognised|undefined/i.test(l) && !/error\(s\) from/.test(l)).slice(0, 40);
         fail('assemble', `${errors} error(s), see ${rel(logPath)}`, bad.join('\n'));
     }
-    step('assemble', `${errors} errors, ${warnings} warnings, ${sum[2]} lines in ${sum[3]}s (REV=${rev} CHECKSUM=${checksum}) -> ${rel(bin)}`);
+    step('assemble', `${errors} errors, ${warnings} warnings, ${sum[2]} lines in ${sum[3]}s (CHECKSUM=${checksum}) -> ${rel(bin)}`);
     detail(r.out);
 }
 
@@ -266,8 +265,6 @@ if (seg) {
 // 5. verify against the retail ROM.
 if (!seg && mode === 'dev') {
     step('verify', `${rel(mod)} not verified (dev build)`);
-} else if (!seg && rev) {
-    step('verify', `${rel(mod)} not verified (no REV A reference ROM)`);
 } else {
     begin('verify');
     const r = await (seg ? node('verifySegment.js', [seg, SEGMENTS[seg], REF]) : node('verifyRom.js', [mod, REF]));
