@@ -59,7 +59,7 @@ asswingo	;player a3 is winger on offense
 .de2
 	cmp.w	temp5(a3),d2	;compare temp5 with d2
 	bne.w	.de3	;branch if different zone
-	move.w	(VDP_CNTR).l,d0	;move frame counter into d0
+	move.w	(HVcount).l,d0	;move frame counter into d0
 	andi.w	#$7F,d0	;pass first 7 bits
 	bne.w	.nodec	;branch if not equal to 0 - this allows random movement in zone while waiting
 .de3
@@ -215,7 +215,7 @@ asscentero
 .de2
 	cmp.w	temp5(a3),d2	;compare temp5 to d2
 	bne.w	.de3
-	move.w	(VDP_CNTR).l,d0	;move frame counter into d0.
+	move.w	(HVcount).l,d0	;move frame counter into d0.
 	;This allows a chance for random movement in zone when waiting
 	andi.w	#$7F,d0	;pass bottom 7 bits
 	bne.w	.nodec
@@ -510,7 +510,7 @@ checkanim	;Goalie animation check; assgoaliectrl branches here too
 	st	temp4(a3)	;FFFF into temp4
 	cmpi.w	#$5A,temp5(a3)	;'Z' ; compare to temp5
 	bgt.w	.de1	;branch if greater
-	move.w	(VDP_CNTR).l,d0
+	move.w	(HVcount).l,d0
 	andi.w	#3,d0	;pass first 2 bits
 	bne.w	.de1	;branch if not 0
 	moveq	#5,d0
@@ -1151,7 +1151,7 @@ asspuckc	;player a3 is puck handler
 .6
 	clr.w	temp1(a3)
 	move.w	#8,temp2(a3)
-	move.w	(VDP_CNTR).l,d0
+	move.w	(HVcount).l,d0
 	andi.w	#3,d0
 	move.w	d0,temp3(a3)
 .7
@@ -1274,7 +1274,7 @@ asspuckc	;player a3 is puck handler
 	eori.w	#4,d1
 	cmp.w	d0,d1
 	bne.w	.next
-	move.w	(VDP_CNTR).l,d1
+	move.w	(HVcount).l,d1
 	andi.w	#1,d1
 	add.w	d1,d0
 	andi.w	#7,d0
@@ -1315,7 +1315,7 @@ chk4lc	;see if computer should call line change
 	bmi.w	rtss2
 	cmp.w	#$58,d0
 	bgt.w	rtss2
-	move.w	(VDP_CNTR).l,d0
+	move.w	(HVcount).l,d0
 	andi.w	#3,d0
 	bne.w	rtss2
 	btst	#pf2lcm,pflags2(a3)
@@ -1356,7 +1356,7 @@ chk4shot
 	bne.w	.pkill	;killing penalty
 	tst.w	(threat).w
 	beq.w	.pkill	;no threat
-	move.w	(VDP_CNTR).l,d0
+	move.w	(HVcount).l,d0
 	andi.w	#3,d0
 	bne.w	.pkill
 	move.w	#$58,d0	;'X'   ; top blue line Y position
@@ -2035,7 +2035,7 @@ check4check
 	bne.w	.next	;branch if not facing in that direction
 	btst	#5,(sflags6).w	;check if puckc in slot
 	bne.w	Acheck	;branch if in slot
-	move.w	(VDP_CNTR).l,d0	;move HVcounter into d0
+	move.w	(HVcount).l,d0	;move HVcounter into d0
 	andi.w	#3,d0	;pass first 2 bits
 	bne.w	burst	;throw check
 	bra.w	Acheck
@@ -3390,7 +3390,7 @@ Endfaceoff	;drop the puck: pick the faceoff winner and send the puck off
 	btst	#3,d0
 	bne.w	.nojoy
 	andi.w	#7,d0
-	move.w	(VDP_CNTR).l,d1
+	move.w	(HVcount).l,d1
 	andi.w	#3,d1
 	bne.w	.nj2
 .nojoy
@@ -4568,7 +4568,7 @@ playeracc
 .sube
 	tst.w	(OptLine).w
 	bne.w	rtss2
-	move.w	(VDP_CNTR).l,d0
+	move.w	(HVcount).l,d0
 	andi.w	#$7F,d0
 	bne.w	rtss2
 	bsr.w	getpde

@@ -17,13 +17,13 @@ ContinueValidation	subq.l	#1,d1
 	cmpi.l	#$8AB9F121,d0		;retail sum. Real CMPI (0C80), not EA cmp
 	bne.s	VDPErrorSetup			;wrong sum: red screen
 	rts
-VDPErrorSetup	movea.l	#VDP_CTRL,a4
+VDPErrorSetup	movea.l	#Vctrl,a4
 	move.w	#VDPR_AUTOINC+$02,(a4)		;auto increment 2
 	move.w	#VDPR_MODE1+$04,(a4)		;mode 1: h interrupt off
 	move.w	#VDPR_BGCOL,(a4)		;backdrop = colour 0
 	move.w	#VDPR_MODE2+$44,(a4)		;mode 2: display on, v interrupt off, dma off
 	move.w	#$C000,(a4)		;cram write, colour 0 (first command word only)
 	move.w	#$3F,d1			;64 colours
-VRAMWriteLoop	move.w	#$E,(VDP_DATA).l	;colour = $00E, full red
+VRAMWriteLoop	move.w	#$E,(Vdata).l	;colour = $00E, full red
 	dbf	d1,VRAMWriteLoop
 Halt	bra.s	Halt			;hang

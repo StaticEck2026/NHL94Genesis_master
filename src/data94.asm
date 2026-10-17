@@ -1307,7 +1307,7 @@ crash	;printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the Rinktil
 	bsr.w	.ri	;d0
 	movea.w	#(mesarea-M68K_RAM),a1
 	bsr.w	printbig
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)
 	move.w	#VDPR_WINY+$06,Vctrl-Vdata(a0)
 	move.w	#VDPR_AUTOINC+$02,Vctrl-Vdata(a0)

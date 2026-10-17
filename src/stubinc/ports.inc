@@ -7,15 +7,12 @@ IO_CT2_CTRL equ $A1000A
 IO_CT2_DATA equ $A10004
 IO_Z80BUS equ $A11100
 IO_Z80RES equ $A11200
-VDP_CNTR equ $C00008
-VDP_CTRL equ $C00004
-VDP_DATA equ $C00000
-VDP_PSG equ $C00011
 
-Vdata equ VDP_DATA	;names: video ports. Control port offset from a0 = Vdata: move.w #x,Vctrl-Vdata(a0) with a0 = VDP_DATA
+Vdata equ $C00000	;video ports. Control port offset from a0 = Vdata: move.w #x,Vctrl-Vdata(a0) with a0 = Vdata
 Vctrl equ Vdata+4
-HVcount equ VDP_CNTR	;horizontal / vertical counter
-;VDP register write words for the control port (register number in the high byte): move.w #VDPR_MODE2+$74,(VDP_CTRL)
+Asound equ $C00011	;PSG sound port
+HVcount equ $C00008	;horizontal / vertical counter
+;VDP register write words for the control port (register number in the high byte): move.w #VDPR_MODE2+$74,(Vctrl)
 VDPR_MODE1 equ $8000
 VDPR_MODE2 equ $8100
 VDPR_PLANEA equ $8200	;plane A name table address / $400

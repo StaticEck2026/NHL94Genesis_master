@@ -1752,7 +1752,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	jsr	(p_turnoff).l
 	bsr.w	setupice_highlight
 	bsr.w	ClrHor
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)	;window H position 0
 	move.w	#VDPR_WINY,Vctrl-Vdata(a0)	;window V position 0
 	move.w	(ExtraChars).w,d4	;ref cam chars
@@ -1830,7 +1830,7 @@ StartHL2	;Play hilite for game a0. Start skips it with a random result. A tied g
 	jsr	(SetupPauseScreen).w	;pause menu screen
 	jsr	(DrawMenuScreen).w
 	move.w	#$18,(palcount).w
-	move.w	#SngIntermission,-(sp)	;song $79
+	move.w	#SngEOP,-(sp)	;song $79
 	bsr.w	song
 	movem.l	(sp),d0-d7/a0-a6
 	move.w	#4,gsper(a0)	;gsper: OT

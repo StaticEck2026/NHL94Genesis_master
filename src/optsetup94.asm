@@ -934,8 +934,8 @@ ReadSetupPads	;wait up to $5460 frames (6 minutes) for a press on any pad (4 wit
 SetupDemo	;Demo after no press for $5460 frames. Clear demoflag, seed RNGseed, Regular Season, Demo, line changes On
 	;penalties On. Falls into SetupStart. Branched to from GameSetUp
 	clr.w	(demoflag).w
-	move.w	(VDP_CNTR).l,(seed).w
-	move.w	(VDP_CNTR).l,(seed+2).w
+	move.w	(HVcount).l,(seed).w
+	move.w	(HVcount).l,(seed+2).w
 	clr.w	(OptPlayMode).w
 	clr.w	(OptNOP).w	;Demo
 	clr.w	(OptLine).w
@@ -947,8 +947,8 @@ SetupStart	;Start pressed: Copy Goalies to both teams, set pojoy, seed RNGseed, 
 	move.w	(sp),(goaliemode1).w
 	move.w	(sp)+,(goaliemode2).w
 	jsr	(UpdatePlayoffLevel).l
-	move.w	(VDP_CNTR).l,(seed).w
-	move.w	(VDP_CNTR).l,(seed+2).w
+	move.w	(HVcount).l,(seed).w
+	move.w	(HVcount).l,(seed+2).w
 	move.w	(OptLine).w,(TmpOptLine2).w
 	cmpi.w	#2,(OptLine).w
 	bne.w	.0

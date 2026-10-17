@@ -141,7 +141,7 @@ cramfade
 	move.w	d5,d4
 	not.w	d4
 	movea.l	#palfadenew,a1
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	clr.w	d6
 .top
 	move.w	d3,d2
@@ -177,7 +177,7 @@ CopyPaletteToCRAM	;Copy all 64 palfadenew colours to colour ram, protected from 
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
 	movea.w	#(palfadenew-M68K_RAM),a1
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#CRAM_W,Vctrl-Vdata(a0)
 	moveq	#$1F,d0
 .0
@@ -557,7 +557,7 @@ DoDMA
 .dd	;(a global in ; local here, only DoDMA uses it)
 	movem.l	d2-d3/a1,-(sp)
 .nd
-	lea	(VDP_CTRL).l,a1
+	lea	(Vctrl).l,a1
 	move.w	#VDPR_MODE2+$54,(a1)
 	move.w	#VDPR_AUTOINC+$02,(a1)
 	move.w	#$9300,d2
@@ -614,7 +614,7 @@ DoDMA_nd2	;vram to vram copy by dma, protected from vblank
 	movem.l	d0-d3/a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	lea	(VDP_CTRL).l,a1
+	lea	(Vctrl).l,a1
 	move.w	#VDPR_MODE2+$54,(a1)
 	move.w	#VDPR_AUTOINC+$01,(a1)
 	move.w	#$9300,d3
@@ -658,7 +658,7 @@ DoDMA_nd2	;vram to vram copy by dma, protected from vblank
 ; d2 = data to fill with
 DoFill
 	movem.l	d3/a1,-(sp)
-	movea.l	#VDP_DATA,a1
+	movea.l	#Vdata,a1
 	andi.l	#$FFFF,d1
 	asl.l	#2,d1
 	lsr.w	#2,d1
@@ -678,7 +678,7 @@ DoFill
 	movem.l	(sp)+,d3/a1
 	rts
 WaitDMA	;wait for dma completion
-	move.w	(VDP_CTRL).l,-(sp)
+	move.w	(Vctrl).l,-(sp)
 	btst	#1,1(sp)
 	addq.w	#2,sp
 	bne.s	WaitDMA
@@ -696,7 +696,7 @@ setVram_0	;second half of setVram without the fade: clear vram and set the VDP r
 	;Falls in from setVram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w	;#dfng
-	move.w	#VDPR_AUTOINC+$02,(VDP_CTRL).l
+	move.w	#VDPR_AUTOINC+$02,(Vctrl).l
 	clr.w	d0
 	bsr.w	Vmaddr
 	move.w	#$3FFF,d0
@@ -752,7 +752,7 @@ setVram_0	;second half of setVram without the fade: clear vram and set the VDP r
 ; d0 = vram address
 ; returns a0 = Vdata!!!
 Vmaddr
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	asl.l	#2,d0
 	lsr.w	#2,d0
 	ori.w	#$4000,d0
