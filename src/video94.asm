@@ -1357,7 +1357,7 @@ FormatAndPrintTime	;d0 bits 14-15 = period, bits 0-13 = seconds
 	clr.w	d0
 	rol.l	#2,d0
 	movea.l	#PeriodLabelTable,a1
-	bsr.w	PrintStringFromList
+	bsr.w	Fprintsmall
 	addq.w	#2,(printx).w
 	swap	d0
 	lsr.w	#2,d0

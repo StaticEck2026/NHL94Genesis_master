@@ -911,7 +911,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	move.w	#1,(DispAttribCtr).w
 	bsr.w	UpdatePlayoffScroll
 .input
-	bsr.w	PlayoffScreen_waitvsync
+	bsr.w	waitxc1
 	movea.l	#rtss2,a0
 	jsr	(DrawPlayoffSprite).l
 	bsr.w	HandlePlayoffInput
@@ -966,7 +966,7 @@ UpdatePlayoffScroll	;Move the tree one step (PlayerScrollCtr) and stop on a page
 PlayoffScreenExit	;Drop HandlePlayoffInput's return address and return from PlayoffScreen
 	addq.w	#4,sp
 	rts
-PlayoffScreen_waitvsync	;Each time palcount runs out, eor the color word at palfadenew+$42 with $EE and restart palcount at $18; then wait for the next vblank
+waitxc1	;(was PlayoffScreen_waitvsync) Each time palcount runs out, eor the color word at palfadenew+$42 with $EE and restart palcount at $18; then wait for the next vblank
 	tst.w	(palcount).w
 	bpl.w	.wait
 	eori.w	#$EE,(palfadenew+$42).w
