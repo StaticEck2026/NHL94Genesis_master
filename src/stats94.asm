@@ -76,7 +76,7 @@ UpdateScoresScroll	;Called every frame by ShowScores: add PlayerScrollCtr to Ver
 UpdateVertScrollReg	;VSRAM word 1 = VertLineScrolling - $30
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FFD0,d0
 	add.w	(VertLineScrolling).w,d0
@@ -752,7 +752,7 @@ UpdatePlayerListScroll	;Set VertLineScrolling = d0. Stop on a page boundary ($80
 .2
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FF90,d0
 	add.w	(VertLineScrolling).w,d0
@@ -1047,7 +1047,7 @@ UpdateScoringScroll	;Set VertLineScrolling = d0. Stop on an entry boundary (32 l
 .2
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	moveq	#$FFFFFFB0,d0
 	add.w	(VertLineScrolling).w,d0
@@ -1223,7 +1223,7 @@ UpdatePenaltyScroll	;Set VertLineScrolling = d0. Stop on an entry boundary (24 l
 .2
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FFB0,d0
 	add.w	(VertLineScrolling).w,d0
@@ -1447,7 +1447,7 @@ UpdateStatsListScroll	;Stats screen per frame: scroll 0 ... SelectedPlayerIdx, s
 SetStatsListScrollReg	;VSRAM = VertLineScrolling - $68
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FF98,d0
 	add.w	(VertLineScrolling).w,d0

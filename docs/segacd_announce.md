@@ -18,7 +18,7 @@ jsr     $371D2.l
 | Call | Argument |
 | --- | --- |
 | `$D312` | immediate `$7A` (scouting) |
-| `$245D2` | immediate `$79` (cartridge song `$79` is `fmtune_intermission`) |
+| `$245D2` | immediate `$79` (cartridge song `$79` is `fmtune_eop`) |
 | `$10B24`, `$10CE6` | the word at `$1A56A` |
 | `$10BD6` | the word at `$1AD70` |
 

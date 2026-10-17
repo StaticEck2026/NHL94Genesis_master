@@ -498,7 +498,7 @@ GameStatisticsScreen	;"Game Statistics" menu item (menu lists): both teams' tota
 SetStatScroll	;Plane A vertical scroll (VSRAM 0) = VertLineScrolling - $50, with disflags bit 2 set while it writes
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W+(2<<16),Vctrl-Vdata(a0)
 	move.w	#$FFB0,d0
 	add.w	(VertLineScrolling).w,d0

@@ -14,7 +14,7 @@ Begin	;cold start, entered from Start. Clear RAM, init sound and menus, go to ti
 	cmpa.w	#$DEF4,a0
 	blt.s	.0
 	clr.w	(PALflag).w		;clear the PAL flag
-	move.w	(VDP_CTRL).l,d0
+	move.w	(Vctrl).l,d0
 	andi.w	#1<<PAL_MODE,d0		;VDP status bit 0 = PAL (50 Hz). it DMA busy; that is bit 1
 	move.w	d0,(PalMode).w
 	beq.w	.ntsc
@@ -454,7 +454,7 @@ Pausemode	;Game is in pause mode now
 	jsr	(SetHor).l
 	bra.w	.hor
 .clr	jsr	(ClrHor).l
-.hor	movea.l	#VDP_DATA,a0
+.hor	movea.l	#Vdata,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)
 	move.w	#VDPR_WINY,Vctrl-Vdata(a0)
 	bset	#dfclock,(disflags).w		;dfclock: clock needs update
@@ -469,7 +469,7 @@ Pausemode	;Game is in pause mode now
 
 SetupPauseScreen	;Draw routine for the pause menu.
 	;also called
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)		;playfield 3 width
 	move.w	#VDPR_WINY+$1C,Vctrl-Vdata(a0)		;playfield 3 height
 	jsr	(SetHor).l

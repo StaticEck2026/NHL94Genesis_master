@@ -24,7 +24,7 @@
 
 ; SngTitle	=	1	;Title song
 ; SngEOP	=	0	;End of Period song
-; SngIntermission	=	3	;End of Game song
+; SngEOP	=	3	;End of Game song
 ; SngPO	=	4	;playoffs music
 
 ; ;sfx????? sound effects equates for Rob's sound file

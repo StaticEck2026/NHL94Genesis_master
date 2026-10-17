@@ -776,8 +776,8 @@ EndOneTimer	;End a one-timer for a3: bits cleared, onetimerplayer = -1, SetSPA S
 newTitleScreen	;the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, TitleImg) with the vblank TitleVBlank, song $78, then the
 	;scrolling credits (Credits, CreditsList text; CreditsPrintRow, CreditsWait) until start. Called from Opening
 	move	#$2700,sr
-	move.w	(VDP_CNTR).l,(seed).w
-	move.w	(VDP_CNTR).l,(seed+2).w
+	move.w	(HVcount).l,(seed).w
+	move.w	(HVcount).l,(seed+2).w
 	move.l	#VBlank_TitleScreen,(vbint).l
 	bset	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
@@ -790,7 +790,7 @@ newTitleScreen	;the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, Title
 	move.w	#$FC00,(VSCRLPM).w
 	move.w	#0,d0
 	jsr	(setVram).l
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.w	#VDPR_WINX,Vctrl-Vdata(a0)
 	move.w	#VDPR_WINY+$17,Vctrl-Vdata(a0)
 	move.w	#VDPR_MODE3+$03,Vctrl-Vdata(a0)
@@ -978,7 +978,7 @@ VBlank_TitleScreen	;newTitleScreen vblank: line scroll table (SortCords) and Vsc
 	move.w	(VSCRLPM).w,d1
 	move.w	#$1C0,d0
 	jsr	(DoDMA).l
-	movea.l	#VDP_DATA,a0
+	movea.l	#Vdata,a0
 	move.l	#VSRAM_W,Vctrl-Vdata(a0)
 	move.w	(Vscroll).w,(a0)
 	movea.w	#(Satt-M68K_RAM),a0

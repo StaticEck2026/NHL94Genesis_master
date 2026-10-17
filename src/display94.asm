@@ -998,17 +998,17 @@ updatesound	;move the crowd noise volume (psg noise channel, asv) toward crowdle
 	bpl.w	.non
 	clr.w	(asv).w
 .non
-	move.b	#$C8,(VDP_PSG).l
-	move.b	#1,(VDP_PSG).l
+	move.b	#$C8,(Asound).l
+	move.b	#1,(Asound).l
 	move.b	(asv).w,d0
 	eori.b	#$F,d0
 	ori.b	#$F0,d0
-	move.b	d0,(VDP_PSG).l
+	move.b	d0,(Asound).l
 	rts
 KillCrowd	;silence the crowd noise (psg). Called from Begin, SetupPauseScreen, StartHL2, ...
-	move.b	#$E7,(VDP_PSG).l
-	move.b	#$DF,(VDP_PSG).l
-	move.b	#$C8,(VDP_PSG).l
-	move.b	#1,(VDP_PSG).l
-	move.b	#$FF,(VDP_PSG).l
+	move.b	#$E7,(Asound).l
+	move.b	#$DF,(Asound).l
+	move.b	#$C8,(Asound).l
+	move.b	#1,(Asound).l
+	move.b	#$FF,(Asound).l
 	rts

@@ -733,7 +733,7 @@ pcm_sample_table	;(sample address, 0) for PCM patches $60-$6E (lea in handle_com
 	dc.l	sfx_crowdboo_pcm,0		;patch $6B
 	dc.l	sfx_oooh_pcm,0		;patch $6C
 	dc.l	sfx_crowdcheer_pcm,0		;patch $6D
-	dc.l	sfx_id_0E_pcm,0		;patch $6E
+	dc.l	sfx_bglass_pcm,0		;patch $6E
 sfx_shotbh_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_shotbh_pcm.bin	;sample 2: shotbh
 	even
@@ -741,7 +741,7 @@ sfx_pass_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_pass_pcm.bin	;sample 1: pass
 	dc.b	$FF			;pad: retail leftover byte
 sfx_oooh_pcm
-	incbin	..\Extracted\NHL94\Sound\sfx_oooh_pcm.bin	;sample 12: oooh, sfx_id_0D, sfx_id_0E
+	incbin	..\Extracted\NHL94\Sound\sfx_oooh_pcm.bin	;sample 12: oooh, sfx_oooh2, sfx_bglass
 	even
 sfx_crowdboo_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_crowdboo_pcm.bin	;sample 11: crowdboo
@@ -752,11 +752,11 @@ sfx_check_pcm
 sfx_crowdcheer_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_crowdcheer_pcm.bin	;sample 13: crowdcheer, homewin
 	even
-sfx_id_0E_pcm
-	incbin	..\Extracted\NHL94\Sound\sfx_id_0E_pcm.bin	;sample 14: sfx_id_0E
+sfx_bglass_pcm
+	incbin	..\Extracted\NHL94\Sound\sfx_bglass_pcm.bin	;sample 14: sfx_bglass
 	dc.b	$FF			;pad: retail leftover byte
 sfx_playerwall_pcm
-	incbin	..\Extracted\NHL94\Sound\sfx_playerwall_pcm.bin	;sample 6: playerwall, sfx_id_21-23
+	incbin	..\Extracted\NHL94\Sound\sfx_playerwall_pcm.bin	;sample 6: playerwall, sfx_playerwall2-23
 	even
 sfx_check2_pcm
 	incbin	..\Extracted\NHL94\Sound\sfx_check2_pcm.bin	;sample 4: check2, check4
@@ -787,8 +787,8 @@ SoundStreamTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_mus
 	dc.l	sfx_hitlow_cmdstream	;sound $A
 	dc.l	sfx_crowdcheer_cmdstream	;sound $B
 	dc.l	sfx_crowdboo_cmdstream	;sound $C
-	dc.l	sfx_id_0D_cmdstream	;sound $D
-	dc.l	sfx_id_0E_cmdstream	;sound $E
+	dc.l	sfx_oooh2_cmdstream	;sound $D
+	dc.l	sfx_bglass_cmdstream	;sound $E
 	dc.l	sfx_homewin_cmdstream	;sound $F
 	dc.l	sfx_pass1_cmdstream	;sound $10
 	dc.l	sfx_pass2_cmdstream	;sound $11
@@ -807,9 +807,9 @@ SoundStreamTable	;event stream of sounds 0-$7A as long pointers (play_sfx_or_mus
 	dc.l	sfx_check3_cmdstream	;sound $1E
 	dc.l	sfx_check4_cmdstream	;sound $1F
 	dc.l	sfx_playerwall_cmdstream	;sound $20
-	dc.l	sfx_id_21_cmdstream	;sound $21
-	dc.l	sfx_id_22_cmdstream	;sound $22
-	dc.l	sfx_id_23_cmdstream	;sound $23
+	dc.l	sfx_playerwall2_cmdstream	;sound $21
+	dc.l	sfx_playerwall3_cmdstream	;sound $22
+	dc.l	sfx_playerwall4_cmdstream	;sound $23
 	dc.l	sfx_puckbody_cmdstream	;sound $24
 	dc.l	sfx_puckpost_cmdstream	;sound $25
 	dc.l	sfx_id_26_27_cmdstream	;sound $26
@@ -896,7 +896,7 @@ SongPointerTable	;the songs $30-$7A of SoundStreamTable (stop_current_song reads
 	dc.l	fmtune_id_76_cmdstream	;song $76
 	dc.l	fmtune_id_77_cmdstream	;song $77
 	dc.l	fmtune_title_cmdstream	;song $78
-	dc.l	fmtune_intermission_cmdstream	;song $79
+	dc.l	fmtune_eop_cmdstream	;song $79
 	dc.l	fmtune_scouting_cmdstream	;song $7A
 sfx_beep1_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_beep1_cmdstream.bin	;sound $1 (SFXbeep1)
@@ -940,14 +940,14 @@ sfx_puckpost_cmdstream
 sfx_playerwall_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_playerwall_cmdstream.bin	;sound $20
 	even
-sfx_id_21_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_id_21_cmdstream.bin	;sound $21
+sfx_playerwall2_cmdstream
+	incbin	..\Extracted\NHL94\Sound\sfx_playerwall2_cmdstream.bin	;sound $21
 	even
-sfx_id_22_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_id_22_cmdstream.bin	;sound $22
+sfx_playerwall3_cmdstream
+	incbin	..\Extracted\NHL94\Sound\sfx_playerwall3_cmdstream.bin	;sound $22
 	even
-sfx_id_23_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_id_23_cmdstream.bin	;sound $23
+sfx_playerwall4_cmdstream
+	incbin	..\Extracted\NHL94\Sound\sfx_playerwall4_cmdstream.bin	;sound $23
 	even
 sfx_puckwall1_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_puckwall1_cmdstream.bin	;sound $28
@@ -1031,11 +1031,11 @@ sfx_crowdcheer_cmdstream
 sfx_crowdboo_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_crowdboo_cmdstream.bin	;sound $C (SFXcrowdboo)
 	even
-sfx_id_0E_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_id_0E_cmdstream.bin	;sound $E
+sfx_bglass_cmdstream
+	incbin	..\Extracted\NHL94\Sound\sfx_bglass_cmdstream.bin	;sound $E
 	even
-sfx_id_0D_cmdstream
-	incbin	..\Extracted\NHL94\Sound\sfx_id_0D_cmdstream.bin	;sound $D
+sfx_oooh2_cmdstream
+	incbin	..\Extracted\NHL94\Sound\sfx_oooh2_cmdstream.bin	;sound $D
 	even
 sfx_siren_cmdstream
 	incbin	..\Extracted\NHL94\Sound\sfx_siren_cmdstream.bin	;sound $0
@@ -1260,10 +1260,10 @@ fmtune_title_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_title_cmdstream94.bin	;song $78: ExitToOpening, newTitleScreen. One stream that loops to its start
 	even
 	dc.l	fmtune_title_cmdstream	;loop pointer
-fmtune_intermission_cmdstream
-	incbin	..\Extracted\NHL94\Sound\fmtune_intermission_cmdstream94.bin	;song $79: IntermissionStart, StartHL2
+fmtune_eop_cmdstream
+	incbin	..\Extracted\NHL94\Sound\fmtune_eop_cmdstream94.bin	;song $79: IntermissionStart, StartHL2
 	even
-	dc.l	fmtune_intermission_cmdstream+4	;loop pointer (past the first event)
+	dc.l	fmtune_eop_cmdstream+4	;loop pointer (past the first event)
 fmtune_scouting_cmdstream
 	incbin	..\Extracted\NHL94\Sound\fmtune_scouting_cmdstream94.bin	;song $7A: ScoutingReport
 	even

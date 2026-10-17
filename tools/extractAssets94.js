@@ -73,12 +73,12 @@ const assets = [
     { name: 'z80_snd_drv93_end.bin', folder: 'NHL94/Sound', start: 0x0001B00D, end: 0x0001B01B }, // rest of the Z80 driver (93 file, same bytes)
     { name: 'sfx_shotbh_pcm.bin', folder: 'NHL94/Sound', start: 0x0001B094, end: 0x0001B288 }, // sample 2: shotbh (93 file, same bytes)
     { name: 'sfx_pass_pcm.bin', folder: 'NHL94/Sound', start: 0x0001B288, end: 0x0001BFB5 }, // sample 1: pass (93 file, same bytes)
-    { name: 'sfx_oooh_pcm.bin', folder: 'NHL94/Sound', start: 0x0001BFB6, end: 0x0001F1FA }, // sample 12: oooh, sfx_id_0D, sfx_id_0E (93 file, same bytes)
+    { name: 'sfx_oooh_pcm.bin', folder: 'NHL94/Sound', start: 0x0001BFB6, end: 0x0001F1FA }, // sample 12: oooh, sfx_oooh2, sfx_bglass (93 file, same bytes)
     { name: 'sfx_crowdboo_pcm.bin', folder: 'NHL94/Sound', start: 0x0001F1FA, end: 0x00021747 }, // sample 11: crowdboo (93 file, same bytes)
     { name: 'sfx_check_pcm.bin', folder: 'NHL94/Sound', start: 0x00021748, end: 0x0002369A }, // sample 5: check1, check3 (93 file, same bytes)
     { name: 'sfx_crowdcheer_pcm.bin', folder: 'NHL94/Sound', start: 0x0002369A, end: 0x0002657A }, // sample 13: crowdcheer, homewin (93 file, same bytes)
-    { name: 'sfx_id_0E_pcm.bin', folder: 'NHL94/Sound', start: 0x0002657A, end: 0x00029FF9 }, // sample 14: sfx_id_0E (93 file, same bytes)
-    { name: 'sfx_playerwall_pcm.bin', folder: 'NHL94/Sound', start: 0x00029FFA, end: 0x0002A4AA }, // sample 6: playerwall, sfx_id_21-23 (93 file, same bytes)
+    { name: 'sfx_bglass_pcm.bin', folder: 'NHL94/Sound', start: 0x0002657A, end: 0x00029FF9 }, // sample 14: sfx_bglass (93 file, same bytes)
+    { name: 'sfx_playerwall_pcm.bin', folder: 'NHL94/Sound', start: 0x00029FFA, end: 0x0002A4AA }, // sample 6: playerwall, sfx_playerwall2-23 (93 file, same bytes)
     { name: 'sfx_check2_pcm.bin', folder: 'NHL94/Sound', start: 0x0002A4AA, end: 0x0002AED9 }, // sample 4: check2, check4 (93 file, same bytes)
     { name: 'sfx_hithigh_pcm.bin', folder: 'NHL94/Sound', start: 0x0002AEDA, end: 0x0002B430 }, // samples 7 and 10: hithigh, hitlow, check1-4, songs $32 and $35-$37 (93 file, same bytes)
     { name: 'sfx_shotfh_pcm.bin', folder: 'NHL94/Sound', start: 0x0002B430, end: 0x0002BFE8 }, // sample 3: shotfh (93 file, same bytes)
@@ -98,9 +98,9 @@ const assets = [
     { name: 'sfx_oooh_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C964, end: 0x0002C980 }, // sound $8 (92 SFXoooh)
     { name: 'sfx_puckpost_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C980, end: 0x0002C990 }, // sound $25 (92 SFXpuckpost)
     { name: 'sfx_playerwall_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C990, end: 0x0002C9AC }, // sound $20 (92 SFXplayerwall)
-    { name: 'sfx_id_21_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C9AC, end: 0x0002C9C8 }, // sound $21
-    { name: 'sfx_id_22_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C9C8, end: 0x0002C9E4 }, // sound $22
-    { name: 'sfx_id_23_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C9E4, end: 0x0002CA00 }, // sound $23
+    { name: 'sfx_playerwall2_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C9AC, end: 0x0002C9C8 }, // sound $21
+    { name: 'sfx_playerwall3_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C9C8, end: 0x0002C9E4 }, // sound $22
+    { name: 'sfx_playerwall4_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002C9E4, end: 0x0002CA00 }, // sound $23
     { name: 'sfx_puckwall1_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CA00, end: 0x0002CA10 }, // sound $28
     { name: 'sfx_puckwall2_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CA10, end: 0x0002CA20 }, // sound $29
     { name: 'sfx_puckwall3_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CA20, end: 0x0002CA30 }, // sound $2A
@@ -128,8 +128,8 @@ const assets = [
     { name: 'sfx_homewin_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CC46, end: 0x0002CC7E }, // sound $F
     { name: 'sfx_crowdcheer_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CC7E, end: 0x0002CC8E }, // sound $B (SFXcrowdcheer)
     { name: 'sfx_crowdboo_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CC8E, end: 0x0002CC9E }, // sound $C (SFXcrowdboo)
-    { name: 'sfx_id_0E_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CC9E, end: 0x0002CCBA }, // sound $E
-    { name: 'sfx_id_0D_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CCBA, end: 0x0002CCCA }, // sound $D
+    { name: 'sfx_bglass_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CC9E, end: 0x0002CCBA }, // sound $E
+    { name: 'sfx_oooh2_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CCBA, end: 0x0002CCCA }, // sound $D
     { name: 'sfx_siren_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CCCA, end: 0x0002CEF2 }, // sound $0 (92 SFXsiren)
     { name: 'fmtune_id_30_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002CEF2, end: 0x0002D29E }, // song $30: ChooseSong, TeamSongs BOS
     { name: 'fmtune_id_31_cmdstream.bin', folder: 'NHL94/Sound', start: 0x0002D29E, end: 0x0002D6CA }, // song $31: ChooseSong, TeamSongs BOS
@@ -204,7 +204,7 @@ const assets = [
     { name: 'fmtune_id_76_cmdstream.bin', folder: 'NHL94/Sound', start: 0x000442BE, end: 0x00044B12 }, // song $76: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
     { name: 'fmtune_id_77_cmdstream.bin', folder: 'NHL94/Sound', start: 0x00044B12, end: 0x0004507A }, // song $77: ChooseSong, TeamSongs ANH / FLA / OTW / WPG
     { name: 'fmtune_title_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x0004507A, end: 0x00046D88 }, // song $78 (93 $35): ExitToOpening, newTitleScreen. 94: one stream that loops to its start (93: intro, loop body)
-    { name: 'fmtune_intermission_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x00046D8C, end: 0x000490DE }, // song $79 (93 $36): IntermissionStart, StartHL2 (penalty94) (differs from 93)
+    { name: 'fmtune_eop_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x00046D8C, end: 0x000490DE }, // song $79 (93 $36): IntermissionStart, StartHL2 (penalty94) (differs from 93)
     { name: 'fmtune_scouting_cmdstream94.bin', folder: 'NHL94/Sound', start: 0x000490E2, end: 0x0004B5BC }, // song $7A (93 $37): ScoutingReport (scout94) (differs from 93)
     { name: 'ScoutTextScript.bin', folder: 'NHL94/Text', start: 0x0004B5C0, end: 0x0004B7A0 }, // unk_4B5C0
     { name: 'GameSetUp94-1.map.jim', folder: 'NHL94/Graphics', start: 0x0004B7A0, end: 0x0004DEEE }, // unk_4B7A0

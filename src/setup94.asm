@@ -741,7 +741,7 @@ IntermissionStart	;reset the clock, song $79, ticker scores, playoff stats at th
 	cmp.w	(vcount).w,d0
 	beq.s	.loop2
 	move.w	(sp)+,d0
-	move.w	#SngIntermission,-(sp)
+	move.w	#SngEOP,-(sp)
 	bsr.w	song
 	bsr.w	UpdateScores
 	cmpi.w	#4,(gsp).w
@@ -844,7 +844,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	bsr.w	DecompressGraphicsPlain
 	move.w	#$104,(clampcounter).w
 	move.w	#$A0,(playoffspritey).w
-	movea.l	#VDP_CTRL,a0
+	movea.l	#Vctrl,a0
 	move.w	#VDPR_WINY+$02,(a0)
 	movea.w	#(potree-M68K_RAM),a1
 	movea.l	#PlayoffTreeSetup,a0	;playoff tree layout by gamelevel
@@ -903,7 +903,7 @@ PlayoffScreen	;bring up playoff screen if in playoff mode. Called from GameOver 
 	String	-(TXPAL3+TXMAP3),$A,1,'Press [ or ] to page',0	;the text as code
 .nopage
 	move.w	#$18,(palcount).w	;after the string
-	move.w	#SngIntermission,-(sp)
+	move.w	#SngEOP,-(sp)
 	bsr.w	song
 	clr.w	d0
 	clr.w	d4

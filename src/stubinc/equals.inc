@@ -240,26 +240,29 @@ SFXhithigh equ $9
 SFXhitlow equ $A
 SFXcrowdcheer equ $B
 SFXcrowdboo equ $C
-SFX0D equ $D
-SFX0E equ $E
+SFXoooh2 equ $D
+SFXbglass equ $E
 SFXhomewin equ $F		;home team won
 SFXpass equ $10		;4 variants, +0-3
 SFXshotbh equ $14		;+0-3
 SFXshotfh equ $18		;+0-3
 SFXcheck equ $1C		;+0-3
 SFXplayerwall equ $20
-SFX21 equ $21
-SFX22 equ $22
-SFX23 equ $23
+SFXplayerwall2 equ $21
+SFXplayerwall3 equ $22
+SFXplayerwall4 equ $23
 SFXpuckbody equ $24
 SFXpuckpost equ $25
 SFX26 equ $26
 SFX27 equ $27
 SFXpuckwall1 equ $28		;+0-3
+SFXpuckwall2 equ $29		;medium (92 SFXpuckwall2)
+SFXpuckwall3 equ $2A		;soft (92 SFXpuckwall3)
+SFXpuckwall4 equ $2B		;softest (new in 93)
 SFXpuckice equ $2C		;+0-3
 ;song numbers
 SngTitle equ $78
-SngIntermission equ $79
+SngEOP equ $79
 SngScout equ $7A
 
 
