@@ -19,7 +19,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	jsr	(DecompressGraphicsPlain).l
 	jsr	(ShowReplayIcon).l
 	bclr	#sfscrl,(sflags).w
-	bclr	#5,(sflags3).w
+	bclr	#sf3track,(sflags3).w
 	st	(replayactive).w
 	movea.l	(recbpr).w,a4
 .rwd
@@ -28,7 +28,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	bne.s	.rwd
 	jsr	(SprSort).l
 	jsr	(setvideo).l
-	bclr	#1,(sflags3).w
+	bclr	#sf3rmplay,(sflags3).w
 	clr.l	(padcont).w
 	clr.l	(padcont+4).w
 	clr.l	(padcont+8).w
@@ -63,7 +63,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	andi.w	#$FFF0,d3
 .2
 	movea.w	#(ReplayStarStruct-M68K_RAM),a5
-	btst	#5,(sflags3).w
+	btst	#sf3track,(sflags3).w
 	beq.w	.dir
 	move.w	d1,d5
 	andi.w	#$F,d5
@@ -90,7 +90,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	eori.w	#4,d5
 	movea.w	#(SortCords-M68K_RAM),a1
 	st	d3
-	bclr	#5,(sflags3).w
+	bclr	#sf3track,(sflags3).w
 	beq.w	.find
 	move.w	$16(a5),d3
 .find
@@ -125,12 +125,12 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	bhi.w	.skip
 	move.l	d0,d4
 	move.w	SCnum(a1),$16(a5)
-	bset	#5,(sflags3).w
+	bset	#sf3track,(sflags3).w
 .skip
 	adda.w	#SCstruct,a1
 	dbf	d2,.loop
 	addq.w	#4,sp
-	btst	#5,(sflags3).w
+	btst	#sf3track,(sflags3).w
 	beq.w	.scrl
 	move.w	$16(a5),d0
 	asl.w	#7,d0
@@ -142,7 +142,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	jsr	(setvideo).l
 	bra.w	.top
 .scrl
-	bset	#5,(sflags).w
+	bset	#sfscrl,(sflags).w
 	eori.w	#4,d5
 	asl.w	#2,d5
 	lea	.dirtab(pc),a0
@@ -193,7 +193,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	jsr	(SprSort).l
 	jsr	(setvideo).l
 	moveq	#1,d7
-	bclr	#1,(sflags3).w
+	bclr	#sf3rmplay,(sflags3).w
 .5
 	btst	#0,(sflags5).w
 	bne.w	.1
@@ -201,8 +201,8 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	beq.w	.1
 	btst	#6,d3
 	beq.w	.f1
-	bclr	#5,(sflags3).w
-	bclr	#5,(sflags).w
+	bclr	#sf3track,(sflags3).w
+	bclr	#sfscrl,(sflags).w
 	move.w	d0,-(sp)
 	move.w	(PadControlBits).w,d0
 	andi.w	#$FFF,d0
@@ -215,7 +215,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	jsr	(SprSort).l
 	jsr	(setvideo).l
 	asl.w	#1,d7
-	bclr	#1,(sflags3).w
+	bclr	#sf3rmplay,(sflags3).w
 .1
 	btst	#sf3rmplay,(sflags3).w
 	beq.w	.noplay
@@ -231,7 +231,7 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 	btst	#7,d1
 	beq.w	.top
 	jsr	(ShowReplayBanner).l
-	bclr	#1,(sflags3).w
+	bclr	#sf3rmplay,(sflags3).w
 	bset	#0,(sflags5).w
 	bne.w	.6
 	bra.w	.top
@@ -258,12 +258,12 @@ ReplayMode	;Instant replay play-back control and display code. Called from the p
 .exit
 	bsr.w	forceblack
 	ori.w	#$F000,(PadControlBits).w
-	bclr	#5,(sflags).w
+	bclr	#sfscrl,(sflags).w
 	movea.l	(recbpr).w,a4
 	bclr	#4,(sflags4).w
 	bsr.w	RestoreReplayFrame
 	jsr	(SprSort).l
-	bclr	#3,(sflags2).w
+	bclr	#sf2replay,(sflags2).w
 	move.w	(sp)+,(disflags).w
 	jsr	(ReloadRinkGraphics).l
 	jsr	(setupEASNmap).l
@@ -387,7 +387,7 @@ adda4	;Step forward 1 frame. First handles a reverse angle switch (sflags4 bit 6
 	move.w	#1,8(a0)
 	movem.l	(sp)+,a0
 	bsr.w	RevReplayAdj
-	btst	#5,(sflags).w
+	btst	#sfscrl,(sflags).w
 	beq.w	*+4
 .0
 	jsr	(ShowReplayIcon).l
@@ -526,12 +526,12 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	or.w	d2,attribute(a3)
 	btst	#4,(sflags4).w	;check if reverse angle replay
 	beq.w	.4	;branch if not
-	move.w	6(a3),d2	;move frame into d2
+	move.w	frame(a3),d2	;move frame into d2
 	cmp.w	#SPFfight,d2	;check if frame is before old fight frames
 	blt.w	.4	;branch if so
 	cmp.w	#SPFPen,d2	;check if frame is after old fight frames
 	bge.w	.4	;branch if so
-	bchg	#3,4(a3)	;change X flip attribute for object
+	bchg	#3,attribute(a3)	;change X flip attribute for object
 .4
 	addq.w	#4,a0
 	adda.w	#SCstruct,a3
@@ -590,7 +590,7 @@ RestoreReplayFrame	;a4 = current replay frame address to convert into normal cor
 	btst	#sfscrl,(sflags).w
 	beq.w	.pos
 	movea.w	a5,a3
-	btst	#5,(sflags3).w
+	btst	#sf3track,(sflags3).w
 	beq.w	.cam
 	clr.w	$18(a5)
 	move.w	$16(a5),d0
@@ -853,7 +853,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	bpl.w	.np2
 	clr.b	nopuck+1(a3)	;clear lower byte of nopuck
 .np2
-	btst	#6,(sflags3).w	;check if penalty timer is up
+	btst	#sf3icetime,(sflags3).w	;check if penalty timer is up
 	beq.w	.11
 	clr.w	d0
 	move.b	pnum(a3),d0	;player offset on roster
@@ -931,7 +931,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 .chkpuck
 	cmp.w	#3,d0	;compare d0 to 3
 	bhi.w	.done	;branch if higher than 3
-	addi.w	#$2C,d0	;','   ; #SFXpuckice
+	addi.w	#SFXpuckice,d0	;','   ; #SFXpuckice
 	move.w	d0,-(sp)
 	bsr.w	sfx
 .done
@@ -945,7 +945,7 @@ updateplayers	;this routine calls all collision/animation/assignment code for al
 	moveq	#-2,d4	;-2 - pad index for puck carrier
 	bsr.w	setpads
 .tp
-	btst	#0,(sflags2).w	;sf2faceoff- check for faceoff
+	btst	#sf2faceoff,(sflags2).w	;sf2faceoff- check for faceoff
 	bne.w	.tp2	;branch if faceoff
 	tst.w	(holdreset).w
 	beq.w	.tp2
@@ -1109,8 +1109,8 @@ updateanim	;frame switch control on struct a3
 	bpl.w	.1	;branch if positive (not the end of the animation)
 	clr.w	d0	;clear d0
 	clr.w	SPAnum(a3)	;clear SPANum
-	bclr	#5,pflags(a3)	;clear animation lock
-	bclr	#1,pflags2(a3)	;clear animation in progress
+	bclr	#pfalock,pflags(a3)	;clear animation lock
+	bclr	#pf2aip,pflags2(a3)	;clear animation in progress
 	bclr	#pf3fall,pflags3(a3)	;clear fall down flag
 	btst	#0,d1	;check if anim attribute loops
 	bne.w	.1	;loop

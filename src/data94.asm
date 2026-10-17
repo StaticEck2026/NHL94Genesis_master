@@ -94,9 +94,9 @@ NewPO	;New playoff generates tree with same team 1. Called from GoNewPlayoffs. F
 	moveq	#7,d0	;clr games won
 	movea.w	#(gsstruct-M68K_RAM),a0	;Game struct variables start
 .cg
-	clr.w	4(a0)	;gspotwins
-	clr.w	6(a0)	;gspobwins
-	adda.w	#$10,a0	;gssize
+	clr.w	gspotwins(a0)	;gspotwins
+	clr.w	gspobwins(a0)	;gspobwins
+	adda.w	#gssize,a0	;gssize
 	dbf	d0,.cg	;falls into MakeTree
 maketree	;Make the playoff tree (potree) from playoffseats and WinBits, clear the scores of this round's games and set their teams
 	;(.sett), then FigureJoy. Called from ContinuePlayoffs and EncodePW; falls in from NewPO
@@ -131,7 +131,7 @@ maketree	;Make the playoff tree (potree) from playoffseats and WinBits, clear th
 	clr.w	gss1(a1)	;gsstruct: gss1
 	clr.w	gss2(a1)	;gss2
 	clr.w	gsper(a1)	;gsper
-	bclr	#1,gsflags(a1)	;hilite requested
+	bclr	#gsfhl,gsflags(a1)	;hilite requested
 	bsr.w	.sett
 	adda.w	#gssize,a1
 	dbf	d1,.loop
@@ -146,12 +146,12 @@ maketree	;Make the playoff tree (potree) from playoffseats and WinBits, clear th
 	beq.w	.1
 	cmpi.w	#5,(bosgames).w
 	beq.w	.1
-	bset	#0,gsflags(a1)	;teams are flipped
+	bset	#gsftf,gsflags(a1)	;teams are flipped
 	move.b	(a0)+,gst2+1(a1)
 	move.b	(a0)+,gst1+1(a1)
 	rts
 .1
-	bclr	#0,gsflags(a1)	;gsftf: teams not flipped
+	bclr	#gsftf,gsflags(a1)	;gsftf: teams not flipped
 	move.b	(a0)+,gst1+1(a1)
 	move.b	(a0)+,gst2+1(a1)
 	rts
@@ -341,20 +341,20 @@ ReadPassBits	;Translate the saved bits at a3 (5 words) to the playoff variables;
 	moveq	#7,d2
 	movea.w	#(gsstruct+(7*$10)-M68K_RAM),a1	;last gsstruct game (gsstruct + 7 * $10)
 .loop
-	bclr	#2,gsflags(a1)	;series over
+	bclr	#gsfso,gsflags(a1)	;series over
 	moveq	#5,d0
 	bsr.w	SuperDiv
 	move.w	d0,gspobwins(a1)	;gspobwins
 	cmp.w	#4,d0
 	bne.w	.nsf0
-	bset	#2,gsflags(a1)
+	bset	#gsfso,gsflags(a1)
 .nsf0
 	moveq	#5,d0
 	bsr.w	SuperDiv
 	move.w	d0,gspotwins(a1)	;gspotwins
 	cmp.w	#4,d0
 	bne.w	.nsf1
-	bset	#2,gsflags(a1)
+	bset	#gsfso,gsflags(a1)
 .nsf1
 	suba.w	#gssize,a1
 	dbf	d2,.loop
@@ -549,7 +549,7 @@ AddPlayoffTeamStats	;Add the po team's game stats to its packed playoff totals: 
 	movea.w	#(tmstruct-M68K_RAM),a2
 	cmp.w	Xvel(a2),d2
 	beq.w	.0
-	adda.w	#$364,a2	;tmsize: the po team is the visitor
+	adda.w	#tmsize,a2	;tmsize: the po team is the visitor
 .0
 	adda.w	#$B4,a2
 	moveq	#$67,d0	;$68 stats
@@ -650,7 +650,7 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 	cmpi.w	#4,gspobwins(a0)
 	beq.w	.b1
 	clr.w	d3
-	btst	#0,gsflags(a0)	;teams flipped
+	btst	#gsftf,gsflags(a0)	;teams flipped
 	beq.w	.0
 	eori.w	#gspobwins-gspotwins,d3
 .0
@@ -736,7 +736,7 @@ ResolveGames	;Compute winners and losers for playoff matchups. Called from Encod
 	bhi.w	.3
 	bset	d1,d3
 .3
-	btst	#0,gsflags(a0)
+	btst	#gsftf,gsflags(a0)
 	beq.w	.nb2
 	bchg	d1,d3
 .nb2
@@ -759,7 +759,7 @@ ShowThreeStars	;End of game Stars of the Game box. Called from UpdatePA while Re
 	bset	#7,(gmode).w
 	bne.w	rtss2	;already shown
 	movem.l	d0/a1,-(sp)
-	bset	#3,(disflags).w
+	bset	#dfclock,(disflags).w
 	move.w	(vcount).w,d0
 .loop2
 	cmp.w	(vcount).w,d0
@@ -1012,7 +1012,7 @@ ShowGoalBox	;Goal box. Closes both line change boxes, then printbig 'GOAL!' ('PP
 	movem.l	d0-d2/a0-a4,-(sp)
 	btst	#2,(BA_PS_flags).w
 	beq.w	.0
-	bset	#2,(sflags2).w
+	bset	#sf2drec,(sflags2).w
 .0
 	movea.w	#(tmstruct-M68K_RAM),a2
 	jsr	(lcfound2).l	;close lc box
@@ -1126,7 +1126,7 @@ GetPlayerName	;but that is the same symbol as getplayername (SNASM symbols are c
 	move.w	(TempPlOffset).w,d0
 	bpl.w	.0
 	andi.w	#$FF,d0
-	adda.w	#$364,a2	;away team (tmsize)
+	adda.w	#tmsize,a2	;away team (tmsize)
 .0
 	bsr.w	getname
 	movem.l	(sp)+,d0/a2

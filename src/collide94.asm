@@ -87,7 +87,7 @@ checkcoll	;d2 = new x coord, d3 = new y coord, a3 = struct of object. Check wall
 	rts
 checkplcoll	;check collision with other players. d2/d3 = x/y cords, a3 = struct. Walk up and down the OOlist from a3 and call checkcx for each
 	;object within $10 in y. Called from checkcoll
-	btst	#5,pflags2(a3)	;pflags2 bit 5 (line change mode)
+	btst	#pf2npc,pflags2(a3)	;pflags2 bit 5 (line change mode)
 	bne.w	.ex
 	cmpi.w	#$B,SCnum(a3)	;#11, SCnum
 	bgt.w	.ex
@@ -133,7 +133,7 @@ checkcx	;d4 = obj. # * 2 for possible collision so check x range and distance fo
 	adda.w	d4,a2	;add d4 to a2. a2 now address of SCStruct-1
 	btst	#pfnc,pflags(a2)	;test pfnc pflags = no collision mode
 	bne.w	.exit	;object has no collision mode on
-	btst	#5,pflags2(a2)	;pf2npc(pflags2) = another no collision mode
+	btst	#pf2npc,pflags2(a2)	;pf2npc(pflags2) = another no collision mode
 	bne.w	.exit	;exit if no collision mode on
 	cmpi.w	#$B,SCnum(a2)	;comparing 11 with SCnum for player. Player SCnum are 0-11.
 	bgt.w	.exit	;not a player
@@ -285,7 +285,7 @@ checkint	;check for interference penalty. player a2 interferes with a3 or vice-v
 	;4 (($14 - byte $73) <= 2)
 	tst.w	$34(a2)	;test for goalie
 	bne.w	rtss2	;exits if not goalie
-	btst	#0,(gmode).w	;test gmclock(gmode). Is there play
+	btst	#gmclock,(gmode).w	;test gmclock(gmode). Is there play
 	bne.w	rtss2	;no fall downs during celebration
 	move.w	(puckc).w,d0	;Puck carrier's SCnum
 	cmp.w	SCnum(a3),d0	;SCnum of this struct
@@ -300,12 +300,12 @@ checkint	;check for interference penalty. player a2 interferes with a3 or vice-v
 	exg	a2,a3
 	cmpi.w	#$1E,impact(a2)	;compare 30 decimal to impact
 	ble.w	rtss2	;exit if impact is less than 30 decimal
-	btst	#4,pflags2(a3)	;pf2pen(pflags2) - Check if player already committed a penalty
+	btst	#pf2pen,pflags2(a3)	;pf2pen(pflags2) - Check if player already committed a penalty
 	bne.w	rtss2	;exit if player is already penalized
 	tst.w	$34(a2)	;test if goalie
 	bne.w	rtss2	;double check to make sure player is goalie
 	move.w	#1,d0	;set d0 to team1 value
-	btst	#6,pflags(a3)	;check if home or away
+	btst	#pfteam,pflags(a3)	;check if home or away
 	beq.w	.control	;jump if home (team1)
 	move.w	#2,d0	;set d0 to team2 value
 .control
@@ -314,11 +314,11 @@ checkint	;check for interference penalty. player a2 interferes with a3 or vice-v
 	cmp.w	(cont2team).w,d0	;check if on player 2's team
 	bne.w	.checky	;branch if controlled by CPU
 .playercont
-	btst	#3,pflags(a3)	;pfjoycon - check if player controlled
+	btst	#pfjoycon,pflags(a3)	;pfjoycon - check if player controlled
 	beq.w	rtss2	;exit if not player controlled
 .checky
 	move.w	Ypos(a2),d0	;Ypos
-	btst	#7,pflags(a2)	;pfgoal - 0 shooting bottom, 1 shooting top
+	btst	#pfgoal,pflags(a2)	;pfgoal - 0 shooting bottom, 1 shooting top
 	beq.w	.checkcrease
 	neg.w	d0	;negative d0 if shooting bottom
 .checkcrease
@@ -336,7 +336,7 @@ checkint	;check for interference penalty. player a2 interferes with a3 or vice-v
 	bsr.w	randomd0
 	cmp.w	#4,d0	;d0 = RNG(28-aggres)
 	bhi.w	rtss2
-	btst	#4,(gmode).w	;Check if highlight, exit if so
+	btst	#gmhl,(gmode).w	;Check if highlight, exit if so
 	bne.w	rtss2
 	move.l	#$22,d0	;Interference Penalty
 	bra.w	AddPenalty
@@ -359,7 +359,7 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	beq.w	Bcheck
 	cmpi.w	#SPAburst,SPA(a3)
 	bne.w	rtss2
-	btst	#0,(gmode).w	;gmclock: increased fight chance after clock stops
+	btst	#gmclock,(gmode).w	;gmclock: increased fight chance after clock stops
 	beq.w	.nofight
 	move.w	#$100,impact(a3)	;impact
 	move.w	#$100,impact(a2)
@@ -371,7 +371,7 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	bsr.w	vtoa
 	sub.w	facedir(a3),d0	;facedir a3
 	andi.w	#7,d0
-	btst	#3,4(a3)	;check attribute xflip?
+	btst	#3,attribute(a3)	;check attribute xflip?
 	beq.w	.0
 	neg.w	d0
 	addq.w	#8,d0
@@ -380,14 +380,14 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	asl.w	#1,d0	;Sets the sprite animation
 	lea	checkinglist(pc),a0	;loads address of check list into a0
 	move.w	0(a0,d0.w),d1	;moves check anim. value into d1, based on d0 offset
-	bset	#5,pflags(a3)	;pfalock - lock until animation done
+	bset	#pfalock,pflags(a3)	;pfalock - lock until animation done
 	bsr.w	SetSPA
 	tst.w	$34(a2)	;check if a2 is goalie
 	beq.w	rtss2
 	cmp.w	#$14,d4	;d4 = impact value
 	blt.w	rtss2
 	moveq	#$78,d0	;uses 60 decimal, this is 120 decimal (most likely due to change in attribute math)
-	btst	#3,pflags(a3)	;checks if player a3 is player controlled
+	btst	#pfjoycon,pflags(a3)	;checks if player a3 is player controlled
 	beq.w	.CheckingCalc
 .PlayerControlled	;(entry point inside CCStart). Changes d0 from 120 to 240
 	;changes d0 from 120 to 240
@@ -414,7 +414,7 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	bsr.w	checkagr
 	cmp.w	#4,d0
 	bhi.w	rtss2
-	btst	#4,(gmode).w	;checks if highlight
+	btst	#gmhl,(gmode).w	;checks if highlight
 	bne.w	rtss2
 	move.b	(HVcount).l,d0	;HVcount
 	andi.w	#2,d0
@@ -425,7 +425,7 @@ CCStart	;Player a3 is checking player a2. Holds (SPAHold, SPAhook) go to holdche
 	bsr.w	checkagr
 	cmp.w	#3,d0
 	bhi.w	.dn2
-	btst	#4,(gmode).w	;checks if highlight
+	btst	#gmhl,(gmode).w	;checks if highlight
 	bne.w	.dn2
 	move.b	(HVcount).l,d0	;HVcount
 	andi.w	#2,d0
@@ -491,7 +491,7 @@ checkagr	;use Agression attribute and RNG to determine if there will be a penalt
 .rand2
 	bsr.w	randomd0
 .teamchk
-	btst	#6,pflags(a3)	;checks if home or away team
+	btst	#pfteam,pflags(a3)	;checks if home or away team
 	bne.w	.away
 	btst	#2,(DelayedPen).w	;visitors have a delayed penalty
 	bne.w	.nopen
@@ -541,7 +541,7 @@ holdcheck	;player a2 is in hold animation looking to hold opponent a3. Entered f
 	move.w	#SPAflail,d1
 	bsr.w	SetSPA
 	exg	a2,a3
-	bset	#5,pflags(a3)	;pfalock
+	bset	#pfalock,pflags(a3)	;pfalock
 	move.w	#SPAHold2,d1
 	cmpi.w	#SPAHold,SPA(a3)
 	beq.w	.setanimation
@@ -551,7 +551,7 @@ holdcheck	;player a2 is in hold animation looking to hold opponent a3. Entered f
 	bsr.w	checkagr
 	cmp.w	#6,d0
 	bhi.w	.ex
-	btst	#4,(gmode).w	;check for highlight
+	btst	#gmhl,(gmode).w	;check for highlight
 	bne.w	.ex
 	move.w	#$24,d0	;penalty $24 after SPAHold2 (hooking?)
 	cmpi.w	#SPAHold2,SPA(a3)
@@ -828,7 +828,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	clr.w	Xvel(a2)	;clear Xvel
 	clr.w	Yvel(a2)	;clear Yvel
 	bset	#pf3fall,pflags3(a2)	;set falldown bit
-	bset	#0,pflags(a2)	;set pfdoff (deceleration)
+	bset	#pfdoff,pflags(a2)	;set pfdoff (deceleration)
 	movem.l	(sp)+,d0/a0	;pop from stack
 	bra.w	.8
 .FallList	;(a table inside FallDown). Fall anim by where a2 is: above, right, below, left (2 words each)
@@ -883,7 +883,7 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	move.w	facedir(a2),d0	;facedir into d0
 	andi.w	#3,d0	;pass first 2 bits of d0
 	bne.w	.22
-	btst	#4,pflags2(a2)	;check if player is unavailable
+	btst	#pf2pen,pflags2(a2)	;check if player is unavailable
 	bne.w	.22	;jump if unavailable
 	move.l	#$A0,d0
 	bsr.w	randomd0
@@ -913,10 +913,10 @@ FallDown	;player a2 falls down, player a3 is the hitting player. Skips a2 in som
 	bsr.w	AddPenalty2
 	bra.w	Stop4Pen
 .22
-	move.w	#$B,-(sp)	;#SFXcrowdcheer
+	move.w	#SFXcrowdcheer,-(sp)	;#SFXcrowdcheer
 	btst	#pfteam,pflags(a2)	;check team
 	bne.w	.3	;jump if away team
-	move.w	#$C,(sp)	;#SFXcrowdboo
+	move.w	#SFXcrowdboo,(sp)	;#SFXcrowdboo
 .3
 	bsr.w	song
 	rts
@@ -924,7 +924,7 @@ setInjuryType	;determines if injury will be for period or game. a2 = player inju
 	;plays sfx $D, locks the scroll on a2 and sets TempPlOffset (pnum, bit 15 set for the away team). a2's tmpdst becomes $FFFD (injured for the
 	;period) or, from a3's Fgt byte (getFgtbyte, chkFgtBit1), $FFFC (injured for the game, sflags7 bit 5). Called from FallDown
 	move.w	d0,-(sp)
-	bset	#2,pflags2(a2)	;set player unavailable
+	bset	#pf2unav,pflags2(a2)	;set player unavailable
 	addi.w	#$12C,(crowdlevel).w
 	addi.w	#$1E,(CwdExciteLvl).w
 	move.w	#SFX0D,-(sp)	;sound effect
@@ -1035,8 +1035,8 @@ checkwallcoll	;d2/d3 = x/y to test, a3 = object, wcradiusx/wcradiusy = radius. C
 	bsr.w	wallcollb
 .2
 	movem.w	(sp)+,d2-d5
-	move.w	$4E(a3),d0	;wallcos: already hit
-	or.w	$50(a3),d0	;wallsin
+	move.w	Wallcos(a3),d0	;wallcos: already hit
+	or.w	Wallsin(a3),d0	;wallsin
 	bne.w	rtss2
 	move.w	#$100,d0
 	clr.w	d1
@@ -1058,7 +1058,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	;sfx $25 or 8 and crowd) or goes in (.goal); a player goes to checkgoalp. Called from checkwallcoll
 	cmpi.w	#$D,Zpos(a3)	;13 pix for zside = height of goal (puck only check)
 	bgt.w	rtss2	;over goal
-	cmpi.w	#$E,SCnum(a3)	;puckSCnum
+	cmpi.w	#puckscnum,SCnum(a3)	;puckSCnum
 	bne.w	checkgoalp	;coll with player not puck
 	sub.w	(a2),d2	;Xpos
 	moveq	#$10,d4	;xside = 16  width of goal/2
@@ -1210,7 +1210,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	jsr	(EndPenaltyShotPlay).l
 	bra.w	.8
 .7
-	btst	#0,(gmode).w
+	btst	#gmclock,(gmode).w
 	bne.w	rtss2
 .8
 	bset	#0,(sflags4).w
@@ -1233,11 +1233,11 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	bpl.w	.9
 	exg	a2,a1
 .9
-	btst	#1,(gmode).w	;gmdir
+	btst	#gmdir,(gmode).w	;gmdir
 	beq.w	.addg
 	exg	a2,a1
 .addg
-	addq.w	#1,$C(a2)	;tmscore: add to Goals
+	addq.w	#1,tmscore(a2)	;tmscore: add to Goals
 	btst	#5,(sflags4).w	;goal stats
 	beq.w	.11
 	btst	#0,(gmode2).w	;no new assignments in a shootout
@@ -1248,9 +1248,9 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	beq.w	.12
 	addq.w	#1,$35A(a2)	;add to BA Goals
 .12
-	btst	#5,(sflags2).w	;sf2pwrplay
+	btst	#sf2pwrplay,(sflags2).w	;sf2pwrplay
 	beq.w	.14
-	btst	#6,(sflags2).w	;sf2pwrtm: 0 home, 1 visitors
+	btst	#sf2pwrtm,(sflags2).w	;sf2pwrtm: 0 home, 1 visitors
 	bne.w	.13
 	cmpa.l	#AwShots,a2
 	bne.w	.14
@@ -1319,7 +1319,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	addi.w	#$CE,d0
 	addq.b	#1,0(a2,d0.w)
 .19
-	move.w	$26(a1),d0	;tmgoalie of the other team
+	move.w	tmgoalie(a1),d0	;tmgoalie of the other team
 	bmi.w	.stat
 	addi.w	#$B4,d0
 	addq.b	#1,0(a1,d0.w)
@@ -1355,7 +1355,7 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 	clr.w	Zpos(a3)
 	st	(puckcross2).w
 	st	(puckcross6).w
-	bset	#2,pflags(a3)	;pfnc
+	bset	#pfnc,pflags(a3)	;pfnc
 	move.w	#$1A,d0	;puckunflip
 	bsr.w	assreplace
 	move.l	a3,-(sp)
@@ -1370,14 +1370,14 @@ checkgoal	;look for coll with goal/net. a2 = goal struct, a3 = object, d2/d3 = x
 .setass	;d0 = assignment, a2 = team. Give each skater of team a2 that is not fighting
 	;assignment d0, clear pfnc. Also clears $64 bit 3 (one-timer) and then calls EndOneTimer. Called from checkgoal (.goal)
 	move.l	a3,-(sp)
-	movea.w	$22(a2),a3	;tmsort
+	movea.w	tmsort(a2),a3	;tmsort
 	moveq	#5,d3
 .loop3	;next skater
 	tst.w	position(a3)	;position
 	ble.w	.nl
-	btst	#0,pflags2(a3)	;pf2fight
+	btst	#pf2fight,pflags2(a3)	;pf2fight
 	bne.w	.nl
-	bclr	#2,pflags(a3)	;pfnc
+	bclr	#pfnc,pflags(a3)	;pfnc
 	bclr	#pf3onetimer,pflags3(a3)
 	beq.w	.insert
 	jsr	(EndOneTimer).l
@@ -1398,7 +1398,7 @@ GetPeriodTimeRemaining	;Return d0 = (gsp << 14 | PerTimeTotal) - gameclock. Call
 	rts
 checkgoalp	;check for player a3 collision with goal/net a2. Entered from checkgoal. Oval goal; skipped for no player coll (pflags2 bit 5), a high
 	;player or a non-player. CheckBump, then wallcoll with sflags6 bit 4 set (no wall collision bit)
-	btst	#5,pflags2(a3)	;pflags2 bit 5: no player coll
+	btst	#pf2npc,pflags2(a3)	;pflags2 bit 5: no player coll
 	bne.w	rtss2
 	cmpi.w	#$A,Zpos(a3)	;Zpos
 	bgt.w	rtss2
@@ -1485,7 +1485,7 @@ wallcollb	;Check for puck over wall. a3 = object, d0/d1 = cos/sin of the wall. N
 	;wallcoll. Zpos above $1D, or above $12 with Ypos below $118: out of play. Otherwise only at x $D-$F with Yvel >= $FA0 (else wallcoll): halve
 	;Yvel, SPA $1078 on the next struct, sfx $E and crowd, then out of play. Out of play: sfslock, pfnc, and while the clock runs penalty 6
 	;(PenOOP) for ltplayer. Called from checkwallcoll
-	cmpi.w	#$E,SCnum(a3)	;#puckSCnum
+	cmpi.w	#puckscnum,SCnum(a3)	;#puckSCnum
 	bne.w	wallcoll	;not puck so wall coll
 	cmpi.w	#$1D,Zpos(a3)	;#12*8/3, Zpos
 	bgt.w	.0
@@ -1510,18 +1510,18 @@ wallcollb	;Check for puck over wall. a3 = object, d0/d1 = cos/sin of the wall. N
 	addi.w	#$258,(crowdlevel).w
 	addi.w	#$F,(CwdExciteLvl).w
 .0
-	bset	#6,(sflags).w	;#sfslock
-	bset	#2,pflags(a3)	;#pfnc
+	bset	#sfslock,(sflags).w	;#sfslock
+	bset	#pfnc,pflags(a3)	;#pfnc
 	tst.w	Ypos(a3)	;Ypos
 	bpl.w	.1
-	ori.w	#$8000,4(a3)	;attribute(a3)
+	ori.w	#$8000,attribute(a3)	;attribute(a3)
 .1
 	clr.w	$86(a3)	;frame+SCstruct(a3)
-	btst	#0,(gmode).w	;#gmclock
+	btst	#gmclock,(gmode).w	;#gmclock
 	bne.w	rtss2
 	move.l	a3,-(sp)
 	move.w	(ltplayer).w,d0
-	asl.w	#7,d0	;#scsize
+	asl.w	#scsize,d0	;#scsize
 	movea.w	#(SortCords-M68K_RAM),a3	;#sortcords
 	adda.w	d0,a3
 	move.l	#6,d0	;#PenOOP
@@ -1547,7 +1547,7 @@ wallcoll	;d0 = cosine, d1 = sine of angle of incidence with wall, a3 = object. B
 	asr.l	#8,d0
 	move.w	d0,d3	;v1t
 	neg.w	d2
-	cmpi.w	#$E,SCnum(a3)	;#puckSCnum, SCnum
+	cmpi.w	#puckscnum,SCnum(a3)	;#puckSCnum, SCnum
 	bne.w	.player
 	bclr	#sf2shot,(sflags2).w	;#sf2shot
 	tst.w	d2
@@ -1675,7 +1675,7 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	beq.w	.exit
 	cmp.w	#$B,d4	;compare 11 to d4
 	bgt.w	.exit
-	asl.w	#7,d4	;#scsize
+	asl.w	#scsize,d4	;#scsize
 	movea.w	#(SortCords-M68K_RAM),a2
 	adda.w	d4,a2	;a2 now has address of player struct
 	btst	#2,(BA_PS_flags).w	;check bit 2
@@ -1690,7 +1690,7 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	bne.w	.exit	;exit if set
 	tst.b	nopuck(a2)	;check if nopuck collision
 	bne.w	.exit	;branch if nopuck
-	btst	#2,pflags2(a2)	;check if player unavailable
+	btst	#pf2unav,pflags2(a2)	;check if player unavailable
 	bne.w	.chkbody	;branch if so
 	cmpi.w	#5,Zpos(a3)	;compare 5 to Zpos
 	bgt.w	.chkbody	;branch if higher
@@ -1804,7 +1804,7 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 	addq.b	#2,d0
 .joycont
 	lsr.w	#1,d0	;divide by 2
-	btst	#3,pflags(a2)	;check if joystick controlled
+	btst	#pfjoycon,pflags(a2)	;check if joystick controlled
 	beq.w	.calcagl	;branch if not
 	move.w	#$F,d0	;move F into d0 (remove Agl)
 .calcagl
@@ -1853,7 +1853,7 @@ checkpuckcoll	;look for puck coll with players. a3 = puck. Clears Yvel past the 
 .neg
 	move.w	#$FFFA,d1	;move -6 into d1
 .5
-	btst	#7,pflags(a2)	;check which goal shooting at
+	btst	#pfgoal,pflags(a2)	;check which goal shooting at
 	bne.w	.6	;branch if top
 	neg.w	d1	;negate d1
 .6
@@ -2005,7 +2005,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	muls.w	d1,d1
 	add.l	d1,d0
 	clr.w	d1
-	btst	#4,(sflags2).w	;check if shot was taken
+	btst	#sf2shot,(sflags2).w	;check if shot was taken
 	bne.w	.nohand	;branch if so
 	btst	#pf3onetimer,pflags3(a2)	;check if one timer
 	bne.w	.onetimer	;branch if so
@@ -2034,7 +2034,7 @@ puckstick	;puck collides with stick. a2 = player who collided, a3 = puck, d0 = d
 	rts
 puckglue	;part of puckstick that puckgoalie also branches to. Player a2 takes the puck: faceoff
 	;and pass stats, crowd song, goalie hold time (temp5), then .setd0player
-	move.w	#7,-(sp)	;SFXpuckget
+	move.w	#SFXpuckget,-(sp)	;SFXpuckget
 	move.w	SCnum(a2),d0	;move SCnum into d0
 	move.w	d0,(puckc).w	;move d0 into puckc
 	movea.w	#(tmstruct-M68K_RAM),a0	;Move Home Stats struct into a0
@@ -2045,8 +2045,8 @@ puckglue	;part of puckstick that puckgoalie also branches to. Player a2 takes th
 .tm
 	st	$1A(a0)	;FF into assist 1
 	st	$1C(a0)	;FF into assist 2
-	bset	#3,tmflags(a0)	;set a flag (not sure what)
-	bclr	#4,(sflags3).w	;clear flag (not sure what, might have to do with faceoff)
+	bset	#tmflast,tmflags(a0)	;set a flag (not sure what)
+	bclr	#sf3fo,(sflags3).w	;clear flag (not sure what, might have to do with faceoff)
 	beq.w	.snd	;branch if it was cleared already
 	addq.w	#1,$E(a1)	;add 1 to faceoff won
 	addi.w	#$C8,(crowdlevel).w	;add to crowdlevel
@@ -2275,7 +2275,7 @@ puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save 
 	bpl.w	.pos	;branch if positive
 	move.w	#$7FFF,d0	;make max positive
 .pos
-	btst	#1,pflags2(a2)	;check if in animation
+	btst	#pf2aip,pflags2(a2)	;check if in animation
 	bne.w	.chkpuckv	;branch if so
 	cmpi.w	#$2C,(a3)	;compare 2C to Xpos of puck
 	bgt.w	.chkpuckv	;branch if greater than
@@ -2301,7 +2301,7 @@ puckgoalie	;puck hits goalie a2. a3 = puck, d0/d1 = goalie - puck x/y. The save 
 	bgt.w	.bounceoff	;branch if greater than
 	cmp.w	(puckvy).w,d0
 	bgt.w	.bounceoff	;branch if greater than
-	btst	#2,pflags2(a2)	;check if player unavailable
+	btst	#pf2unav,pflags2(a2)	;check if player unavailable
 	bne.w	.bounceoff	;branch if so
 	clr.w	Zvel(a3)	;clear puck Zvel
 	bra.w	puckglue
@@ -2767,7 +2767,7 @@ ResetBench	;remove all players from penalty box / put all players on their own b
 	sub.b	d1,(PBnum).w
 	cmpi.w	#$FFFD,tmpdst(a0,d0.w)	;compare -4 with tmpdst
 	beq.w	.next
-	cmpi.w	#$FFFC,$66(a0,d0.w)	;compare -3 with tmpdst
+	cmpi.w	#$FFFC,tmpdst(a0,d0.w)	;compare -3 with tmpdst
 	beq.w	.next
 	move.w	#$FFFE,tmpdst(a0,d0.w)	;move -2 into tmpdst
 .next
@@ -2792,7 +2792,7 @@ Setplass	;set players (a3) initial assignment from .alist by position
 setplayer	;bring player onto the ice and set his attributes. d3 = offset of player on roster, a3 = sortcord of player. Reads the roster bytes
 	;through AttributeCalc (attribute number in TempWord2). Adds the PP / PK, home / away and third period bonuses (team ScoreOdds bytes) to
 	;some attributes and clamps them with ClampNibble
-	bclr	#6,pflags2(a3)	;clear line change mode? (I believe pflags2 are 1 off because of fighting missing)
+	bclr	#pf2inj,pflags2(a3)	;clear line change mode? (I believe pflags2 are 1 off because of fighting missing)
 	movea.w	#(tmstruct-M68K_RAM),a0	;Start of Team Struct
 	btst	#pfteam,pflags(a3)	;checks if home or away (if 0, home)
 	beq.w	.0
@@ -2822,7 +2822,7 @@ setplayer	;bring player onto the ice and set his attributes. d3 = offset of play
 	clr.l	(PPBonus).w	;Clears all bonuses
 	tst.w	position(a3)	;check if goalie
 	beq.w	.playdatamove
-	btst	#5,(sflags2).w	;might be checking for a PP
+	btst	#sf2pwrplay,(sflags2).w	;might be checking for a PP
 	beq.w	.habonus
 	bsr.w	chkpk2	;prob determines what team is PP or PK
 	beq.w	.pk

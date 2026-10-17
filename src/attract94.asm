@@ -3,7 +3,7 @@
 
 EASportsScreen	;Called from Begin. Show the EA Sports screen until a button, or $50 x 4 frames (about 5 s)
 	move.l	#vb2,(vbint).w	;vblank handler
-	bclr	#1,(disflags).w
+	bclr	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
 	move.w	#$A000,(VmMap2).w
 	move.w	#7,(Map2col1).w

@@ -96,7 +96,7 @@ OneTimerTarget	;One-timer pass target for receiver a3: an offset by facing from 
 	bra.w	.facing
 .skater
 	move.w	Ypos(a3),d0
-	btst	#7,pflags(a3)
+	btst	#pfgoal,pflags(a3)
 	bne.w	.near
 	neg.w	d0
 .near
@@ -108,7 +108,7 @@ OneTimerTarget	;One-timer pass target for receiver a3: an offset by facing from 
 	bclr	#2,(sflags6).w
 .facing
 	move.w	facedir(a3),d0
-	btst	#7,pflags(a3)
+	btst	#pfgoal,pflags(a3)
 	bne.w	.offset
 	addq.w	#4,d0
 	andi.w	#7,d0
@@ -132,7 +132,7 @@ OneTimerTarget	;One-timer pass target for receiver a3: an offset by facing from 
 	bgt.w	.side
 	move.w	#$103,d2
 .side
-	btst	#7,pflags(a3)
+	btst	#pfgoal,pflags(a3)
 	bne.w	.rand
 	neg.w	d1
 	neg.w	d2
@@ -172,7 +172,7 @@ OneTimerGoalieTbl	;OneTimerTarget target offsets (x, y) by facing, goalie
 	dc.w	$FFFB,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7,$FFCE,$FFF7
 assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take control of him
 	;(setc1player / setc2player, also for pads 3 and 4), start the animation (setonetimeranim), then shoot when the puck arrives (EndOneTimer)
-	bclr	#1,pflags(a3)	;pfna - clear new assignment
+	bclr	#pfna,pflags(a3)	;pfna - clear new assignment
 	beq.w	.checkxpos	;branch if not new assignment
 	bset	#pf3onetimer,pflags3(a3)	;set one timer bit
 	bne.w	.checkxpos	;branch if already set
@@ -184,7 +184,7 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	SCnum(a3),d0	;move a3 SCnum into d0
 	move.w	d0,(onetimerplayer).w	;move d0
-	btst	#3,pflags(a3)	;check if joystick controlled
+	btst	#pfjoycon,pflags(a3)	;check if joystick controlled
 	bne.w	.setanim	;branch if so
 	tst.w	(inputjoy).w	;check input controller
 	bmi.w	.setanim	;branch if minus (no control)
@@ -225,8 +225,8 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	bsr.w	setonetimeranim	;sets the one timer animation
 	clr.w	SPAnum(a3)	;clear SPAnum
 	jsr	(SetSPA).l
-	bset	#5,pflags(a3)	;lock animation
-	bset	#1,pflags2(a3)	;set anim in progress
+	bset	#pfalock,pflags(a3)	;lock animation
+	bset	#pf2aip,pflags2(a3)	;set anim in progress
 	move.w	(sp)+,d0
 	movem.l	(sp)+,d0-d7/a0-a6
 	bra.w	.ex
@@ -267,7 +267,7 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	bclr	#7,(sflags8).w	;clear bit 7
 	bra.w	.shoot
 .loose
-	btst	#0,(gmode).w	;check if game clock
+	btst	#gmclock,(gmode).w	;check if game clock
 	bne.w	.shoot	;branch if clock stopped
 	movem.l	d0-d1,-(sp)	;push to stack
 	cmpi.w	#$10,SPAnum(a3)	;compare 10 to SPAnum
@@ -351,7 +351,7 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	ble.w	.chkanim
 	move.w	#1,SPAcnt(a3)
 .chkanim
-	btst	#1,pflags2(a3)
+	btst	#pf2aip,pflags2(a3)
 	bne.w	.animon
 	movem.l	(sp)+,d0-d1
 	bra.w	.chkdone
@@ -360,12 +360,12 @@ assonetimer	;Assignment $23 (asstab), player a3 shooting a one-timer: take contr
 	movem.l	(sp)+,d0-d1
 	btst	#0,(onetimerflags).w
 	beq.w	.nop
-	bclr	#5,pflags(a3)
+	bclr	#pfalock,pflags(a3)
 	bra.w	.chkdone
 .nop
 	nop
 .chkdone
-	btst	#1,pflags2(a3)
+	btst	#pf2aip,pflags2(a3)
 	bne.w	.ex
 .shoot
 	jsr	(EndOneTimer).l
@@ -377,7 +377,7 @@ setonetimeranim	;the one-timer animation: d1 = SPAshotf or SPAshotb from the ang
 	move.w	(a3),d0	;move XPos of a3 into d0
 	neg.w	d0	;negate d0
 	move.w	#$108,d1	;move top goal line into d1
-	btst	#7,pflags(a3)	;check which goal shooting at
+	btst	#pfgoal,pflags(a3)	;check which goal shooting at
 	bne.w	.top	;branch if top
 	neg.w	d1	;negate d1
 .top
@@ -392,7 +392,7 @@ setonetimeranim	;the one-timer animation: d1 = SPAshotf or SPAshotb from the ang
 PuckOnAttackHalf	;d0 = 1 when the puck is on the half of the goal player a3 shoots at, else 0 (the code after the bra is never used). Called from doinput and
 	movem.w	d0-d1,-(sp)
 	move.w	(pucky).w,d0
-	btst	#7,pflags(a3)	;pfgoal - check which goal shooting at
+	btst	#pfgoal,pflags(a3)	;pfgoal - check which goal shooting at
 	bne.w	.cont	;branch if top goal
 	neg.w	d0
 .cont
@@ -435,7 +435,7 @@ onetimershot	;Do the one-timer shot (doshot), credit the last two passers as the
 	jsr	(doshot).l
 	movem.l	d0/a0,-(sp)
 	movea.l	#tmstruct,a0	;Home Stats
-	btst	#6,pflags(a3)	;check if home or away
+	btst	#pfteam,pflags(a3)	;check if home or away
 	beq.w	.home	;branch if home
 	lea	$364(a0),a0	;add if away
 .home
@@ -450,7 +450,7 @@ onetimershot	;Do the one-timer shot (doshot), credit the last two passers as the
 	addq.w	#1,$35C(a0)	;add to one timer attempt
 	movem.l	(sp)+,d0/a0
 	bset	#0,(onetimerflags).w	;set bit 0
-	bset	#1,pflags2(a3)	;set animation in progress
+	bset	#pf2aip,pflags2(a3)	;set animation in progress
 	bset	#1,(sflags6).w	;set bit 1
 	rts
 CheckOneTimerFacing	;called from setonetimeranim. it does nothing, d0 and d1 are restored at the end; it seems meant to
@@ -464,12 +464,12 @@ CheckOneTimerFacing	;called from setonetimeranim. it does nothing, d0 and d1 are
 	andi.w	#7,d1	;pass first 3 bits of d1
 	cmp.w	#4,d1	;compare to 4
 	bgt.w	.g0	;branch if greater than
-	move.w	4(a3),d0	;move attribute into d0
+	move.w	attribute(a3),d0	;move attribute into d0
 	eori.w	#$FFFF,d0	;EOR FFFF with d0. Makes d0 opposite.
 	andi.w	#$800,d0	;pass 12th bit of d0
 	bra.w	.ex
 .g0
-	move.w	4(a3),d0	;move attribute into d0
+	move.w	attribute(a3),d0	;move attribute into d0
 	andi.w	#$800,d0	;pass 12th bit of d0
 .ex
 	movem.w	(sp)+,d0-d1	;pop from stack

@@ -147,7 +147,7 @@ PrintMenuItem	;Print menu item a1 and step a1 past it. An item whose text starts
 	bne.w	.plain
 	move.l	a1,-(sp)
 	movea.l	#.manual,a1
-	btst	#1,(sflags).w	;sfpj: the pause pad
+	btst	#sfpj,(sflags).w	;sfpj: the pause pad
 	beq.w	.homegoalie
 	tst.w	(goaliemode2).w
 	bra.w	.chkgoalie

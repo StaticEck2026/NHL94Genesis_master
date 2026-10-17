@@ -5,9 +5,9 @@
 check4bench	;check if player a3 should go to bench
 	btst	#2,(BA_PS_flags).w
 	bne.s	rtss3
-	btst	#3,pflags(a3)
+	btst	#pfjoycon,pflags(a3)
 	bne.s	rtss3
-	btst	#4,pflags2(a3)
+	btst	#pf2pen,pflags2(a3)
 	bne.s	rtss3
 	tst.b	newpos(a3)
 	bpl.w	.0
@@ -24,13 +24,13 @@ check4bench	;check if player a3 should go to bench
 	cmp.w	(puckc).w,d0
 	beq.s	rtss3
 	addq.w	#4,sp
-	bset	#2,pflags2(a3)	;set player unavailable (pf2unav)
+	bset	#pf2unav,pflags2(a3)	;set player unavailable (pf2unav)
 	clr.w	temp1(a3)
 	move.l	#$B,d0	;assbench
 	bra.w	assreplace
 .samepl
 	addq.w	#4,sp
-	bclr	#2,pflags2(a3)
+	bclr	#pf2unav,pflags2(a3)
 	bclr	#pfnc,pflags(a3)
 	st	newpnum(a3)
 	st	newpos(a3)
@@ -51,7 +51,7 @@ assbench	;player a3 should goto bench
 	cmpi.w	#$64,temp1(a3)
 	beq.w	.done
 	bsr.w	check4bench
-	btst	#4,pflags2(a3)
+	btst	#pf2pen,pflags2(a3)
 	bne.w	assexit
 	bclr	#pfna,pflags(a3)
 	beq.w	.nna
@@ -116,7 +116,7 @@ assbench	;player a3 should goto bench
 	move.b	pnum(a3),d0
 	add.w	d0,d0
 	movea.l	#tmstruct,a0
-	btst	#6,pflags(a3)
+	btst	#pfteam,pflags(a3)
 	beq.w	.t0
 	adda.w	#tmsize,a0
 .t0
@@ -132,7 +132,7 @@ assbench	;player a3 should goto bench
 	movea.l	#EvadePC,a0
 	bra.w	skateto
 .nobench
-	bclr	#2,pflags2(a3)
+	bclr	#pf2unav,pflags2(a3)
 .nobench2
 	move.b	newpos(a3),d0
 	ext.w	d0
@@ -144,9 +144,9 @@ rtss4
 	rts
 ; player a3 should exit bench area
 asseben	;Player a3 should exit the bench area
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.s	rtss4
-	bclr	#1,pflags(a3)
+	bclr	#pfna,pflags(a3)
 	beq.w	.nna
 	clr.w	Xvel(a3)
 	clr.w	Yvel(a3)
@@ -160,31 +160,31 @@ asseben	;Player a3 should exit the bench area
 	move.w	#$88,(a3)
 	neg.w	(a3)
 	move.w	#2,facedir(a3)
-	bset	#5,pflags(a3)
+	bset	#pfalock,pflags(a3)
 	move.w	#SPAwallright,d1
 	bra.w	SetSPA
 .nna
 	move.w	#4,facedir(a3)
 	bclr	#pfnc,pflags(a3)
-	bclr	#5,pflags2(a3)
-	bclr	#2,pflags2(a3)
+	bclr	#pf2npc,pflags2(a3)
+	bclr	#pf2unav,pflags2(a3)
 	clr.w	SPA(a3)
 	move.w	#$1000,Xvel(a3)
 	bra.w	assexit
 ; player a3 should go to penalty box
 asspenalty
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.s	rtss4
-	bclr	#1,pflags(a3)
+	bclr	#pfna,pflags(a3)
 	beq.w	.nna
-	bset	#2,pflags2(a3)	;set player unavailable (pf2unav)
+	bset	#pf2unav,pflags2(a3)	;set player unavailable (pf2unav)
 	bsr.w	.clrplayer
 	moveq	#-2,d4	;move -2 into d4
 	bsr.w	setpads	;moves player number into a temp value so graphics know who it is
 	move.w	#8,temp2(a3)	;move 8 into temp2
 	moveq	#$B,d0	;move 11 dec into d0
 	move.b	(PBnum).w,d1	;gets number of players in PB. 00HV (H=Home, V=Visitors)
-	btst	#6,pflags(a3)	;checks if player is home or away
+	btst	#pfteam,pflags(a3)	;checks if player is home or away
 	bne.w	.0	;branch if away
 	lsr.w	#4,d1	;shift 4 bits to get Home players in PB
 	neg.w	d0	;make d0 negative (different box)
@@ -199,7 +199,7 @@ asspenalty
 	move.w	d1,temp4(a3)	;move d1 into temp4 (skateto YPos)
 	move.w	#$88,temp3(a3)	;move 136 decimal into temp3 (skateto XPos)
 	clr.w	temp1(a3)	;clear temp1
-	bset	#5,pflags2(a3)	;set bit for no player collision
+	bset	#pf2npc,pflags2(a3)	;set bit for no player collision
 	clr.w	Wallcos(a3)	;clear wallCos (angle of last collision)
 	clr.w	Wallsin(a3)	;clear wallSin (angle of last collision)
 .nna
@@ -237,11 +237,11 @@ asspenalty
 	clr.w	Xvel(a3)
 	cmp.w	facedir(a3),d2
 	bne.w	rtss4
-	bset	#5,pflags(a3)
+	bset	#pfalock,pflags(a3)
 	move.w	#2,facedir(a3)
 	move.w	#SPAwallright,d1
 	bsr.w	SetSPA
-	bclr	#4,pflags2(a3)
+	bclr	#pf2pen,pflags2(a3)
 	move.l	#$D,d0	;assdopen
 	bra.w	assreplace
 .st
@@ -250,7 +250,7 @@ asspenalty
 	movea.l	#rtss2,a0
 	bra.w	skateto
 .clrplayer	;take the joystick off player a3
-	btst	#3,pflags(a3)
+	btst	#pfjoycon,pflags(a3)
 	beq.w	rtss4
 	clr.w	d4
 	move.w	SCnum(a3),d0
@@ -260,10 +260,10 @@ asspenalty
 	bra.w	changeplayer
 ; add player a3 to penalty box
 assdopen
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.w	rtss4
 	moveq	#$10,d0
-	btst	#6,pflags(a3)
+	btst	#pfteam,pflags(a3)
 	beq.w	.1
 	moveq	#1,d0
 .1
@@ -273,15 +273,15 @@ assdopen
 	rts
 ; player a3 should exit penalty area
 assepen
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.w	rtss4
-	bclr	#1,pflags(a3)
+	bclr	#pfna,pflags(a3)
 	beq.w	.nna
 	bset	#pfnc,pflags(a3)	;set player in no collision mode
-	bset	#2,pflags2(a3)	;set player unavailable
+	bset	#pf2unav,pflags2(a3)	;set player unavailable
 	moveq	#$10,d0
 	moveq	#$FFFFFFC4,d1
-	btst	#6,pflags(a3)
+	btst	#pfteam,pflags(a3)
 	beq.w	.0
 	moveq	#1,d0
 	neg.w	d1
@@ -292,7 +292,7 @@ assepen
 	clr.w	Yvel(a3)
 	move.w	#$86,(a3)
 	move.w	#2,facedir(a3)
-	bset	#5,pflags(a3)
+	bset	#pfalock,pflags(a3)
 	move.w	#SPAwallleft,d1
 	bsr.w	SetSPA
 	jmp	SprSort
@@ -302,14 +302,14 @@ assepen
 	st	newpos(a3)
 	bclr	#pfjoycon,pflags(a3)
 	bclr	#pfnc,pflags(a3)
-	bclr	#5,pflags2(a3)
-	bclr	#2,pflags2(a3)
+	bclr	#pf2npc,pflags2(a3)
+	bclr	#pf2unav,pflags2(a3)
 	move.w	#$F000,Xvel(a3)
 	bra.w	assexit
 ; moves the goalie not being used during shootout/pen shot off the screen
 ; a3 = goalie who is to be taken off ice
 assgoaliebreakwait	;asstab entry. In a shootout or penalty shot park the idle goalie off the ice, else exit
-	btst	#5,pflags(a3)	;check if animation locked
+	btst	#pfalock,pflags(a3)	;check if animation locked
 	bne.w	.exit	;exit if so
 	btst	#2,(BA_PS_flags).w	;check if pen shot
 	bne.w	.park	;branch if so
@@ -335,7 +335,7 @@ assgoaliebreakwait	;asstab entry. In a shootout or penalty shot park the idle go
 	rts
 ; players do nothing until faceoff is over
 assfaceoff
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.w	.exit
 	btst	#sf2faceoff,(sflags2).w
 	beq.w	assexit
@@ -344,16 +344,16 @@ assfaceoff
 ; assignment for players actually participating in faceoff
 ; a3 = player
 assfaceoffpl	;Face off player
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.w	.exit2
-	btst	#0,(sflags2).w
+	btst	#sf2faceoff,(sflags2).w
 	beq.w	.exit
-	bclr	#1,pflags(a3)
+	bclr	#pfna,pflags(a3)
 	beq.w	.nna
 	clr.w	temp1(a3)
 .nna
 	movea.l	#fofdata2,a0
-	btst	#6,pflags(a3)
+	btst	#pfteam,pflags(a3)
 	beq.w	.0
 	addq.w	#4,a0
 .0
@@ -378,7 +378,7 @@ assfaceoffpl	;Face off player
 	beq.w	.d
 	move.w	#SPAfaceoffr,d1
 .d
-	bset	#1,pflags2(a3)
+	bset	#pf2aip,pflags2(a3)
 	bra.w	SetSPA
 .exit	;shared exit of assfaceoffpl
 	move.b	#$14,nopuck(a3)
@@ -391,17 +391,17 @@ assfwatch	;rts only: there is no fighting
 	rts	;assfwatch - possible location where players watching fight
 ; player should do nothing
 donothing
-	btst	#5,pflags(a3)	;#pfalock
+	btst	#pfalock,pflags(a3)	;#pfalock
 	bne.s	assfwatch
-	btst	#3,pflags(a3)	;#pfjoycon
+	btst	#pfjoycon,pflags(a3)	;#pfjoycon
 	bne.s	assfwatch
 	moveq	#8,d0
 	bra.w	doplayeracc
 ; player skates with stanley cup overhead
 assstanley
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.s	assfwatch
-	bclr	#1,pflags(a3)
+	bclr	#pfna,pflags(a3)
 	beq.w	.nna
 	move.w	#$5A,temp3(a3)
 	tst.w	(Hpos).w
@@ -424,9 +424,9 @@ assstanley
 	bra.w	playeracc
 ; player a3 celebrates, if scoreing player then do arm pump
 assscore
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.s	assfwatch
-	bclr	#1,pflags(a3)
+	bclr	#pfna,pflags(a3)
 	beq.w	.nna
 	bsr.w	.1
 	move.w	#8,temp2(a3)
@@ -446,7 +446,7 @@ assscore
 	beq.w	.chkx
 	subq.w	#1,(shootoutdelay).w
 	bne.w	.chkx
-	bset	#2,(sflags2).w
+	bset	#sf2drec,(sflags2).w
 .chkx
 	cmpi.w	#$88,(a3)
 	bgt.w	.3
@@ -457,7 +457,7 @@ assscore
 .noso
 	sub.w	d7,temp1(a3)
 	bpl.w	.ckcon
-	bset	#5,pflags(a3)
+	bset	#pfalock,pflags(a3)
 	move.w	#SPAcelebrate,d1
 	move.w	(shotplayer).w,d0
 	cmp.w	SCnum(a3),d0
@@ -471,20 +471,20 @@ assscore
 	move.w	d0,temp1(a3)
 	rts
 .ckcon
-	btst	#3,pflags(a3)
+	btst	#pfjoycon,pflags(a3)
 	beq.w	skateto
 rtss6
 	rts
 ; player a3 is defensive player on offense
 assdefo
-	btst	#5,pflags(a3)
+	btst	#pfalock,pflags(a3)
 	bne.s	rtss6
 	btst	#gmclock,(gmode).w	;#gmclock
 	bne.w	donothing	;Whistle blown, do nothing
 	bsr.w	check4bench	;check if player should go to bench
-	btst	#3,pflags(a3)	;#pfjoycon - is player joystick controlled
+	btst	#pfjoycon,pflags(a3)	;#pfjoycon - is player joystick controlled
 	bne.s	rtss6	;yes, then exit
-	bclr	#1,pflags(a3)	;#pfna - checks if theres a new assignment
+	bclr	#pfna,pflags(a3)	;#pfna - checks if theres a new assignment
 	beq.w	.nna
 	clr.w	temp1(a3)	;clears temp1 if new assignment
 	move.w	#8,temp2(a3)	;moves 8 into temp2 if new assignment
@@ -502,10 +502,10 @@ assdefo
 	subq.b	#1,temp1(a3)	;sub 1 from temp1
 .noboost
 	move.l	#2,d0	;assdefd
-	btst	#4,tmflags(a2)	;check if team is offsides
+	btst	#tmfoffside,tmflags(a2)	;check if team is offsides
 	bne.w	assreplace	;if so, assreplace
 	move.w	(pucky).w,d1	;move pucky into d1
-	btst	#7,pflags(a3)	;#pfgoal - check which net to score on
+	btst	#pfgoal,pflags(a3)	;#pfgoal - check which net to score on
 	bne.w	.de1	;branch if top
 	neg.w	d1	;Negates d1- shooting on bottom net
 .de1
@@ -526,7 +526,7 @@ assdefo
 	neg.w	d0	;player is LD, so negates d0
 .1
 	move.w	#$62,d1	;'b'   ; just inside of blueline
-	btst	#7,pflags(a3)	;#pfgoal
+	btst	#pfgoal,pflags(a3)	;#pfgoal
 	bne.w	.0	;branch if top net shooting
 	neg.w	d0	;shooting on bottom net, so negate d0 and d1
 	neg.w	d1
@@ -543,14 +543,14 @@ assdefo
 	bra.w	skateto	;skateto routine
 ; player a3 is defensive player on defense
 assdefd
-	btst	#5,pflags(a3)	;check if locked in animiation
+	btst	#pfalock,pflags(a3)	;check if locked in animiation
 	bne.w	rtss6	;exit if so
-	btst	#0,(gmode).w	;check if clock running
+	btst	#gmclock,(gmode).w	;check if clock running
 	bne.w	donothing	;donothing if no clock
 	bsr.w	check4bench	;check if going to bench
-	btst	#3,pflags(a3)	;check if joystick controlled
+	btst	#pfjoycon,pflags(a3)	;check if joystick controlled
 	bne.w	rtss6	;exit if so
-	bclr	#1,pflags(a3)	;clear new assignment bit
+	bclr	#pfna,pflags(a3)	;clear new assignment bit
 	beq.w	.nna	;branch if no new assignment
 	clr.w	temp1(a3)	;clear temp1
 	move.w	#8,temp2(a3)	;move 8 into temp2
@@ -567,7 +567,7 @@ assdefd
 	move.w	(pucky).w,d1	;move pucky into d1
 	move.w	(puckvy).w,d3	;move puckvy into d3
 	asr.w	#6,d3	;divide by 64
-	btst	#7,pflags(a3)	;check which net shooting on
+	btst	#pfgoal,pflags(a3)	;check which net shooting on
 	bne.w	.de00	;branch if top
 	neg.w	d1	;negate d1 and d3 if bottom
 	neg.w	d3
@@ -579,7 +579,7 @@ assdefd
 	add.w	d1,d3	;add d1 to d3
 	cmp.w	#Blueline,d3	;'X'   ; compare top blueline to d3
 	blt.w	.de0
-	btst	#4,tmflags(a2)	;check if team is offsides
+	btst	#tmfoffside,tmflags(a2)	;check if team is offsides
 	bne.w	.de0	;branch if offsides
 	move.w	(puckc).w,d1	;move puckc into d1
 	bmi.w	.de0	;branch if no puckc
@@ -604,11 +604,11 @@ assdefd
 .de2
 	moveq	#5,d2	;move 5 into d2
 	move.w	#$FC18,d0	;move -1000 dec into d0
-	btst	#7,pflags(a3)	;check what net shooting at
+	btst	#pfgoal,pflags(a3)	;check what net shooting at
 	beq.w	.gdwn	;branch if bottom net
 	neg.w	d0	;negate d0
 .gup
-	btst	#2,pflags2(a0)	;check if a0 player unavailable
+	btst	#pf2unav,pflags2(a0)	;check if a0 player unavailable
 	bne.w	.gu0	;branch if so
 	tst.w	position(a0)	;check a0 position
 	bmi.w	.gu0	;branch if empty position
@@ -637,7 +637,7 @@ assdefd
 	clr.w	temp3(a3)	;clear temp3 if not
 	bra.w	.nodec
 .gdwn
-	btst	#2,pflags2(a0)	;check if player a0 unavail
+	btst	#pf2unav,pflags2(a0)	;check if player a0 unavail
 	bne.w	.gd0	;branch if so
 	tst.w	position(a0)	;check a0 position
 	bmi.w	.gd0	;branch if empty (goalie)
@@ -675,14 +675,14 @@ rtss21
 	rts
 ; player a3 is winger on defense
 asswingd
-	btst	#5,pflags(a3)	;check if locked in animation
+	btst	#pfalock,pflags(a3)	;check if locked in animation
 	bne.s	rtss21	;exit if so
-	btst	#0,(gmode).w	;check if clock is running
+	btst	#gmclock,(gmode).w	;check if clock is running
 	bne.w	donothing	;donothing if its stopped
 	bsr.w	check4bench	;check if going to bench
-	btst	#3,pflags(a3)	;check if joystick controlled
+	btst	#pfjoycon,pflags(a3)	;check if joystick controlled
 	bne.s	rtss21	;exit if so
-	bclr	#1,pflags(a3)	;clear new assignment bit
+	bclr	#pfna,pflags(a3)	;clear new assignment bit
 	beq.w	.nna	;branch if cleared already (no new assignment)
 	clr.w	temp1(a3)	;clear temp1
 	move.w	#8,temp2(a3)	;move 8 into temp2
@@ -711,12 +711,12 @@ asswingd
 	neg.w	d0	;make d0 negative
 .1
 	move.l	#$9E,d1	;move $9E into d1 (blueline + 70 dec)
-	btst	#7,pflags(a3)	;check which goal shooting at
+	btst	#pfgoal,pflags(a3)	;check which goal shooting at
 	beq.w	.0	;branch if bottom goal
 	neg.w	d0	;negate d0
 	neg.w	d1	;negate d1
 	moveq	#$FFFFFFB2,d2	;move into d2 (slightly above bottom blue line)
-	btst	#4,tmflags(a2)	;check bit 4 of offset 30 (currently offside)
+	btst	#tmfoffside,tmflags(a2)	;check bit 4 of offset 30 (currently offside)
 	;Home - C6FE
 	;Away - CA62
 	bne.w	.dg11	;branch if set
@@ -733,7 +733,7 @@ asswingd
 .0
 	moveq	#$4E,d2	;'N'   ; defending top goal
 	;4E - slightly below top blue line
-	btst	#4,tmflags(a2)	;check bit 4 of offset 30
+	btst	#tmfoffside,tmflags(a2)	;check bit 4 of offset 30
 	;Home - C6FE
 	;Away - CA62
 	bne.w	.dg11	;branch if set
