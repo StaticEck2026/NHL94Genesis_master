@@ -2,7 +2,8 @@
 
 M68K_RAM equ $FFFF0000
 sramcleared equ $FFFF1FFE
-replayend equ $FFFFAF54	;end of the replay frames ($62 bytes each from M68K_RAM); suba4, adda43 and the record step wrap here
+replayend equ $FFFFAF54				;end of the replay frames ($62 bytes each from M68K_RAM); suba4, adda43
+									;and the record step wrap here
 ;$FFFFAFCA is SortCords-SCstruct
 VSCRLPM equ $FFFFB000
 VSPRITES equ $FFFFB002
@@ -17,7 +18,7 @@ smallfontchars equ $FFFFB012
 smallfont2chars equ $FFFFB014
 energybarchars equ $FFFFB016
 rinkvrcset equ $FFFFB018
-animchars equ $FFFFB01A	;94 keeps the crowd tiles 1st vram char here
+animchars equ $FFFFB01A				;94 keeps the crowd tiles 1st vram char here
 faceoffvrcset equ $FFFFB01C
 framercset equ $FFFFB01E
 EASNcset equ $FFFFB020
@@ -109,7 +110,7 @@ PadControlBits equ $FFFFBE78
 padcont equ $FFFFBE7A
 ;$FFFFBE7E is padcont+4
 ;$FFFFBE82 is padcont+8
-PadControlBits34 equ $FFFFBE86	;as PadControlBits, for pads 3 and 4 (4 way play)
+PadControlBits34 equ $FFFFBE86		;as PadControlBits, for pads 3 and 4 (4 way play)
 sso equ $FFFFBE88
 shotplayer equ $FFFFBED8
 lastplayer equ $FFFFBEDA
@@ -130,24 +131,27 @@ pad4way1 equ $FFFFBEF6
 pad4way2 equ $FFFFBEF7
 pad4way3 equ $FFFFBEF8
 pad4way4 equ $FFFFBEF9
-pad4wayword equ $FFFFBEFA	;the pad word the unused ReadJoySwapPad1-4 swap a pad's saved word into around ReadJoy1
-pad4waysave1 equ $FFFFBEFE	;ReadJoySwapPad1 saved pad word
-pad4waysave2 equ $FFFFBF00	;ReadJoySwapPad2 saved pad word
-pad4waysave3 equ $FFFFBF02	;ReadJoySwapPad3 saved pad word
-pad4waysave4 equ $FFFFBF04	;ReadJoySwapPad4 saved pad word
-bholdtimer equ $FFFFBF06	;B button hold timers of pads 1 / 2 (one byte each); bholdtimer34 for pads 3 / 4
+pad4wayword equ $FFFFBEFA			;the pad word the unused ReadJoySwapPad1-4 swap a pad's saved word into
+									;around ReadJoy1
+pad4waysave1 equ $FFFFBEFE			;ReadJoySwapPad1 saved pad word
+pad4waysave2 equ $FFFFBF00			;ReadJoySwapPad2 saved pad word
+pad4waysave3 equ $FFFFBF02			;ReadJoySwapPad3 saved pad word
+pad4waysave4 equ $FFFFBF04			;ReadJoySwapPad4 saved pad word
+bholdtimer equ $FFFFBF06			;B button hold timers of pads 1 / 2 (one byte each); bholdtimer34 for pads
+									;3 / 4
 bholdtimer34 equ $FFFFBF08
 padword3 equ $FFFFBF0A
 padword4 equ $FFFFBF0C
-padword1 equ $FFFFBF0E	;a pad 1 word swapped with padword3 for 4 way play (updateplayers)
-padword2 equ $FFFFBF10	;a pad 2 word swapped with padword4 for 4 way play (updateplayers)
-TempWord1 equ $FFFFBF12	;a scratch word (hot / cold totals, record page, button direction ...)
-TempWord2 equ $FFFFBF14	;a scratch word (hot / cold totals, attribute number, credits step ...)
+padword1 equ $FFFFBF0E				;a pad 1 word swapped with padword3 for 4 way play (updateplayers)
+padword2 equ $FFFFBF10				;a pad 2 word swapped with padword4 for 4 way play (updateplayers)
+TempWord1 equ $FFFFBF12				;a scratch word (hot / cold totals, record page, button direction ...)
+TempWord2 equ $FFFFBF14				;a scratch word (hot / cold totals, attribute number, credits step ...)
 TempRawSpd equ $FFFFBF16
 TempMaxSpd equ $FFFFBF18
 TempEnergySpd equ $FFFFBF1C
 TempLegSpd equ $FFFFBF1E
-TempBuffer equ $FFFFBF20	;40 byte scratch buffer: String buffer (AppendNumber, names, "(played by NAME)"), hot / cold player, sum byte pairs
+TempBuffer equ $FFFFBF20			;40 byte scratch buffer: String buffer (AppendNumber, names, "(played by
+									;NAME)"), hot / cold player, sum byte pairs
 ;$FFFFBF2A is TempBuffer+10, the 6th (coldest) SortHotColdStarters pair
 scorergoalies equ $FFFFBF48
 recties equ $FFFFBF4A
@@ -159,10 +163,10 @@ awayhotidx equ $FFFFBF54
 homehotidx equ $FFFFBF56
 awaycoldidx equ $FFFFBF58
 homecoldidx equ $FFFFBF5A
-awayhotplayer equ $FFFFBF5C	;the away team's hottest starter (BuildHotColdLists)
-homehotplayer equ $FFFFBF5E	;the home team's hottest starter
-awaycoldplayer equ $FFFFBF60	;the away team's coldest starter
-homecoldplayer equ $FFFFBF62	;the home team's coldest starter
+awayhotplayer equ $FFFFBF5C			;the away team's hottest starter (BuildHotColdLists)
+homehotplayer equ $FFFFBF5E			;the home team's hottest starter
+awaycoldplayer equ $FFFFBF60		;the away team's coldest starter
+homecoldplayer equ $FFFFBF62		;the home team's coldest starter
 ChkBodyG equ $FFFFBF64
 ChkBodySqG equ $FFFFBF66
 NegChkBodyG equ $FFFFBF6A
@@ -204,12 +208,17 @@ sflags equ $FFFFC2EC
 sflags2 equ $FFFFC2EE
 sflags3 equ $FFFFC2F0
 BA_PS_flags equ $FFFFC2F2
-sflags4 equ $FFFFC2F4	;94 flag word: reverse angle replay (bits 4, 6, 7), slot, penalty shot goal ...
-sflags5 equ $FFFFC2F6	;94 flag word: crowd noise on (bit 7), menu handler keeps its screen (bit 1), setup scroll (bit 2) ...
-sflags6 equ $FFFFC2F8	;94 flag word: one-timer (bits 1, 2), slot (bit 5), save RAM write (bit 6), record value (bit 7) ...
-gmode2 equ $FFFFC2FA	;94 game mode word, beside gmode: shootout (bit 0), shootout skater has the puck (bit 1), breakaway (bit 4) ...
-sflags7 equ $FFFFC2FC	;94 flag byte: arena faceoff animation (bit 0), injury (bit 5), crowd meter broken (bit 6) ...
-sflags8 equ $FFFFC2FE	;94 flag byte: penalty shot / shootout and one-timer bits
+sflags4 equ $FFFFC2F4				;94 flag word: reverse angle replay (bits 4, 6, 7), slot, penalty shot
+									;goal ...
+sflags5 equ $FFFFC2F6				;94 flag word: crowd noise on (bit 7), menu handler keeps its screen (bit
+									;1), setup scroll (bit 2) ...
+sflags6 equ $FFFFC2F8				;94 flag word: one-timer (bits 1, 2), slot (bit 5), save RAM write (bit
+									;6), record value (bit 7) ...
+gmode2 equ $FFFFC2FA				;94 game mode word, beside gmode: shootout (bit 0), shootout skater has
+									;the puck (bit 1), breakaway (bit 4) ...
+sflags7 equ $FFFFC2FC				;94 flag byte: arena faceoff animation (bit 0), injury (bit 5), crowd
+									;meter broken (bit 6) ...
+sflags8 equ $FFFFC2FE				;94 flag byte: penalty shot / shootout and one-timer bits
 DelayedPen equ $FFFFC300
 crowdnoisedelay equ $FFFFC304
 CwdChkCntr equ $FFFFC306
@@ -233,7 +242,7 @@ cont3team equ $FFFFC32C
 cont4team equ $FFFFC32E
 HomeTeam equ $FFFFC330
 VisTeam equ $FFFFC332
-TeamBlockMap equ $FFFFC334	;Map word buffer for CopyTeamBlockMapData and PutTeamBlock
+TeamBlockMap equ $FFFFC334			;Map word buffer for CopyTeamBlockMapData and PutTeamBlock
 PenBuf equ $FFFFC3A4
 ; Penalty numbers (word offsets into Penaltylist) for AddPenalty
 PenEOP	equ	$2
@@ -266,6 +275,12 @@ PenRoughingPS	equ	$36
 PenChargingPS	equ	$38
 PenCrossChkPS	equ	$3A
 PenSlashingPS	equ	$3C
+; Sprite object counts and sizes (92 names)
+collrad	equ	8						;collision radius of an object (objects collide within collrad*2)
+horoff	equ	197						;subtracted from the screen y in the horizontal rink view
+ssosize	equ	$14						;bytes per sso object
+ssonum	equ	4						;screen objects not tied to the rink scroll (2 arrows + 2 scoreboard logos)
+ffonum	equ	7						;objects tied to the rink scroll (93 had 5)
 Pencntdwn equ $FFFFC3E6
 Penaltytimer equ $FFFFC3E8
 PBnum equ $FFFFC3EA
@@ -311,7 +326,7 @@ pojoy equ $FFFFCEF0
 WinBits equ $FFFFCEF2
 potree equ $FFFFCEF4
 PlList equ $FFFFCF14
-menuitem equ $FFFFCF20	;menu state: selected item, then (+2) first item shown
+menuitem equ $FFFFCF20				;menu state: selected item, then (+2) first item shown
 menulist equ $FFFFCF24
 menudraw equ $FFFFCF28
 TickerNum equ $FFFFCF2C
@@ -322,7 +337,8 @@ HmAwBonus equ $FFFFCF31
 callbackPtr equ $FFFFCF32
 ThreeStars equ $FFFFCF36
 ;$FFFFCF38 is ThreeStars+2, the text after a String length word at ThreeStars
-teamrecbuf equ $FFFFCFFE	;SRAM team record buffer: the 16 byte record of a team (ReadCrowdRecord), byte 8 crowd record, byte 9 its name number
+teamrecbuf equ $FFFFCFFE			;SRAM team record buffer: the 16 byte record of a team (ReadCrowdRecord),
+									;byte 8 crowd record, byte 9 its name number
 nibblebuffer equ $FFFFD036
 ;$FFFFD03A is nibblebuffer+4
 homeuser equ $FFFFD042
@@ -376,7 +392,8 @@ onetimertargety equ $FFFFD416
 onetimerheight equ $FFFFD418
 FallYPos equ $FFFFD41A
 FallXPos equ $FFFFD41C
-aholdtimer equ $FFFFD41E	;A button hold timers of pads 1 / 2 (one byte each); aholdtimer34 for pads 3 / 4
+aholdtimer equ $FFFFD41E			;A button hold timers of pads 1 / 2 (one byte each); aholdtimer34 for pads
+									;3 / 4
 aholdtimer34 equ $FFFFD420
 setupfirstline equ $FFFFD422
 setupprevline equ $FFFFD424
@@ -406,7 +423,8 @@ cardlogochars2 equ $FFFFD452
 shootoutclock equ $FFFFD454
 shootoutjiffy equ $FFFFD456
 ValidSRAM equ $FFFFD458
-namelog equ $FFFFD45A	;the user name log: $80 bytes from save RAM $DA0 (NameLogIO), 12 bytes per name, namelogsel the entry
+namelog equ $FFFFD45A				;the user name log: $80 bytes from save RAM $DA0 (NameLogIO), 12 bytes per
+									;name, namelogsel the entry
 nameentrybuf equ $FFFFD4DA
 ;$FFFFD4DC is nameentrybuf+2, the text after its length word
 namelength equ $FFFFD4E8
@@ -418,30 +436,33 @@ awaycardidx equ $FFFFD4F2
 cardindex equ $FFFFD4F4
 cardvis equ $FFFFD4F6
 cardcount equ $FFFFD4F8
-homecardlist equ $FFFFD4FA	;the home player card order (BuildCardPlayerLists), read by GetCardPlayer
-awaycardlist equ $FFFFD514	;the away player card order
+homecardlist equ $FFFFD4FA			;the home player card order (BuildCardPlayerLists), read by GetCardPlayer
+awaycardlist equ $FFFFD514			;the away player card order
 cardplayer equ $FFFFD52E
 nameframechars equ $FFFFD530
-recsort1 equ $FFFFD532	;Record Holders row order sorted on record byte 0 (ReadTeamRecords), read by PrintPlayerRecords
-recsort2 equ $FFFFD53A	;Record Holders row order sorted on record byte 4 (ReadTeamRecords, sflags6 bit 6)
-winsort equ $FFFFD542	;Record Holders win row order (CalcWinPercents), read by PrintWinRecords
-winpcts equ $FFFFD54A	;the win % byte of each of the 8 records (CalcWinPercents)
-winties equ $FFFFD552	;the ties word of each record (record bytes $C-$D)
-wingames equ $FFFFD562	;the games word of each record (record bytes $A-$B)
-shootoutstate equ $FFFFD572	;first of the 19 words ClearGameStats clears ($FFD572-$FFD597: shootout goals, shootoutround, shooter lists ...)
+recsort1 equ $FFFFD532				;Record Holders row order sorted on record byte 0 (ReadTeamRecords), read
+									;by PrintPlayerRecords
+recsort2 equ $FFFFD53A				;Record Holders row order sorted on record byte 4 (ReadTeamRecords,
+									;sflags6 bit 6)
+winsort equ $FFFFD542				;Record Holders win row order (CalcWinPercents), read by PrintWinRecords
+winpcts equ $FFFFD54A				;the win % byte of each of the 8 records (CalcWinPercents)
+winties equ $FFFFD552				;the ties word of each record (record bytes $C-$D)
+wingames equ $FFFFD562				;the games word of each record (record bytes $A-$B)
+shootoutstate equ $FFFFD572			;first of the 19 words ClearGameStats clears ($FFD572-$FFD597: shootout
+									;goals, shootoutround, shooter lists ...)
 homeshootgoals equ $FFFFD574
 awayshootgoals equ $FFFFD576
 shootoutround equ $FFFFD578
-homeshooters equ $FFFFD57A	;the home shootout shooter list (6 words, homeshootnum the index)
+homeshooters equ $FFFFD57A			;the home shootout shooter list (6 words, homeshootnum the index)
 ;$FFFFD585 is homeshootnum-1
 homeshootnum equ $FFFFD586
-awayshooters equ $FFFFD588	;the away shootout shooter list (6 words)
+awayshooters equ $FFFFD588			;the away shootout shooter list (6 words)
 ;$FFFFD593 is shootoutteam-1
 shootoutteam equ $FFFFD594
 matchup equ $FFFFD598
-scoutunused equ $FFFFD59A	;cleared by ScoutingReport, never read
+scoutunused equ $FFFFD59A			;cleared by ScoutingReport, never read
 matchuphome equ $FFFFD59C
-matchupvis equ $FFFFD59E	;the visitors player of the matchup; also the scroll limit of StatsReport
+matchupvis equ $FFFFD59E			;the visitors player of the matchup; also the scroll limit of StatsReport
 homerating equ $FFFFD5A0
 visrating equ $FFFFD5A2
 advframe equ $FFFFD5A4
@@ -470,23 +491,25 @@ HmTeam equ $FFFFD6CA
 SongIndex equ $FFFFD6CC
 OvrDivisor equ $FFFFD6CE
 OvrDividend equ $FFFFD6D0
-homehotcoldsave equ $FFFFD6D2	;clearTeamStats keeps the first $1A0 bytes of the home hot / cold table (HmShots+$1A2) here
-awayhotcoldsave equ $FFFFD872	;the same for AwShots+$1A2
+homehotcoldsave equ $FFFFD6D2		;clearTeamStats keeps the first $1A0 bytes of the home hot / cold table
+									;(HmShots+$1A2) here
+awayhotcoldsave equ $FFFFD872		;the same for AwShots+$1A2
 sopath equ $FFFFDA12
 sopathpoint equ $FFFFDA14
 sopathx equ $FFFFDA16
 sopathy equ $FFFFDA18
 sopathdir equ $FFFFDA1A
 sopathend equ $FFFFDA1C
-picturebuf equ $FFFFDA1E	;UnpackPicture output: tile count word, then the 4 bit tiles (DrawMatchupBitmap, dobitmap read it)
-picturebits equ $FFFFDEA0	;UnpackPicture: the 3 packed bytes of the row being unpacked
+picturebuf equ $FFFFDA1E			;UnpackPicture output: tile count word, then the 4 bit tiles
+									;(DrawMatchupBitmap, dobitmap read it)
+picturebits equ $FFFFDEA0			;UnpackPicture: the 3 packed bytes of the row being unpacked
 homepresses equ $FFFFDEA4
 homedirpresses equ $FFFFDEA8
 awaypresses equ $FFFFDEAC
 awaydirpresses equ $FFFFDEB0
 replayicontimer equ $FFFFDEB4
 TmpPuckX equ $FFFFDEB6
-lognametext equ $FFFFDEBA	;the unused TerminateLogName's GetLogName String text (length word at -2)
+lognametext equ $FFFFDEBA			;the unused TerminateLogName's GetLogName String text (length word at -2)
 songdelay equ $FFFFDECC
 delayedsong equ $FFFFDECE
 shootoutdelay equ $FFFFDED0

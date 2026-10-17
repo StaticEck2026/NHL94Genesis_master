@@ -68,8 +68,8 @@
 ; replaynum	=	((varstart-replaystart)/replaysize)-1	;number of frames for replay
 ; replayend	=	replaystart+(replaynum*replaysize)	;end of replay ram
 
-; Sortobjs	=	16	;number of sorted graphics objects- these are arranged so sprites lower on the screen are of higher priority
-; scsize	=	7	;2 to this power indicates ram needed for each sortobj
+; Sortobjs	=	16	;number of sorted graphics objects- these are arranged so sprites lower on the screen are
+; of higher priority scsize	=	7	;2 to this power indicates ram needed for each sortobj
 ; SCstruct	=	1<<scsize	;ram for each sortobj
 ; RAMSTART = varstart
 ; 	RSSET   varstart	
@@ -274,8 +274,8 @@
 ; pads	=	ffo
 ; padcont	rs.w	3
 
-; ssonum	=	4	;4 objects not tied to icerink scrolling (2 arrows for off screen players + 2 large team logos on scoreboard)
-; ssosize	=	Ypos
+; ssonum	=	4	;4 objects not tied to icerink scrolling (2 arrows for off screen players + 2 large team
+; logos on scoreboard) ssosize	=	Ypos
 ; sso	rs.b	ssonum*ssosize
 
 ; shotplayer	rs.w	1	;player who shot last

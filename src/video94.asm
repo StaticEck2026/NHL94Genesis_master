@@ -2,7 +2,8 @@
 ;	roots, start sounds, read up to four joysticks and wait for buttons, move and fill video
 ;	memory and set up the screen.
 
-UnpackNibbles	;a0 = packed data, d0 = count: unpack 4-bit values into words at nibblebuffer
+UnpackNibbles						;a0 = packed data, d0 = count: unpack 4-bit values into words at
+									;nibblebuffer
 	movem.l	d0-d2/a0-a1,-(sp)
 	movea.w	#(nibblebuffer-M68K_RAM),a1
 	clr.w	d2
@@ -20,7 +21,8 @@ UnpackNibbles	;a0 = packed data, d0 = count: unpack 4-bit values into words at n
 	dbf	d0,.loop
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-WeightedRandomSelect	;d0 = number of word weights at nibblebuffer: return a weighted random index
+WeightedRandomSelect				;d0 = number of word weights at nibblebuffer:
+									;return a weighted random index
 	movem.l	d1/a1,-(sp)
 	movea.w	#(nibblebuffer-M68K_RAM),a1
 	clr.w	d1
@@ -88,7 +90,7 @@ forceblack
 	dbf	d0,.1
 	movem.l	(sp)+,d0/a0
 	rts
-forceblack2	;fade to black, keeping palfadenew (saved on the stack and restored)
+forceblack2							;fade to black, keeping palfadenew (saved on the stack and restored)
 	movem.l	d0/a0,-(sp)
 	movea.w	#(palfadenew-M68K_RAM),a0
 	moveq	#$1F,d0
@@ -104,7 +106,8 @@ forceblack2	;fade to black, keeping palfadenew (saved on the stack and restored)
 	dbf	d0,.loop2
 	movem.l	(sp)+,d0/a0
 	rts
-forcefade	;regardless of interupts/disflags fade in new palettes, don't upset anything else
+forcefade							;regardless of interupts/disflags fade in new palettes, don't upset
+									;anything else
 	move	sr,-(sp)
 	move.l	(vbint).w,-(sp)
 	move.w	(disflags).w,-(sp)
@@ -172,7 +175,7 @@ cramfade
 	cmp.w	#$80,d6
 	bne.s	.top
 	rts
-CopyPaletteToCRAM	;Copy all 64 palfadenew colours to colour ram, protected from vblank
+CopyPaletteToCRAM					;Copy all 64 palfadenew colours to colour ram, protected from vblank
 	movem.l	d0/a0-a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
@@ -220,11 +223,11 @@ randomd0
 ; returns d0.L^.5 in d0
 sroot
 	tst.l	d0
-	beq.w	rtss2	;zero^.5 = zero
-	cmp.l	#$640,d0	;#40^2
+	beq.w	rtss2					;zero^.5 = zero
+	cmp.l	#$640,d0				;#40^2
 	bhi.w	.m2
 	move.l	d1,-(sp)
-	moveq	#-1,d1	;-1
+	moveq	#-1,d1					;-1
 .0
 	addq.w	#2,d1
 	sub.w	d1,d0
@@ -235,7 +238,7 @@ sroot
 	rts
 .m2
 	movem.l	d1-d4,-(sp)
-	moveq	#9,d3	;max number of reps
+	moveq	#9,d3					;max number of reps
 	move.w	#$8000,d1
 	cmp.l	#$F00000,d0
 	bhi.w	.big
@@ -277,7 +280,7 @@ sroot
 sfx
 	movem.l	d0-d7/a0-a6,-(sp)
 	clr.l	d0
-	move.w	$40(sp),d0	;$40 = 16*4
+	move.w	$40(sp),d0				;$40 = 16*4
 	bmi.w	.none
 	move.w	d0,(lastsfx).w
 	jsr	(play_sfx_or_music_track).l
@@ -291,7 +294,7 @@ sfx
 song
 	movem.l	d0-d7/a0-a6,-(sp)
 	clr.l	d0
-	move.w	$40(sp),d0	;$40 = 16*4
+	move.w	$40(sp),d0				;$40 = 16*4
 	bmi.w	.none
 	jsr	(play_sfx_or_music_track).l
 .none
@@ -335,7 +338,7 @@ waitx
 ; special version of waitx for zamboni crossing
 ; wait d0 vblanks or until input from either joystick
 ; retrun joystick variables (d0-d3) if any
-waitxsr	;Wait d0 vblanks while the zamboni crosses
+waitxsr								;Wait d0 vblanks while the zamboni crosses
 	movem.l	d4-d7/a0-a3,-(sp)
 	neg.w	d0
 	move.w	d0,(vcount).w
@@ -345,7 +348,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	addq.w	#1,(zamx).w
 .nz
 	moveq	#1,d7
-	jsr	(updatecrowdf).w		;4EB8: target below $8000
+	jsr	(updatecrowdf).w			;4EB8: target below $8000
 	jsr	(RunArenaAnim).l
 	clr.w	(pausepad).w
 	bclr	#sfpj,(sflags).w
@@ -382,7 +385,7 @@ waitxsr	;Wait d0 vblanks while the zamboni crosses
 	moveq	#$FFFFFF88,d0
 .menu
 	movem.w	d0,-(sp)
-	jsr	(HandleMenuInput).w		;4EB8: target below $8000
+	jsr	(HandleMenuInput).w			;4EB8: target below $8000
 	bne.w	.resume
 	addq.w	#2,sp
 	bset	#7,d1
@@ -412,7 +415,7 @@ waitjoy
 	rts
 ; return d1 = new button presses
 orjoy
-	tst.w	(FourWayPlay).w	;check for 4-way play?
+	tst.w	(FourWayPlay).w			;check for 4-way play?
 	bne.w	.4way
 	bsr.w	ReadJoy1
 	move.w	d1,-(sp)
@@ -448,7 +451,7 @@ nodiag
 .ok
 	movem.l	(sp)+,d0/d4-d5
 	rts
-ProcessInputWithRepeat	;nodiag, then key repeat on d1-d3
+ProcessInputWithRepeat				;nodiag, then key repeat on d1-d3
 	bsr.s	nodiag
 	tst.w	d3
 	beq.w	rtss2
@@ -490,7 +493,7 @@ ReadJoy2
 	eor.w	d1,d2
 	and.w	d2,d1
 	rts
-ReadJoy3	;read 4 way play pad 3 (pad4way3). Same returns as ReadJoy1
+ReadJoy3							;read 4 way play pad 3 (pad4way3). Same returns as ReadJoy1
 	move.b	(pad4way3).w,d0
 	bsr.w	ReadJoy
 	move.w	(lj3).w,d2
@@ -499,7 +502,7 @@ ReadJoy3	;read 4 way play pad 3 (pad4way3). Same returns as ReadJoy1
 	eor.w	d1,d2
 	and.w	d2,d1
 	rts
-ReadJoy4	;read 4 way play pad 4 (pad4way4). Same returns as ReadJoy1
+ReadJoy4							;read 4 way play pad 4 (pad4way4). Same returns as ReadJoy1
 	move.b	(pad4way4).w,d0
 	bsr.w	ReadJoy
 	move.w	(lj4).w,d2
@@ -508,7 +511,8 @@ ReadJoy4	;read 4 way play pad 4 (pad4way4). Same returns as ReadJoy1
 	eor.w	d1,d2
 	and.w	d2,d1
 	rts
-ReadJoy	;read controller a0. Return d0 = direction (bit 0-3) and new button (bit 4-7) presses, d1 = buttons down (all 8 bits)
+ReadJoy								;read controller a0. Return d0 = direction (bit 0-3) and new button (bit
+									;4-7) presses, d1 = buttons down (all 8 bits)
 	not.b	d0
 	clr.w	d1
 	move.b	d0,d1
@@ -544,7 +548,7 @@ DoDMA
 	add.w	a0,d2
 	bcc.w	.nd
 	beq.w	.nd
-	lsr.w	#1,d2	;do 2 transers if source address crosses 64k boundary
+	lsr.w	#1,d2					;do 2 transers if source address crosses 64k boundary
 	sub.w	d2,d0
 	move.w	d0,-(sp)
 	bsr.w	.dd
@@ -554,7 +558,7 @@ DoDMA
 	adda.w	d0,a0
 	move.w	d2,d0
 	bra.w	.nd
-.dd	;(a global in ; local here, only DoDMA uses it)
+.dd									;(a global in ; local here, only DoDMA uses it)
 	movem.l	d2-d3/a1,-(sp)
 .nd
 	lea	(Vctrl).l,a1
@@ -610,7 +614,7 @@ DoDMA
 	move	(sp)+,sr
 	movem.l	(sp)+,d2-d3/a1
 	rts
-DoDMA_nd2	;vram to vram copy by dma, protected from vblank
+DoDMA_nd2							;vram to vram copy by dma, protected from vblank
 	movem.l	d0-d3/a1,-(sp)
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
@@ -677,7 +681,7 @@ DoFill
 	dbf	d0,.0
 	movem.l	(sp)+,d3/a1
 	rts
-WaitDMA	;wait for dma completion
+WaitDMA								;wait for dma completion
 	move.w	(Vctrl).l,-(sp)
 	btst	#1,1(sp)
 	addq.w	#2,sp
@@ -692,10 +696,11 @@ setVram
 	dbf	d1,.0
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
-setVram_0	;second half of setVram without the fade: clear vram and set the VDP registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
-	;Falls in from setVram, called from EASportsScreen and HiScoreScreen
+setVram_0							;second half of setVram without the fade: clear vram and set the VDP
+									;registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
+									;Falls in from setVram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
-	bset	#dfng,(disflags).w	;#dfng
+	bset	#dfng,(disflags).w		;#dfng
 	move.w	#VDPR_AUTOINC+$02,(Vctrl).l
 	clr.w	d0
 	bsr.w	Vmaddr
@@ -704,15 +709,15 @@ setVram_0	;second half of setVram without the fade: clear vram and set the VDP r
 .9
 	move.l	d1,(a0)
 	dbf	d0,.9
-	move.w	#$8C00,d0	;8 for shadow mode
-	btst	#df32c,(disflags).w	;#df32c
+	move.w	#$8C00,d0				;8 for shadow mode
+	btst	#df32c,(disflags).w		;#df32c
 	bne.w	.i32
 	ori.w	#$81,d0
 .i32
-	move.w	d0,Vctrl-Vdata(a0)	;40 col mode, no interlace, normal brightness
+	move.w	d0,Vctrl-Vdata(a0)		;40 col mode, no interlace, normal brightness
 	move.w	#VDPR_MODE1+$04,Vctrl-Vdata(a0)	;512 color palette enable
 	move.w	#VDPR_MODE2+$64,Vctrl-Vdata(a0)
-	move.w	#$9001,d0	;playfield is 64x32
+	move.w	#$9001,d0				;playfield is 64x32
 	cmpi.w	#6,(Map1col1).w
 	beq.w	.i64
 	move.w	#$9003,d0
@@ -745,7 +750,7 @@ setVram_0	;second half of setVram without the fade: clear vram and set the VDP r
 	move.w	#VDPR_BGCOL,Vctrl-Vdata(a0)	;Palette # 0 is border/transparent
 	move.w	#VDPR_MODE3,Vctrl-Vdata(a0)	;Scroll mode (entire scroll)
 	move.l	#VSRAM_W,Vctrl-Vdata(a0)	;vsram
-	move.l	#0,(a0)	;playfield 1/2
+	move.l	#0,(a0)					;playfield 1/2
 	move.w	(sp)+,(disflags).w
 	rts
 ; set video port to address d0
@@ -772,10 +777,14 @@ Vmaddr
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
-dobitmap	;transfer palette data/map data/tiles data to vram. a0 = palette, a1 = map, a2 = tiles (DecompressGraphics data), d0 = start x, d1 = start y, d2 = width x, d3 = width y, d4 = start char, d5 = pal used bits (0-3) for color fam 1-4. printy is restored and the tiles go last through DecompressGraphics (returns d4 = end char)
+dobitmap							;transfer palette data/map data/tiles data to vram. a0 = palette, a1 =
+									;map, a2 = tiles (DecompressGraphics data), d0 = start x, d1 = start y, d2
+									;= width x, d3 = width y, d4 = start char, d5 = pal used bits (0-3) for
+									;color fam 1-4. printy is restored and the tiles go last through
+									;DecompressGraphics (returns d4 = end char)
 	move.w	(printy).w,-(sp)
 	move.w	(disflags).w,-(sp)
-	bset	#dfng,(disflags).w	;#dfng
+	bset	#dfng,(disflags).w		;#dfng
 	movem.l	d0-d3/d5-d6/a0-a3,-(sp)
 	move.w	d1,d6
 	movea.w	#(palfadenew-M68K_RAM),a3
@@ -797,8 +806,8 @@ dobitmap	;transfer palette data/map data/tiles data to vram. a0 = palette, a1 = 
 	subq.w	#1,d2
 .loop2
 	bsr.w	xyVmMap
-	move.w	d6,d0	;y start
-	mulu.w	(a1),d0	;map width
+	move.w	d6,d0					;y start
+	mulu.w	(a1),d0					;map width
 	add.w	2(sp),d0
 	asl.w	#1,d0
 	move.w	$A(sp),d1
@@ -821,14 +830,14 @@ dobitmap	;transfer palette data/map data/tiles data to vram. a0 = palette, a1 = 
 	move.w	(sp)+,(disflags).w
 	move.w	(sp)+,(printy).w
 	rts
-DecompressGraphicsWithCallback	;DecompressGraphics, then return 8 bytes past the call (callback data)
+DecompressGraphicsWithCallback		;DecompressGraphics, then return 8 bytes past the call (callback data)
 	move.l	(sp),(callbackPtr).w
 	bsr.w	DecompressGraphics
 	addq.l	#8,(sp)
 	rts
-DecompressGraphicsPlain	;Clear callbackPtr, fall into DecompressGraphics
+DecompressGraphicsPlain				;Clear callbackPtr, fall into DecompressGraphics
 	clr.l	(callbackPtr).w
-DecompressGraphics	;a2 = graphics data, d4 = start char
+DecompressGraphics					;a2 = graphics data, d4 = start char
 	movem.l	d0-d1/a0-a6,-(sp)
 	movea.l	a2,a0
 	move.w	d4,d1
@@ -850,7 +859,7 @@ DecompressGraphics	;a2 = graphics data, d4 = start char
 .done
 	movem.l	(sp)+,d0-d1/a0-a6
 	rts
-DecompressBytecode	;Unpack a0 into the 256 byte ring buffer at ThreeStars
+DecompressBytecode					;Unpack a0 into the 256 byte ring buffer at ThreeStars
 	movea.w	#(ThreeStars-M68K_RAM),a1
 	movea.w	#(ThreeStars-M68K_RAM),a3
 	movea.w	#(callbackPtr-M68K_RAM),a4
@@ -868,7 +877,7 @@ DecompressBytecode	;Unpack a0 into the 256 byte ring buffer at ThreeStars
 	move.w	0(a2,d0.w),d0
 	jsr	0(a2,d0.w)
 	bra.s	.loop
-jump_table	;DecompressBytecode handler offsets, one per opcode high nibble
+jump_table							;DecompressBytecode handler offsets, one per opcode high nibble
 	dc.w	Opcode_CopyLiteral-jump_table	;0
 	dc.w	Opcode_CopyLiteral-jump_table	;1
 	dc.w	Opcode_ClearBytes-jump_table	;2
@@ -885,7 +894,7 @@ jump_table	;DecompressBytecode handler offsets, one per opcode high nibble
 	dc.w	Opcode_CopyBackwardReverseShort-jump_table	;D
 	dc.w	Opcode_CopyBackwardReverseMedium-jump_table	;E
 	dc.w	Opcode_CopyBackwardReverseLong-jump_table	;F
-Opcode_CopyLiteral	;opcodes 0-1, copy (low 5 bits)+1 bytes from the data
+Opcode_CopyLiteral					;opcodes 0-1, copy (low 5 bits)+1 bytes from the data
 	move.b	-1(a0),d0
 	andi.w	#$1F,d0
 .loop
@@ -896,7 +905,7 @@ Opcode_CopyLiteral	;opcodes 0-1, copy (low 5 bits)+1 bytes from the data
 .next
 	dbf	d0,.loop
 	rts
-Opcode_ClearBytes	;opcode 2, write (low 4 bits)+1 zero bytes
+Opcode_ClearBytes					;opcode 2, write (low 4 bits)+1 zero bytes
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 .loop
@@ -907,7 +916,7 @@ Opcode_ClearBytes	;opcode 2, write (low 4 bits)+1 zero bytes
 .next
 	dbf	d0,.loop
 	rts
-Opcode_Fillbytes	;opcode 3, write the next data byte (low 4 bits)+3 times
+Opcode_Fillbytes					;opcode 3, write the next data byte (low 4 bits)+3 times
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 	addq.w	#2,d0
@@ -920,7 +929,7 @@ Opcode_Fillbytes	;opcode 3, write the next data byte (low 4 bits)+3 times
 .next
 	dbf	d0,.loop
 	rts
-Opcode_CopyBackwardShort	;opcodes 4-7, copy from back in the output buffer
+Opcode_CopyBackwardShort			;opcodes 4-7, copy from back in the output buffer
 	move.b	-1(a0),d0
 	andi.w	#7,d0
 	addq.w	#1,d0
@@ -928,7 +937,7 @@ Opcode_CopyBackwardShort	;opcodes 4-7, copy from back in the output buffer
 	lsr.w	#3,d2
 	andi.w	#7,d2
 	addq.w	#1,d2
-CopyBackwardRun	;shared copy loop, d0 = count-1, d2 = distance back
+CopyBackwardRun						;shared copy loop, d0 = count-1, d2 = distance back
 	neg.b	d2
 	add.b	d1,d2
 .loop
@@ -940,13 +949,13 @@ CopyBackwardRun	;shared copy loop, d0 = count-1, d2 = distance back
 .next
 	dbf	d0,.loop
 	rts
-Opcode_CopyBackwardMedium	;opcode 8
+Opcode_CopyBackwardMedium			;opcode 8
 	move.b	-1(a0),d0
 	andi.w	#$F,d0
 	addq.w	#2,d0
 	move.b	(a0)+,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardLong	;opcode 9
+Opcode_CopyBackwardLong				;opcode 9
 	move.b	(a0),d0
 	asl.b	#1,d0
 	move.b	-1(a0),d0
@@ -957,7 +966,7 @@ Opcode_CopyBackwardLong	;opcode 9
 	andi.w	#$7F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardExtended1	;opcode A
+Opcode_CopyBackwardExtended1		;opcode A
 	move.b	-1(a0),d0
 	asl.w	#8,d0
 	move.b	(a0),d0
@@ -968,7 +977,7 @@ Opcode_CopyBackwardExtended1	;opcode A
 	andi.w	#$3F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardExtended2	;opcode B
+Opcode_CopyBackwardExtended2		;opcode B
 	move.b	-1(a0),d0
 	asl.w	#8,d0
 	move.b	(a0),d0
@@ -979,7 +988,7 @@ Opcode_CopyBackwardExtended2	;opcode B
 	andi.w	#$1F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardRun
-Opcode_CopyBackwardReverseShort	;opcodes C-D, copy backwards through the source
+Opcode_CopyBackwardReverseShort		;opcodes C-D, copy backwards through the source
 	move.b	-1(a0),d0
 	andi.w	#3,d0
 	addq.w	#1,d0
@@ -987,7 +996,7 @@ Opcode_CopyBackwardReverseShort	;opcodes C-D, copy backwards through the source
 	lsr.w	#2,d2
 	andi.w	#7,d2
 	addq.w	#1,d2
-CopyBackwardReverseRun	;shared reverse copy loop
+CopyBackwardReverseRun				;shared reverse copy loop
 	neg.b	d2
 	add.b	d1,d2
 .loop
@@ -1012,7 +1021,7 @@ Opcode_CopyBackwardReverseMedium	;opcode E. Distance 0 is the end code
 	addq.w	#4,sp
 	movem.l	(sp)+,d0-d3/a0-a2
 	rts
-Opcode_CopyBackwardReverseLong	;opcode F
+Opcode_CopyBackwardReverseLong		;opcode F
 	move.b	(a0),d0
 	asl.b	#1,d0
 	move.b	-1(a0),d0
@@ -1023,7 +1032,7 @@ Opcode_CopyBackwardReverseLong	;opcode F
 	andi.w	#$7F,d2
 	addq.w	#1,d2
 	bra.s	CopyBackwardReverseRun
-FlushOutputBuffer	;Write the full ring buffer to vram
+FlushOutputBuffer					;Write the full ring buffer to vram
 	movem.l	d0-d1/a0-a1,-(sp)
 	move.w	d1,d0
 	bne.w	.size
@@ -1066,7 +1075,7 @@ xyVmMap
 eraser
 	movem.l	d0-d2/a0,-(sp)
 	move.w	(disflags).w,-(sp)
-	bset	#dfng,(disflags).w	;#dfng
+	bset	#dfng,(disflags).w		;#dfng
 	movem.w	d0-d1,-(sp)
 .1
 	bsr.s	xyVmMap
@@ -1089,7 +1098,7 @@ eraser
 Framer
 	movem.l	d0-d4/a0-a1,-(sp)
 	move.w	(disflags).w,-(sp)
-	bset	#dfng,(disflags).w	;#dfng
+	bset	#dfng,(disflags).w		;#dfng
 	movem.w	d0-d1,-(sp)
 	move.w	(printa).w,d2
 	add.w	(framercset).w,d2
@@ -1131,7 +1140,7 @@ Framer
 	rts
 ; see print
 ; string macro should follow jsr to this routine
-printsmallz	;String macro follows the call
+printsmallz							;String macro follows the call
 	move.l	a1,-(sp)
 	movea.l	4(sp),a1
 	bsr.w	printsmall
@@ -1149,7 +1158,8 @@ printsmallz	;String macro follows the call
 ; b = color/priority (0-3 = color fam,prio off), (4-7 = color fam, prio on)
 ; xx = x coord to print at
 ; yy = y coord to print at
-printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font (setupfontchars) when sflags6 bit 3 is set
+printsmall							;Print string macro a1 at printx/y/m with printa; uses the setup font
+									;(setupfontchars) when sflags6 bit 3 is set
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w
 	movem.l	d0-d3/a0/a2-a3,-(sp)
@@ -1204,22 +1214,22 @@ printsmall	;Print string macro a1 at printx/y/m with printa; uses the setup font
 	addq.w	#1,(printx).w
 	bsr.w	xyVmMap
 	bra.s	.1
-ControlCodeJumpTable	;printsmall control codes, indexed by -byte
-	dc.l	rtss2		;0: padding, no-op
+ControlCodeJumpTable				;printsmall control codes, indexed by -byte
+	dc.l	rtss2					;0: padding, no-op
 	dc.l	ControlCode_SetMap		;-1: map
-	dc.l	ControlCode_SetAttribute		;-2: palette/priority
+	dc.l	ControlCode_SetAttribute	;-2: palette/priority
 	dc.l	ControlCode_SetX		;-3: x
 	dc.l	ControlCode_SetY		;-4: y
 	dc.l	ControlCode_AddX		;-5: x offset
 	dc.l	ControlCode_AddY		;-6: y offset
 	dc.l	ControlCode_SetFont		;-7: char set
-	dc.l	ControlCode_SetMapAndPosition		;-8: attribute, map, x, y
-ControlCode_SetMapAndPosition	;control code -8, next 4 bytes = attribute, map, x, y
+	dc.l	ControlCode_SetMapAndPosition	;-8: attribute, map, x, y
+ControlCode_SetMapAndPosition		;control code -8, next 4 bytes = attribute, map, x, y
 	bsr.w	ControlCode_SetAttribute
 	bsr.w	ControlCode_SetMap
 	bsr.w	ControlCode_SetX
 	bra.w	ControlCode_SetY
-ControlCode_SetMap	;Control code -1, next byte = map number -> printm
+ControlCode_SetMap					;Control code -1, next byte = map number -> printm
 	move.b	(a1)+,d0
 	subq.w	#1,d3
 	andi.w	#3,d0
@@ -1227,38 +1237,38 @@ ControlCode_SetMap	;Control code -1, next byte = map number -> printm
 	subq.w	#4,d0
 	move.w	d0,(printm).w
 	bra.w	xyVmMap
-ControlCode_SetAttribute	;Control code -2, next byte = palette/priority -> printa
+ControlCode_SetAttribute			;Control code -2, next byte = palette/priority -> printa
 	move.b	(a1)+,d2
 	andi.w	#7,d2
 	subq.w	#1,d3
 	ror.w	#3,d2
 	move.w	d2,(printa).w
 	rts
-ControlCode_SetX	;Control code -3, next byte = printx
+ControlCode_SetX					;Control code -3, next byte = printx
 	clr.w	d0
 	move.b	(a1)+,d0
 	subq.w	#1,d3
 	move.w	d0,(printx).w
 	bra.w	xyVmMap
-ControlCode_SetY	;Control code -4, next byte = printy
+ControlCode_SetY					;Control code -4, next byte = printy
 	clr.w	d0
 	move.b	(a1)+,d0
 	subq.w	#1,d3
 	move.w	d0,(printy).w
 	bra.w	xyVmMap
-ControlCode_AddX	;control code -5, add the next (signed) byte to printx
+ControlCode_AddX					;control code -5, add the next (signed) byte to printx
 	move.b	(a1)+,d0
 	ext.w	d0
 	subq.w	#1,d3
 	add.w	d0,(printx).w
 	bra.w	xyVmMap
-ControlCode_AddY	;control code -6, add the next (signed) byte to printy
+ControlCode_AddY					;control code -6, add the next (signed) byte to printy
 	move.b	(a1)+,d0
 	ext.w	d0
 	subq.w	#1,d3
 	add.w	d0,(printy).w
 	bra.w	xyVmMap
-ControlCode_SetFont	;control code -7, next byte = char set index
+ControlCode_SetFont					;control code -7, next byte = char set index
 	clr.w	d0
 	move.b	(a1)+,d0
 	subq.w	#1,d3
@@ -1340,7 +1350,7 @@ print
 .3
 	add.w	(smallfontchars).w,d0
 .p
-	add.w	d2,d0	;for alternate palettes
+	add.w	d2,d0					;for alternate palettes
 	move.w	d0,(a0)
 	addq.w	#1,(printx).w
 .1
@@ -1352,7 +1362,7 @@ print
 	addq.w	#1,(printx).w
 	bsr.w	xyVmMap
 	bra.s	.1
-FormatAndPrintTime	;d0 bits 14-15 = period, bits 0-13 = seconds
+FormatAndPrintTime					;d0 bits 14-15 = period, bits 0-13 = seconds
 	swap	d0
 	clr.w	d0
 	rol.l	#2,d0
@@ -1363,7 +1373,7 @@ FormatAndPrintTime	;d0 bits 14-15 = period, bits 0-13 = seconds
 	lsr.w	#2,d0
 	bsr.w	PushTime
 	bra.w	print
-PeriodLabelTable	;String list for FormatAndPrintTime: " 1", " 2", " 3", "OT"
+PeriodLabelTable					;String list for FormatAndPrintTime: " 1", " 2", " 3", "OT"
 	dc.w	4
 	dc.b	' 1'
 	dc.w	4
@@ -1413,7 +1423,8 @@ PushTime
 	move.w	d0,-(a1)
 	move.l	(sp)+,d0
 	rts
-PushNumber	;convert d0 into string format of base 10 number, no leading zeros. Return a1 = string
+PushNumber							;convert d0 into string format of base 10 number, no leading zeros. Return
+									;a1 = string
 	movea.w	#(PushNumberBuf-M68K_RAM),a1
 	move.l	d0,-(sp)
 	move.l	a1,-(sp)
@@ -1437,46 +1448,46 @@ PushNumber	;convert d0 into string format of base 10 number, no leading zeros. R
 	move.w	d0,-(a1)
 	move.l	(sp)+,d0
 	rts
-PushNumberWidth	;right-justified number
-	movem.l	d0-d3,-(sp)	;push to stack
+PushNumberWidth						;right-justified number
+	movem.l	d0-d3,-(sp)				;push to stack
 	movea.w	#(PushWidthBuf+2-M68K_RAM),a1	;move address FFC00A into a1
-	moveq	#1,d2	;move 1 into d2
-	sub.w	d2,d1	;sub d2 from d1
-	bra.w	.loop	;branch
+	moveq	#1,d2					;move 1 into d2
+	sub.w	d2,d1					;sub d2 from d1
+	bra.w	.loop					;branch
 .mul
-	mulu.w	#$A,d2	;mult d2 by 10 dec
+	mulu.w	#$A,d2					;mult d2 by 10 dec
 .loop
-	dbf	d1,.mul	;exit when d1 is 0
-	moveq	#$20,d3	;' '   ; move 20 into d3
+	dbf	d1,.mul						;exit when d1 is 0
+	moveq	#$20,d3					;' '   ; move 20 into d3
 .loop2
-	ext.l	d0	;sign extend d0
-	divu.w	d2,d0	;divide d2 into d0
-	bne.w	.0	;branch if not equal
-	cmp.w	#1,d2	;compare d2 to 1
-	beq.w	.0	;branch if equal
-	move.w	d3,d0	;move d3 into d0
+	ext.l	d0						;sign extend d0
+	divu.w	d2,d0					;divide d2 into d0
+	bne.w	.0						;branch if not equal
+	cmp.w	#1,d2					;compare d2 to 1
+	beq.w	.0						;branch if equal
+	move.w	d3,d0					;move d3 into d0
 	bra.w	.put
 .0
 	;DeterStrLength?+26   j
-	moveq	#$30,d3	;'0'   ; move 48 dec into d3
-	add.w	d3,d0	;add d3 to d0
+	moveq	#$30,d3					;'0'   ; move 48 dec into d3
+	add.w	d3,d0					;add d3 to d0
 .put
-	move.b	d0,(a1)+	;move d0 into a1 and increment a1
-	swap	d0	;swap d0 words
-	divu.w	#$A,d2	;divide d2 by 10 dec
-	bne.s	.loop2	;branch if not equal to 0
-	move.l	a1,d0	;move a1 into d0
-	subi.w	#$C008,d0	;sub C008 from d0
-	btst	#0,d0	;test bit 0 of d0
+	move.b	d0,(a1)+				;move d0 into a1 and increment a1
+	swap	d0						;swap d0 words
+	divu.w	#$A,d2					;divide d2 by 10 dec
+	bne.s	.loop2					;branch if not equal to 0
+	move.l	a1,d0					;move a1 into d0
+	subi.w	#$C008,d0				;sub C008 from d0
+	btst	#0,d0					;test bit 0 of d0
 	beq.w	.00
-	clr.b	(a1)+	;clear byte at a1 and increment
-	addq.w	#1,d0	;add 1 to d0
+	clr.b	(a1)+					;clear byte at a1 and increment
+	addq.w	#1,d0					;add 1 to d0
 .00
 	movea.w	#(PushWidthBuf-M68K_RAM),a1	;move address FFC008 back into a1
-	move.w	d0,(a1)	;move d0 into a1 address location
-	movem.l	(sp)+,d0-d3	;push from stack
+	move.w	d0,(a1)					;move d0 into a1 address location
+	movem.l	(sp)+,d0-d3				;push from stack
 	rts
-appendz	;see appstring. String macro should follow the bsr/jsr to this routine
+appendz								;see appstring. String macro should follow the bsr/jsr to this routine
 	movea.l	(sp)+,a1
 	bsr.w	appstring
 	jmp	(a1)
@@ -1512,7 +1523,7 @@ appstring
 .ex
 	movem.l	(sp)+,d0/a0
 	rts
-printbigz	;String macro follows the call
+printbigz							;String macro follows the call
 	move.l	a1,-(sp)
 	movea.l	4(sp),a1
 	bsr.w	printbig
@@ -1571,7 +1582,7 @@ printbig
 	movem.l	(sp)+,d0-d7/a0/a2
 	move.w	(sp)+,(disflags).w
 	rts
-PrintBigChar	;print big font char d0 (ascii) through bfasciicon
+PrintBigChar						;print big font char d0 (ascii) through bfasciicon
 	subi.w	#$20,d0
 	movea.l	#bfasciicon,a0
 	moveq	#1,d2
@@ -1599,7 +1610,7 @@ PrintBigChar	;print big font char d0 (ascii) through bfasciicon
 	addq.w	#2,d1
 	dbf	d2,.loop
 	rts
-PutBigTile	;write one big font tile to the map at printx / printy
+PutBigTile							;write one big font tile to the map at printx / printy
 	add.w	d6,d3
 	movem.l	d1/a0,-(sp)
 	move.w	d5,d0
@@ -1614,15 +1625,18 @@ PutBigTile	;write one big font tile to the map at printx / printy
 	move.w	d3,(a0)
 	movem.l	(sp)+,d1/a0
 	rts
-AddSmallFont	;transfer smallfont.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
+AddSmallFont						;transfer smallfont.map tiles to vram. d4 = char to start tiles at, return
+									;d4 = end of tiles + 1. Goes through DecompressGraphics
 	move.w	d4,(smallfontchars).w
 	movea.l	#SmallFontMap+8,a2
 	bra.w	DecompressGraphicsPlain
-AddFramer	;transfer framer.map tiles to vram. d4 = char to start tiles at, return d4 = end of tiles + 1. Goes through DecompressGraphics
+AddFramer							;transfer framer.map tiles to vram. d4 = char to start tiles at, return d4
+									;= end of tiles + 1. Goes through DecompressGraphics
 	movea.l	#FramerMap+8,a2
 	move.w	d4,(framercset).w
 	bra.w	DecompressGraphicsPlain
-AddTeamBlock	;transfer TeamBlocks.map tiles to vram at char 2. Return d4 = end of tiles + 1. Goes through DecompressGraphics
+AddTeamBlock						;transfer TeamBlocks.map tiles to vram at char 2. Return d4 = end of tiles
+									;+ 1. Goes through DecompressGraphics
 	moveq	#2,d4
 	movea.l	#Teamblocksmap+8,a2
 	bra.w	DecompressGraphicsPlain
