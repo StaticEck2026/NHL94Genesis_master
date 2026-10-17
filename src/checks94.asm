@@ -4653,23 +4653,23 @@ stopna
 	bpl.w	rtss2
 	clr.w	Yvel(a3)
 	rts
+runspeed	equ	200	;acc speed equate for table below
 dirtab	dc.w	0
 	;X/Y acc speed for each direction 0-7
-	;runspeed constant = 200 ($C8)
-	dc.w	$C8
-	dc.w	$8D	;runspeed / sqrt(2)
-	dc.w	$8D
-	dc.w	$C8
+	dc.w	runspeed
+	dc.w	runspeed*1000/1414	;runspeed / sqrt(2)
+	dc.w	runspeed*1000/1414
+	dc.w	runspeed
 	dc.w	0
-	dc.w	$8D
-	dc.w	$FF73	;- runspeed / sqrt(2)
+	dc.w	runspeed*1000/1414
+	dc.w	-runspeed*1000/1414	;- runspeed / sqrt(2)
 	dc.w	0
-	dc.w	$FF38	;- runspeed
-	dc.w	$FF73
-	dc.w	$FF73
-	dc.w	$FF38
+	dc.w	-runspeed	;- runspeed
+	dc.w	-runspeed*1000/1414
+	dc.w	-runspeed*1000/1414
+	dc.w	-runspeed
 	dc.w	0
-	dc.w	$FF73
-	dc.w	$8D
+	dc.w	-runspeed*1000/1414
+	dc.w	runspeed*1000/1414
 	dc.w	0
 	dc.w	0
