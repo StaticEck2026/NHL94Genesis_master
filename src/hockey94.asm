@@ -157,7 +157,7 @@ StartPer	;start a period: reset stack, rink and clock, face off, run the game lo
 	jsr	(song).l
 	cmpi.w	#2,(gsp).w
 	bge.w	Gameloop
-	bset	#7,(sflags3).w		;set for periods 1 and 2 only
+	bset	#sf3fosong,(sflags3).w		;set for periods 1 and 2 only
 
 Gameloop	;Main loop for game
 	bsr.w	DoGameFrame
@@ -358,7 +358,7 @@ clockcont_0	;End of period. Also entered from puckfaceoff
 .eog	jsr	(ClearPenaltyBuffer).l	;end of game
 	addi.w	#$3E8,(crowdlevel).w	;1000
 	bset	#gmclock,(gmode).w		;gmclock: stop clock
-	bset	#gmend,(gmode).w		;set at end of game
+	bset	#gmeog,(gmode).w		;set at end of game
 	jsr	(ClearPenalties).l
 	move.w	#4,d0			;PenEOG
 	jmp	AddPenalty2
@@ -434,7 +434,7 @@ Pausemode	;Game is in pause mode now
 	beq.w	.chk2
 	movea.l	#PauseMenuItems,a0		;third item list
 	bra.w	.0
-.chk2	btst	#2,tmflags(a2)		;tmflags
+.chk2	btst	#tmftimeout,tmflags(a2)		;tmflags
 	beq.w	.0
 	movea.l	#PauseText2,a0		;alternate item list
 .0	bsr.w	InitMenuState

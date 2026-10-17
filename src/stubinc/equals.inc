@@ -40,7 +40,7 @@ ifok equ 2		;iflags: icing
 tmflcc equ 0		;tmflags: line change on
 ;flag bits added in 93 and shared by the later games (names and meanings from NHLPA93Genesis ram93.asm)
 dffaceoff equ 4		;face off sprites on (92 tested sf2faceoff).
-gmend equ 6		;game over: also ends the period.
+gmeog equ 6		;game over reached: the next face off goes to PeriodOver
 gsfhl equ 1		;hilite requested
 gsfso equ 2		;series over
 gsftf equ 0		;teams are flipped
@@ -53,8 +53,12 @@ sf3fo equ 4		;face off just ended (set by the drop): the next puck pickup wins i
 sf3icetime equ 6		;set once a second by updatepentime: each player on the ice adds 1 to its time on ice.
 sf3track equ 5		;the scroll window tracks an object.
 tmflast equ 3		;next touch overwrites the last touch only.
-tmflc equ 1		;team is in line change mode.
-tmfoffside equ 4		;team is offsides.
+tmflcm equ 1		;team is in line change mode (92 scanned the players for pf2lcm)
+tmfoside equ 4		;team is offsides (92 flagged the player with pf3oside)
+tmftimeout equ 2		;timeout used (the pause menu drops Timeout from then on). Same bit as tmfmid and tmfslide
+tmfmid equ tmftimeout		;nearest player always takes the in-between spot (assnearest)
+sf3fosong equ 7		;set for periods 1 and 2: play the face off tune once, at the first face off past half the period
+gmstars equ 7		;the Stars of the Game box was already shown
 ; ----------------------------------
 
 

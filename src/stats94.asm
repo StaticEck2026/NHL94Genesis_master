@@ -1940,7 +1940,7 @@ TimeoutMenu	;Pause menu "Timeout" for team a2: switch the menu to PauseText2, sh
 	subq.w	#1,(menuitem).w
 	subq.w	#1,(menuitem+2).w
 	move.l	#PauseText2,(menulist).l
-	bset	#2,tmflags(a2)
+	bset	#tmftimeout,tmflags(a2)
 	bsr.w	printz
 	String	-(TXPRI+TXMAP3),5,$C
 	moveq	#$16,d0

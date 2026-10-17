@@ -756,7 +756,7 @@ ShowThreeStars	;End of game Stars of the Game box. Called from UpdatePA while Re
 	;home team won
 	cmpi.w	#$40,(RefCnt).w
 	bgt.w	rtss2	;ref animation not far enough yet
-	bset	#7,(gmode).w
+	bset	#gmstars,(gmode).w
 	bne.w	rtss2	;already shown
 	movem.l	d0/a1,-(sp)
 	bset	#dfclock,(disflags).w

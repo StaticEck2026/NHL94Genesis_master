@@ -593,7 +593,7 @@ resetplstuff	;reset team variables/and players on both teams. Called from puckfa
 	movem.l	(sp)+,d0-d2/a0-a3
 	rts
 .top
-	bclr	#tmfoffside,tmflags(a2)	;clear team offside bit
+	bclr	#tmfoside,tmflags(a2)	;clear team offside bit
 	moveq	#5,d2
 	movea.w	tmsort(a2),a3	;tmsort
 .loop

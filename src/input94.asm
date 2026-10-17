@@ -600,7 +600,7 @@ SetLCmode
 	btst	#4,(sflags7).w
 	bne.w	rtss7
 	bsr.w	loadTeamStruct
-	bset	#tmflc,tmflags(a2)
+	bset	#tmflcm,tmflags(a2)
 	bne.w	rtss7
 	btst	#3,(sflags5).w
 	bne.w	.0
@@ -628,7 +628,7 @@ SetLCmode2	;a2 = team struct. Draw the line change box
 	bsr.w	getlchoice
 	tst.w	d0
 	bmi.w	.next
-	btst	#tmflc,tmflags(a2)
+	btst	#tmflcm,tmflags(a2)
 	bne.w	.pr
 	cmp.w	$2E(a2),d4
 	bne.w	.up
@@ -752,7 +752,7 @@ lcfound
 	bclr	#pf2lcm,pflags2(a3)
 	bset	#pfjoycon,pflags(a3)
 	bsr.w	loadTeamStruct
-	bclr	#tmflc,tmflags(a2)
+	bclr	#tmflcm,tmflags(a2)
 	move.w	d0,tmline(a2)
 	jsr	(setpersonel).l
 lcfound2	;close lc box

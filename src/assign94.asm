@@ -502,7 +502,7 @@ assdefo
 	subq.b	#1,temp1(a3)	;sub 1 from temp1
 .noboost
 	move.l	#2,d0	;assdefd
-	btst	#tmfoffside,tmflags(a2)	;check if team is offsides
+	btst	#tmfoside,tmflags(a2)	;check if team is offsides
 	bne.w	assreplace	;if so, assreplace
 	move.w	(pucky).w,d1	;move pucky into d1
 	btst	#pfgoal,pflags(a3)	;#pfgoal - check which net to score on
@@ -579,7 +579,7 @@ assdefd
 	add.w	d1,d3	;add d1 to d3
 	cmp.w	#Blueline,d3	;'X'   ; compare top blueline to d3
 	blt.w	.de0
-	btst	#tmfoffside,tmflags(a2)	;check if team is offsides
+	btst	#tmfoside,tmflags(a2)	;check if team is offsides
 	bne.w	.de0	;branch if offsides
 	move.w	(puckc).w,d1	;move puckc into d1
 	bmi.w	.de0	;branch if no puckc
@@ -716,7 +716,7 @@ asswingd
 	neg.w	d0	;negate d0
 	neg.w	d1	;negate d1
 	moveq	#$FFFFFFB2,d2	;move into d2 (slightly above bottom blue line)
-	btst	#tmfoffside,tmflags(a2)	;check bit 4 of offset 30 (currently offside)
+	btst	#tmfoside,tmflags(a2)	;check bit 4 of offset 30 (currently offside)
 	;Home - C6FE
 	;Away - CA62
 	bne.w	.dg11	;branch if set
@@ -733,7 +733,7 @@ asswingd
 .0
 	moveq	#$4E,d2	;'N'   ; defending top goal
 	;4E - slightly below top blue line
-	btst	#tmfoffside,tmflags(a2)	;check bit 4 of offset 30
+	btst	#tmfoside,tmflags(a2)	;check bit 4 of offset 30
 	;Home - C6FE
 	;Away - CA62
 	bne.w	.dg11	;branch if set

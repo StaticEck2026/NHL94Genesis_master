@@ -49,7 +49,7 @@ asswingo	;player a3 is winger on offense
 	addq.w	#8,d2	;add 8 to d2 (d2 = 8)
 	cmp.w	#$58,d0	;'X'   ; compare top blue line with d0
 	blt.w	.de2	;branch if in neutral zone
-	btst	#tmfoffside,tmflags(a2)	;check bit 4 of offset 30 (currently offside)
+	btst	#tmfoside,tmflags(a2)	;check bit 4 of offset 30 (currently offside)
 	;(C6FE Home, CA62 Away)
 	bne.w	.de2	;branch if set
 	addq.w	#8,d2	;add 8 to d2 (d2 = $10)
@@ -204,7 +204,7 @@ asscentero
 	addq.w	#8,d2	;set zone to 8
 	cmp.w	#$58,d0	;'X'   ; check opponents blue line
 	blt.w	.de2	;branch if in neutral zone
-	btst	#tmfoffside,tmflags(a2)	;Checks if currently offside
+	btst	#tmfoside,tmflags(a2)	;Checks if currently offside
 	;C6FE - Home
 	;CA62 - Away
 	bne.w	.de2	;branch if offside
@@ -1894,7 +1894,7 @@ assnearest
 .nodec2
 	btst	#pfjoycon,pflags(a3)	;pfjoycon - check if controlled
 	bne.w	rtss2	;jump if controlled
-	btst	#2,tmflags(a2)	;check bit 2 of $30(a2)
+	btst	#tmfmid,tmflags(a2)	;check bit 2 of $30(a2)
 	bne.w	.nodec22
 	tst.w	(puckc).w	;check if theres a puck carrier
 	bmi.w	.topuck	;jump if no puck carrier
@@ -1915,7 +1915,7 @@ assnearest
 	asr.w	#1,d1	;divide by 2
 	add.w	(sp)+,d0	;add original future puckx
 	add.w	(sp)+,d1	;add original future pucky
-	btst	#2,tmflags(a2)	;?? - doesn't seem to be set anywhere
+	btst	#tmfmid,tmflags(a2)	;?? - doesn't seem to be set anywhere
 	beq.w	.spdboost
 	btst	#pfgoal,pflags(a3)	;pfgoal
 	beq.w	.botshoot	;branch if bottom
@@ -2660,7 +2660,7 @@ puckfaceoff
 	bclr	#1,(gmode2).w
 	tst.w	(gameclock).w
 	beq.w	PeriodOver
-	btst	#gmend,(gmode).w
+	btst	#gmeog,(gmode).w
 	bne.w	PeriodOver
 	cmpi.w	#3,(gsp).w
 	bne.w	.npo
@@ -2676,7 +2676,7 @@ puckfaceoff
 	bls.w	.returngoalies
 	cmpi.w	#$3C,(gameclock).w
 	blt.w	.returngoalies
-	bclr	#7,(sflags3).w
+	bclr	#sf3fosong,(sflags3).w
 	beq.w	.returngoalies
 	btst	#gmclock,(gmode).w
 	beq.w	.returngoalies
@@ -2692,8 +2692,8 @@ puckfaceoff
 	st	temp2(a3)
 	tst.w	(OptLine).w
 	bne.w	WaitForFaceoffLineChanges
-	bclr	#tmflc,(tmstruct+tmflags).w
-	bclr	#tmflc,(AwShots+tmflags).w
+	bclr	#tmflcm,(tmstruct+tmflags).w
+	bclr	#tmflcm,(AwShots+tmflags).w
 	movea.w	#(SortCords-M68K_RAM),a0
 	moveq	#$B,d0
 .clearlcmloop
@@ -3523,7 +3523,7 @@ ChkOffsides	;check for offsides penalty. a3 = puck. Flags the whole team
 	bmi.w	.1
 	cmp.w	Ypos(a0),d0
 	bge.w	.1
-	bset	#tmfoffside,tmflags(a2)
+	bset	#tmfoside,tmflags(a2)
 	rts
 .1
 	adda.w	#SCstruct,a0
@@ -3547,14 +3547,14 @@ ChkOffsides	;check for offsides penalty. a3 = puck. Flags the whole team
 	bmi.w	.3
 	cmp.w	Ypos(a0),d0
 	ble.w	.3
-	bset	#tmfoffside,tmflags(a2)
+	bset	#tmfoside,tmflags(a2)
 	rts
 .3
 	adda.w	#SCstruct,a0
 	dbf	d2,.2
 	rts
 ClearOffsidesIfAllPlayers	;a2 = team struct: clear the team offsides flag once no skater is past the line
-	btst	#tmfoffside,tmflags(a2)
+	btst	#tmfoside,tmflags(a2)
 	beq.w	rtss2
 	movea.w	tmsort(a2),a0
 	moveq	#5,d1
@@ -3570,7 +3570,7 @@ ClearOffsidesIfAllPlayers	;a2 = team struct: clear the team offsides flag once n
 	cmp.w	#$58,d0
 	dbgt	d1,.top
 	bgt.w	rtss2
-	bclr	#tmfoffside,tmflags(a2)
+	bclr	#tmfoside,tmflags(a2)
 	rts
 a2offsides	;player a2 touched the puck: offsides penalty if his team is flagged and the puck is past the blue line
 	btst	#gmoffs,(gmode).w
@@ -3587,7 +3587,7 @@ a2offsides	;player a2 touched the puck: offsides penalty if his team is flagged 
 	beq.w	.1
 	adda.w	#tmsize,a0
 .1
-	btst	#tmfoffside,tmflags(a0)
+	btst	#tmfoside,tmflags(a0)
 	beq.w	rtss2
 	btst	#gmhl,(gmode).w
 	bne.w	rtss2
