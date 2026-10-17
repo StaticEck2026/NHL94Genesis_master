@@ -29,6 +29,7 @@ box = $18A56			;jsr (x).l at $B946
 checkob = $E62E			;bsr.w at $B72E
 chgplayer = $FF9A8		;jsr (x).l at $BFBC
 dirtab = $10E64			;movea.l #x at $
+runspeed = 200			;acc speed equate (checks94.asm), used by the pass divide
 doplayeracc = $10750		;bne.w at $B626
 eraser = $1197E			;bsr.w at $BB5A
 getpde = $1575A			;jsr (x).l at $BB62
