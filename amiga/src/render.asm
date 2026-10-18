@@ -2457,6 +2457,26 @@ rd_spr_build
 
 ;	------------------------------------------------------------------------------------------
 ;	High priority plane B cells under something of low priority: draw them again on top.
+FIXPL	MACRO					;plane at \1: the bitmap byte (a3) under the mask d5
+	move.b	(a3),d7
+	and.b	d5,d7
+	bfextu	\1(a1){d1:8},d0
+	and.b	d2,d0
+	or.b	d7,d0
+	bfins	d0,\1(a1){d1:8}
+	adda.w	d3,a3
+	ENDM
+FIXPAL	MACRO					;palette plane at \1: all of the mask if set
+	tst.b	(a3)
+	sne	d7
+	and.b	d5,d7
+	bfextu	\1(a1){d1:8},d0
+	and.b	d2,d0
+	or.b	d7,d0
+	bfins	d0,\1(a1){d1:8}
+	adda.w	d3,a3
+	ENDM
+
 rd_fixups
 	move.w	(rd_hiBn).l,d7
 	subq.w	#1,d7
@@ -2496,60 +2516,57 @@ rd_fixups
 	move.w	d2,(rd_fy).l
 	bsr	rd_iscovered
 	beq	.next
-	; redraw from the bitmap: 6 plane bytes and the mask per row
+	; redraw from the bitmap (rows of 6 plane rows, then the mask bitmap): its lines on screen
+	move.w	d7,-(sp)
 	move.w	(rd_cw).l,d3
-	move.w	d5,d1
-	lsl.w	#3,d1				;plane pixel row
-	moveq	#0,d6				;row in cell
-.row	move.w	(rd_fy).l,d2
+	moveq	#0,d6				;first line
+	tst.w	d2
+	bpl	.top
+	move.w	d2,d6
+	neg.w	d6
+.top	move.w	#SCRH,d7
+	sub.w	d2,d7				;lines to the screen bottom
+	cmpi.w	#8,d7
+	ble	.bot
+	moveq	#8,d7
+.bot	sub.w	d6,d7				;lines
+	subq.w	#1,d7
+	bmi	.done
 	add.w	d6,d2
-	bmi	.nr
-	cmpi.w	#SCRH,d2
-	bge	.next
-	movea.l	(rd_back).l,a1
 	mulu.w	#SROW,d2
+	movea.l	(rd_back).l,a1
 	adda.l	d2,a1
+	move.w	d0,d1
+	addi.w	#SCRX*8,d1			;bit offset
+	lsl.w	#3,d5
+	add.w	d6,d5				;plane pixel row
+	mulu.w	d3,d5
+	lea	(mkB).l,a2
+	adda.l	d5,a2
+	adda.w	d4,a2
+	mulu.w	#6,d5
 	lea	(bmB).l,a0
-	move.w	d1,d2
-	add.w	d6,d2
-	mulu.w	d3,d2
-	mulu.w	#6,d2
-	adda.l	d2,a0
-	adda.w	d4,a0				;plane 0 byte
-	move.b	(a0),d0
-	lsl.w	#8,d0
-	adda.w	d3,a0
-	move.b	(a0),d0
-	swap	d0
-	adda.w	d3,a0
-	move.b	(a0),d0
-	lsl.w	#8,d0
-	adda.w	d3,a0
-	move.b	(a0),d0
-	move.l	d0,(rd_tmp+4).l			;planes 0-3
-	moveq	#0,d2
-	adda.w	d3,a0
-	tst.b	(a0)
-	beq	.p4
-	moveq	#1,d2
-.p4	adda.w	d3,a0
-	tst.b	(a0)
-	beq	.p5
-	addq.w	#2,d2
-.p5	lea	(mkB).l,a0
-	move.w	d1,d0
-	add.w	d6,d0
-	mulu.w	d3,d0
-	adda.l	d0,a0
-	movem.l	d1/d3-d7/a4,-(sp)
-	move.b	(a0,d4.w),d3			;mask
-	move.l	(rd_tmp+4).l,d1
-	move.w	(rd_fx).l,d0
-	bsr	rd_put8
-	movem.l	(sp)+,d1/d3-d7/a4
-.nr	addq.w	#1,d6
-	cmpi.w	#8,d6
-	blt	.row
+	adda.l	d5,a0
+	adda.w	d4,a0
+	move.w	d3,d6
+	mulu.w	#6,d6				;bitmap row
+	move.w	d7,d4
+.row	move.b	(a2),d5				;mask
+	beq	.nr
+	move.b	d5,d2
+	not.b	d2				;keep
+	movea.l	a0,a3
+	FIXPL	0
+	FIXPL	SBPR
+	FIXPL	2*SBPR
+	FIXPL	3*SBPR
+	FIXPAL	4*SBPR
+	FIXPAL	5*SBPR
+.nr	lea	SROW(a1),a1
+	adda.w	d6,a0
+	adda.w	d3,a2
+	dbf	d4,.row
+.done	move.w	(sp)+,d7
 .next	dbf	d7,.each
 .x	rts
 
