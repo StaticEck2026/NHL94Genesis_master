@@ -3601,14 +3601,15 @@ rd_fps
 	bls	.t
 	moveq	#9,d0
 .t	movem.l	d0-d3,-(sp)
-	moveq	#-8,d0
+	moveq	#0,d0
 	moveq	#4,d1
-	moveq	#24,d2
+	moveq	#16,d2
 	moveq	#5,d3
 	bsr	rd_mark
 	movem.l	(sp)+,d0-d3
 	movea.l	(rd_back).l,a0
 	move.w	(rd_xorg).l,d2
+	addq.w	#7,d2				;(the first whole byte on the screen)
 	lsr.w	#3,d2
 	lea	SROW*4(a0,d2.w),a0
 	bsr	.digit
