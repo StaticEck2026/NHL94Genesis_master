@@ -325,7 +325,7 @@ os_save_prof
 	move.l	d0,(prof_mark+16).l
 	move.l	d4,d1
 	move.l	#prof_mark,d2
-	moveq	#20,d3
+	moveq	#52,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)

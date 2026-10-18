@@ -4,7 +4,7 @@ list) with shot_N.png (the reference Genesis renderer) at the Genesis' 8 levels 
 channel: the reference renderer's are linear, the Amiga's the measured Genesis output levels
 (render.asm rd_gen2amiga). The Amiga shows a frame once its blits are done, so it can be up to
 a few frames behind the game: each screen is compared with the references of its frame and of
-the 3 before it (shot_N-1.png ...) that are there, and the closest counts. Prints the frames that
+the 5 before it (shot_N-1.png ...) that are there, and the closest counts. Prints the frames that
 differ; exit status 1 if any do."""
 import glob, os, sys
 import numpy as np
@@ -28,7 +28,7 @@ for ami in sorted(glob.glob(os.path.join(sys.argv[1], 'ami_*.png'))):
     a = Image.open(ami).convert('RGB')
     la = ami_levels(a)
     n = None
-    for k in range(4):
+    for k in range(6):
         r = os.path.join(os.path.dirname(ref), 'shot_%05d.png' % (frame - k))
         if not os.path.exists(r):
             continue

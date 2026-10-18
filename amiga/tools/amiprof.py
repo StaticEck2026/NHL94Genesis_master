@@ -25,5 +25,10 @@ if len(d) >= 8 + 4 * n + 16:
     if t1 > t0:
         print('%.2f frames a second (%d frames in %.1f s since the F9 mark, the game at %d Hz)'
               % (hz * (c1 - c0) / (t1 - t0), c1 - c0, (t1 - t0) / hz, hz))
+if len(d) >= 8 + 4 * n + 52:
+    h = struct.unpack('>8I', d[28 + 4 * n:60 + 4 * n])
+    if sum(h):
+        print('frames shown for 1 .. 8+ vertical blanks: ' + ' '.join('%d' % x for x in h) +
+              ' (%s)' % ' '.join('%.0f%%' % (100.0 * x / sum(h)) for x in h))
 for k, v in c.most_common(int(sys.argv[3]) if len(sys.argv) > 3 else 30):
     print('%6.2f%%  %s' % (100.0 * v / n, k))

@@ -16,9 +16,11 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
   Genesis), 60 on NTSC. `F8` switches between the two.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 20 frames a second (FS-UAE,
-cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
-the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay is shown at a steady 25 frames a second
+on PAL most of the time (each frame on the screen for 2 vertical blanks; heavy moments drop to
+about 17), measured in FS-UAE, cycle exact. The game itself always runs at full speed; it is
+the screen updates that are fewer. `F6` lifts the cap: about 30 frames a second on average,
+but unevenly paced (a frame shows for 1 or 2 vertical blanks), which looks less smooth.
 
 ## Running
 
@@ -57,9 +59,10 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. `F7` switches the Amiga's audio low-pass
-filter (on at start, like the output filter of a model 1 Genesis). `F8` switches the game
-between 50 and 60 frames a second.
+`Esc` quits to the Workbench and writes the save file. `F6` switches between a steady 25 frames
+a second and as many as there is time for. `F7` switches the Amiga's audio low-pass filter (on
+at start, like the output filter of a model 1 Genesis). `F8` switches the game between 50 and
+60 frames a second.
 
 ### Screen
 
@@ -83,13 +86,18 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DWATCHDOG=1` shows a debug screen (the last interrupted program counters) when no frame has
   been drawn for 4 seconds.
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
-- `-DPROFILE=1` samples the program counter 60 times a second and writes `nhl94.prof` on exit;
-  `amiga/tools/amiprof.py` turns it into a list of routines.
+- `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
+  exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
+  blitter is put on the caller), the frame rate since `F9` was pressed, and how many frames were
+  on the screen for 1, 2, 3 ... vertical blanks.
+- `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
   for now: they do not sound right yet.
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
-  not listed for repair must match the bitmap. The test harness reports the first failure.
+  not listed for repair must match the bitmap. It also compares every name table each frame
+  and fails if one changed that the write marks said could not have. The test harness reports
+  the first failure.
 
 ## How it works
 
@@ -129,12 +137,20 @@ The hardware layer:
   without waiting. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
   and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
-  the VDP registers, scroll and sprite list taken when it starts (the game runs several of its
-  frames meanwhile; without it, players could be from a later game frame than the rink). A
-  frame's copper list is set by a marker queued after its blits (the level 3 interrupt sets it
-  when the queue gets there), so the CPU goes on to the next frame while the blitter finishes.
-  A buffer is drawn into again only once the frame after it has been on the screen for a
-  vertical blank (counted by the same interrupt).
+  the VDP registers, scroll and sprite list taken when it starts, with the changed tiles
+  converted in the same game frame (the game runs several of its frames meanwhile; without it,
+  players could be from a later game frame than the rink). A frame's copper list is handed
+  over by a marker queued after its blits (the level 3 interrupt takes it when the queue gets
+  there) and set at the first vertical blank that keeps the frame before on the screen for 2,
+  so the CPU goes on to the next frame while the blitter finishes. A new frame is begun every
+  2 game frames at most. A buffer is drawn into again only once the frame after it has been
+  on the screen for a vertical blank (counted by the same interrupt). When the game runs at the
+  display's rate (50 Hz PAL, 60 Hz NTSC) its frames are timed by the vertical blank too, so
+  they cannot drift against the frames shown; otherwise by a CIA timer. The game's own
+  interrupt masks (5, 3: the Genesis line interrupt) are lowered to 0 in conversion, so the
+  blit queue is fed while the game's code runs. The renderer only reads which name tables the
+  game may have written (DMA, fills and copies mark the blocks they change, data port writes
+  the block they begin in) and compares only those with its copies.
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.

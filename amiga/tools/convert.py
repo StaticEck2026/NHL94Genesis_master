@@ -195,6 +195,11 @@ def convert_line(code, ctx):
     # Z80 bus request polls: the bus is always free on the Amiga (writes go to a dummy word).
     if op2.lower() == 'btst' and args2 and re.search(r'\(IO_Z80BUS\)\.l', args2, re.I):
         args2 = re.sub(r'\(IO_Z80BUS\)\.l', '(hal_zero).l', args2, flags=re.I)
+    # The game's mask 5 or 3 keeps out the Genesis line interrupts. On the Amiga levels 1-5 are
+    # the port's own (the blit queue and vertical blank on 3): the game's code lets them in, or
+    # the blitter would wait while the game runs.
+    if op2.lower() == 'move' and args2 and re.match(r'^#\$2[1-5]00,sr$', args2, re.I):
+        args2 = '#$2000,sr'
     # Code grows (32-bit RAM addresses), so let vasm size every branch (bra.l on the 68020).
     if sz2 and re.match(r'^(bra|bsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo))$', op2, re.I) \
             and '*' not in (args2 or ''):     # bra.w *+4 counts on the branch's own size

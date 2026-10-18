@@ -83,7 +83,11 @@ hal_int2
 	bne	.nf7
 	jsr	(snd_filter_toggle).l
 	bra	.hs
-.nf7	cmpi.b	#$57,d1				;F8: 50 / 60 game frames a second
+.nf7	cmpi.b	#$55,d1				;F6: a steady 25 frames a second / as many as can be
+	bne	.nf6
+	eori.l	#1^2,(hal_pace).l
+	bra	.hs
+.nf6	cmpi.b	#$57,d1				;F8: 50 / 60 game frames a second
 	bne	.nf8
 	eori.w	#50^60,(hal_hz).l
 	jsr	(hal_set_rate).l
@@ -94,6 +98,12 @@ hal_int2
 	bne	.hs
 	move.l	(rd_count).l,(prof_mark).l
 	move.l	(hal_frames).l,(prof_mark+4).l
+	lea	(prof_mark+20).l,a0
+	moveq	#7,d1
+.ch	clr.l	(a0)+
+	dbf	d1,.ch
+	moveq	#$58,d1
+	lea	(hal_keys).l,a0
 	ENDIF
 	bra	.hs
 .up	sf	(a0,d1.w)

@@ -425,8 +425,12 @@ rd_frame
 	bsr	rd_show
 	addq.l	#1,(rd_count).l
 	bra	.skip
-.draw	bsr	rd_snapshot
+.draw	bsr	rd_vsync			;(the state is taken once there is a buffer for it)
+	move	sr,-(sp)			;the sprite list and the tiles of one game tick: no
+	ori	#$0700,sr			;tick in between
+	bsr	rd_snapshot
 	bsr	rd_decode_dirty
+	move	(sp)+,sr
 	lea	(rd_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1
@@ -644,16 +648,13 @@ rd_bq_go
 rd_bq_start
 .next	move.w	(rd_bqhead).l,d0
 	cmp.w	(rd_bqtail).l,d0
-	beq.s	.idle
+	beq	.idle
 	lea	(rd_bq).l,a0
 	mulu.w	#BQE,d0
 	adda.l	d0,a0
-	move.w	(rd_bqhead).l,d0
-	addq.w	#1,d0
-	andi.w	#BQN-1,d0
-	move.w	d0,(rd_bqhead).l
 	tst.w	$05E-$040(a0)
-	beq.s	.mark
+	beq	.mark
+	bsr	.adv
 	st	(rd_bqbusy).l
 	lea	(CUSTOM+$040).l,a1
 	move.l	(a0)+,(a1)+			;BLTCON0, BLTCON1
@@ -668,34 +669,97 @@ rd_bq_start
 	move.w	$05C-$058(a0),$05C-$058(a1)	;BLTSIZV
 	move.w	$05E-$058(a0),$05E-$058(a1)	;BLTSIZH: go
 	rts
-.mark	move.l	$048-$040(a0),(CUSTOM+$080).l	;COP1LC: from the next frame
-	move.w	$04C-$040(a0),d0
+.mark	tst.l	(rd_showcop).l			;the show before still waits for its vertical
+	bne	.hold				;blank: so does the queue (rd_bqhold)
+	bsr	.adv
+	move.l	$048-$040(a0),(rd_showcop).l
+	move.w	$04C-$040(a0),(rd_showbuf).l
+	bsr	rd_showdue
+	bra	.next
+.hold	st	(rd_bqbusy).l
+	st	(rd_bqhold).l
+	rts
+.idle	sf	(rd_bqbusy).l
+	rts
+.adv	move.w	(rd_bqhead).l,d0
+	addq.w	#1,d0
+	andi.w	#BQN-1,d0
+	move.w	d0,(rd_bqhead).l
+	rts
+
+;	The show waiting (rd_showcop), if it is due: each frame stays on the screen hal_pace
+;	vertical blanks at least. Its copper list is set (from the next frame on), its buffer's rd_shownvb
+;	noted. Interrupts off. Uses d0, a1.
+rd_showdue
+	tst.l	(rd_showcop).l
+	beq.s	.x
+	move.l	(rd_vblanks).l,d0
+	sub.l	(rd_lastset).l,d0
+	sub.l	(hal_pace).l,d0
+	bmi.s	.x
+	IFD	PROFILE
+	add.l	(hal_pace).l,d0			;(statistics: vertical blanks the frame before was
+	subq.l	#1,d0				;shown for)
+	cmpi.l	#7,d0
+	bls.s	.h
+	moveq	#7,d0
+.h	lea	(prof_mark+20).l,a1
+	addq.l	#1,(a1,d0.l*4)
+	ENDC
+	move.l	(rd_vblanks).l,(rd_lastset).l
+	move.l	(rd_showcop).l,(CUSTOM+$080).l	;COP1LC
+	clr.l	(rd_showcop).l
+	move.w	(rd_showbuf).l,d0
 	lsl.w	#2,d0
 	lea	(rd_shownvb).l,a1
 	move.l	(rd_vblanks).l,(a1,d0.w)
-	bra	.next
-.idle	sf	(rd_bqbusy).l
-	rts
+.x	rts
 
 ;	Level 3: the blitter has finished (the next entry, or the queue is idle), or a vertical
 ;	blank (counted: rd_vsync).
 rd_bq_int
 	movem.l	d0/a0-a1,-(sp)
-	move.w	(CUSTOM+$01E).l,d0		;INTREQR
-	btst	#5,d0
-	beq.s	.nvb
+	move.w	(CUSTOM+$01E).l,-(sp)		;INTREQR
+	btst	#6,1(sp)
+	beq.s	.nbl
+	move.w	#$0040,(CUSTOM+INTREQ).l
+	move.w	#$0040,(CUSTOM+INTREQ).l
+	tst.b	(rd_bqhold).l
+	bne.s	.nbl				;(held: no blit of ours ran)
+	tst.b	(rd_bqbusy).l
+	beq.s	.nbl
+	bsr	rd_bq_start
+.nbl	btst	#5,1(sp)
+	beq.s	.x
 	move.w	#$0020,(CUSTOM+INTREQ).l
 	move.w	#$0020,(CUSTOM+INTREQ).l
 	addq.l	#1,(rd_vblanks).l
-.nvb	btst	#6,d0
-	beq	.x
-	move.w	#$0040,(CUSTOM+INTREQ).l
-	move.w	#$0040,(CUSTOM+INTREQ).l
-	tst.b	(rd_bqbusy).l
-	beq	.x
+	tst.b	(hal_vbtick).l
+	beq.s	.nt
+	st	(hal_vbreq).l
+	move.w	#$A000,(CUSTOM+INTREQ).l	;the game's tick (level 6)
+.nt	bsr	rd_showdue
+	tst.b	(rd_bqhold).l
+	beq.s	.x
+	tst.l	(rd_showcop).l
+	bne.s	.x
+	sf	(rd_bqhold).l			;the queue goes on with the next show
 	bsr	rd_bq_start
-.x	movem.l	(sp)+,d0/a0-a1
+.x	addq.l	#2,sp
+	movem.l	(sp)+,d0/a0-a1
+	tst.b	(hal_swpend).l			;a game tick came in a handler: switch now, unless
+	bne.s	.sw				;this one interrupted a handler too
 	rte
+.sw	btst	#2,(sp)
+	bne.s	.r
+	btst	#1,(sp)
+	bne.s	.r
+	btst	#0,(sp)
+	bne.s	.r
+	sf	(hal_swpend).l
+	tst.b	(ctx_cur).l
+	bne	ctx_to_game
+.r	rte
 
 ;	------------------------------------------------------------------------------------------
 ;	Can the name table at VRAM d0 (32 byte aligned), d1 bytes long, have changed since it was
@@ -4167,6 +4231,11 @@ rd_ctiles	ds.w	4
 rd_bqhead	ds.w	1
 rd_bqtail	ds.w	1
 rd_bqbusy	ds.b	1
+rd_bqhold	ds.b	1			;the queue waits at a show for a vertical blank
+	even
+rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
+rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)
+rd_showbuf	ds.w	1			;(its buffer)
 		even
 rd_bq		ds.b	BQN*BQE
 rd_c4m		ds.w	1			;$FFFF: 4 columns, $FF00: 3
