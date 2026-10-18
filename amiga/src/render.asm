@@ -58,7 +58,8 @@ rd_frontcop	ds.l	1
 rd_lastframe	ds.l	1
 rd_lastgen	ds.l	2
 rd_count	ds.l	1			;frames drawn
-rd_colours	ds.w	64
+rd_colours	ds.w	64			;high nibbles of the 24 bit colours ($0RGB)
+rd_colourslo	ds.w	64			;and the low nibbles
 rd_mode		ds.w	1
 rd_clipx0	ds.w	1
 rd_clipx1	ds.w	1
@@ -72,7 +73,7 @@ mkB		ds.b	BMAX*8			;plane B high priority mask (the CPU's only: fast memory)
 	cnop	0,8
 rd_screens	ds.b	SCRSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
-rd_cop		ds.l	2*128
+rd_cop		ds.l	2*256
 rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
 rd_ovl		ds.b	SCRSIZE			;plane A / window overlay
 rd_ovlmlo	ds.b	SBPR*SCRH		;its low priority mask
@@ -159,7 +160,7 @@ rd_init
 	move.l	a0,(rd_back).l
 	lea	(rd_cop).l,a0
 	move.l	a0,(rd_backcop).l
-	lea	512(a0),a1
+	lea	1024(a0),a1
 	move.l	a1,(rd_frontcop).l
 	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l
@@ -3264,49 +3265,62 @@ rd_c2p
 rd_palette
 	lea	(vdp_cram).l,a0
 	lea	(rd_colours).l,a1
+	lea	(rd_colourslo).l,a2
 	moveq	#63,d0
 .c	move.w	(a0)+,d1
 	bsr	rd_gen2amiga
 	move.w	d2,(a1)+
+	move.w	d4,(a2)+
 	dbf	d0,.c
-	lea	(rd_colours).l,a1
+	; colour 0 of each palette line is the backdrop colour
 	moveq	#0,d0
 	move.b	(vdp_regs+7).l,d0
 	andi.w	#$3F,d0
-	move.w	(a1,d0.w*2),d1
+	lea	(rd_colours).l,a1
+	bsr.s	.bd
+	lea	(rd_colourslo).l,a1
+	bsr.s	.bd
+	btst	#6,(vdp_regs+1).l
+	bne	.on
+	lea	(rd_colours).l,a1		;display off: black
+	moveq	#63,d0
+.off	clr.l	(a1)+				;(both tables)
+	dbf	d0,.off
+.on	rts
+.bd	move.w	(a1,d0.w*2),d1
 	move.w	d1,(a1)
 	move.w	d1,32(a1)
 	move.w	d1,64(a1)
 	move.w	d1,96(a1)
-	btst	#6,(vdp_regs+1).l
-	bne	.on
-	moveq	#31,d0				;display off: black
-.off	clr.l	(a1)+
-	dbf	d0,.off
-.on	rts
+	rts
 
+;	Genesis colour d1 (CRAM: ----BBB-GGG-RRR-) -> AGA 24 bit colour: d2 = high nibbles ($0RGB),
+;	d4 = low nibbles. The 8 levels are those the Genesis puts out (its DAC and video encoder
+;	compress the scale: measured 0, 52, 87, 116, 144, 172, 206, 255), not a straight line.
 rd_gen2amiga
 	moveq	#0,d2
+	moveq	#0,d4
 	move.w	d1,d3
-	lsr.w	#1,d3
-	andi.w	#7,d3
-	move.b	(.x7,pc,d3.w),d3
-	lsl.w	#8,d3
-	or.w	d3,d2
+	lsr.w	#1,d3				;red
+	bsr.s	.ch
 	move.w	d1,d3
-	lsr.w	#5,d3
-	andi.w	#7,d3
-	move.b	(.x7,pc,d3.w),d3
-	lsl.w	#4,d3
-	or.w	d3,d2
+	lsr.w	#5,d3				;green
+	bsr.s	.ch
 	move.w	d1,d3
 	lsr.w	#8,d3
-	lsr.w	#1,d3
-	andi.w	#7,d3
-	move.b	(.x7,pc,d3.w),d3
-	or.w	d3,d2
+	lsr.w	#1,d3				;blue
+.ch	andi.w	#7,d3
+	move.b	(.lv,pc,d3.w),d3
+	lsl.w	#4,d2
+	lsl.w	#4,d4
+	ror.b	#4,d3				;high nibble low
+	move.b	d3,d5
+	andi.b	#15,d5
+	or.b	d5,d2
+	lsr.b	#4,d3
+	or.b	d3,d4
 	rts
-.x7	dc.b	0,2,4,6,9,11,13,15
+.lv	dc.b	0,52,87,116,144,172,206,255
 
 ;	------------------------------------------------------------------------------------------
 ;	Frames drawn in the last second, top left of the screen in colour 63 (F10 shows it).
@@ -3421,7 +3435,7 @@ rd_show
 	COPMOVE	$10A,#SROW-40			;BPL2MOD
 	COPMOVE	$100,#$6201			;BPLCON0: 6 planes, colour, ECS bits on
 	COPMOVE	$102,#0				;BPLCON1
-	COPMOVE	$104,#$0024			;BPLCON2
+	COPMOVE	$104,#$0224			;BPLCON2: KILLEHB (6 planes would be Extra Half-Brite)
 	COPMOVE	$1FC,#$0001			;FMODE: 32 bit bitplane fetch
 	COPMOVE	$10C,#$0011			;BPLCON4
 	move.w	#$0E0,d1
@@ -3436,7 +3450,9 @@ rd_show
 	addq.w	#2,d1
 	addi.l	#SBPR,d0
 	dbf	d2,.bp
+	; the 64 colours: per bank of 32 the high nibbles, then (LOCT) the low nibbles
 	lea	(rd_colours).l,a1
+	lea	(rd_colourslo).l,a2
 	moveq	#0,d3
 .bank	move.w	#$106,(a0)+			;BPLCON3: bank
 	move.w	d3,d0
@@ -3450,6 +3466,15 @@ rd_show
 	move.w	(a1)+,(a0)+
 	addq.w	#2,d1
 	dbf	d2,.col
+	move.w	#$106,(a0)+			;BPLCON3: the same bank, LOCT
+	ori.w	#$0200,d0
+	move.w	d0,(a0)+
+	move.w	#$180,d1
+	moveq	#31,d2
+.lo	move.w	d1,(a0)+
+	move.w	(a2)+,(a0)+
+	addq.w	#2,d1
+	dbf	d2,.lo
 	addq.w	#1,d3
 	cmpi.w	#2,d3
 	bne	.bank

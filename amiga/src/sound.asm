@@ -12,6 +12,9 @@
 ;	pitch; the rest of the patch's envelope (decay, release at key off) is a volume envelope
 ;	stepped at 60 Hz. The PCM samples are copied to chip RAM as signed bytes at start.
 ;
+;	The Amiga's audio low-pass filter (the "LED" filter, about 3.3 kHz) is on while the game
+;	runs, as the Genesis model 1's output filter softens its sound; F7 switches it.
+;
 ;	snd_z80_cmd takes a command from the driver (it is called where the driver hands the Z80
 ;	its command); snd_z80_poll, from the 60 Hz interrupt, does the work on Paula.
 
@@ -89,8 +92,26 @@ snd_init
 .q	clr.w	8(a0)
 	lea	$10(a0),a0
 	dbf	d0,.q
+	; the low-pass filter on (CIA-A port A bit 1 low); the OS's setting kept for the exit
+	move.b	(CIAA_PRA).l,d0
+	andi.b	#2,d0
+	move.b	d0,(snd_ledsave).l
+	bclr	#1,(CIAA_PRA).l
 	movem.l	(sp)+,d0-d2/a0-a2
 	rts
+
+;	F7: the low-pass filter on / off.
+snd_filter_toggle
+	bchg	#1,(CIAA_PRA).l
+	rts
+
+;	Back to the OS: the filter as it was.
+snd_exit
+	bclr	#1,(CIAA_PRA).l
+	tst.b	(snd_ledsave).l
+	beq.s	.x
+	bset	#1,(CIAA_PRA).l
+.x	rts
 
 ;	The driver has written a command to the Z80 RAM: note what it asks for (snd_z80_poll does
 ;	it) and answer as the Z80 does when it is done.
@@ -649,6 +670,7 @@ snd_pend_on	ds.b	1
 snd_pend_att	ds.b	1
 snd_pend_frq	ds.b	1
 snd_pcm_start	ds.b	1
+snd_ledsave	ds.b	1
 		even
 
 	section	game,code

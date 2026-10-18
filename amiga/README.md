@@ -48,12 +48,13 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. The 4 way play adaptor modes are not
+`Esc` quits to the Workbench and writes the save file. `F7` switches the Amiga's audio
+low-pass filter (on at start, like the output filter of a model 1 Genesis). The 4 way play adaptor modes are not
 available.
 
 ## Building
 
-Needs Python 3, Node.js (for the repository's asset extraction pre-step, see the main README) and
+Needs Python 3 with numpy, Node.js (for the repository's asset extraction pre-step, see the main README) and
 vasm (`vasmm68k_mot`, Motorola syntax; on the `PATH`, in `$VASM`, or at `/opt/amiga/vasm`).
 
     amiga/build.sh
@@ -95,14 +96,18 @@ The hardware layer:
   cached in planar form. Plane B is kept as a bitmap and blitted with the scroll. Plane A and the
   window are an overlay layer with masks. Sprites are drawn by the CPU. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
-  and the display window, and frames are double buffered.
+  and the display window, and frames are double buffered. The colours are AGA 24 bit colours
+  (each written as high then low nibbles) at the levels the Genesis puts out, which are not a
+  straight line from 0 to 255; Extra Half-Brite is switched off so all 64 registers are used.
 - `input.asm`: joysticks, CD32 pads and the keyboard, read as two 3 button pads.
 - `sound.asm`: the four Paula voices in place of the Z80, YM2612 and DAC. The game's own 68000
   sound driver runs unchanged. `sound.asm` reads the commands the driver writes for the Z80:
   key on, key off, frequency, volume and patch per FM channel, and the PCM start, rate and volume.
   The 32 FM patches are rendered to samples at build time by `amiga/tools/fmrender.py`, a model
-  of the YM2612. Each patch has an attack and a loop at each pitch band it is used at. The rest
-  of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
+  of the YM2612. Each patch has an attack and a loop at each octave band it is used at, so every
+  note plays at 14 to 28 kHz. The synthesis runs at 8 times the sample rate and is low-pass
+  filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
+  back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
   note takes a free voice, else the quietest released one, else the oldest.
 - `stub.asm`: the launcher.
 

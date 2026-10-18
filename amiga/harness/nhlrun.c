@@ -224,7 +224,7 @@ static void custom_write(uint32_t a, uint32_t v)
 static void amiga_png(const char *name)
 {
     uint32_t bpl[8] = {0}, pal[256] = {0};
-    int bank = 0, ddf = 0x38, nplanes = 0, mod = 0;
+    int bank = 0, loct = 0, ddf = 0x38, nplanes = 0, mod = 0, ham = 0, killehb = 0;
     uint32_t pc = cop1lc;
     for (int i = 0; i < 400 && pc; i++) {
         uint32_t w1 = rd16(pc), w2 = rd16(pc + 2);
@@ -235,12 +235,17 @@ static void amiga_png(const char *name)
         if (r >= 0xE0 && r < 0x100) {
             int n = (r - 0xE0) / 4;
             if (r & 2) bpl[n] = (bpl[n] & 0xFFFF0000) | w2; else bpl[n] = (bpl[n] & 0xFFFF) | (w2 << 16);
-        } else if (r == 0x106) bank = w2 >> 13;
+        } else if (r == 0x106) { bank = w2 >> 13; loct = (w2 >> 9) & 1; }
         else if (r >= 0x180 && r < 0x1C0) {
+            /* AGA: a write sets the high nibbles (and copies them to the low ones), a write
+               with BPLCON3 LOCT the low nibbles */
             int c = bank * 32 + (r - 0x180) / 2;
-            pal[c] = (((w2 >> 8) & 15) * 17) << 16 | (((w2 >> 4) & 15) * 17) << 8 | ((w2 & 15) * 17);
+            uint32_t n = ((w2 >> 8) & 15) << 16 | ((w2 >> 4) & 15) << 8 | (w2 & 15);
+            if (!loct) pal[c] = n << 4 | n;
+            else pal[c] = (pal[c] & 0xF0F0F0) | n;
         } else if (r == 0x092) ddf = w2;
-        else if (r == 0x100) nplanes = (w2 >> 12) & 7;
+        else if (r == 0x100) { nplanes = (w2 >> 12) & 7; ham = (w2 >> 11) & 1; }
+        else if (r == 0x104) killehb = (w2 >> 9) & 1;
         else if (r == 0x108) mod = w2;
     }
     int diwh = 0x81, diwstop = 0xC1;
@@ -261,8 +266,11 @@ static void amiga_png(const char *name)
             int c = 0, xx = x + skip;
             for (int p = 0; p < nplanes; p++)
                 if (rd8(bpl[p] + y * bpr + xx / 8) & (0x80 >> (xx & 7))) c |= 1 << p;
+            uint32_t col = pal[c];
+            if (nplanes == 6 && !ham && !killehb)   /* Extra Half-Brite: colours 32-63 halve 0-31 */
+                col = c >= 32 ? (pal[c - 32] >> 1) & 0x7F7F7F : pal[c];
             uint8_t *o = rgb + (y * w + x) * 3;
-            o[0] = pal[c] >> 16; o[1] = pal[c] >> 8; o[2] = pal[c];
+            o[0] = col >> 16; o[1] = col >> 8; o[2] = col;
         }
     png_write(name, rgb, w, h);
 }

@@ -7,7 +7,7 @@
 ;	  CD32 play            Start
 ;	Keyboard, player 1: cursor keys, Z = A, X = B, C = C, Return = Start
 ;	          player 2: F1 = A, F2 = B, F3 = C, F4 = Start
-;	Esc goes back to the Workbench (the save file is written then).
+;	Esc goes back to the Workbench (the save file is written then). F7 switches the audio filter.
 
 CIAA_PRA	equ	$BFE001
 CIAA_DDRA	equ	$BFE201
@@ -78,7 +78,11 @@ hal_int2
 	bne	.nf10
 	not.b	(hal_fpsshow).l
 	bra	.hs
-.nf10
+.nf10	cmpi.b	#$56,d1				;F7: audio filter
+	bne	.nf7
+	jsr	(snd_filter_toggle).l
+	bra	.hs
+.nf7
 	IFD	PROFILE
 	cmpi.b	#$58,d1				;F9: mark the start of the frame rate count
 	bne	.hs

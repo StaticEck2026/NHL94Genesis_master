@@ -232,6 +232,7 @@ hal_exit
 	ori.b	#$80,d0
 	move.b	d0,(CIAB_ICR).l
 	bsr	hal_kbd_exit
+	jsr	(snd_exit).l
 	move.l	(os_vbr).l,d0
 	movec	d0,vbr
 	movea.l	(os_ssp).l,sp
