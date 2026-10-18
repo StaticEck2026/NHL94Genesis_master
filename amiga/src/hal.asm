@@ -164,11 +164,14 @@ hal_int6
 	beq	.none
 	move.l	(sp)+,d0
 	addq.l	#1,(hal_frames).l
-	addq.w	#1,(hal_wd).l
+	IFD	WATCHDOG			;(debug builds: the game's screen can rightly stay
+	addq.w	#1,(hal_wd).l			; the same for a long time)
 	cmpi.w	#240,(hal_wd).l
 	bne	.nowd
 	jsr	(hal_watchdog).l
-.nowd	jsr	(snd_z80_poll).l
+.nowd
+	ENDIF
+	jsr	(snd_z80_poll).l
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
 	pea	(.post).l
 	move	sr,-(sp)
@@ -270,8 +273,9 @@ hal_display_init
 	move.w	#$83C0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter
 	rts
 
-;	No frame drawn for 4 seconds: a black and white debug screen with the code base, the last
-;	16 interrupted pcs and the last sr / context, in hex.
+;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the
+;	code base, the last 16 interrupted pcs and the last sr / context, in hex.
+	IFD	WATCHDOG
 hal_watchdog
 	movem.l	d0-d2/a0-a2,-(sp)
 	lea	(hal_dbgscr).l,a0
@@ -333,6 +337,7 @@ hal_hex8
 	dbf	d4,.d
 	movem.l	(sp)+,d0-d4/a0-a3
 	rts
+	ENDIF
 
 hal_int_ignore
 	move.w	#$3FFF,(CUSTOM+INTREQ).l
@@ -348,6 +353,14 @@ hal_exception
 	move.l	12(sp),(hal_exc_info+12).l
 	move.w	#$F00,(CUSTOM+$180).l
 .hang	bra	.hang
+
+;	find3d (display94.asm) keeps the sprites of objects within these of the camera: the
+;	Genesis' +-$90, wider in the wide view (rd_frame sets them).
+hal_cullx	dc.w	$0090
+hal_cullxn	dc.w	$FF70
+rd_wide		dc.b	-1			;the wide view (F6)
+hal_play	dc.b	0			;set by find3d: the game is drawing the rink
+		even
 
 	section	bss,bss
 	cnop	0,4
@@ -383,7 +396,9 @@ rend_stack_top
 
 	section	chip,bss_c
 hal_copempty	ds.l	4
+	IFD	WATCHDOG
 hal_dbgcop	ds.l	20
 hal_dbgscr	ds.b	40*200
+	ENDIF
 
 	section	game,code

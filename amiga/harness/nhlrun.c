@@ -510,7 +510,24 @@ int main(int argc, char **argv)
         if (getenv("NHL_VDPLOG")) {         /* mode, plane size, plane B scroll */
             uint8_t *r = mem + (vdpregs & 0xFFFFFF);
             uint32_t hs = (r[13] & 0x3F) << 10;
-            printf("frame %d: r11 %02x r12 %02x r16 %02x hscrollB %d vscrollB %d\n", frame, r[11], r[12], r[16],
+            {   /* sprites by x: on the 256 screen, in a 32 pixel margin, further out */
+                uint32_t sat = (r[5] & 0x7F) << 9;
+                int on = 0, margin = 0, far = 0, n = 0, link = 0;
+                do {
+                    uint32_t e = vram + sat + link * 8;
+                    int y = rd16(e) & 0x3FF, x = rd16(e + 6) & 0x1FF, w = ((rd8(e + 2) >> 2) & 3) * 8 + 8;
+                    if (y >= 128 - 32 && y < 128 + 224) {
+                        if (x + w > 128 && x < 128 + 256) on++;
+                        else if (x + w > 128 - 32 && x < 128 + 288) margin++;
+                        else far++;
+                    }
+                    link = rd8(e + 3) & 0x7F;
+                } while (link && ++n < 80);
+                if (getenv("NHL_SPRLOG")) printf("frame %d: sprites on %d margin %d far %d\n", frame, on, margin, far);
+            }
+            int black = 1;
+            for (int c = 0; c < 64; c++) if (rd16(cram + 2 * c) & 0xEEE) black = 0;
+            printf("frame %d: black %d r1 %02x r11 %02x r12 %02x r16 %02x hscrollB %d vscrollB %d\n", frame, black, r[1], r[11], r[12], r[16],
                    (int16_t)rd16(vram + hs + 2), (int16_t)rd16(vsram + 2));
         }
         irq6_pending = 1;

@@ -43,11 +43,14 @@ rd_hiB		ds.l	BMAX			;plane B high priority cells: column, row (words)
 rd_hiBn		ds.w	1
 rd_hiBok	ds.w	1			;list matches bmB
 rd_Bkey		ds.l	2			;base, size of the plane in bmB (invalid: redraw all)
-rd_cover	ds.b	64*32			;screen cells something low was drawn on (fixups)
+rd_cover	ds.l	2*32			;screen cells something low was drawn on (fixups): a bit
+						;each, 64 a row
 rd_sprites	ds.l	2*80
 rd_spn		ds.w	1
 rd_w		ds.w	1			;screen width 256 / 320
 rd_cells	ds.w	1			;tiles across +1
+rd_dw		ds.w	1			;Amiga screen width (320 for H32 in the wide view)
+rd_xo		ds.w	1			;Amiga screen x of the Genesis screen's x 0
 rd_cw		ds.w	1			;plane B cells across, down
 rd_ch		ds.w	1
 rd_bx0		ds.w	1			;plane B pixel at screen 0, 0
@@ -58,6 +61,8 @@ rd_frontcop	ds.l	1
 rd_lastframe	ds.l	1
 rd_lastgen	ds.l	2
 rd_count	ds.l	1			;frames drawn
+rd_palgen	ds.l	1			;the CRAM changes and registers the colours are of
+rd_palkey	ds.l	1
 rd_colours	ds.w	64			;high nibbles of the 24 bit colours ($0RGB)
 rd_colourslo	ds.w	64			;and the low nibbles
 rd_mode		ds.w	1
@@ -74,7 +79,9 @@ mkB		ds.b	BMAX*8			;plane B high priority mask (the CPU's only: fast memory)
 rd_screens	ds.b	SCRSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 rd_cop		ds.l	2*256
+	IFD	SPRBLIT
 rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
+	ENDIF
 rd_ovl		ds.b	SCRSIZE			;plane A / window overlay
 rd_ovlmlo	ds.b	SBPR*SCRH		;its low priority mask
 rd_ovlmhi	ds.b	SBPR*SCRH		;its high priority mask (follows the low one)
@@ -165,6 +172,7 @@ rd_init
 	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l
 	move.l	d0,(rd_lastgen).l
+	move.l	d0,(rd_palgen).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
@@ -357,7 +365,18 @@ rd_frame
 .changed
 	move.l	(rd_lastgen).l,(rd_lastgen+4).l
 	move.l	d0,(rd_lastgen).l
-	bsr	rd_decode_dirty
+	; all black (a fade, or the game loading behind a black screen): show black and leave the
+	; CPU to the game; the tiles are converted when there is something to see
+	bsr	rd_palette
+	lea	(rd_colours).l,a0
+	moveq	#63,d0
+.blk	tst.l	(a0)+				;(both tables)
+	dbne	d0,.blk
+	bne.s	.draw
+	bsr	rd_show
+	addq.l	#1,(rd_count).l
+	bra	.skip
+.draw	bsr	rd_decode_dirty
 	lea	(vdp_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1
@@ -368,7 +387,22 @@ rd_frame
 	moveq	#41,d1
 .h32	move.w	d0,(rd_w).l
 	move.w	d1,(rd_cells).l
-	; fast path?
+	; the Amiga screen: 320 wide in H32 too when the wide view is on (rd_xo: where the
+	; Genesis screen's x 0 is; the game keeps the sprites of a wider area, hal_cullx)
+	move.w	d0,(rd_dw).l
+	clr.w	(rd_xo).l
+	move.l	#$0090FF70,(hal_cullx).l
+	cmpi.w	#256,d0
+	bne.s	.nw
+	tst.b	(rd_wide).l
+	beq.s	.nw
+	tst.b	(hal_play).l			;only for the rink: the other H32 screens (the pause
+	beq.s	.nw				;menu) have no picture beyond the 256 columns
+	sf	(hal_play).l
+	move.w	#320,(rd_dw).l
+	move.w	#32,(rd_xo).l
+	move.l	#$00B0FF50,(hal_cullx).l
+.nw	; fast path?
 	move.b	11(a5),d0
 	andi.b	#7,d0
 	bne	.chunky				;line / cell scroll or column vscroll
@@ -380,9 +414,10 @@ rd_frame
 	bra	.shown
 .chunky	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches
+	move.w	(rd_w).l,(rd_dw).l		;(the chunky path draws the Genesis screen only)
+	clr.w	(rd_xo).l
 	bsr	rd_chunky
-.shown	bsr	rd_palette
-	bsr	rd_show
+.shown	bsr	rd_show
 	addq.l	#1,(rd_count).l
 .skip	movem.l	(sp)+,d0-d7/a0-a6
 	rts
@@ -416,7 +451,7 @@ rd_fast
 	bsr	rd_blitB
 	bsr	rd_collect_sprites
 	lea	(rd_cover).l,a0			;nothing low drawn yet
-	move.w	#64*32/4-1,d0
+	moveq	#2*32-1,d0
 .c	clr.l	(a0)+
 	dbf	d0,.c
 	bsr	rd_buildA
@@ -763,6 +798,7 @@ rd_blitB
 	lea	(vdp_vram).l,a0
 	move.w	2(a0,d0.l),d0			;B hscroll
 	neg.w	d0
+	sub.w	(rd_xo).l,d0			;(wide view: from further left)
 	move.w	(rd_cw).l,d1
 	lsl.w	#3,d1
 	subq.w	#1,d1
@@ -792,7 +828,7 @@ rd_blitB
 	lsl.w	#3,d0				;plane width
 	move.w	(rd_bx0).l,d1
 	sub.w	d1,d0				;pixels to the right edge
-	move.w	(rd_w).l,d2
+	move.w	(rd_dw).l,d2
 	cmp.w	d2,d0
 	bge	.one
 	; two pieces: [bx0, W) at screen 0, then [0, w-(W-bx0)) at screen W-bx0
@@ -1091,19 +1127,23 @@ rd_cover_rect
 	asr.w	#3,d1
 	asr.w	#3,d2
 	asr.w	#3,d3
+	sub.w	d0,d2
+	addq.w	#1,d2				;cells across (at most 40)
 	lea	(rd_cover).l,a0
-.r	move.w	d1,d4
-	lsl.w	#6,d4
-	add.w	d0,d4
+	lea	(a0,d1.w*8),a0			;first row
+	sub.w	d1,d3				;rows - 1
+.r	cmpi.w	#32,d2
+	bgt.s	.wide
+	bfset	(a0){d0:d2}			;(a width of 32 is coded as 0)
+	bra.s	.n
+.wide	move.w	d2,d4
+	subi.w	#32,d4
 	move.w	d0,d5
-.c	st	(a0,d4.w)
-	addq.w	#1,d4
-	addq.w	#1,d5
-	cmp.w	d2,d5
-	ble	.c
-	addq.w	#1,d1
-	cmp.w	d3,d1
-	ble	.r
+	addi.w	#32,d5
+	bfset	(a0){d0:0}
+	bfset	(a0){d5:d4}
+.n	addq.l	#8,a0
+	dbf	d3,.r
 .x	movem.l	(sp)+,d0-d6/a0
 	rts
 
@@ -1360,6 +1400,19 @@ rd_ovl_blit
 	sub.w	d2,d3
 .b	tst.w	d3
 	ble	.bx
+	; only the Genesis screen's columns (the wide view shows plane B and sprites beyond)
+	tst.w	d0
+	bpl.s	.g0
+	moveq	#0,d0
+.g0	move.w	(rd_w).l,d4
+	subq.w	#1,d4
+	cmp.w	d4,d1
+	ble.s	.g1
+	move.w	d4,d1
+.g1	cmp.w	d1,d0
+	bgt	.bx
+	add.w	(rd_xo).l,d0			;to Amiga screen pixels
+	add.w	(rd_xo).l,d1
 	tst.w	(rd_pass).l
 	bne	.nocov
 	movem.l	d0-d3,-(sp)
@@ -1396,6 +1449,10 @@ rd_ovl_blit
 	adda.w	d0,a1
 	lea	(a3,d5.l),a2
 	adda.w	d0,a2
+	move.w	(rd_xo).l,d4
+	lsr.w	#3,d4
+	suba.w	d4,a1				;the overlay is in Genesis screen columns
+	suba.w	d4,a2
 	move.w	d1,d4
 	add.w	d4,d4				;bytes a row
 	moveq	#NPLANES-1,d6
@@ -1962,6 +2019,7 @@ rd_sprite_blit
 	move.w	6(a4),d3
 	andi.w	#$1FF,d3
 	subi.w	#128,d3
+	add.w	(rd_xo).l,d3
 	move.w	d3,(rd_sx).l			;x
 	move.w	4(a4),(rd_sat).l
 	; whole sprite off screen?
@@ -1971,7 +2029,7 @@ rd_sprite_blit
 	lsl.w	#3,d4
 	add.w	d0,d4
 	ble	.x
-	cmp.w	(rd_w).l,d3
+	cmp.w	(rd_dw).l,d3
 	bge	.x
 	move.w	d1,d4
 	lsl.w	#3,d4
@@ -2024,6 +2082,7 @@ rd_sprite_blit
 	rol.w	#3,d0
 	andi.w	#3,d0
 	move.w	d0,(rd_spal).l
+	IFD	SPRBLIT
 	; build image and mask
 	lea	(rd_sprimg).l,a2
 	tst.b	(rd_sprflip).l
@@ -2033,7 +2092,6 @@ rd_sprite_blit
 	lea	SPRBUF(a2),a3			;mask
 	move.l	a2,(rd_simg).l
 	move.l	a3,(rd_smask).l
-	IFD	SPRBLIT
 	bsr	rd_spr_build
 	ELSE
 	bra	rd_spr_cpu
@@ -2583,7 +2641,7 @@ rd_fixups
 	lsl.w	#3,d1
 	subq.w	#1,d1
 	and.w	d1,d0
-	cmp.w	(rd_w).l,d0
+	cmp.w	(rd_dw).l,d0
 	blt	.xok
 	sub.w	d1,d0
 	subq.w	#1,d0				;- plane width
@@ -2663,7 +2721,7 @@ rd_fixups
 
 ;	Z clear if a screen cell under the 8x8 box at (d0, d2) is marked in rd_cover. Keeps d0-d5.
 rd_iscovered
-	movem.l	d0-d5,-(sp)
+	movem.l	d0-d5/a0,-(sp)
 	move.w	d0,d4				;x0
 	move.w	d0,d5
 	addq.w	#7,d5				;x1
@@ -2686,27 +2744,22 @@ rd_iscovered
 .3	cmpi.w	#27,d3
 	ble	.4
 	moveq	#27,d3
-.4	lea	(rd_cover).l,a0
-.r	cmp.w	d3,d1
-	bgt	.no
-	move.w	d1,d0
-	lsl.w	#6,d0
-	add.w	d4,d0
-	move.w	d4,d2
-.c	cmp.w	d5,d2
-	bgt	.nr
-	tst.b	(a0,d0.w)
+.4	sub.w	d4,d5
+	bmi	.no
+	addq.w	#1,d5				;cells across (1 or 2)
+	lea	(rd_cover).l,a0
+	lea	(a0,d1.w*8),a0
+	sub.w	d1,d3				;rows - 1 (0 or 1)
+	bmi	.no
+.r	bfextu	(a0){d4:d5},d0
 	bne	.yes
-	addq.w	#1,d0
-	addq.w	#1,d2
-	bra	.c
-.nr	addq.w	#1,d1
-	bra	.r
-.yes	movem.l	(sp)+,d0-d5
-	moveq	#1,d6				;Z clear
-	rts
-.no	movem.l	(sp)+,d0-d5
+	addq.l	#8,a0
+	dbf	d3,.r
+.no	movem.l	(sp)+,d0-d5/a0
 	moveq	#0,d6				;Z set
+	rts
+.yes	movem.l	(sp)+,d0-d5/a0
+	moveq	#1,d6				;Z clear
 	rts
 
 	section	bss,bss
@@ -3263,6 +3316,17 @@ rd_c2p
 ;	==========================================================================================
 ;	Colours: CRAM ----bbb-ggg-rrr- to Amiga $0RGB. 0, 16, 32 and 48 all show the backdrop.
 rd_palette
+	; the same colours as last time? (CRAM, backdrop colour, display on)
+	move.l	(vdp_cramgen).l,d0
+	move.w	(vdp_regs).l,d1			;registers 0, 1
+	swap	d1
+	move.b	(vdp_regs+7).l,d1
+	cmp.l	(rd_palgen).l,d0
+	bne.s	.new
+	cmp.l	(rd_palkey).l,d1
+	beq	.on
+.new	move.l	d0,(rd_palgen).l
+	move.l	d1,(rd_palkey).l
 	lea	(vdp_cram).l,a0
 	lea	(rd_colours).l,a1
 	lea	(rd_colourslo).l,a2
@@ -3418,7 +3482,7 @@ rd_show
 	bne	.pal
 	move.w	#$1AA1,d1
 	move.w	#$FAA1,d2
-.pal	cmpi.w	#320,(rd_w).l
+.pal	cmpi.w	#320,(rd_dw).l
 	beq	.w320
 	addi.l	#SCRX-4,d0
 	bra	.dw

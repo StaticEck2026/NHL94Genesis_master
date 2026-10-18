@@ -48,8 +48,20 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. `F7` switches the Amiga's audio
-low-pass filter (on at start, like the output filter of a model 1 Genesis). The 4 way play adaptor modes are not
+`Esc` quits to the Workbench and writes the save file. `F6` switches the wide view (below).
+`F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model
+1 Genesis).
+
+### Full screen
+
+The menus are 320 pixels wide, the Amiga's full low resolution width. The rink is 256 wide on
+the Genesis (its H32 mode); the Amiga shows it 320 wide, with 32 more pixels of the rink each
+side. The game keeps the sprites of that wider area (its sprite culling is widened to match) and
+the score and clock boxes stay where they were. `F6` switches back to the Genesis' 256 pixels,
+which draws about 15% faster. Screens other than the rink stay as the Genesis shows them.
+
+In vAmigaWeb, set "visible display area" to "viewport tracking" in the settings: it then zooms to
+the picture the game shows, without the borders. The 4 way play adaptor modes are not
 available.
 
 ## Building
@@ -62,6 +74,8 @@ vasm (`vasmm68k_mot`, Motorola syntax; on the `PATH`, in `$VASM`, or at `/opt/am
 writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94.info`. With
 `VASMFLAGS`:
 
+- `-DWATCHDOG=1` shows a debug screen (the last interrupted program counters) when no frame has
+  been drawn for 4 seconds.
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
 - `-DPROFILE=1` samples the program counter 60 times a second and writes `nhl94.prof` on exit;
   `amiga/tools/amiprof.py` turns it into a list of routines.

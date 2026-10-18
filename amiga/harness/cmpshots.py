@@ -19,6 +19,8 @@ for ami in sorted(glob.glob(os.path.join(sys.argv[1], 'ami_*.png'))):
     if not os.path.exists(ref):
         continue
     a, b = Image.open(ami).convert('RGB'), Image.open(ref).convert('RGB')
+    if a.size[0] == 320 and b.size[0] == 256:    # the wide view: the Genesis screen in the middle
+        a = a.crop((32, 0, 288, a.size[1]))
     if a.size != b.size:
         print('%s: size %s, reference %s' % (os.path.basename(ami), a.size, b.size))
         bad += 1
