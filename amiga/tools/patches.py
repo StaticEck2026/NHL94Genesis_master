@@ -166,17 +166,6 @@ P('video94.asm', """	move.l	#0,(a0)					;playfield 1/2
 	jsr	(hal_vdp_dirty_all).l		;all of VRAM was cleared
 	move.w	(sp)+,(disflags).w""")
 
-# A sprite frame's sprites (addframe2): all but the last get bit 7 of the link byte (the VDP
-# reads 7 bits) set, "the next sprite is of the same frame", so the renderer can draw the frame
-# as one image.
-P('display94.asm', """	move.b	d6,3(a6)				;move d6 (link counter) into 3+a6
-""", """	move.b	d6,3(a6)				;move d6 (link counter) into 3+a6
-	tst.w	d5
-	beq.s	.lastspr
-	bset	#7,3(a6)				;(Amiga: the next sprite is of this frame too)
-.lastspr
-""")
-
 # Build option NOCROWD: no animated crowd sprites in the stands (a few sprites a frame, about a
 # tenth of the renderer's time in play).
 P('display94.asm', 'showcrowd\t\t\t\t\t\t\t;draw crowd sprites', 'showcrowd\n\tIFD\tNOCROWD\n\trts\n\tENDC\n\t\t\t\t\t\t\t;draw crowd sprites')

@@ -136,9 +136,7 @@ The hardware layer:
   by 8 lines a bit). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
-  the tiles, used again until a tile of theirs changes); a player's frame, which the Genesis
-  shows as 2 or 3 hardware sprites, is one image built by the blitter from theirs (the game's
-  frame routine marks its sprites in the link byte's unused bit 7), and plane B's high priority cells are
+  the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
   blitted back over what was drawn under them (found by moving the screen cells something low
   was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
   without waiting. A chunky renderer with
