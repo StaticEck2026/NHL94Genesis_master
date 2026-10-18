@@ -154,3 +154,6 @@ SPAboardbot,SPAboardback,behavior
 SPAboardmidl,SPAbenchcheckl,behavior
 SPAboardmidr,SPAbenchcheckr,behavior
 SPAboardchk,SPAcrosscheck,behavior
+GameStatisticsScreen,StatsReport,92G
+DisplayTeamStatsScreen,DisplayStats,92G
+PlayoffScreen_waitvsync,waitxc1,92G

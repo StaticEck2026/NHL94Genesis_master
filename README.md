@@ -1,5 +1,7 @@
 # NHL 94 Genesis
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how changes are made (names, comments, layout, verification).
+
 > **Work in progress:** this disassembly is unfinished and unpolished, and is being actively worked on. Expect labels, file layout and docs to change.
 
 ## 🚧 Current Status

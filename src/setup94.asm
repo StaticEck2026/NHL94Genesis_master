@@ -1000,7 +1000,7 @@ UpdatePlayoffScroll					;Move the tree one step (PlayerScrollCtr) and stop on a 
 PlayoffScreenExit					;Drop HandlePlayoffInput's return address and return from PlayoffScreen
 	addq.w	#4,sp
 	rts
-waitxc1								;(was PlayoffScreen_waitvsync) Each time palcount runs out, eor the color
+waitxc1								;Each time palcount runs out, eor the color
 									;word at palfadenew+$42 with $EE and restart palcount at $18; then wait
 									;for the next vblank
 	tst.w	(palcount).w
