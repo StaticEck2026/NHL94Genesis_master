@@ -10,10 +10,12 @@ base, n = struct.unpack('>II', d[:8])
 c = collections.Counter()
 for i in range(n):
     pc, = struct.unpack('>I', d[8 + 4 * i:12 + 4 * i])
+    wait = pc >> 31                     # a sample in rd_waitblit: its caller
+    pc &= 0x7FFFFFFF
     v = pc - base
     if 0 <= v < 0x200000:
         j = bisect.bisect_right(keys, v) - 1
-        c[syms[j][1]] += 1
+        c[('rd_waitblit <- ' if wait else '') + syms[j][1]] += 1
     else:
         c['(outside code %06x)' % (pc & 0xFFFF00)] += 1
 print('%d samples' % n)

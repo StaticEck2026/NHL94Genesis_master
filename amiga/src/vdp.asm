@@ -17,6 +17,7 @@ vdp_regs	ds.b	32
 vdp_pending	ds.w	1			;first word of a split address command waiting
 vdp_first	ds.w	1
 vdp_cramgen	ds.l	1			;bumped on every CRAM change the renderer must pick up
+vdp_wmap	ds.l	64			;per 32 byte block of VRAM: a data port write began there
 hal_vdp_ptr	ds.l	1			;address the next data port access uses
 hal_ctl_tmp	ds.l	1			;control word / long being written
 
@@ -99,6 +100,10 @@ vdp_command
 	andi.w	#3,d2
 	ror.w	#2,d2				;A15-14 to bits 15-14
 	or.w	d2,d1				;d1 = address
+	tst.b	d0
+	bpl.s	.nd
+	bset	#31,d1				;(CD5: a DMA, which marks what it changes itself)
+.nd
 	move.l	d0,d2
 	rol.l	#2,d2
 	andi.w	#3,d2				;CD1-0
@@ -118,7 +123,15 @@ vdp_command
 	lea	(vdp_dummy).l,a0
 	bra	.set
 .vram	lea	(vdp_vram).l,a0
-	adda.l	d1,a0
+	bclr	#31,d1
+	bne.s	.vr
+	tst.w	d2
+	beq.s	.vr				;(a read)
+	moveq	#0,d2				;data port writes begin in this 32 byte block: the
+	move.w	d1,d2				;renderer compares its name tables then (rd_ntwritten)
+	lsr.w	#5,d2
+	bfset	(vdp_wmap).l{d2:1}
+.vr	adda.l	d1,a0
 	bra	.set
 .cram	andi.w	#$7F,d1
 	lea	(vdp_cram).l,a0

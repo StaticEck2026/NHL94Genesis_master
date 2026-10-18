@@ -167,15 +167,22 @@ hal_int6
 	IFD	PROFILE
 	btst	#1,d0				;timer B: sample the interrupted pc
 	beq.s	.np
-	movem.l	d1/a0,-(sp)
-	move.l	(prof_pos).l,d1
+	movem.l	d1-d2/a0,-(sp)
+	move.l	18(sp),d2
+	cmpi.l	#rd_waitblit,d2			;waiting for the blitter: the caller instead
+	blo.s	.pc				;(bit 31 set)
+	cmpi.l	#rd_waitblit_end,d2
+	bhs.s	.pc
+	move.l	24(sp),d2
+	bset	#31,d2
+.pc	move.l	(prof_pos).l,d1
 	lea	(prof_buf).l,a0
-	move.l	14(sp),(a0,d1.l*4)
+	move.l	d2,(a0,d1.l*4)
 	addq.l	#1,d1
 	andi.l	#PROFMAX-1,d1
 	move.l	d1,(prof_pos).l
 	addq.l	#1,(prof_count).l
-	movem.l	(sp)+,d1/a0
+	movem.l	(sp)+,d1-d2/a0
 .np
 	ENDIF
 	btst	#0,d0

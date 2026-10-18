@@ -109,6 +109,7 @@ mkB6		ds.b	BMAX*48			;its high priority mask in each plane's place (blitter)
 rd_cop		ds.l	NBUF*256			;a copper list per buffer
 rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
+rd_fpsimg	ds.w	5*NPLANES*NBUF		;the frame rate digits (rd_fps), per buffer
 rd_ovlmlo	ds.b	OSROW*SCRH		;its low priority mask, each row once per plane (so one blit
 rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low one)
 
@@ -262,10 +263,13 @@ rd_decode_dirty
 	lea	(tc_chg).l,a3
 	moveq	#0,d7
 	moveq	#0,d3				;any
-.long	move.l	(a4),d6
+.long	move	sr,-(sp)
+	ori	#$0700,sr			;(the game sets the bits)
+	move.l	(a4),d6
+	clr.l	(a4)
+	move	(sp)+,sr
 	move.l	d6,(a3)+
 	beq	.next
-	clr.l	(a4)
 	moveq	#1,d3
 	moveq	#31,d5
 .bit	btst	d5,d6
@@ -444,6 +448,7 @@ rd_frame
 	bsr	rd_fast
 	bra	.shown
 .chunky	moveq	#-1,d0
+	sf	(rd_ntsync).l			;(name table writes are not followed meanwhile)
 	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches (all redrawn and
 						;restored on the way back)
 	move.w	#SCRX*8,(rd_xorg).l
@@ -586,6 +591,7 @@ rd_waitblit
 .w	btst	#6,(CUSTOM+DMACONR).l
 	bne	.w
 	rts
+rd_waitblit_end
 
 ;	------------------------------------------------------------------------------------------
 ;	Blit queue: the blits are written into entries laid out like the blitter's registers
@@ -692,6 +698,65 @@ rd_bq_int
 	rte
 
 ;	------------------------------------------------------------------------------------------
+;	Can the name table at VRAM d0 (32 byte aligned), d1 bytes long, have changed since it was
+;	last compared with its copy? Only if a DMA, fill or copy changed its blocks (tc_chg) or a
+;	data port write began in one (vdp_wmap: cleared here), or the copies are not in step
+;	(rd_ntsync). d0.b = $FF if so, else 0 (and the flags). Uses d0-d4/a0-a1.
+rd_ntwritten
+	lsr.l	#5,d0				;first block
+	moveq	#31,d2
+	add.l	d2,d1
+	lsr.l	#5,d1				;blocks
+	moveq	#0,d2
+	lea	(vdp_wmap).l,a0
+	lea	(tc_chg).l,a1
+	move	sr,-(sp)
+	ori	#$0700,sr			;(the game sets vdp_wmap bits)
+.l	moveq	#32,d3
+	cmp.l	d3,d1
+	bhs.s	.w
+	move.l	d1,d3
+.w	bfextu	(a0){d0:d3},d4
+	or.l	d4,d2
+	IFD	STATS
+	beq.s	.s1
+	addq.l	#1,(rd_dbg_x+32).l
+	move.l	d0,(rd_dbg_x+36).l
+.s1
+	ENDC
+	bfclr	(a0){d0:d3}
+	bfextu	(a1){d0:d3},d4
+	or.l	d4,d2
+	IFD	STATS
+	tst.l	d4
+	beq.s	.s2
+	addq.l	#1,(rd_dbg_x+24).l
+	move.l	d0,(rd_dbg_x+28).l
+.s2
+	ENDC
+	add.l	d3,d0
+	sub.l	d3,d1
+	bne.s	.l
+	move	(sp)+,sr
+	tst.b	(rd_ntsync).l
+	seq	d0
+	tst.l	d2
+	sne	d1
+	or.b	d1,d0
+	rts
+
+	IFD	VERIFY
+;	Debug: a name table changed that rd_ntwritten said could not have (d0 = 1 plane B, 2 plane
+;	A, 3 window): rd_vfail = frame, $FE, d0 (once).
+rd_ntfail
+	tst.l	(rd_vfail).l
+	bne.s	.x
+	move.w	(rd_count+2).l,(rd_vfail).l
+	move.b	#$FE,(rd_vfail+2).l
+	move.b	d0,(rd_vfail+3).l
+.x	rts
+	ENDC
+
 ;	Bring the plane B bitmap up to date with the name table and the tiles.
 rd_updateB
 	lea	(rd_regs).l,a5
@@ -705,6 +770,13 @@ rd_updateB
 	lsl.l	#5,d2				;name table address
 	lea	(vdp_vram).l,a0
 	adda.l	d2,a0				;a0 = name table
+	movem.l	d0-d2/a0,-(sp)
+	mulu.w	d0,d1
+	add.l	d1,d1
+	move.l	d2,d0
+	bsr	rd_ntwritten
+	move.b	d0,(rd_ntcur).l			;written since last time?
+	movem.l	(sp)+,d0-d2/a0
 	swap	d2
 	move.w	d0,d2
 	lsl.w	#8,d2
@@ -728,6 +800,11 @@ rd_updateB
 	or.l	d5,d3
 	dbf	d4,.tu
 	move.l	d3,(rd_btchg).l
+	IFD	STATS
+	beq.s	.st0
+	addq.l	#1,(rd_dbg_x+0).l
+.st0
+	ENDC
 	clr.w	(rd_hiBok).l
 	move.w	d0,d7
 	mulu.w	d1,d7
@@ -741,7 +818,12 @@ rd_updateB
 	bne	.cell
 	tst.l	(rd_btchg).l
 	bne	.cell
-	; only entries can have changed: find the changed longs quickly
+	; only entries can have changed, and only if the name table was written to: find the
+	; changed longs quickly
+	IFND	VERIFY
+	tst.b	(rd_ntcur).l
+	beq	.fdone
+	ENDC
 	move.l	a0,(rd_tmp).l			;name table start
 	addq.w	#1,d7
 	lsr.w	#1,d7
@@ -764,6 +846,15 @@ rd_updateB
 	beq	.fn
 	move.w	d1,(a1,d0.l*2)
 	clr.w	(rd_hiBok).l
+	IFD	VERIFY
+	tst.b	(rd_ntcur).l
+	bne.s	.vok
+	move.l	d0,-(sp)
+	moveq	#1,d0
+	bsr	rd_ntfail
+	move.l	(sp)+,d0
+.vok
+	ENDC
 	moveq	#0,d4
 	move.w	d0,d4
 	divu.w	(rd_cw).l,d4
@@ -810,6 +901,9 @@ rd_updateB
 ;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap. The blits of the frame
 ;	before may still read the bitmap: they are let finish first.
 rd_cellB
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+4).l
+	ENDC
 	bsr	rd_waitblit
 	; all buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
 	moveq	#0,d1				;(bit field offsets are longs)
@@ -923,6 +1017,9 @@ rd_cellB
 
 ;	List the high priority cells of plane B (for the fixups).
 rd_list_hiB
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+8).l
+	ENDC
 	lea	(shB).l,a0
 	lea	(rd_hiB).l,a1
 	move.w	(rd_cw).l,d6
@@ -1471,6 +1568,9 @@ rd_cover_rect
 ;	rows that have cells into the screen, low priority before the sprites, high after.
 
 rd_ovl_redraw
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+16).l
+	ENDC
 	sf	(rd_ovldirty).l
 	; clear image and masks (blitter, D only)
 	bsr	rd_waitblit
@@ -1788,6 +1888,9 @@ rd_ovl_blit
 ;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
 ;	scrolled by whole cells. d6 = plane cells across, d7 = down.
 rd_ovl_cells_changed
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+20).l
+	ENDC
 	bsr	rd_waitblit			;(the frame before's blits may still read the overlay)
 	lea	(rd_aused).l,a3
 	lea	(rd_chgA).l,a4
@@ -2001,6 +2104,18 @@ rd_buildA
 	; name tables against their copies (copied as they are compared); changed longs listed
 	clr.w	(rd_nchgA).l
 	clr.w	(rd_nchgW).l
+	movem.l	d2-d4,-(sp)
+	move.l	(rd_abase).l,d0
+	move.w	d6,d1
+	mulu.w	d7,d1
+	add.l	d1,d1
+	bsr	rd_ntwritten
+	movem.l	(sp)+,d2-d4
+	move.b	d0,(rd_ntcur).l
+	IFND	VERIFY
+	beq	.caw				;not written to: as it was
+	ENDC
+	move.b	#2,(rd_nttab).l
 	lea	(vdp_vram).l,a0
 	adda.l	(rd_abase).l,a0
 	lea	(rd_shA).l,a1
@@ -2020,6 +2135,18 @@ rd_buildA
 	addq.w	#1,d2
 	dbf	d0,.ca
 	move.w	d3,(rd_nchgA).l
+.caw	movem.l	d2-d4,-(sp)
+	move.l	(rd_wbase).l,d0
+	moveq	#0,d1
+	move.w	(rd_wwidth).l,d1
+	lsl.l	#6,d1				;* 32 rows * 2
+	bsr	rd_ntwritten
+	movem.l	(sp)+,d2-d4
+	move.b	d0,(rd_ntcur).l
+	IFND	VERIFY
+	beq	.cww
+	ENDC
+	move.b	#3,(rd_nttab).l
 	lea	(vdp_vram).l,a0
 	adda.l	(rd_wbase).l,a0
 	lea	(rd_shW).l,a1
@@ -2038,6 +2165,7 @@ rd_buildA
 	addq.w	#1,d2
 	dbf	d0,.cw
 	move.w	d3,(rd_nchgW).l
+.cww	st	(rd_ntsync).l			;(the copies are in step from here on)
 	; tiles of these cells converted again?
 	lea	(tc_chg).l,a0
 	lea	(rd_aused).l,a1
@@ -2059,6 +2187,16 @@ rd_buildA
 	bsr	rd_ovl_cells_changed
 	bra	.keep
 .note	; long d2 of a name table changed: list it (d3 = count), or ask for a full redraw
+	IFD	VERIFY
+	tst.b	(rd_ntcur).l
+	bne.s	.nok
+	move.l	d0,-(sp)
+	moveq	#0,d0
+	move.b	(rd_nttab).l,d0
+	bsr	rd_ntfail
+	move.l	(sp)+,d0
+.nok
+	ENDC
 	moveq	#1,d1
 	cmpi.w	#2,d5
 	beq.s	.n2
@@ -2071,7 +2209,27 @@ rd_buildA
 .nfull	moveq	#2,d5
 	rts
 .full
-	; rebuild
+	; rebuild, the copies as drawn (a compare skipped while the key changed left them behind)
+	lea	(vdp_vram).l,a0
+	adda.l	(rd_abase).l,a0
+	lea	(rd_shA).l,a1
+	move.w	d6,d0
+	mulu.w	d7,d0
+	lsr.w	#1,d0
+	subq.w	#1,d0
+.cpa	move.l	(a0)+,(a1)+
+	dbf	d0,.cpa
+	lea	(vdp_vram).l,a0
+	adda.l	(rd_wbase).l,a0
+	lea	(rd_shW).l,a1
+	move.w	(rd_wwidth).l,d0
+	lsl.w	#4,d0
+	subq.w	#1,d0
+.cpw	move.l	(a0)+,(a1)+
+	dbf	d0,.cpw
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+12).l
+	ENDC
 	lea	(rd_akeynew).l,a0
 	lea	(rd_akey).l,a1
 	moveq	#5,d0
@@ -3762,7 +3920,6 @@ rd_gen2amiga
 ;	------------------------------------------------------------------------------------------
 ;	Frames drawn in the last second, top left of the screen in colour 63 (F10 shows it).
 rd_fps
-	bsr	rd_waitblit			;(the CPU draws into the back buffer)
 	move.l	(hal_frames).l,d0
 	sub.l	(rd_fpst).l,d0
 	cmp.w	(hal_hz).l,d0
@@ -3783,33 +3940,46 @@ rd_fps
 .t	movem.l	d0-d3,-(sp)
 	moveq	#0,d0
 	moveq	#4,d1
-	moveq	#16,d2
+	moveq	#32,d2
 	moveq	#5,d3
 	bsr	rd_mark
 	movem.l	(sp)+,d0-d3
-	movea.l	(rd_back).l,a0
-	move.w	(rd_xorg).l,d2
-	addq.w	#7,d2				;(the first whole byte on the screen)
-	lsr.w	#3,d2
-	lea	SROW*4(a0,d2.w),a0
-	bsr	.digit
-	addq.l	#1,a0
-	move.w	d1,d0
-.digit	; 4x5 digit d0 at byte a0, all 6 planes
+	; the two 4x5 digits, all 6 planes, into this buffer's image; a queued blit puts it on the
+	; screen (the CPU does not wait for the blitter)
+	move.w	(rd_bufi).l,d2
+	mulu.w	#5*NPLANES*2,d2
+	lea	(rd_fpsimg).l,a0
+	adda.l	d2,a0
+	movea.l	a0,a3
 	lea	(.font,pc),a1
 	mulu.w	#5,d0
-	adda.w	d0,a1
-	movea.l	a0,a2
+	mulu.w	#5,d1
+	lea	(a1,d0.w),a2			;tens
+	adda.w	d1,a1				;units
 	moveq	#4,d2
-.r	move.b	(a1)+,d3
+.r	move.b	(a2)+,d3
+	lsl.w	#8,d3
+	move.b	(a1)+,d3
 	moveq	#NPLANES-1,d4
-	movea.l	a2,a3
-.p	move.b	d3,(a3)
-	lea	SBPR(a3),a3
+.p	move.w	d3,(a0)+
 	dbf	d4,.p
-	lea	SROW(a2),a2
 	dbf	d2,.r
-	rts
+	bsr	rd_bq_alloc
+	move.l	#$09F00000,$040(a6)		;A to D
+	move.l	#$FFFFFFFF,$044(a6)
+	move.l	a3,$050(a6)			;BLTAPT
+	movea.l	(rd_back).l,a0
+	move.w	(rd_xorg).l,d2
+	addi.w	#15,d2				;(the first whole word on the screen)
+	lsr.w	#4,d2
+	add.w	d2,d2
+	lea	SROW*4(a0,d2.w),a0
+	move.l	a0,$054(a6)			;BLTDPT
+	clr.w	$064(a6)			;BLTAMOD
+	move.w	#SBPR-2,$066(a6)		;BLTDMOD
+	move.w	#5*NPLANES,$05C(a6)		;BLTSIZV
+	move.w	#1,$05E(a6)			;BLTSIZH
+	bra	rd_bq_go
 .font
 rd_font	dc.b	$E0,$A0,$A0,$A0,$E0, $40,$C0,$40,$40,$E0, $E0,$20,$E0,$80,$E0, $E0,$20,$60,$20,$E0
 	dc.b	$A0,$A0,$E0,$20,$20, $E0,$80,$E0,$20,$E0, $E0,$80,$E0,$A0,$E0, $E0,$20,$40,$40,$40
@@ -3988,6 +4158,10 @@ rd_show
 	section	bss,bss
 rd_tline	ds.w	1
 rd_nchgA	ds.w	1
+rd_ntcur	ds.b	1			;the name table being compared was written (rd_ntwritten)
+rd_nttab	ds.b	1			;(VERIFY: which)
+rd_ntsync	ds.b	1			;0: compare all name tables with their copies
+	even
 rd_sbit		ds.w	1
 rd_ctiles	ds.w	4
 rd_bqhead	ds.w	1
@@ -4011,6 +4185,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
+rd_dbg_x	ds.l	12			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max

@@ -49,9 +49,14 @@ static inline uint32_t rd32(uint32_t a) { return (rd16(a) << 16) | rd16(a + 2); 
 static uint32_t watch_addr = 0xFFFFFFFF;   /* NHL_WATCH=address: report changes of that word */
 static int in_blit;
 static void watch_hit(uint32_t a, uint32_t v);
+static uint32_t vw_lo = 0xFFFFFFFF, vw_hi;     /* NHL_VWLOG=lo:hi (VRAM offsets): CPU writes there */
+static struct { uint32_t pc, n, ch, lo, hi; } vw[64];
+static int vwn;
+static void vw_hit(uint32_t a, uint32_t v);
 static inline void wr8(uint32_t a, uint32_t v)
 {
     a &= 0xFFFFFF;
+    if (a >= vw_lo && a < vw_hi) vw_hit(a, v);
     if ((a & ~1u) == watch_addr && mem[a] != (uint8_t)v) watch_hit(a, v);
     mem[a] = v;
 }
@@ -86,6 +91,18 @@ static uint32_t cop1lc;
 static uint16_t creg[0x100];
 static long long blit_words;
 static int blit_warn;
+
+static void vw_hit(uint32_t a, uint32_t v)
+{
+    uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
+    int i;
+    for (i = 0; i < vwn && vw[i].pc != pc; i++) ;
+    if (i == vwn) { if (vwn == 64) return; vwn++; vw[i].pc = pc; vw[i].n = vw[i].ch = 0; vw[i].lo = 0xFFFFFFFF; vw[i].hi = 0; }
+    vw[i].n++;
+    if (mem[a] != (uint8_t)v) vw[i].ch++;
+    if (a < vw[i].lo) vw[i].lo = a;
+    if (a > vw[i].hi) vw[i].hi = a;
+}
 
 static void watch_hit(uint32_t a, uint32_t v)
 {
@@ -548,6 +565,10 @@ int main(int argc, char **argv)
     m68k_set_reg(M68K_REG_SP, 0x1000);
     uint32_t vdpregs = rd32(dbg), vram = rd32(dbg + 4), cram = rd32(dbg + 8), vsram = rd32(dbg + 12);
     uint32_t padstate = rd32(dbg + 24);
+    if (getenv("NHL_VWLOG")) {
+        unsigned lo, hi;
+        if (sscanf(getenv("NHL_VWLOG"), "%x:%x", &lo, &hi) == 2) { vw_lo = (vram & 0xFFFFFF) + lo; vw_hi = (vram & 0xFFFFFF) + hi; }
+    }
     for (frame = 1; frame <= frames; frame++) {
         wr16(padstate, pad_at(frame));
         if (getenv("NHL_PROF") && frame >= (getenv("NHL_PROF_FROM") ? atoi(getenv("NHL_PROF_FROM")) : 0)) {
@@ -562,6 +583,12 @@ int main(int argc, char **argv)
         } else
             run_cycles(ncyc);
         if (red_screen) { dump_exception(); break; }
+        if (vwn) {
+            for (int i = 0; i < vwn; i++)
+                printf("frame %d: vram writes pc %06x: %u bytes (%u changed) %04x-%04x\n", frame, vw[i].pc, vw[i].n, vw[i].ch,
+                       vw[i].lo - (vram & 0xFFFFFF), vw[i].hi - (vram & 0xFFFFFF));
+            vwn = 0;
+        }
         aud_frame();
         if (getenv("NHL_VDPLOG")) {         /* mode, plane size, plane B scroll */
             uint8_t *r = mem + (vdpregs & 0xFFFFFF);
@@ -583,7 +610,7 @@ int main(int argc, char **argv)
             }
             int black = 1;
             for (int c = 0; c < 64; c++) if (rd16(cram + 2 * c) & 0xEEE) black = 0;
-            printf("frame %d: black %d r1 %02x r11 %02x r12 %02x r16 %02x hscrollB %d vscrollB %d\n", frame, black, r[1], r[11], r[12], r[16],
+            printf("frame %d: black %d r1 %02x r2 %02x r3 %02x r4 %02x r5 %02x r13 %02x r11 %02x r12 %02x r16 %02x r17 %02x r18 %02x hscrollB %d vscrollB %d\n", frame, black, r[1], r[2], r[3], r[4], r[5], r[13], r[11], r[12], r[16], r[17], r[18],
                    (int16_t)rd16(vram + hs + 2), (int16_t)rd16(vsram + 2));
         }
         irq6_pending = 1;
@@ -655,6 +682,10 @@ int main(int argc, char **argv)
     if (getenv("NHL_STATS")) {   /* build with VASMFLAGS=-DSTATS=1 */
         uint32_t k = rd32(dbg + 72);
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
+        fprintf(stderr, "renderer: plane B tile scans %u, cells %u, high lists %u; A rebuilds %u, overlay redraws %u, cell updates %u\n",
+                rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
+        fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
+                rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
     }
     {                                   /* VERIFY builds: the scroll buffers' self-check */
         uint32_t v = rd32(rd32(dbg + 76));
