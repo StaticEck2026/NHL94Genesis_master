@@ -10,13 +10,13 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
-  about 1 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
+  about 1.3 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
   Genesis), 60 on NTSC. `F8` switches between the two.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 12 frames a second (FS-UAE,
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 16 to 19 frames a second (FS-UAE,
 cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
 the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
 
@@ -123,7 +123,10 @@ The hardware layer:
   BPLCON1 delay. Only what was drawn over it two frames ago and the cells the game changed are
   blitted back from the bitmap (a dirty map per buffer, 16 pixels by 8 lines a bit). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
-  layer with masks. Sprites are drawn by the CPU. A chunky renderer with
+  layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
+  the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
+  blitted back over what was drawn under them; the CPU queues a whole frame for the blitter
+  without waiting. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
   and the display window, and frames are double buffered. A frame is drawn from a snapshot of
   the VDP registers, scroll and sprite list taken when it starts (the game runs several of its
