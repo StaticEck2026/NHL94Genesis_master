@@ -9,6 +9,7 @@ rm -rf output/amiga/src
 mkdir -p output/amiga
 python3 amiga/tools/convert.py output/amiga/src
 cp amiga/src/*.asm amiga/src/*.i output/amiga/src/
+python3 amiga/tools/fmrender.py Extracted/NHL94/Sound output/amiga/src/fm_patches.i
 cd output/amiga/src
 "$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS -o ../nhl94.game -L ../nhl94.lst nhl94_amiga.asm
 ls -l ../nhl94.game

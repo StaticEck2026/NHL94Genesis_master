@@ -112,9 +112,81 @@ static void do_blit(int h, int w)
     }
 }
 
+/* ---- Paula: the four voices' DMA, mixed into a WAV (NHL_WAV=file) a frame at a time ---- */
+#define WAVHZ 44100
+static struct { uint32_t ptr, len, pos; double frac; int on; } aud[4];
+static FILE *wavf;
+static uint32_t wav_samples;
+
+static void aud_latch(int i)
+{
+    aud[i].ptr = ((uint32_t)creg[(0xA0 + 16 * i) / 2] << 16) | creg[(0xA2 + 16 * i) / 2];
+    aud[i].len = creg[(0xA4 + 16 * i) / 2] ? creg[(0xA4 + 16 * i) / 2] : 0x10000;
+    aud[i].pos = 0;
+    aud[i].frac = 0;
+}
+
+static void aud_dmacon(uint32_t v)
+{
+    for (int i = 0; i < 4; i++) {
+        if (!(v & (1 << i))) continue;
+        if (v & 0x8000) {
+            if (!aud[i].on) aud_latch(i);
+            aud[i].on = 1;
+            if (getenv("NHL_AUDLOG"))
+                fprintf(stderr, "frame %d: voice %d start %06x len %u per %u\n", frame, i, aud[i].ptr, aud[i].len,
+                        creg[(0xA6 + 16 * i) / 2]);
+        }
+        else aud[i].on = 0;
+    }
+}
+
+static void wav_header(void)
+{
+    uint32_t data = wav_samples * 4;
+    uint8_t h[44] = "RIFF....WAVEfmt \x10\0\0\0\1\0\2\0....\0\0\0\0\4\0\x10\0data....";
+    uint32_t vals[4][2] = {{4, 36 + data}, {24, WAVHZ}, {28, WAVHZ * 4}, {40, data}};
+    for (int k = 0; k < 4; k++) for (int b = 0; b < 4; b++) h[vals[k][0] + b] = vals[k][1] >> (8 * b);
+    fseek(wavf, 0, SEEK_SET);
+    fwrite(h, 1, 44, wavf);
+}
+
+static void aud_frame(void)
+{
+    if (!wavf) {
+        if (!getenv("NHL_WAV")) return;
+        wavf = fopen(getenv("NHL_WAV"), "wb");
+        wav_header();
+    }
+    for (int n = 0; n < WAVHZ / 60; n++) {
+        int lr[2] = {0, 0};
+        for (int i = 0; i < 4; i++) {
+            if (!aud[i].on) continue;
+            int per = creg[(0xA6 + 16 * i) / 2], vol = creg[(0xA8 + 16 * i) / 2] & 0x7F;
+            if (per < 124) per = 124;
+            if (vol > 64) vol = 64;
+            lr[(i == 0 || i == 3) ? 0 : 1] += (int8_t)rd8(aud[i].ptr + aud[i].pos) * vol;
+            aud[i].frac += 3546895.0 / per / WAVHZ;
+            while (aud[i].frac >= 1) {
+                aud[i].frac -= 1;
+                if (++aud[i].pos >= 2 * aud[i].len) aud_latch(i);
+            }
+        }
+        for (int c = 0; c < 2; c++) {
+            int v = lr[c] * 2;
+            if (v > 32767) v = 32767;
+            if (v < -32768) v = -32768;
+            fputc(v & 0xFF, wavf);
+            fputc((v >> 8) & 0xFF, wavf);
+        }
+        wav_samples++;
+    }
+}
+
 static void custom_write(uint32_t a, uint32_t v)
 {
     uint32_t off = a & 0xFFE;
+    if (off == 0x096) aud_dmacon(v);
     if (off >= 0x040 && off <= 0x074 && cycles_total + m68k_cycles_run() < blit_busy_until && blit_warn < 20) {
         blit_warn++;
         fprintf(stderr, "frame %d: blitter register %03x written while busy, pc=%06x\n", frame, off,
@@ -233,6 +305,7 @@ static uint32_t load_hunks(const char *path)
     for (int i = 0; i < nh; i++) {
         uint32_t sz = (be32(p) & 0x3FFFFFFF) * 4;
         base[i] = addr;
+        if (getenv("NHL_AUDLOG")) fprintf(stderr, "hunk %d at %06x\n", i, addr);
         addr = (addr + sz + 0x1000) & ~0xFFF;
         p += 4;
     }
@@ -385,6 +458,7 @@ int main(int argc, char **argv)
         } else
             cycles_total += m68k_execute(ncyc);
         if (red_screen) { dump_exception(); break; }
+        aud_frame();
         irq6_pending = 1;
         m68k_set_irq(6);
         int shot = every && frame % every == 0;
@@ -444,6 +518,7 @@ int main(int argc, char **argv)
                 vdpref_stats(frame, mem + (vdpregs & 0xFFFFFF), mem + (vram & 0xFFFFFF), mem + (vsram & 0xFFFFFF));
         }
     }
+    if (wavf) { wav_header(); fclose(wavf); }
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)));
     if (getenv("NHL_STATS")) {   /* build with VASMFLAGS=-DSTATS=1 */

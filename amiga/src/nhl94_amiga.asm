@@ -52,6 +52,8 @@ chip_start
 	include	"period94.asm"
 	include	"goalie94.asm"
 	include	"title94.asm"
+
+	include	"sound.asm"			;Paula sound (after sound94.asm: it copies its samples)
 ;checksum94.asm: not used (cartridge ROM check)
 
 	section	game,code

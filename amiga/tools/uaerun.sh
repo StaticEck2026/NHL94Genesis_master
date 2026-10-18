@@ -2,6 +2,8 @@
 # Run the Amiga build in FS-UAE (A1200, AROS ROM unless KICK is set) on a virtual X display and
 # take screenshots.  uaerun.sh <seconds> <outdir> [key events: "t:key" pairs, t in seconds]
 # Needs: fs-uae, Xvfb, ImageMagick (import), xdotool.
+# Sound: UAEAUDIO=openal with ALSOFT_CONF naming an OpenAL Soft config with drivers=wave
+# and [wave] file=out.wav records it.
 set -e
 SECS=${1:-30}; OUT=${2:-/tmp/uae-shots}; shift 2 || true
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -22,7 +24,7 @@ hard_drive_0_label = NHL94
 fullscreen = 0
 window_width = 768
 window_height = 576
-audio_driver = null
+audio_driver = ${UAEAUDIO:-null}
 base_dir = $W/base
 logs_dir = $W/logs
 ${UAEEXTRA:-}

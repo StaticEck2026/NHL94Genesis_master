@@ -129,6 +129,11 @@ P('sound94.asm', """	move.b	#0,$97(a1)
 	clr.w	(IO_Z80BUS).l""", """	move.b	#0,$97(a1)
 	jsr	(snd_z80_cmd).l
 	clr.w	(IO_Z80BUS).l""")
+# The Z80 got the PCM start as a 24 bit cartridge address; the Amiga sound code takes all of it.
+P('sound94.asm', """	move.l	0(a1,d0.w),d0
+""", """	move.l	0(a1,d0.w),d0
+	move.l	d0,(snd_pcm_addr).l
+""")
 
 # Tile data written through the data port (not by DMA): tell the renderer's tile cache.
 P('video94.asm', """	movem.l	d0-d4/a0-a2,-(sp)

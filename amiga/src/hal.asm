@@ -55,6 +55,7 @@ hal_game_main
 	lea	(RAMBASE+$FFF0).l,sp
 	bsr	hal_vdp_init
 	move.b	#$7D,(hal_z80ram+$96).l		;the sound driver's "Z80 idle" handshake
+	jsr	(snd_init).l
 	bsr	hal_set_vectors
 	jsr	(rd_init).l
 	bsr	hal_display_init
@@ -256,15 +257,6 @@ hal_display_init
 	move.w	d0,(CUSTOM+$088).l		;COPJMP1
 	move.w	#$0020,(CUSTOM+DMACON).l	;no sprites
 	move.w	#$83C0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter
-	rts
-
-;	Stand-in for the Z80 sound driver: take the 68000 driver's command buffer and PCM requests
-;	from the Z80 RAM buffer and play them (sound.asm). Until then just acknowledge.
-snd_z80_poll
-	rts
-snd_z80_cmd
-	move.b	#$7D,(hal_z80ram+$96).l
-	clr.b	(hal_z80ram+$97).l
 	rts
 
 ;	No frame drawn for 4 seconds: a black and white debug screen with the code base, the last
