@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Render the game's 32 YM2612 FM patches as Amiga samples (build step of the Amiga port).
 
-Paula has no FM synthesis, so each patch is played as a sample. A patch is rendered at the
-pitch bands it is used at in the songs and sound effects (an octave a band), so every note
-plays back at 0.71 to 1.41 times the render rate: 14 to 28 kHz, where Paula's lack of
-interpolation does least harm. A sound that holds is the attack (the envelopes until they
+Paula has no FM synthesis, so each patch is played as a sample: 8 bit, rendered at 11025 Hz.
+A patch is rendered at the pitch bands it is used at in the songs and sound effects (an octave
+a band), so every note plays back at 0.71 to 1.41 times the render rate (7.8 to 15.6 kHz). A sound that holds is the attack (the envelopes until they
 settle) then a loop of 2 periods; the rest of its envelope (decay, and the release at key off)
 is a volume envelope at run time (amiga/src/sound.asm). A sound that dies away by itself is one
 sample with no loop.
@@ -21,7 +20,7 @@ Needs numpy. Usage: fmrender.py <Extracted/NHL94/Sound directory> out.i
 import glob, math, os, sys
 import numpy as np
 
-SR = 20000                # render rate: a note at the band's pitch plays back at this rate
+SR = 11025                # render rate: a note at the band's pitch plays back at this rate
 OS = 8                    # synthesis at OS * SR
 BANDS = [20.0 * 2 ** k for k in range(8)]   # band pitches (Hz); a note f uses the highest <= f*sqrt 2
 ATTACK_MAX = 0.25         # at most this much attack before the loop (seconds)

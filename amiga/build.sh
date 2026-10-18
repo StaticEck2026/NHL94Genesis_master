@@ -9,13 +9,19 @@ rm -rf output/amiga/src
 mkdir -p output/amiga
 python3 amiga/tools/convert.py output/amiga/src
 cp amiga/src/*.asm amiga/src/*.i output/amiga/src/
-# The FM patches as samples (kept: they only change with the patches or the renderer)
+# The FM patches and the PCM sounds as samples (kept: they only change with their sources or
+# the tools)
 FMI=output/amiga/fm_patches.i
 if [ ! -f $FMI ] || [ amiga/tools/fmrender.py -nt $FMI ] || [ Extracted/NHL94/Sound/fm_instrument_patches.bin -nt $FMI ]; then
   python3 -c 'import numpy' 2>/dev/null || { echo "build.sh: fmrender.py needs numpy (pip install numpy)"; exit 1; }
   python3 amiga/tools/fmrender.py Extracted/NHL94/Sound $FMI
 fi
 cp $FMI output/amiga/src/fm_patches.i
+PCMI=output/amiga/pcm.i
+if [ ! -f $PCMI ] || [ amiga/tools/pcmrender.py -nt $PCMI ] || [ src/sound94.asm -nt $PCMI ]; then
+  python3 amiga/tools/pcmrender.py src/sound94.asm Extracted/NHL94/Sound $PCMI
+fi
+cp $PCMI output/amiga/src/pcm.i
 cd output/amiga/src
 # Twice: the second time with the list of the places that hold RAM window addresses, which
 # ramrel.py takes from the first (its hunk is the last, so the others do not move).

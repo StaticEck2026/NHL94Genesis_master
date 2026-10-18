@@ -31,7 +31,7 @@ In an emulator, use the hard drive image `output/amiga/nhl94.hdf`. The build mak
 There is also a bootable floppy, `output/amiga/nhl94.adf` (880 KB, double density, so it works
 in the A1200's own drive and in every emulator). The game does not fit on a floppy as it is, so
 there it is `NHL94.pak`, its parts deflate compressed, which the launcher loads and unpacks
-itself. Loading from a real floppy takes a minute or so; the hard drive image starts at once.
+itself. Loading from a real floppy takes about 70 seconds; the hard drive image starts at once.
 To install the floppy on a hard drive, copy `NHL94`, `NHL94.info` and `NHL94.pak` into one
 directory.
 
@@ -132,12 +132,16 @@ The hardware layer:
 - `sound.asm`: the four Paula voices in place of the Z80, YM2612 and DAC. The game's own 68000
   sound driver runs unchanged. `sound.asm` reads the commands the driver writes for the Z80:
   key on, key off, frequency, volume and patch per FM channel, and the PCM start, rate and volume.
-  The 32 FM patches are rendered to samples at build time by `amiga/tools/fmrender.py`, a model
-  of the YM2612. Each patch has an attack and a loop at each octave band it is used at, so every
-  note plays at 14 to 28 kHz. The synthesis runs at 8 times the sample rate and is low-pass
+  All audio is 8 bit at 11 kHz at most. The 32 FM patches are rendered to samples at 11025 Hz at
+  build time by `amiga/tools/fmrender.py`, a model of the YM2612. Each patch has an attack and a
+  loop at each octave band it is used at, so every note plays at 7.8 to 15.6 kHz. The synthesis runs at 8 times the sample rate and is low-pass
   filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
   back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
-  note takes a free voice, else the quietest released one, else the oldest.
+  note takes a free voice, else the quietest released one, else the oldest. The PCM sounds
+  (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`:
+  most already play at 11 kHz or less and are kept as they are; the two the game plays faster
+  (the glass at 29 kHz, a hit at 12 kHz) are resampled to 11025 Hz and played at a period that
+  keeps their pitch.
 - `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
   file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
   decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
