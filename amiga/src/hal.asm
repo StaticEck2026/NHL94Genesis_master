@@ -23,7 +23,6 @@ CIAB_TBLO	equ	$BFD600
 CIAB_TBHI	equ	$BFD700
 PROFMAX		equ	65536
 
-GENESIS_HZ	equ	60
 CIA_CLOCK	equ	709379			;PAL E clock
 CIA_CLOCK_NTSC	equ	715909
 
@@ -33,6 +32,22 @@ hal_header
 	dc.b	'NH94'
 	dc.l	hal_game_main
 	dc.l	hal_debug
+
+;	The timer period for hal_hz frames a second (a running timer takes it at its next
+;	underflow). Keeps all but d0.
+hal_set_rate
+	move.l	d1,-(sp)
+	move.l	#CIA_CLOCK,d0
+	tst.b	(hal_pal).l
+	bne.s	.p
+	move.l	#CIA_CLOCK_NTSC,d0
+.p	move.w	(hal_hz).l,d1
+	divu.w	d1,d0
+	move.b	d0,(CIAB_TALO).l
+	lsr.w	#8,d0
+	move.b	d0,(CIAB_TAHI).l
+	move.l	(sp)+,d1
+	rts
 
 ;	Debug block, read by the test harness:
 ;	+0  vdp_regs  +4 vdp_vram  +8 vdp_cram  +12 vdp_vsram  +16 exception info (16 longs)
@@ -46,7 +61,7 @@ hal_debug
 	dc.l	rd_dbg_key,rd_vfail
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
-;	the 60 Hz timer and jumps to the cartridge's cold start.
+;	the game frame timer and jumps to the cartridge's cold start.
 hal_game_main
 	move	#$2700,sr
 	tst.b	(hal_amiga).l
@@ -100,17 +115,19 @@ hal_set_vectors
 	movec	a0,vbr
 	rts
 
-;	CIA-B timer A, continuous, at the Genesis frame rate, on level 6.
+;	CIA-B timer A, continuous, at the game's frame rate (hal_hz), on level 6. The rate is the
+;	display's, as on the console of each region: 50 Hz with a PAL display (a PAL Mega Drive
+;	runs the game at 50 Hz, a sixth slower), 60 Hz with NTSC; F8 switches it.
 hal_start_timer
 	move.b	#$7F,(CIAB_ICR).l		;all CIA-B interrupts off
 	move.b	#0,(CIAB_CRA).l
-	move.w	#CIA_CLOCK/GENESIS_HZ,d0
+	tst.w	(hal_hz).l
+	bne.s	.hz
+	move.w	#60,(hal_hz).l
 	tst.b	(hal_pal).l
-	bne	.pal
-	move.w	#CIA_CLOCK_NTSC/GENESIS_HZ,d0
-.pal	move.b	d0,(CIAB_TALO).l
-	lsr.w	#8,d0
-	move.b	d0,(CIAB_TAHI).l
+	beq.s	.hz
+	move.w	#50,(hal_hz).l
+.hz	bsr	hal_set_rate
 	move.b	#$81,(CIAB_ICR).l		;timer A interrupt on
 	move.b	#$11,(CIAB_CRA).l		;start, continuous, force load
 	IFD	PROFILE
@@ -355,6 +372,8 @@ hal_exception
 	move.w	#$F00,(CUSTOM+$180).l
 .hang	bra	.hang
 
+hal_hz		dc.w	0			;game frames a second (0: from the display)
+
 	section	bss,bss
 	cnop	0,4
 hal_vectors	ds.l	64
@@ -368,7 +387,7 @@ hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1
-prof_mark	ds.l	4
+prof_mark	ds.l	5
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high

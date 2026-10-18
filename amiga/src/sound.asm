@@ -10,7 +10,7 @@
 ;	loop, at the pitch bands the patch is used at). A key on takes a voice (a free one, else
 ;	the quietest released one, else the oldest) and plays the patch's sample at the note's
 ;	pitch; the rest of the patch's envelope (decay, release at key off) is a volume envelope
-;	stepped at 60 Hz. The PCM sounds are samples made at build time too (pcmrender.py: signed,
+;	stepped each game frame. The PCM sounds are samples made at build time too (pcmrender.py: signed,
 ;	at most 11 kHz; one played faster on the Genesis is resampled and played at a longer period).
 ;	All audio is 8 bit and at most 11 kHz: the FM samples are rendered at 11025 Hz.
 ;
@@ -18,12 +18,13 @@
 ;	runs, as the Genesis model 1's output filter softens its sound; F7 switches it.
 ;
 ;	snd_z80_cmd takes a command from the driver (it is called where the driver hands the Z80
-;	its command); snd_z80_poll, from the 60 Hz interrupt, does the work on Paula.
+;	its command); snd_z80_poll, from the game frame interrupt (50 or 60 Hz, hal_hz), does the
+;	work on Paula. The envelope speeds are made for 60 Hz and scaled to the frame rate, so the
+;	sounds keep their length at 50 Hz (the YM2612's envelopes do not depend on it).
 
 AUD0LC		equ	$0A0			;voice n at + n * $10: LC, LEN, PER, VOL
 PCMHZ		equ	30594			;the Z80 PCM loop: 117 T states at 3.58 MHz
 PAULACLK	equ	3546895
-FRAMECLK	equ	PAULACLK/60		;Paula clocks a frame
 
 ;	voice
 V_OWNER		equ	0			;.b -1 free, 0-6 FM channel, 7 PCM
@@ -124,7 +125,7 @@ snd_z80_cmd
 	move	(sp)+,sr
 	rts
 
-;	60 Hz: carry out the driver's commands on Paula and step the envelopes.
+;	Each game frame: carry out the driver's commands on Paula and step the envelopes.
 snd_z80_poll
 	movem.l	d0-d7/a0-a6,-(sp)
 	lea	(hal_z80ram).l,a5
@@ -296,12 +297,26 @@ snd_fm_period
 
 ;	Voice a0 has started a sample of d2 bytes at period d3: frames until it is played.
 snd_sample_frames
+	movem.l	d4-d5,-(sp)
+	moveq	#0,d5
+	move.w	(hal_hz).l,d5
+	move.l	#PAULACLK,d4
+	divu.l	d5,d4				;Paula clocks a frame
 	andi.l	#$FFFF,d3
 	mulu.l	d3,d2
-	divu.l	#FRAMECLK,d2
+	divu.l	d4,d2
 	addq.w	#1,d2
 	move.w	d2,V_FRAMES(a0)
+	movem.l	(sp)+,d4-d5
 	rts
+
+;	d2 = the envelope step d2 (attenuation units a 60 Hz frame) for a frame at hal_hz.
+snd_rate
+	cmpi.w	#60,(hal_hz).l
+	beq.s	.x
+	mulu.w	#6,d2
+	divu.l	#5,d2				;(50 Hz)
+.x	rts
 
 ;	Key on FM channel d1 (patch, frequency and attenuation from the Z80 RAM). d7 |= its voice.
 snd_keyon
@@ -562,6 +577,7 @@ snd_envelopes
 	beq	.nrel
 	moveq	#0,d2
 	move.w	2*FM_BANDS+6(a2),d2		;release
+	bsr	snd_rate
 	add.l	d2,d1
 .nrel	cmpi.b	#ST_ATTACK,d0
 	beq	.att
@@ -573,6 +589,7 @@ snd_envelopes
 	bne	.sus
 	moveq	#0,d2
 	move.w	2*FM_BANDS(a2),d2		;decay
+	bsr	snd_rate
 	add.l	d2,d1
 	sub.l	d2,V_SL(a0)
 	bhi	.set
@@ -580,6 +597,7 @@ snd_envelopes
 	bra	.set
 .sus	moveq	#0,d2
 	move.w	2*FM_BANDS+4(a2),d2		;sustain decay
+	bsr	snd_rate
 	add.l	d2,d1
 	bra	.set
 .att	subq.w	#1,V_FRAMES(a0)

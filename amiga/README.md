@@ -12,7 +12,9 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
   about 1 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
-- PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
+- PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
+  frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
+  Genesis), 60 on NTSC. `F8` switches between the two.
 
 Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 12 frames a second (FS-UAE,
 cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
@@ -55,8 +57,9 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. `F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model
-1 Genesis).
+`Esc` quits to the Workbench and writes the save file. `F7` switches the Amiga's audio low-pass
+filter (on at start, like the output filter of a model 1 Genesis). `F8` switches the game
+between 50 and 60 frames a second.
 
 ### Screen
 
@@ -107,7 +110,7 @@ handshake, the pad reader and the save RAM.
 
 The hardware layer:
 
-- `hal.asm`: start-up, interrupt vectors, the 60 Hz CIA timer that stands in for the Genesis
+- `hal.asm`: start-up, interrupt vectors, the 50 / 60 Hz CIA timer that stands in for the Genesis
   vertical blank, and the two contexts (the game, and the renderer it runs while the game waits).
 - `os.asm`: takes the machine from the OS and gives it back; keeps the OS's memory in the
   `RAMBASE` window; loads and saves `NHL94.sav`.
@@ -120,7 +123,9 @@ The hardware layer:
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. Sprites are drawn by the CPU. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
-  and the display window, and frames are double buffered: a finished frame's copper list is
+  and the display window, and frames are double buffered. A frame is drawn from a snapshot of
+  the VDP registers, scroll and sprite list taken when it starts (the game runs several of its
+  frames meanwhile; without it, players could be from a later game frame than the rink). And: a finished frame's copper list is
   taken at the next vertical blank, and the renderer waits for that blank (counted by the
   level 3 interrupt) before it draws into the other buffer, which is on the screen until then.
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the

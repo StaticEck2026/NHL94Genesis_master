@@ -317,12 +317,15 @@ os_save_prof
 	move.l	(os_iobuf+4).l,d3
 	lsl.l	#2,d3
 	jsr	DOS_Write(a6)
-	; then frames drawn and 60 Hz ticks at the F9 mark and now
+	; then frames drawn and game frames at the F9 mark and now, and the game frame rate
 	move.l	(rd_count).l,(prof_mark+8).l
 	move.l	(hal_frames).l,(prof_mark+12).l
+	moveq	#0,d0
+	move.w	(hal_hz).l,d0
+	move.l	d0,(prof_mark+16).l
 	move.l	d4,d1
 	move.l	#prof_mark,d2
-	moveq	#16,d3
+	moveq	#20,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)

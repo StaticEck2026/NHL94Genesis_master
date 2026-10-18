@@ -8,7 +8,7 @@
 ;	Keyboard, player 1: cursor keys, Z = A, X = B, C = C, Return = Start
 ;	          player 2: F1 = A, F2 = B, F3 = C, F4 = Start
 ;	Esc goes back to the Workbench (the save file is written then). F7 switches the audio
-;	filter.
+;	filter, F8 the game's speed (50 / 60 frames a second).
 
 CIAA_PRA	equ	$BFE001
 CIAA_DDRA	equ	$BFE201
@@ -83,7 +83,12 @@ hal_int2
 	bne	.nf7
 	jsr	(snd_filter_toggle).l
 	bra	.hs
-.nf7
+.nf7	cmpi.b	#$57,d1				;F8: 50 / 60 game frames a second
+	bne	.nf8
+	eori.w	#50^60,(hal_hz).l
+	jsr	(hal_set_rate).l
+	bra	.hs
+.nf8
 	IFD	PROFILE
 	cmpi.b	#$58,d1				;F9: mark the start of the frame rate count
 	bne	.hs

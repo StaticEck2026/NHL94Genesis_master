@@ -73,6 +73,9 @@ rd_scroll	ds.w	1			;scroll mode this frame
 rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
 rd_frontcop	ds.l	1
+rd_regs		ds.b	32			;the VDP registers (rd_snapshot)
+rd_hs		ds.l	1			;its plane A, B horizontal scroll
+rd_vs		ds.l	1			;and vertical scroll
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
 rd_shownvb	ds.l	1			;rd_vblanks when the last frame was given to the display
 rd_lastframe	ds.l	1
@@ -404,8 +407,9 @@ rd_frame
 	bsr	rd_show
 	addq.l	#1,(rd_count).l
 	bra	.skip
-.draw	bsr	rd_decode_dirty
-	lea	(vdp_regs).l,a5
+.draw	bsr	rd_snapshot
+	bsr	rd_decode_dirty
+	lea	(rd_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1
 	move.b	12(a5),d2
@@ -475,8 +479,7 @@ rd_fast
 	move.w	(rd_w).l,d2
 	move.w	#SCRH,d3
 	bsr	rd_mark
-.b	bsr	rd_collect_sprites
-	lea	(rd_cover).l,a0			;nothing low drawn yet
+.b	lea	(rd_cover).l,a0			;nothing low drawn yet
 	moveq	#2*32-1,d0
 .c	clr.l	(a0)+
 	dbf	d0,.c
@@ -662,7 +665,7 @@ rd_bq_int
 ;	------------------------------------------------------------------------------------------
 ;	Bring the plane B bitmap up to date with the name table and the tiles.
 rd_updateB
-	lea	(vdp_regs).l,a5
+	lea	(rd_regs).l,a5
 	bsr	rd_planesize
 	move.w	d0,(rd_cw).l
 	move.w	d1,(rd_ch).l
@@ -901,20 +904,13 @@ rd_list_hiB
 ;	x + 32, row y at rows y and y + 256) and the screen is the window on it at the scroll
 ;	position.
 rd_scrollpos
-	lea	(vdp_regs).l,a5
-	moveq	#0,d0
-	move.b	13(a5),d0
-	andi.w	#$3F,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0
-	lea	(vdp_vram).l,a0
-	move.w	2(a0,d0.l),d0			;B hscroll
+	move.w	(rd_hs+2).l,d0			;B hscroll
 	neg.w	d0
 	move.w	(rd_cw).l,d3
 	lsl.w	#3,d3
 	subq.w	#1,d3				;plane width - 1
 	and.w	d3,d0				;plane x at Genesis screen x 0
-	move.w	(vdp_vsram+2).l,d1
+	move.w	(rd_vs+2).l,d1
 	move.w	(rd_ch).l,d2
 	lsl.w	#3,d2
 	subq.w	#1,d2
@@ -1185,9 +1181,32 @@ rd_blitrect
 	rts
 
 ;	------------------------------------------------------------------------------------------
+;	The VDP state that places the picture, taken at once (no game frame can run in between):
+;	the registers, the plane A / B scroll, the sprite list. A frame takes the game several of
+;	its frames to draw; drawn from this, its planes and sprites are all of the same one.
+rd_snapshot
+	move	sr,-(sp)
+	ori	#$0700,sr
+	lea	(vdp_regs).l,a0
+	lea	(rd_regs).l,a1
+	moveq	#32/4-1,d0
+.r	move.l	(a0)+,(a1)+
+	dbf	d0,.r
+	move.l	(vdp_vsram).l,(rd_vs).l		;full screen vertical scroll: A, B
+	moveq	#0,d0
+	move.b	(rd_regs+13).l,d0
+	andi.w	#$3F,d0
+	lsl.l	#8,d0
+	lsl.l	#2,d0
+	lea	(vdp_vram).l,a0
+	move.l	(a0,d0.l),(rd_hs).l		;full screen horizontal scroll: A, B
+	bsr	rd_collect_sprites
+	move	(sp)+,sr
+	rts
+
 ;	The sprite list, followed from sprite 0 through the links.
 rd_collect_sprites
-	lea	(vdp_regs).l,a5
+	lea	(rd_regs).l,a5
 	moveq	#0,d0
 	move.b	5(a5),d0
 	moveq	#64,d6
@@ -1850,7 +1869,7 @@ rd_ovl_setcell
 	rts
 
 rd_buildA
-	lea	(vdp_regs).l,a5
+	lea	(rd_regs).l,a5
 	lea	(rd_akeynew).l,a3
 	; window rows (screen cells) and columns
 	move.b	18(a5),d0
@@ -1903,13 +1922,7 @@ rd_buildA
 	move.l	d0,(a3)+			;key: A base
 	move.w	(rd_cw).l,d6
 	move.w	(rd_ch).l,d7
-	moveq	#0,d0
-	move.b	13(a5),d0
-	andi.w	#$3F,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0
-	lea	(vdp_vram).l,a0
-	move.w	(a0,d0.l),d0
+	move.w	(rd_hs).l,d0			;A hscroll
 	neg.w	d0
 	move.w	d6,d1
 	lsl.w	#3,d1
@@ -1917,7 +1930,7 @@ rd_buildA
 	and.w	d1,d0
 	move.w	d0,(rd_ax0).l
 	move.w	d0,(a3)+			;key: A x
-	move.w	(vdp_vsram).l,d0
+	move.w	(rd_vs).l,d0
 	move.w	d7,d1
 	lsl.w	#3,d1
 	subq.w	#1,d1
@@ -3272,9 +3285,8 @@ rd_plane
 	movem.l	(sp)+,d6-d7/a5-a6
 	rts
 
-;	Sprites into the chunky buffer, last first.
+;	Sprites into the chunky buffer, last first (the list from rd_snapshot).
 rd_sprites_chunky
-	bsr	rd_collect_sprites
 	move.w	(rd_spn).l,d5
 	lea	(rd_sprites).l,a1
 	move.w	d5,d0
@@ -3559,7 +3571,7 @@ rd_gen2amiga
 rd_fps
 	move.l	(hal_frames).l,d0
 	sub.l	(rd_fpst).l,d0
-	cmpi.l	#GENESIS_HZ,d0
+	cmp.w	(hal_hz).l,d0
 	blt	.draw
 	move.l	(hal_frames).l,(rd_fpst).l
 	move.l	(rd_count).l,d0
