@@ -3125,16 +3125,25 @@ rd_show
 	bsr	rd_fps
 .nofps	movea.l	(rd_backcop).l,a0
 	move.l	(rd_back).l,d0
-	cmpi.w	#320,(rd_w).l
+	; the 224 lines: from line $3C on PAL, $1A on NTSC (262 lines a frame)
+	move.w	#$3CA1,d1			;DIWSTRT, H32 (256 pixels)
+	move.w	#$1CA1,d2			;DIWSTOP
+	tst.b	(hal_pal).l
+	bne	.pal
+	move.w	#$1AA1,d1
+	move.w	#$FAA1,d2
+.pal	cmpi.w	#320,(rd_w).l
 	beq	.w320
-	COPMOVE	$08E,#$3CA1			;DIWSTRT
-	COPMOVE	$090,#$1CA1			;DIWSTOP
 	addi.l	#SCRX-4,d0
 	bra	.dw
-.w320	COPMOVE	$08E,#$3C81
-	COPMOVE	$090,#$1CC1
+.w320	move.b	#$81,d1				;H40: 320 pixels
+	move.b	#$C1,d2
 	addq.l	#SCRX,d0
-.dw	COPMOVE	$092,#$0038			;DDFSTRT
+.dw	move.w	#$08E,(a0)+
+	move.w	d1,(a0)+
+	move.w	#$090,(a0)+
+	move.w	d2,(a0)+
+	COPMOVE	$092,#$0038			;DDFSTRT
 	COPMOVE	$094,#$00C8			;DDFSTOP (2x fetch)
 	COPMOVE	$108,#SROW-40			;BPL1MOD: interleaved
 	COPMOVE	$10A,#SROW-40			;BPL2MOD

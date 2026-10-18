@@ -15,3 +15,4 @@ cd output/amiga/src
 ls -l ../nhl94.game
 "$VASM" -Fhunkexe -m68020 -nocase -quiet -o ../NHL94 stub.asm
 ls -l ../NHL94
+python3 ../../../amiga/tools/mkicon.py ../NHL94.info

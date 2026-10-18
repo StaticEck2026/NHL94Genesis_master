@@ -24,7 +24,8 @@ CIAB_TBHI	equ	$BFD700
 PROFMAX		equ	65536
 
 GENESIS_HZ	equ	60
-CIA_CLOCK	equ	709379			;PAL E clock; an NTSC machine runs 1% faster
+CIA_CLOCK	equ	709379			;PAL E clock
+CIA_CLOCK_NTSC	equ	715909
 
 	section	game,code
 hal_header
@@ -98,8 +99,13 @@ hal_set_vectors
 hal_start_timer
 	move.b	#$7F,(CIAB_ICR).l		;all CIA-B interrupts off
 	move.b	#0,(CIAB_CRA).l
-	move.b	#(CIA_CLOCK/GENESIS_HZ)&$FF,(CIAB_TALO).l
-	move.b	#(CIA_CLOCK/GENESIS_HZ)>>8,(CIAB_TAHI).l
+	move.w	#CIA_CLOCK/GENESIS_HZ,d0
+	tst.b	(hal_pal).l
+	bne	.pal
+	move.w	#CIA_CLOCK_NTSC/GENESIS_HZ,d0
+.pal	move.b	d0,(CIAB_TALO).l
+	lsr.w	#8,d0
+	move.b	d0,(CIAB_TAHI).l
 	move.b	#$81,(CIAB_ICR).l		;timer A interrupt on
 	move.b	#$11,(CIAB_CRA).l		;start, continuous, force load
 	IFD	PROFILE

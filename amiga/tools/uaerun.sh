@@ -10,7 +10,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 W=${UAEWORK:-/tmp/uaework}
 mkdir -p "$W/hd/S" "$W/base" "$W/logs" "$OUT"
 cp "$ROOT/output/amiga/nhl94.game" "$W/hd/NHL94.game"
-cp "$ROOT/output/amiga/NHL94" "$W/hd/NHL94"
+cp "$ROOT/output/amiga/NHL94" "$ROOT/output/amiga/NHL94.info" "$W/hd/"
 printf 'NHL94\n' > "$W/hd/S/startup-sequence"
 KICK=${KICK:-/opt/amiga/aros-amiga-m68k-rom.bin}
 KEXT=${KEXT:-/opt/amiga/aros-amiga-m68k-ext.bin}
