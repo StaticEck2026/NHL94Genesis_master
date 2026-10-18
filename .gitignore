@@ -20,3 +20,6 @@ Thumbs.db
 desktop.ini
 
 # lst/nhl94.bin and lst/nhl94.bin.lst stay tracked (the reference ROM and its listing).
+# Amiga port build products
+amiga/harness/nhlrun
+__pycache__/

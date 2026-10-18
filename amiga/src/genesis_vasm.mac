@@ -1,0 +1,49 @@
+;	vasm versions of the macros in src/macros/genesis.mac. vasm cannot org backwards inside a
+;	section, so the length words are forward references instead.
+
+VmInc MACRO							;set video auto inc. mode
+	VCTLW	#$8f00+(\1&255)
+	ENDM
+
+String MACRO
+	dc.w	.se\@-*
+	dc.b	\1
+	IFNB	\2
+	dc.b	\2
+	ENDIF
+	IFNB	\3
+	dc.b	\3
+	ENDIF
+	IFNB	\4
+	dc.b	\4
+	ENDIF
+	IFNB	\5
+	dc.b	\5
+	ENDIF
+	IFNB	\6
+	dc.b	\6
+	ENDIF
+	IFNB	\7
+	dc.b	\7
+	ENDIF
+	IFNB	\8
+	dc.b	\8
+	ENDIF
+	IFNB	\9
+	dc.b	\9
+	ENDIF
+	cnop	0,2
+.se\@
+	ENDM
+
+HEX2 MACRO
+	dc.w	$\1,$\2,$\3,$\4
+	ENDM
+
+PLAYER MACRO
+	dc.b	0,.pe\@-*+1
+	dc.b	\1
+	cnop	0,2
+.pe\@
+	dc.w	$\2,$\3,$\4,$\5
+	ENDM
