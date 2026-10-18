@@ -52,6 +52,11 @@ static inline void wr32(uint32_t a, uint32_t v) { wr16(a, v >> 16); wr16(a + 2, 
 static uint32_t custom_read(uint32_t a, int size)
 {
     uint32_t off = a & 0xFFE;
+    if (off == 0x006 && getenv("NHL_FIXEDHV")) {   /* the same "random" beam position every run */
+        static uint32_t reads;
+        reads++;
+        return ((frame * 7 + reads * 13) & 0xFF) << 8 | ((reads * 29) & 0xFF);
+    }
     if (off == 0x006) {             /* VHPOSR */
         long long c = cycles_total + m68k_cycles_run();
         uint32_t line = (c / 455) % 262, h = (c / 2) % 227;
@@ -598,6 +603,10 @@ int main(int argc, char **argv)
     if (getenv("NHL_STATS")) {   /* build with VASMFLAGS=-DSTATS=1 */
         uint32_t k = rd32(dbg + 72);
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
+    }
+    if (getenv("NHL_PEEK")) {           /* NHL_PEEK=address: a word there at the end */
+        uint32_t a = strtoul(getenv("NHL_PEEK"), NULL, 16);
+        fprintf(stderr, "peek %06x: %04x\n", a, rd16(a));
     }
     if (getenv("NHL_DUMP")) {
         FILE *f = fopen(getenv("NHL_DUMP"), "wb");

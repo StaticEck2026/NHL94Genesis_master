@@ -83,8 +83,8 @@ rd_cop		ds.l	2*256
 rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
 	ENDIF
 rd_ovl		ds.b	SCRSIZE			;plane A / window overlay
-rd_ovlmlo	ds.b	SBPR*SCRH		;its low priority mask
-rd_ovlmhi	ds.b	SBPR*SCRH		;its high priority mask (follows the low one)
+rd_ovlmlo	ds.b	SROW*SCRH		;its low priority mask, each row once per plane (so one blit
+rd_ovlmhi	ds.b	SROW*SCRH		;does all 6); the high priority mask (follows the low one)
 
 	section	game,code
 
@@ -1181,7 +1181,7 @@ rd_ovl_redraw
 	move.w	#SBPR/2,$05E(a6)
 	bsr	rd_waitblit
 	move.l	#rd_ovlmlo,$054(a6)
-	move.w	#SCRH*2,$05C(a6)		;both mask planes (they follow each other)
+	move.w	#SCRH*6*2,$05C(a6)		;both masks (they follow each other)
 	move.w	#SBPR/2,$05E(a6)
 	; rows used, per priority: x min, x max (pixels), empty = min > max
 	lea	(rd_ovlrows).l,a0
@@ -1297,9 +1297,9 @@ rd_ovl_cell
 	movem.l	d4-d7/a5,-(sp)
 	bsr	rd_put8
 	movem.l	(sp)+,d4-d7/a5
-	; mask: or the row's mask bits in
+	; mask: or the row's mask bits in (each plane's copy)
 	move.w	d7,d6
-	mulu.w	#SBPR,d6
+	mulu.w	#SROW,d6
 	lea	(a5,d6.l),a0
 	move.w	d0,d6
 	addi.w	#SCRX*8,d6
@@ -1314,6 +1314,11 @@ rd_ovl_cell
 	adda.w	d6,a0
 	swap	d1
 	or.w	d1,(a0)
+	or.w	d1,SBPR(a0)
+	or.w	d1,2*SBPR(a0)
+	or.w	d1,3*SBPR(a0)
+	or.w	d1,4*SBPR(a0)
+	or.w	d1,5*SBPR(a0)
 .skip	adda.w	d4,a2
 	adda.w	d5,a3
 	addq.w	#1,d7
@@ -1440,7 +1445,7 @@ rd_ovl_blit
 	move.w	d2,d4
 	mulu.w	#SROW,d4			;screen / overlay line offset
 	move.w	d2,d5
-	mulu.w	#SBPR,d5			;mask line offset
+	mulu.w	#SROW,d5			;mask line offset (masks are interleaved like the screen)
 	movea.l	(rd_back).l,a0
 	adda.l	d4,a0
 	adda.w	d0,a0
@@ -1455,30 +1460,26 @@ rd_ovl_blit
 	suba.w	d4,a2
 	move.w	d1,d4
 	add.w	d4,d4				;bytes a row
-	moveq	#NPLANES-1,d6
-.plane	bsr	rd_bq_alloc
+	; one blit for the 6 planes: rows of the interleaved image, mask and screen
+	bsr	rd_bq_alloc
 	move.w	#$0FCA,$040(a6)
 	move.w	#0,$042(a6)
 	move.w	#$FFFF,$044(a6)
 	move.w	#$FFFF,$046(a6)
 	move.l	a2,$050(a6)			;A: mask
-	move.l	a1,$04C(a6)			;B: overlay plane
+	move.l	a1,$04C(a6)			;B: overlay
 	move.l	a0,$048(a6)			;C
 	move.l	a0,$054(a6)			;D
 	move.w	#SBPR,d5
 	sub.w	d4,d5
 	move.w	d5,$064(a6)			;AMOD
-	move.w	#SROW,d5
-	sub.w	d4,d5
 	move.w	d5,$062(a6)			;BMOD
 	move.w	d5,$060(a6)			;CMOD
 	move.w	d5,$066(a6)			;DMOD
-	move.w	d3,$05C(a6)
+	mulu.w	#NPLANES,d3
+	move.w	d3,$05C(a6)			;lines * 6 planes
 	move.w	d1,$05E(a6)
 	bsr	rd_bq_go
-	lea	SBPR(a0),a0
-	lea	SBPR(a1),a1
-	dbf	d6,.plane
 .bx	rts
 
 ;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
@@ -1590,11 +1591,17 @@ rd_ovl_setcell
 	clr.b	5*SBPR(a0)
 	lea	(rd_ovlmlo).l,a0
 	move.w	d5,d6
-	mulu.w	#SBPR,d6
+	mulu.w	#SROW,d6
 	adda.l	d6,a0
 	adda.w	d3,a0
-	clr.b	(a0)
-	clr.b	SBPR*SCRH(a0)			;the high mask
+	lea	(rd_ovlmhi-rd_ovlmlo).l,a1
+	adda.l	a0,a1				;the high mask
+	moveq	#5,d6
+.cm	clr.b	(a0)
+	clr.b	(a1)
+	lea	SBPR(a0),a0
+	lea	SBPR(a1),a1
+	dbf	d6,.cm
 .cn	addq.w	#1,d5
 	dbf	d4,.cl
 	move.w	d0,d3
