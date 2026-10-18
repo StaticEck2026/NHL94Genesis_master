@@ -6,13 +6,13 @@ Read `SEGMENT_AGENT.md` (the Current rules) and `docs/HANDOFF.md` before editing
 
 ## Build
 
-`npm run build:retail` (or `node tools/build.js retail`) runs the whole build and prints one line per step; `npm run build:dev` (`node tools/build.js dev`) builds with `CHECKSUM=0` and skips the verify. Linux needs wine and wine32 (`build.js` runs the assembler under wine); Windows runs it directly. Add `--verbose` for each step's full output. `rev=1` in the environment builds REV A.
+`npm run build:retail` (or `node tools/build.js retail`) runs the whole build and prints one line per step; `npm run build:dev` (`node tools/build.js dev`) builds with `CHECKSUM=0` and skips the verify. Linux needs wine and wine32 (`build.js` runs the assembler under wine); Windows runs it directly. Add `--verbose` for each step's full output.
 
 ```
 [1/5] prebuild   check the retail ROM and extract graphics/sound assets into Extracted/
                  ROM OK, 475 assets
 [2/5] assemble   SNASM68k turns src/*.asm into a raw ROM image
-                 0 errors, 0 warnings, 69719 lines in 0.29s (REV=0 CHECKSUM=1) -> output/build/nhl94.raw.bin
+                 0 errors, 0 warnings, 69719 lines in 0.29s (CHECKSUM=1) -> output/build/nhl94.raw.bin
 [3/5] fixopcodes patch the instructions where SNASM picks a different encoding than EA's original assembler
                  473 opcodes fixed
 [4/5] fixrom     pad to a valid ROM size, write the header end address and the checksum

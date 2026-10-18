@@ -8,7 +8,7 @@
 - `src/nhl94.asm` fills to 1MB. Includes placed after that fill start at $100000, so new data does not move any retail code.
 - `src/shortcalls.inc` (included last, emits nothing) stops the build if a routine the retail code calls with a short `jsr`/`jmp (x).w` moves past $7FFF. `tools/build.js` then stops at the assemble step and prints the routine, the files that call it, and the fix below.
 - `NumTeams` / `NumPlayoffTeams` (`src/stubinc/equals.inc`) drive the option limits, the random team range and the playoff clamp, and every per-team table checks its length while assembling.
-- `CHECKSUM=0` skips the boot check (`build:dev`); `REV` picks retail or Rev A.
+- `CHECKSUM=0` skips the boot check (`build:dev`). There is a single revision.
 
 ## Short jumps
 
