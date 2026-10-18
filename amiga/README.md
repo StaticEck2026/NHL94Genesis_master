@@ -14,7 +14,7 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 13 frames a second (FS-UAE,
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 12 frames a second (FS-UAE,
 cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
 the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
 
