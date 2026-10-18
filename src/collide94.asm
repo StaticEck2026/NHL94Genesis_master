@@ -1,12 +1,12 @@
 ;	Collisions. This file bounces players off the walls and each other, runs body checks, holds
 ;	and hooks, and decides when a player falls or is hurt.
 
-;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20
-;	OldYpos, $28 Xvel, $2A Yvel, $2E impactp, $32 impact, $34 position, $40 temp1, $4A / $4C
-;	wall radius x / y, $4E wallcos, $50 wallsin, $52 SCnum, $54 facedir, $58 SPA, $5E / $5F
-;	nopuck, $62 pflags, $63 pflags2, $64 bit 1 breakaway, bit 3 one-timer, bit 4 wall
-;	collision, bit 5 fell, $66 pnum, $67 weight, $68 Agl, $71 Stk, $73 aggres, $74 Fgt,
-;	$75 Chk.
+
+;Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, $14 Ypos, $1C OldXpos, $20 OldYpos, $28 Xvel,
+;$2A Yvel, $2E impactp, $32 impact, $34 position, $40 temp1, $4A / $4C wall radius x / y, $4E wallcos,
+;$50 wallsin, $52 SCnum, $54 facedir, $58 SPA, $5E / $5F nopuck, $62 pflags, $63 pflags2, $64 bit 1
+;breakaway, bit 3 one-timer, bit 4 wall collision, bit 5 fell, $66 pnum, $67 weight, $68 Agl, $71 Stk,
+;$73 aggres, $74 Fgt, $75 Chk.
 
 checkcoll							;d2 = new x coord, d3 = new y coord, a3 = struct of object. Check wall
 									;collision (around the hot spot and the end of the stick) and player
@@ -993,17 +993,17 @@ setInjuryType						;determines if injury will be for period or game. a2 = player
 .exit
 	move.w	(sp)+,d0
 	rts
-;	checkfight (an rts), checkwallcoll, checkgoal, GetPeriodTimeRemaining,
-;	checkgoalp, CheckBump, wallcollb, wallcoll, checkpuckcoll_sfx (entered
-;	from checkpuckcoll) and checkpuckcoll.
+;	Goal, wall and puck collision routines, from checkfight (an rts) to checkpuckcoll.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $1C OldXpos, $20
-;	OldYpos, $24 OldZpos, $28 Xvel, $2A Yvel, $2C Zvel, $32 impact, $34 position, $4E wallcos, $50 wallsin,
-;	$52 SCnum, $58 SPA, $5E nopuck (byte), $62 pflags, $63 pflags2, $64 bit 3 one-timer, bit 4 wall collision,
-;	$68 Agl, $76 handedness. Team struct from HmShots / AwShots (tmsize $364): $C tmscore, $18-$1C scorer and
-;	assists, $22 tmsort, $24 tmap, $26 tmgoalie, $B4 / $CE goal / assist bytes per player, $342 goals by
-;	period, $356 PP goals, $35A BA goals, $362 SH goals.
+
+;Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $1C OldXpos, $20
+;OldYpos, $24 OldZpos, $28 Xvel, $2A Yvel, $2C Zvel, $32 impact, $34 position, $4E wallcos, $50 wallsin,
+;$52 SCnum, $58 SPA, $5E nopuck (byte), $62 pflags, $63 pflags2, $64 bit 3 one-timer, bit 4 wall collision,
+;$68 Agl, $76 handedness. Team struct from HmShots / AwShots (tmsize $364): $C tmscore, $18-$1C scorer and
+;assists, $22 tmsort, $24 tmap, $26 tmgoalie, $B4 / $CE goal / assist bytes per player, $342 goals by
+;period, $356 PP goals, $35A BA goals, $362 SH goals.
 
 checkfight							;an rts: there is no fighting (93 looked for the start of a fight between
 									;a2 and a3 here). Called from checkcx
@@ -1946,20 +1946,20 @@ checkpuckcoll						;look for puck coll with players. a3 = puck. Clears Yvel past
 	move.w	#SFXshotwiff,-(sp)		;sound
 	bsr.w	sfx
 	bra.w	.exit
-;	puckstick, puckglue, puckbody, rtss2 (the shared rts), puckgoalie,
-;	deflect, makepde, getpde, setpde, setpersonel, SetPlList,
-;	TryAddPlayerToList, SetupPenaltyShot, forcepldata, ResetBench, Setplass,
-;	setplayer and ClampNibble.
+;	Puck contact routines (stick, glue, body, goalie, deflection) and the player list and setup code
+;	that follows them, down to setplayer and ClampNibble. rtss2 is the shared rts.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $28 Xvel, $2A Yvel,
-;	$2C Zvel, $34 position, $46 temp4, $48 temp5, $52 SCnum, $54 facedir, $58 SPA, $5A, $5E nopuck (byte), $60
-;	newpos, $61 newpnum, $62 pflags, $63 pflags2, $64 bit 3 one-timer, $66 pnum, then the attributes setplayer
-;	writes: $67 Wgt, $68 Agl, $69 Spd, $6A OfA, $6B DfA, $6C ShP, $6D ShA, $6E Pas, $6F jersey, $70 PS bias,
-;	$71 Stk, $72 End, $73 Agr, $74 Fgt, $75 Chk, $76 handed.
-;	Team struct from HmShots (tmsize $364): $E faceoffs won, $14 passes completed, $16 tmline, $1A / $1C
-;	assists, $1E tmdata, $22 tmsort, $24 tmap, $26 tmgoalie, $30 tmflags, $32 tmpde, $66 tmpdst (-4 / -3
-;	injured, -2 bench, -1 ice, >0 penalty box), $16A line sets.
+
+;Sort struct (SortCords, $80 each): 0 Xpos, 4 attribute, 6 frame, $14 Ypos, $18 Zpos, $28 Xvel, $2A Yvel,
+;$2C Zvel, $34 position, $46 temp4, $48 temp5, $52 SCnum, $54 facedir, $58 SPA, $5A, $5E nopuck (byte), $60
+;newpos, $61 newpnum, $62 pflags, $63 pflags2, $64 bit 3 one-timer, $66 pnum, then the attributes setplayer
+;writes: $67 Wgt, $68 Agl, $69 Spd, $6A OfA, $6B DfA, $6C ShP, $6D ShA, $6E Pas, $6F jersey, $70 PS bias,
+;$71 Stk, $72 End, $73 Agr, $74 Fgt, $75 Chk, $76 handed.
+;Team struct from HmShots (tmsize $364): $E faceoffs won, $14 passes completed, $16 tmline, $1A / $1C
+;assists, $1E tmdata, $22 tmsort, $24 tmap, $26 tmgoalie, $30 tmflags, $32 tmpde, $66 tmpdst (-4 / -3
+;injured, -2 bench, -1 ice, >0 penalty box), $16A line sets.
 
 puckstick							;puck collides with stick. a2 = player who collided, a3 = puck, d0 =
 									;distance^2 (from checkpuckcoll .ccx). A stick check on the puck carrier

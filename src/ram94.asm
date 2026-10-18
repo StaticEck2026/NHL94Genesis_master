@@ -1,6 +1,7 @@
 ;	Old RAM equate list. It is kept here, commented out, for reference only; the RAM names the
 ;	game uses are in the RAM map of the stubinc folder, and this file adds nothing to the ROM.
-; ;Variables
+;
+;Variables
 ; Vctrl	=	Vdata+4
 
 ; MaxSprites	=	64	;max sprites during game (64 because 32 col mode)
@@ -10,7 +11,7 @@
 
 ; Stack	=	$fffffdf0	;stack goes below sound Ram		
 
-; ;joystick button equates
+;joystick button equates
 ; ubut	=	0	;up
 ; dbut	=	1	;down
 ; lbut	=	2	;left
@@ -27,7 +28,7 @@
 ; SngEOP	=	3	;End of Game song
 ; SngPO	=	4	;playoffs music
 
-; ;sfx????? sound effects equates for Rob's sound file
+;sfx????? sound effects equates for Rob's sound file
 ; SFXskatestop	=	-1
 
 ; SFXsiren	=	0
@@ -73,7 +74,7 @@
 ; SCstruct	=	1<<scsize	;ram for each sortobj
 ; RAMSTART = varstart
 ; 	RSSET   varstart	
-; ;vram mapping variables...
+;vram mapping variables...
 ; VSCRLPM	rs.w	1	;location in vram of scroll parameters
 ; VSPRITES	rs.w	1	;location in vram of sprite attributes
 ; VmMAP1	rs.w	1	;location in vram of playfield 1
@@ -111,7 +112,7 @@
 
 ; asv	rs.w	1	;analog sound volume (crowd noise)
 
-; ;the following are equates for several structures allocated below them
+;the following are equates for several structures allocated below them
 ; Xcord	=	0
 ; Ycord	=	2
 
@@ -395,7 +396,7 @@
 ; gsp	rs.w	1	;game period
 ; gameclock	rs.l	1	;game clock
 
-; ;team variables
+;team variables
 ; tmshots	=	0	;shots stat
 ; tmPwrGoals	=	tmshots+2	;power play goals stat
 ; tmPwrPlays	=	tmPwrGoals+2	;power plays stat
@@ -417,7 +418,7 @@
 ; tmsize	=	tmpdst+(2*maxros)
 ; tmstruct	rs.b	tmsize*2
 
-; ;game structure variables
+;game structure variables
 ; gst1	=	0	;team 1
 ; gst2	=	gst1+2	;team 2
 ; gspotwins	=	gst2+2	;play off top team (on tree) wins (for best of 7)

@@ -456,14 +456,14 @@ showcrowd							;draw crowd sprites: up to 3 frames per PBnum nibble, then the t
 	movem.l	(sp)+,d0-d5
 .x
 	rts
-;	showclock, checksso, setsortcords, setffo, uppads, the pad label code
-;	(QueuePadLabel, RenderSmallFontChar, ButtonLabelCharTable),
-;	addframe, addframe2, find3d, updatesound and KillCrowd.
-;	The horizontal clock's .digit and .digits tables sit inside showclock.
+;	Clock, pad label and object helpers from showclock to KillCrowd. The horizontal clock's .digit and
+;	.digits tables sit inside showclock.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Object offsets: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
-;	ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
+
+;Object offsets: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
+;ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
 
 showclock							;put the game clock on screen. Called from setvideo and PauseMode. On the
 									;horizontal rink the clock is printed (printz / print with .digits; not in

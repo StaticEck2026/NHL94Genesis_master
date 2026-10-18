@@ -4,6 +4,7 @@
 ;
 ;	The sub CPU owns the game. This CPU drives the VDP and trades commands through
 ;	the gate array ($A1200E flags, $A12010 command words, $A12020 status words).
+;
 ;	$FF0000-$FF34B7 is transcribed and verified. This file is $FF0000-$FF0271.
 ;	maindma.asm through maintext.asm continue it.
 

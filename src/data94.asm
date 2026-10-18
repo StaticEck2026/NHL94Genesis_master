@@ -4,9 +4,10 @@
 
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
+
 ;RAM: potree, WinBits, pojoy, statsbuffer
-;	tpassbits. gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2
-;	$E gsflags (bits 0 gsftf teams flipped, 1 gsfhl hilite, 2 gsfso series over).
+;tpassbits. gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2
+;$E gsflags (bits 0 gsftf teams flipped, 1 gsfhl hilite, 2 gsfso series over).
 
 DefaultMenus						;Set the default menu choices for the beginning of the game: the 9 option
 									;words from defmenuoptions (93 had 7). Called once from Begin
@@ -641,16 +642,15 @@ ReadTeamStats						;Unpack the $68 playoff stat totals from the bit stream into 
 	move.w	d1,(a0)+
 	dbf	d0,.loop
 	rts
-;	ResolveGames, the end of game box (ShowThreeStars,
-;	TakeTopStarScore, CalcStarScores / Values), the injury box,
-;	the penalty shot box, the goal box, box, the player name formatters
-;	(GetPlayerName, getname ... ConvertByteToDigits) and the exception
-;	handlers AddError, Illinst, ZeroDiv and crash.
+;	Playoff results, the end of game box, the injury, penalty shot and goal boxes, the player name
+;	formatters and the exception handlers.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2, $E
-;	gsflags. Team struct: $C goals, $28 team, $B4 / $CE / $E8 goals / assists / shots bytes per roster slot,
-;	$136 frames on ice; tmsize $364.
+
+;gsstruct game ($10 bytes): 0 gst1, 2 gst2, 4 gspotwins, 6 gspobwins, 8 gsper, $A gss1, $C gss2, $E gsflags.
+;Team struct: $C goals, $28 team, $B4 / $CE / $E8 goals / assists / shots bytes per roster slot,
+;$136 frames on ice; tmsize $364.
 
 ResolveGames						;Compute winners and losers for playoff matchups. Called from EncodePW
 	move.w	(gamenum).w,d0
@@ -1387,18 +1387,12 @@ crash								;printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the
 	move.b	d1,(a0)+
 	dbf	d2,.top
 	rts
-;	Data tables: the crowd frame table (cd0, used by updatecrowdf), the
-;	player logic assignment table asstab, Penaltylist, the penalty shot
-;	tables (PenShotPenalties), bfasciicon, linelist, PlayerPositionText,
-;	PerLabels, sizetab, sublist, priolist, the playoff tree layout
-;	(PlayoffTreeSetup), the attribute column lists, and the menu item lists
-;	for the pause, intermission and line editor exit menus.
-;	PAttribOverall / PAttribOverallMask and GAttribOverall /
-;	GAttribOverallMask are read by code from inside the column tables. Two
-;	attribute column longs are written as dc.w pairs.
-;	Menu item lists: two printsmall control Strings, then per item a String
-;	and the handler address (dc.l). Item 0 leaves the menu (its handler is
-;	rtss2). String $FF ends the list.
+;	Data tables: crowd frames, player logic assignments, penalties, menus and the playoff tree layout.
+;	The attribute column lists hold PAttribOverall / PAttribOverallMask and GAttribOverall /
+;	GAttribOverallMask, which code reads from inside the tables. Two column longs are dc.w pairs.
+;
+;	Menu item lists: two printsmall control Strings, then per item a String and the handler address
+;	(dc.l). Item 0 leaves the menu (its handler is rtss2). String $FF ends the list.
 
 cd0									;$fftt = frame/time for various levels of crowd
 									;excitement. Used by updatecrowdf.

@@ -1,6 +1,7 @@
 ;	Sub CPU heap helpers from STARTER.BIN, linked at $21300.
 ;	Sierra C puts the function name after the rts. These two are EngineIdle
 ;	and GetData. Verified against STARTER.BIN file offset $4FA8.
+;
 ;	$24FB4 is the HOCKEY.SEG object. $FF8000 is the sub CPU gate array, used
 ;	by the routine EngineIdle calls when a free block is at least $8000.
 

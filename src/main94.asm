@@ -6,6 +6,7 @@
 ;	68000
 ;	ABSOLUTE
 ;	A4OFF
+;
 ;	llchar	'.'	; Change the local label character to '.'.
 ;	mlchar	'@'	; Change the macro label character to '@'.
 

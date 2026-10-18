@@ -765,15 +765,10 @@ Vmaddr
 	andi.w	#3,d0
 	move.l	d0,Vctrl-Vdata(a0)
 	rts
-;	dobitmap, the tile decompressor (DecompressGraphicsWithCallback,
-;	DecompressGraphicsPlain, DecompressGraphics, DecompressBytecode,
-;	jump_table, the Opcode_* handlers, FlushOutputBuffer), xyVmMap, eraser,
-;	Framer, printz2 / printsmall and the control codes, printz / print,
-;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber,
-;	PushNumberWidth, appendz / appstring, printbigz / printbig, PrintBigChar /
-;	PutBigTile, AddSmallFont, AddFramer and AddTeamBlock.
-;	The decompressor handlers and control code routines sit at the addresses
-;	in jump_table and ControlCodeJumpTable.
+;	Bitmap and tile decompression, text and number printing, and the small and big font routines.
+;	The decompressor handlers and control code routines sit at the addresses in jump_table and
+;	ControlCodeJumpTable.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 

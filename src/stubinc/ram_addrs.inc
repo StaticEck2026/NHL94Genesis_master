@@ -279,7 +279,8 @@ PenSlashingPS	equ	$3C
 collrad	equ	8						;collision radius of an object (objects collide within collrad*2)
 horoff	equ	197						;subtracted from the screen y in the horizontal rink view
 ssosize	equ	$14						;bytes per sso object
-ssonum	equ	4						;screen objects not tied to the rink scroll (2 arrows + 2 scoreboard logos)
+ssonum	equ	4						;screen objects not tied to the rink scroll (2 arrows + 2 scoreboard
+									;logos)
 ffonum	equ	7						;objects tied to the rink scroll (93 had 5)
 PenCntDwn equ $FFFFC3E6
 Penaltytimer equ $FFFFC3E8

@@ -1024,19 +1024,15 @@ SetHor								;switch graphics to horizontal ice rink graphics mode
 .ex
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-;	printscores1, PrintTeamNameAndScore, PrintTeamLogoAndScore, EASNLogo,
-;	USBoard, pplpen, linebar, getlinee, AvgCline, ChkShotStat,
-;	loadTeamStruct, SetupTeamForIntermission, RestoreTeamEnergy,
-;	reenergizeteam, Intermission, InitScores, UpdateScores, SetScore, sctab,
-;	NewTicker, NewTicker2, NewTicker3, NewTicker3pt2, GameLabels,
-;	ClearTickerArea, SetTickerAreaPosition, Fprintsmall,
-;	AdvanceStringPtr, DoHiLights, StartHL and StartHL2.
+;	Scoreboard, score ticker, intermission and highlight routines, from printscores1 to StartHL2.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Team struct from HmShots / AwShots (tmsize $364): 0 tmshots, $C tmscore, $16 tmline, $1E tmdata, $22
-;	tmsort, $24 tmap, $26 tmgoalie, $32 tmpde, $66 tmpdst, $9A penalty box list, $E8 per-player shot bytes,
-;	$16A line sets, $34A shots by period, $354 power play shots. Game struct (gsstruct, $10 each): 0 gst1, 2
-;	gst2, 8 gsper, $A gss1, $C gss2, $E gsflags (bit 1 gsfhl, bit 2 gsfso).
+
+;Team struct from HmShots / AwShots (tmsize $364): 0 tmshots, $C tmscore, $16 tmline, $1E tmdata, $22
+;tmsort, $24 tmap, $26 tmgoalie, $32 tmpde, $66 tmpdst, $9A penalty box list, $E8 per-player shot bytes,
+;$16A line sets, $34A shots by period, $354 power play shots. Game struct (gsstruct, $10 each): 0 gst1, 2
+;gst2, 8 gsper, $A gss1, $C gss2, $E gsflags (bit 1 gsfhl, bit 2 gsfso).
 
 printscores1						;Draw scoreboard. Vertical rink: period box and the score box (team names
 									;and scores). Horizontal rink .sbscreen: period and both team logos with

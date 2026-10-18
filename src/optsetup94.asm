@@ -2,12 +2,13 @@
 ;	option within its limits. New in 94: the goalie and user record options, the shootout, 4 Way
 ;	Play, and team logos on the setup screen.
 
-;	Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season,
-;	Continue Playoffs, New Playoffs, New Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1team,
-;	6 Opt2team, 8 Optperlen, $A OptGoalie, $C OptUserRec (0 On), $E OptPen (0 Off), $10
-;	OptLine (0 On, 2 Auto). setupcardflags bits: 0 player card up, 1 card side (visitors),
-;	2 / 3 home / visitors block drawn, 5 C pressed, 6 / 7 home / visitors logo shown.
-;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa.
+
+;Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season,
+;Continue Playoffs, New Playoffs, New Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1team,
+;6 Opt2team, 8 Optperlen, $A OptGoalie, $C OptUserRec (0 On), $E OptPen (0 Off), $10
+;OptLine (0 On, 2 Auto). setupcardflags bits: 0 player card up, 1 card side (visitors),
+;2 / 3 home / visitors block drawn, 5 C pressed, 6 / 7 home / visitors logo shown.
+;printz String first byte, negated: low 2 bits = map, the rest << 9 = printa.
 
 GameSetUp							;Game setup screen, called from PeriodOver. Builds the screen
 									;(setoptions), then runs the menu: up / down move the frame, left / right

@@ -1637,17 +1637,14 @@ EvadePC
 	moveq	#6,d0
 .ex
 	rts
-;	checkob, assbreakaway, assnearest, check4check, asspassrec, assshoot, the
-;	penalty shot code (puckshootout ... PenaltyShotEndReturn), the faceoff code
-;	(puckfaceoff ... Endfaceoff), ChkGoalies, ReturnGoalies, CPgoalie,
-;	CompLine, pucknorm, then ChkOffsides, the puck state routines, skateto,
-;	avdgoal, skatetopuck, the assignment list helpers, GetHot, SetSPA, the
-;	acceleration code (doplayeracc ... stopna) and dirtab.
+;	Late routines of the logic code: offsides, the puck state routines, skating and acceleration.
+;	The penalty shot and faceoff code sit among the assignment routines.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Inline print strings after printz / printz2 use the String macro (length word includes itself).
-;	SortCords offsets: Xpos 0, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36, temp1 $40,
-;	temp3 $44, temp4 $46, SCnum $52, facedir $54, SPA $58, pflags $62, pflags2 $63.
+
+;SortCords offsets: Xpos 0, Ypos $14, Xvel $28, Yvel $2A, position $34, assnum $36, temp1 $40,
+;temp3 $44, temp4 $46, SCnum $52, facedir $54, SPA $58, pflags $62, pflags2 $63.
 
 checkob								;bring up little warning ref if a player on your team is over blue line
 	btst	#gmoffs,(gmode).w
@@ -3502,12 +3499,14 @@ pucknorm
 	bne.w	checkpuckcoll
 	bsr.w	puckunflip
 	bra.w	checkpuckcoll
-;	PuckIChk, puckunflip / puckflip / puckshadow, findpc, skateto, avdgoal, skatetopuckinit / skatetopuck,
-;	assexit / assinsert / assreplace, vtoa, GetHot, SetSPA, doplayeracc, goalieacc, noturn0 / noturn,
-;	playeracc, MaxSpeed, dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap follows.
-;The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	SortCords offsets: Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34
-;	SCnum $52, facedir $54, SPA $58, SPAnum $5A, SPAcnt $5C, pflags $62, pflags2 $63.
+;	Helpers from PuckIChk to WeightedRandomSelect: puck flipping, skating, assignment lists and
+;	acceleration. remap follows.
+;
+;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
+;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
+
+;SortCords offsets: Xpos 0, attribute 4, Ypos $14, Zpos $18, Xvel $28, Yvel $2A, position $34
+;SCnum $52, facedir $54, SPA $58, SPAnum $5A, SPAcnt $5C, pflags $62, pflags2 $63.
 
 ChkOffsides							;check for offsides penalty. a3 = puck. Flags the whole team
 	btst	#gmoffs,(gmode).w

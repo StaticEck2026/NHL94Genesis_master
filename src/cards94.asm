@@ -1,7 +1,6 @@
 ;	New in 94: player cards and saved records. This file times and draws the player cards on the
-;	game setup screen, loads team colors and featured player pictures, keeps the team, player,
-;	crowd and user records in save RAM and runs the Player Cards screens. Print strings follow
-;	the calls that print them.
+;	game setup screen, loads team colors and featured player pictures, and keeps the team, player,
+;	crowd and user records in save RAM. Print strings follow the calls that print them.
 
 ResetCardTimer						;Reset the player card timer cardtimer to $AA ($53 if C was pressed).
 									;Called from ReadSetupPads, PrintOptions and PlayerCardTimer
