@@ -32,6 +32,9 @@ NPLANES		equ	6
 CHPITCH		equ	384			;chunky fallback: bytes per line
 CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
+SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
+SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
+						;frame built, image
 
 	section	bss,bss
 	cnop	0,4
@@ -76,6 +79,9 @@ rd_frontcop	ds.l	1
 rd_regs		ds.b	32			;the VDP registers (rd_snapshot)
 rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
+rd_sctab	ds.l	4*SCSLOTS		;sprite image cache (rd_sc_get)
+rd_scpos	ds.l	1			;bytes written to its ring so far
+rd_tchg		ds.l	2048			;frame each tile was last converted in
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
 rd_shownvb	ds.l	1			;rd_vblanks when the last frame was given to the display
 rd_lastframe	ds.l	1
@@ -99,9 +105,7 @@ mkB		ds.b	BMAX*8			;plane B high priority mask (the CPU's only: fast memory)
 rd_screens	ds.b	BUFSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 rd_cop		ds.l	2*256
-	IFD	SPRBLIT
-rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
-	ENDIF
+rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_ovlmlo	ds.b	OSROW*SCRH		;its low priority mask, each row once per plane (so one blit
 rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low one)
@@ -203,6 +207,11 @@ rd_init
 	move.l	d0,(rd_lastgen).l
 	move.l	d0,(rd_palgen).l
 	move.l	d0,(rd_shownvb).l		;(nothing shown yet)
+	lea	(rd_sctab).l,a0			;no sprite images
+	move.w	#SCSLOTS-1,d1
+.sc	move.l	d0,(a0)
+	lea	16(a0),a0
+	dbf	d1,.sc
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
@@ -274,6 +283,8 @@ rd_decode_dirty
 
 ;	Convert tile d0. Uses d0-d4/a0-a3/a5/a6.
 rd_decode_tile
+	lea	(rd_tchg).l,a0
+	move.l	(rd_count).l,(a0,d0.l*4)	;(the sprite image cache sees it)
 	lea	(vdp_vram).l,a0
 	move.l	d0,d1
 	lsl.l	#5,d1
@@ -2159,7 +2170,6 @@ rd_inwindow
 ;	screen at any pixel position. Two image buffers: the next sprite is built while the blitter
 ;	draws the last one.
 SPRMAXB		equ	6			;bytes a row: up to 32 pixels and the shift word
-SPRBUF		equ	32*6*SPRMAXB		;one image (or mask)
 
 rd_sprites_planar
 	move.w	(rd_spn).l,d5
@@ -2220,6 +2230,19 @@ rd_sprite_blit
 	move.w	(rd_sch).l,d3
 	lsl.w	#3,d3
 	bsr	rd_mark
+	IFD	STATS
+	movem.l	d0-d1/a0,-(sp)
+	addq.l	#1,(rd_dbg_ntw).l		;(statistics: sprites drawn, those of new tiles)
+	move.w	(rd_sat).l,d0
+	andi.l	#$7FF,d0
+	move.w	(rd_scw).l,d1
+	mulu.w	(rd_sch).l,d1
+	lea	(tc_chg).l,a0
+	bftst	(a0){d0:d1}
+	beq.s	.st0
+	addq.l	#1,(rd_dbg_til).l
+.st0	movem.l	(sp)+,d0-d1/a0
+	ENDC
 	tst.w	(rd_pass).l
 	bne	.nocov
 	bsr	rd_cover_rect
@@ -2261,26 +2284,21 @@ rd_sprite_blit
 	rol.w	#3,d0
 	andi.w	#3,d0
 	move.w	d0,(rd_spal).l
-	IFD	SPRBLIT
-	; build image and mask
-	lea	(rd_sprimg).l,a2
-	tst.b	(rd_sprflip).l
-	beq	.b0
-	lea	SPRBUF*2(a2),a2
-.b0	not.b	(rd_sprflip).l
-	lea	SPRBUF(a2),a3			;mask
-	move.l	a2,(rd_simg).l
-	move.l	a3,(rd_smask).l
-	bsr	rd_spr_build
-	ELSE
-	bra	rd_spr_cpu
-	ENDIF
-.blit	move.w	(rd_r1).l,d5
+	; from the image cache: the whole sprite as 6 interleaved planes and a mask, cut into the
+	; screen by one blit (queued: the CPU goes on). Columns dropped on the left: the CPU draws
+	tst.w	(rd_c0).l
+	bne	rd_spr_cpu
+	bsr	rd_sc_get			;a2 = image, a3 = mask
+	move.w	(rd_r1).l,d5
 	sub.w	(rd_r0).l,d5			;rows
 	ble	.x
-	move.w	(rd_wb).l,d4			;bytes a row
-	bsr	rd_waitblit
-	lea	(CUSTOM).l,a6
+	move.w	(rd_wb).l,d4			;bytes a plane row
+	move.w	(rd_r0).l,d0			;the first row drawn
+	mulu.w	d4,d0
+	mulu.w	#NPLANES,d0
+	adda.l	d0,a2
+	adda.l	d0,a3
+	bsr	rd_bq_alloc
 	move.w	(rd_colx).l,d0
 	add.w	(rd_xorg).l,d0
 	move.w	d0,d1
@@ -2288,14 +2306,12 @@ rd_sprite_blit
 	lsr.w	#4,d0
 	add.w	d0,d0				;destination byte of the first word
 	ror.w	#4,d1
-	move.w	d1,d2
-	ori.w	#$0FCA,d2			;A mask, B image, C, D; AB + /AC
-	move.w	d2,$040(a6)
-	move.w	d1,$042(a6)
-	move.w	#$FFFF,$044(a6)
-	move.w	#$FFFF,$046(a6)
-	move.l	(rd_smask).l,$050(a6)		;BLTAPT
-	move.l	(rd_simg).l,$04C(a6)		;BLTBPT
+	move.w	d1,$042(a6)			;BLTCON1: B shift
+	ori.w	#$0FCA,d1
+	move.w	d1,$040(a6)			;A shift; A mask, B image, C, D: AB + /AC
+	move.l	#-1,$044(a6)			;(the last word of each mask row is clear)
+	move.l	a3,$050(a6)			;BLTAPT
+	move.l	a2,$04C(a6)			;BLTBPT
 	movea.l	(rd_back).l,a0
 	move.w	(rd_sy).l,d1
 	add.w	(rd_r0).l,d1
@@ -2310,12 +2326,101 @@ rd_sprite_blit
 	sub.w	d4,d0
 	move.w	d0,$060(a6)			;BLTCMOD
 	move.w	d0,$066(a6)			;BLTDMOD
-	mulu.w	#6,d5
+	mulu.w	#NPLANES,d5
 	move.w	d5,$05C(a6)			;BLTSIZV
-	move.w	d4,d0
-	lsr.w	#1,d0
-	move.w	d0,$05E(a6)			;BLTSIZH: go
+	lsr.w	#1,d4
+	move.w	d4,$05E(a6)			;BLTSIZH
+	bra	rd_bq_go
 .x	rts
+
+;	------------------------------------------------------------------------------------------
+;	Sprite image cache. A sprite's image (6 interleaved planes, rows of rd_wb bytes: its
+;	columns rounded to words and a clear word for the blitter's shift) and its mask (the same
+;	layout, the mask in each plane's place) are built once and kept in a ring of chip RAM
+;	(rd_scarena), found through a hash table by its tiles, size, flips and palette. An image is
+;	used while none of its tiles was converted again (rd_tchg: the frame each tile last was)
+;	after it was built and the ring has not come round to it again. The players use the same
+;	few frames over and over: most sprites are found.
+
+;	a2 = the image, a3 = the mask of the sprite rd_sat, rd_scw, rd_sch (rd_wb set).
+rd_sc_get
+	movem.l	d0-d7/a0-a1/a4,-(sp)
+	moveq	#0,d0
+	move.w	(rd_sat).l,d0
+	andi.w	#$7FFF,d0			;tile, flips, palette (not the priority)
+	move.w	(rd_scw).l,d1
+	subq.w	#1,d1
+	lsl.w	#2,d1
+	add.w	(rd_sch).l,d1
+	subq.w	#1,d1
+	swap	d1
+	clr.w	d1
+	or.l	d1,d0				;key: size << 16 | attributes
+	move.l	d0,d2
+	mulu.l	#$9E3779B1,d2
+	swap	d2
+	andi.w	#SCSLOTS-1,d2
+	lsl.w	#4,d2
+	lea	(rd_sctab).l,a4
+	adda.w	d2,a4
+	; the image size, image and mask
+	move.w	(rd_wb).l,d7
+	mulu.w	(rd_sch).l,d7
+	mulu.w	#NPLANES*8,d7			;bytes of the image (and of the mask)
+	cmp.l	(a4),d0
+	bne.s	.build
+	move.l	(rd_scpos).l,d1
+	sub.l	4(a4),d1			;ring written since
+	cmpi.l	#SCARENA,d1
+	bhi.s	.build
+	move.l	8(a4),d3			;built in this frame
+	moveq	#0,d1
+	move.w	d0,d1				;(the tile in bits 10-0)
+	move.w	(rd_scw).l,d2
+	mulu.w	(rd_sch).l,d2
+	subq.w	#1,d2
+	lea	(rd_tchg).l,a0
+.tc	andi.w	#$7FF,d1
+	cmp.l	(a0,d1.w*4),d3
+	blo.s	.build				;a tile converted since
+	addq.w	#1,d1
+	dbf	d2,.tc
+	movea.l	12(a4),a2			;found
+	bra	.mask
+.build	move.l	(rd_scpos).l,d2			;room in the ring for image and mask
+	move.l	d7,d1
+	add.l	d1,d1
+	move.l	d2,d3
+	andi.l	#SCARENA-1,d3
+	add.l	d1,d3
+	cmpi.l	#SCARENA,d3
+	bls.s	.fit
+	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
+	addi.l	#SCARENA,d2
+.fit	move.l	d0,(a4)
+	move.l	d2,4(a4)
+	move.l	(rd_count).l,8(a4)
+	move.l	d2,d3
+	andi.l	#SCARENA-1,d3
+	lea	(rd_scarena).l,a2
+	adda.l	d3,a2
+	move.l	a2,12(a4)
+	add.l	d1,d2
+	move.l	d2,(rd_scpos).l
+	lea	(a2,d7.l),a3
+	move.l	(rd_r0).l,-(sp)			;all its lines (r0, r1)
+	clr.w	(rd_r0).l
+	move.w	(rd_sch).l,d0
+	lsl.w	#3,d0
+	move.w	d0,(rd_r1).l
+	movem.l	d7/a4,-(sp)
+	bsr	rd_spr_build
+	movem.l	(sp)+,d7/a4
+	move.l	(sp)+,(rd_r0).l
+	movea.l	12(a4),a2
+.mask	lea	(a2,d7.l),a3
+	movem.l	(sp)+,d0-d7/a0-a1/a4
+	rts
 
 ;	Draw the sprite described by rd_sx..rd_r1 straight into the back buffer: for each line the
 ;	tile rows of its columns are merged into one field per plane (up to 32 pixels) and written
@@ -3812,10 +3917,7 @@ rd_ncol		ds.w	1
 rd_wb		ds.w	1
 rd_r0		ds.w	1
 rd_r1		ds.w	1
-rd_sprflip	ds.w	1
 		cnop	0,4
-rd_simg		ds.l	1
-rd_smask	ds.l	1
 rd_fpsv		ds.w	1
 		cnop	0,4
 rd_fpst		ds.l	1
