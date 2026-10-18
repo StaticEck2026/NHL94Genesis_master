@@ -52,7 +52,6 @@ GoalieOdds	=	10
 ; .sr (4 bytes of bonuses), .godds (starting goalie weights), .ls 8 lines of 8 player numbers (1 = first
 ; .pld entry), .pld players ended by an empty String, then 4 Strings: city, abbreviation, nickname, arena.
 ;------------------------
-;------------------------
 ; .sr: 4 bytes, byte 3 is never read. byte 0: scoring odds of simulated games (SetScore): bits 4-6 = offense
 ; row, bits 0-2 = defense row of the weights table; byte 1: high nibble = penalty kill deficit, low nibble =
 ; power play bonus; byte 2: high nibble = home bonus, low nibble = visitor bonus (negated)
