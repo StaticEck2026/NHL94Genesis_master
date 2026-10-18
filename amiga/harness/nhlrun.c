@@ -28,7 +28,7 @@ static uint8_t *mem;
 static int irq6_pending;
 static long long blit_busy_until;
 static int intena, blit_irq, blit_end_pending, vb_irq;
-long long blitstat[3];   /* the blitter's level 3 interrupt */
+long long blitstat[4];   /* the blitter's level 3 interrupt */
 
 static void update_irq(void)
 {
@@ -147,8 +147,9 @@ static void do_blit(int h, int w)
     }
     in_blit = 0;
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
-        extern long long blitstat[3];
-        blitstat[(con0 & 0x0FFF) == 0x0FCA ? 1 : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 2] += blit_busy_until - blit_start;
+        extern long long blitstat[4];
+        int kind = (con0 & 0x0FFF) == 0x0FCA ? (alwm ? 2 : 1) : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 3;
+        blitstat[kind] += blit_busy_until - blit_start;
     }
 }
 
@@ -623,8 +624,8 @@ int main(int argc, char **argv)
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)));
     if (getenv("NHL_STATS"))
-        fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, other %.1f M\n",
-                blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6);
+        fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, sprites %.1f M, other %.1f M\n",
+                blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6, blitstat[3] / 1e6);
     if (getenv("NHL_STATS")) {   /* build with VASMFLAGS=-DSTATS=1 */
         uint32_t k = rd32(dbg + 72);
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));

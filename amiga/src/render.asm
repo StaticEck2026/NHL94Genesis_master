@@ -98,12 +98,13 @@ rd_pass		ds.w	1			;0 low priority pass, $8000 high
 rd_tmp		ds.l	8
 rd_cellpri	ds.w	1
 rd_rowbuf	ds.l	2
-mkB		ds.b	BMAX*8			;plane B high priority mask (the CPU's only: fast memory)
+mkB		ds.b	BMAX*8			;plane B high priority mask (for the CPU: fast memory)
 
 	section	chip,bss_c
 	cnop	0,8
 rd_screens	ds.b	BUFSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
+mkB6		ds.b	BMAX*48			;its high priority mask in each plane's place (blitter)
 rd_cop		ds.l	2*256
 rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
@@ -498,15 +499,12 @@ rd_fast
 	tst.b	(rd_ovldirty).l
 	beq	.ovl
 	bsr	rd_ovl_redraw
-.ovl	clr.w	(rd_pass).l
-	bsr	rd_ovl_blit
-	bsr	rd_waitblit			;the CPU draws the sprites
+.ovl	clr.w	(rd_pass).l			;(all queued for the blitter; what the CPU draws
+	bsr	rd_ovl_blit			;waits for it)
 	bsr	rd_sprites_planar
-	bsr	rd_waitblit
 	bsr	rd_fixups
 	move.w	#$8000,(rd_pass).l
 	bsr	rd_ovl_blit
-	bsr	rd_waitblit
 	bsr	rd_sprites_planar
 	IFD	VERIFY
 	bsr	rd_waitblit
@@ -806,7 +804,7 @@ rd_cellB
 	bhs.s	.once
 	bfset	32*4(a1){d1:1}
 	bfset	(DROWS+32)*4(a1){d1:1}
-.once
+.once	move.l	a4,-(sp)
 	move.w	d0,(rd_cellpri).l		;bit 15: high priority
 	move.w	d0,d1
 	andi.l	#$7FF,d1
@@ -821,6 +819,8 @@ rd_cellB
 	lea	(bmB).l,a1
 	adda.l	d2,a1
 	adda.w	d4,a1				;a1 = cell, plane 0, row 0
+	movea.l	a1,a4
+	adda.l	#mkB6-bmB,a4			;a4 = its mask in the bitmap's layout
 	lea	(mkB).l,a3
 	move.w	d5,d3
 	lsl.w	#3,d3
@@ -881,7 +881,20 @@ rd_cellB
 	moveq	#0,d0
 .hi	move.b	d0,(a3)
 	adda.w	d1,a3
+	move.b	d0,(a4)				;(each plane's place)
+	adda.w	d1,a4
+	move.b	d0,(a4)
+	adda.w	d1,a4
+	move.b	d0,(a4)
+	adda.w	d1,a4
+	move.b	d0,(a4)
+	adda.w	d1,a4
+	move.b	d0,(a4)
+	adda.w	d1,a4
+	move.b	d0,(a4)
+	adda.w	d1,a4
 	dbf	d3,.row
+	movea.l	(sp)+,a4
 	rts
 
 ;	List the high priority cells of plane B (for the fixups).
@@ -2426,6 +2439,7 @@ rd_sc_get
 ;	tile rows of its columns are merged into one field per plane (up to 32 pixels) and written
 ;	with bitfield instructions under the mask.
 rd_spr_cpu
+	bsr	rd_waitblit			;(the CPU draws into the back buffer)
 	move.w	(rd_colx).l,d0
 	add.w	(rd_xorg).l,d0
 	move.w	d0,(rd_sbit).l			;bit offset of the first column in a screen row
@@ -2910,8 +2924,12 @@ FIXPAL	MACRO					;palette plane at \1: all of the mask if set
 	adda.w	d3,a3
 	ENDM
 
+;	In scroll mode a blit each (rd_fix_blit, queued), else drawn by the CPU.
 rd_fixups
-	move.w	(rd_hiBn).l,d7
+	tst.w	(rd_scroll).l
+	bne.s	.go
+	bsr	rd_waitblit			;(the CPU draws into the back buffer)
+.go	move.w	(rd_hiBn).l,d7
 	subq.w	#1,d7
 	bmi	.x
 	lea	(rd_hiB).l,a4
@@ -2949,6 +2967,11 @@ rd_fixups
 	move.w	d2,(rd_fy).l
 	bsr	rd_iscovered
 	beq	.next
+	tst.w	(rd_scroll).l
+	beq.s	.cpu
+	bsr	rd_fix_blit
+	bra	.next
+.cpu
 	; redraw from the bitmap (rows of 6 plane rows, then the mask bitmap): its lines on screen
 	move.w	d7,-(sp)
 	move.w	(rd_cw).l,d3
@@ -3003,6 +3026,46 @@ rd_fixups
 .done	move.w	(sp)+,d7
 .next	dbf	d7,.each
 .x	rts
+
+;	Scroll mode: queue the redraw of plane B's high priority pixels of cell d4 (column), d5
+;	(row), at screen line d2: the bitmap through its mask (mkB6), the cell's word, no shift
+;	(the buffer holds the plane at its own columns). Its neighbour in the word is redrawn too:
+;	high priority plane B pixels are right over anything drawn before the high pass. Keeps
+;	everything.
+rd_fix_blit
+	movem.l	d0-d1/a0-a2/a6,-(sp)
+	move.w	d4,d0
+	andi.w	#$FFFE,d0			;the word's byte
+	move.w	d5,d1
+	mulu.w	#8*64*NPLANES,d1		;the bitmap's row (64 cells across)
+	lea	(bmB).l,a0
+	adda.l	d1,a0
+	adda.w	d0,a0
+	lea	(mkB6).l,a1
+	adda.l	d1,a1
+	adda.w	d0,a1
+	move.w	(rd_brow0).l,d1
+	add.w	d2,d1
+	mulu.w	#SROW,d1
+	movea.l	(rd_buf).l,a2
+	adda.l	d1,a2
+	lea	SCRX(a2,d0.w),a2
+	bsr	rd_bq_alloc
+	move.l	#$0FCA0000,$040(a6)		;A mask, B bitmap, C, D: AB + /AC
+	move.l	#-1,$044(a6)
+	move.l	a1,$050(a6)			;BLTAPT
+	move.l	a0,$04C(a6)			;BLTBPT
+	move.l	a2,$048(a6)			;BLTCPT
+	move.l	a2,$054(a6)			;BLTDPT
+	move.w	#64-2,$064(a6)			;BLTAMOD
+	move.w	#64-2,$062(a6)			;BLTBMOD
+	move.w	#SBPR-2,$060(a6)		;BLTCMOD
+	move.w	#SBPR-2,$066(a6)		;BLTDMOD
+	move.w	#8*NPLANES,$05C(a6)
+	move.w	#1,$05E(a6)
+	bsr	rd_bq_go
+	movem.l	(sp)+,d0-d1/a0-a2/a6
+	rts
 
 ;	Z clear if a screen cell under the 8x8 box at (d0, d2) is marked in rd_cover. Keeps d0-d5.
 rd_iscovered
