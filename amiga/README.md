@@ -14,7 +14,7 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 10 frames a second (FS-UAE,
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 13 frames a second (FS-UAE,
 cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
 the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
 
@@ -27,6 +27,13 @@ not enough memory, `nhl94.game` missing), a requester says why.
 
 In an emulator, use the hard drive image `output/amiga/nhl94.hdf`. The build makes it when
 `xdftool` is installed (`pip install amitools`). It boots straight into the game.
+
+There is also a bootable floppy, `output/amiga/nhl94.adf` (880 KB, double density, so it works
+in the A1200's own drive and in every emulator). The game does not fit on a floppy as it is, so
+there it is `NHL94.pak`, its parts deflate compressed, which the launcher loads and unpacks
+itself. Loading from a real floppy takes a minute or so; the hard drive image starts at once.
+To install the floppy on a hard drive, copy `NHL94`, `NHL94.info` and `NHL94.pak` into one
+directory.
 
 - **vAmigaWeb** (vamigaweb.github.io): choose the Amiga 1200 model with fast RAM (the "A1200"
   preset with 8 MB fast RAM), then drop `nhl94.hdf` onto the page. Do not drop `nhl94.game`
@@ -131,7 +138,10 @@ The hardware layer:
   filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
   back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
   note takes a free voice, else the quietest released one, else the oldest.
-- `stub.asm`: the launcher.
+- `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
+  file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
+  decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
+  it has AmigaDOS load `NHL94.game`.
 
 The renderer queues its blits; the blitter's interrupt starts each next one, so the CPU goes on
 building the next layer meanwhile.

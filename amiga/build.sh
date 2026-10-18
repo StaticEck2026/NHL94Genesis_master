@@ -40,6 +40,13 @@ if command -v "$XDFTOOL" >/dev/null 2>&1; then
     + write startup-sequence S/startup-sequence + write ../NHL94 NHL94 + write ../NHL94.info NHL94.info \
     + write ../nhl94.game NHL94.game >/dev/null
   ls -l ../nhl94.hdf
+  # A bootable 880 KB floppy: the game packed (pack.py), the launcher loads it
+  python3 ../../../amiga/tools/pack.py ../nhl94.game ../NHL94.pak
+  rm -f ../nhl94.adf
+  "$XDFTOOL" ../nhl94.adf create + format NHL94 ffs + boot install + makedir S \
+    + write startup-sequence S/startup-sequence + write ../NHL94 NHL94 + write ../NHL94.info NHL94.info \
+    + write ../NHL94.pak NHL94.pak >/dev/null
+  ls -l ../nhl94.adf
 else
-  echo "(no xdftool: nhl94.hdf not made; pip install amitools)"
+  echo "(no xdftool: nhl94.hdf and nhl94.adf not made; pip install amitools)"
 fi
