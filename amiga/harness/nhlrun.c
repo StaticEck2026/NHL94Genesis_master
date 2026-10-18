@@ -446,6 +446,10 @@ int main(int argc, char **argv)
     }
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)));
+    if (getenv("NHL_STATS")) {   /* build with VASMFLAGS=-DSTATS=1 */
+        uint32_t k = rd32(dbg + 72);
+        fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
+    }
     if (getenv("NHL_DUMP")) {
         FILE *f = fopen(getenv("NHL_DUMP"), "wb");
         fwrite(mem + (rd32(dbg + 48) & 0xFFFFFF), 1, 4096 * 32, f);

@@ -18,6 +18,10 @@ CIAB_ICR	equ	$BFDD00
 CIAB_CRA	equ	$BFDE00
 CIAB_TALO	equ	$BFD400
 CIAB_TAHI	equ	$BFD500
+CIAB_CRB	equ	$BFDF00
+CIAB_TBLO	equ	$BFD600
+CIAB_TBHI	equ	$BFD700
+PROFMAX		equ	65536
 
 GENESIS_HZ	equ	60
 CIA_CLOCK	equ	709379			;PAL E clock; an NTSC machine runs 1% faster
@@ -38,6 +42,7 @@ hal_debug
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
+	dc.l	rd_dbg_key
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the 60 Hz timer and jumps to the cartridge's cold start.
@@ -96,6 +101,13 @@ hal_start_timer
 	move.b	#(CIA_CLOCK/GENESIS_HZ)>>8,(CIAB_TAHI).l
 	move.b	#$81,(CIAB_ICR).l		;timer A interrupt on
 	move.b	#$11,(CIAB_CRA).l		;start, continuous, force load
+	IFD	PROFILE
+	move.b	#0,(CIAB_CRB).l
+	move.b	#355&$FF,(CIAB_TBLO).l		;~2 kHz
+	move.b	#355>>8,(CIAB_TBHI).l
+	move.b	#$82,(CIAB_ICR).l
+	move.b	#$11,(CIAB_CRB).l
+	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
 	move.w	#$C000|$2000,(CUSTOM+INTENA).l	;master + EXTER (level 6)
 	rts
@@ -122,6 +134,20 @@ hal_int6
 	move.l	d0,-(sp)
 	move.b	(CIAB_ICR).l,d0			;reading acknowledges
 	move.w	#$2000,(CUSTOM+INTREQ).l
+	IFD	PROFILE
+	btst	#1,d0				;timer B: sample the interrupted pc
+	beq.s	.np
+	movem.l	d1/a0,-(sp)
+	move.l	(prof_pos).l,d1
+	lea	(prof_buf).l,a0
+	move.l	14(sp),(a0,d1.l*4)
+	addq.l	#1,d1
+	andi.l	#PROFMAX-1,d1
+	move.l	d1,(prof_pos).l
+	addq.l	#1,(prof_count).l
+	movem.l	(sp)+,d1/a0
+.np
+	ENDIF
 	btst	#0,d0
 	beq	.none
 	move.l	(sp)+,d0
@@ -330,6 +356,11 @@ hal_pcring	ds.l	17
 hal_pcpos	ds.w	1
 hal_wd		ds.w	1
 hal_starve	ds.w	1
+	IFD	PROFILE
+prof_pos	ds.l	1
+prof_count	ds.l	1
+prof_buf	ds.l	PROFMAX
+	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
 hal_padports	ds.w	8
 hal_z80bus	ds.w	1			;written by the bus requests

@@ -424,11 +424,13 @@ rd_fast
 	bsr	rd_ovl_redraw
 .ovl	clr.w	(rd_pass).l
 	bsr	rd_ovl_blit
+	bsr	rd_waitblit			;the CPU draws the sprites
 	bsr	rd_sprites_planar
 	bsr	rd_waitblit
 	bsr	rd_fixups
 	move.w	#$8000,(rd_pass).l
 	bsr	rd_ovl_blit
+	bsr	rd_waitblit
 	bsr	rd_sprites_planar
 	bra	rd_waitblit
 
@@ -484,6 +486,48 @@ rd_updateB
 	moveq	#0,d4				;cell column
 	moveq	#0,d5				;cell row
 	move.w	#-1,(rd_hiBok).l		;unchanged unless a cell is redrawn
+	tst.w	d6
+	bne	.cell
+	tst.l	(rd_btchg).l
+	bne	.cell
+	; only entries can have changed: find the changed longs quickly
+	move.l	a0,(rd_tmp).l			;name table start
+	addq.w	#1,d7
+	lsr.w	#1,d7
+	subq.w	#1,d7				;longs - 1
+.f	cmpm.l	(a0)+,(a1)+
+	dbne	d7,.f
+	beq	.fdone
+	; long at a0-4 differs: its two cells
+	movem.l	d7/a0-a1,-(sp)
+	move.l	a0,d0
+	sub.l	(rd_tmp).l,d0
+	subq.l	#4,d0
+	lsr.l	#1,d0				;first cell
+	moveq	#1,d3
+.fc	movem.l	d0/d3,-(sp)
+	lea	(shB).l,a1
+	movea.l	(rd_tmp).l,a0
+	move.w	(a0,d0.l*2),d1			;entry
+	cmp.w	(a1,d0.l*2),d1
+	beq	.fn
+	move.w	d1,(a1,d0.l*2)
+	clr.w	(rd_hiBok).l
+	moveq	#0,d4
+	move.w	d0,d4
+	divu.w	(rd_cw).l,d4
+	move.l	d4,d5
+	swap	d4				;column
+	move.w	d1,d0
+	bsr	rd_cellB
+.fn	movem.l	(sp)+,d0/d3
+	addq.l	#1,d0
+	dbf	d3,.fc
+	movem.l	(sp)+,d7/a0-a1
+	dbf	d7,.f
+.fdone	tst.w	(rd_hiBok).l
+	bne	.x
+	bra	rd_list_hiB
 .cell	move.w	(a0)+,d0
 	tst.w	d6
 	bne	.draw
@@ -665,14 +709,17 @@ rd_blitB
 	move.w	d0,d7				;screen x of the second piece
 	moveq	#0,d1				;plane x 0
 	sub.w	d0,d2				;width
+	st	(rd_blitnoc).l			;its first word is drawn over by the next piece
 	bsr	rd_blitrect			;d1 plane x, d2 width, d3 lines, d4 plane y, d5 screen y,
 						;d7 screen x
 	movem.w	(sp)+,d0-d2
 	move.w	d0,d2
 	moveq	#0,d7
+	sf	(rd_blitnoc).l			;its last word holds the other piece's first pixels
 	bsr	rd_blitrect
 	bra	.hd
 .one	moveq	#0,d7
+	st	(rd_blitnoc).l			;whole width: the edges are margin
 	bsr	rd_blitrect
 .hd	movem.w	(sp)+,d3-d6
 	add.w	d3,d5
@@ -719,7 +766,11 @@ rd_blitrect
 	move.w	#$8000,d5
 	asr.w	d1,d5				;last word mask: bits up to the last pixel
 	lea	(CUSTOM).l,a6
-	move.w	#$07CA,$040(a6)			;BLTCON0: B, C, D, AB+/AC
+	move.w	#$07CA,d3			;BLTCON0: B, C, D, AB+/AC
+	tst.b	(rd_blitnoc).l
+	beq.s	.usec
+	move.w	#$05C0,d3			;B, D, AB: nothing to keep at the edges
+.usec	move.w	d3,$040(a6)
 	ror.w	#4,d7
 	move.w	d7,$042(a6)			;BLTCON1: B shift
 	move.w	#0,$044(a6)			;BLTAFWM: the extra word is kept
@@ -1007,6 +1058,10 @@ rd_ovl_redraw
 .ir	move.w	#$7FFF,(a0)+
 	move.w	#-$7FFF,(a0)+
 	dbf	d0,.ir
+	lea	(rd_ovlcolf).l,a0
+	move.w	#2*32*48/4-1,d0
+.icf	clr.l	(a0)+
+	dbf	d0,.icf
 	bsr	rd_waitblit
 	; draw the cells
 	lea	(rd_alist).l,a4
@@ -1033,8 +1088,32 @@ rd_ovl_cell
 	asr.w	#3,d3
 	addq.w	#1,d3				;rows of 8 lines from y = -8
 	moveq	#1,d4				;the cell can touch 2 bands
+	lea	(rd_ovlcolf).l,a6		;column flags: band * 48 + (x + 8) / 8
+	tst.w	d0
+	bpl.s	.clo
+	lea	32*48(a6),a6
+.clo
 .band	cmpi.w	#31,d3
 	bhi	.nb
+	move.w	d3,d5
+	mulu.w	#48,d5
+	move.w	d1,d6
+	addq.w	#8,d6
+	asr.w	#3,d6
+	bmi.s	.f1
+	cmpi.w	#47,d6
+	bhi.s	.f1
+	add.w	d5,d6
+	st	(a6,d6.w)
+.f1	move.w	d1,d6
+	addi.w	#15,d6
+	asr.w	#3,d6
+	bmi.s	.f2
+	cmpi.w	#47,d6
+	bhi.s	.f2
+	add.w	d5,d6
+	st	(a6,d6.w)
+.f2
 	cmp.w	(a5,d3.w*4),d1
 	bge	.nmin
 	move.w	d1,(a5,d3.w*4)
@@ -1121,11 +1200,58 @@ rd_ovl_blit
 	beq	.lo
 	lea	32*4(a4),a4
 	movea.l	#rd_ovlmhi,a3
-.lo	moveq	#0,d7				;band (lines -8 + 8 * band)
+.lo	lea	(rd_ovlcolf).l,a5
+	tst.w	(rd_pass).l
+	beq.s	.lof
+	lea	32*48(a5),a5
+.lof	moveq	#0,d7				;band (lines -8 + 8 * band)
 .band	move.w	(a4),d0				;x min
 	move.w	2(a4),d1			;x max
 	cmp.w	d1,d0
 	bgt	.next
+	; runs of flagged columns between them
+	addq.w	#8,d0
+	asr.w	#3,d0				;first column
+	addq.w	#8,d1
+	asr.w	#3,d1				;last column
+	tst.w	d0
+	bpl.s	.c0
+	moveq	#0,d0
+.c0	cmpi.w	#47,d1
+	ble.s	.c1
+	moveq	#47,d1
+.c1	move.w	d7,d2
+	mulu.w	#48,d2
+	lea	(a5,d2.w),a2			;this band's flags
+.run	cmp.w	d1,d0
+	bgt	.next
+	tst.b	(a2,d0.w)
+	bne.s	.rs
+	addq.w	#1,d0
+	bra.s	.run
+.rs	move.w	d0,d2				;run start
+.re	addq.w	#1,d0
+	cmp.w	d1,d0
+	bgt.s	.rx
+	tst.b	(a2,d0.w)
+	bne.s	.re
+.rx	; columns d2 .. d0-1: pixels d2*8-8 .. d0*8-9
+	movem.l	d0-d1/a2,-(sp)
+	move.w	d0,d1
+	lsl.w	#3,d1
+	subi.w	#9,d1
+	move.w	d2,d0
+	lsl.w	#3,d0
+	subq.w	#8,d0
+	bsr	.blitrun
+	movem.l	(sp)+,d0-d1/a2
+	bra.s	.run
+.next	addq.l	#4,a4
+	addq.w	#1,d7
+	cmpi.w	#30,d7
+	blt	.band
+	rts
+.blitrun	; pixels d0 .. d1 of band d7
 	; lines of the band on screen
 	move.w	d7,d2
 	subq.w	#1,d2
@@ -1142,7 +1268,7 @@ rd_ovl_blit
 	move.w	#SCRH,d3
 	sub.w	d2,d3
 .b	tst.w	d3
-	ble	.next
+	ble	.bx
 	tst.w	(rd_pass).l
 	bne	.nocov
 	movem.l	d0-d3,-(sp)
@@ -1205,10 +1331,131 @@ rd_ovl_blit
 	lea	SBPR(a0),a0
 	lea	SBPR(a1),a1
 	dbf	d6,.plane
-.next	addq.l	#4,a4
-	addq.w	#1,d7
-	cmpi.w	#30,d7
-	blt	.band
+.bx	rts
+
+;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
+;	scrolled by whole cells. d6 = plane cells across, d7 = down.
+rd_ovl_cells_changed
+	lea	(rd_aused).l,a3
+	lea	(rd_chgA).l,a4
+	move.w	(rd_nchgA).l,d4
+	bra	.anext
+.aloop	move.w	(a4)+,d0
+	add.w	d0,d0				;first cell of the long
+	moveq	#1,d3
+.acell	movem.l	d0/d3-d4/a4,-(sp)
+	moveq	#0,d1
+	move.w	d0,d1
+	divu.w	d6,d1				;row : column (remainder)
+	move.l	d1,d2
+	swap	d2				;column
+	move.w	(rd_ax0).l,d5
+	lsr.w	#3,d5
+	sub.w	d5,d2
+	move.w	d6,d5
+	subq.w	#1,d5
+	and.w	d5,d2				;screen column
+	move.w	(rd_ay0).l,d5
+	lsr.w	#3,d5
+	sub.w	d5,d1
+	move.w	d7,d5
+	subq.w	#1,d5
+	and.w	d5,d1				;screen row
+	cmp.w	(rd_cells).l,d2
+	bhi.s	.askip
+	cmpi.w	#28,d1
+	bhi.s	.askip
+	movem.l	d0-d1,-(sp)
+	move.w	d2,d4
+	move.w	d1,d5
+	bsr	rd_inwindow
+	movem.l	(sp)+,d0-d1
+	bne.s	.askip				;the window covers it
+	lea	(rd_shA).l,a0
+	move.w	(a0,d0.w*2),d0			;entry
+	lsl.w	#3,d2
+	lsl.w	#3,d1
+	exg	d1,d2				;d1 = x, d2 = y
+	bsr	rd_ovl_setcell
+.askip	movem.l	(sp)+,d0/d3-d4/a4
+	addq.w	#1,d0
+	dbf	d3,.acell
+.anext	dbf	d4,.aloop
+	; window
+	lea	(rd_chgW).l,a4
+	move.w	(rd_nchgW).l,d4
+	bra	.wnext
+.wloop	move.w	(a4)+,d0
+	add.w	d0,d0
+	moveq	#1,d3
+.wcell	movem.l	d0/d3-d4/a4,-(sp)
+	moveq	#0,d1
+	move.w	d0,d1
+	divu.w	(rd_wwidth).l,d1
+	move.l	d1,d2
+	swap	d2				;column
+	movem.l	d0-d2,-(sp)
+	move.w	d2,d4
+	move.w	d1,d5
+	bsr	rd_inwindow
+	movem.l	(sp)+,d0-d2
+	beq.s	.wskip
+	lea	(rd_shW).l,a0
+	move.w	(a0,d0.w*2),d0
+	lsl.w	#3,d2
+	lsl.w	#3,d1
+	exg	d1,d2
+	bsr	rd_ovl_setcell
+.wskip	movem.l	(sp)+,d0/d3-d4/a4
+	addq.w	#1,d0
+	dbf	d3,.wcell
+.wnext	dbf	d4,.wloop
+	rts
+
+;	Cell d0 at (d1, d2), a whole cell position: clear it in the overlay and its masks, then draw
+;	it if its tile is not empty. a3 = rd_aused.
+rd_ovl_setcell
+	movem.l	d0-d7/a0-a6,-(sp)
+	move.w	d0,d3
+	andi.w	#$7FF,d3
+	lea	(rd_aused).l,a3
+	bfset	(a3){d3:1}
+	move.w	d1,d3
+	addi.w	#SCRX*8,d3
+	lsr.w	#3,d3				;byte
+	moveq	#7,d4
+	move.w	d2,d5				;line
+.cl	tst.w	d5
+	bmi.s	.cn
+	cmpi.w	#SCRH,d5
+	bge.s	.cn
+	lea	(rd_ovl).l,a0
+	move.w	d5,d6
+	mulu.w	#SROW,d6
+	adda.l	d6,a0
+	adda.w	d3,a0
+	clr.b	(a0)
+	clr.b	SBPR(a0)
+	clr.b	2*SBPR(a0)
+	clr.b	3*SBPR(a0)
+	clr.b	4*SBPR(a0)
+	clr.b	5*SBPR(a0)
+	lea	(rd_ovlmlo).l,a0
+	move.w	d5,d6
+	mulu.w	#SBPR,d6
+	adda.l	d6,a0
+	adda.w	d3,a0
+	clr.b	(a0)
+	clr.b	SBPR*SCRH(a0)			;the high mask
+.cn	addq.w	#1,d5
+	dbf	d4,.cl
+	move.w	d0,d3
+	andi.w	#$FFF,d3
+	lea	(tp_cls).l,a0
+	tst.b	(a0,d3.w)
+	beq.s	.x
+	bsr	rd_ovl_cell
+.x	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
 rd_buildA
@@ -1289,43 +1536,55 @@ rd_buildA
 	move.w	d6,(a3)+			;key: size, width
 	move.w	d7,(a3)+
 	move.w	(rd_cells).l,(a3)+
-	; same as last time?
+	; same as last time? d5: 0 nothing, 1 a few cells (listed), 2 everything
 	lea	(rd_akeynew).l,a0
 	lea	(rd_akey).l,a1
-	moveq	#0,d5				;changed
+	moveq	#0,d5
 	moveq	#5,d0
 .k	cmpm.l	(a0)+,(a1)+
 	beq	.k1
-	moveq	#1,d5
+	moveq	#2,d5
 .k1	dbf	d0,.k
-	; name tables against their copies (copied as they are compared)
+	; name tables against their copies (copied as they are compared); changed longs listed
+	clr.w	(rd_nchgA).l
+	clr.w	(rd_nchgW).l
 	lea	(vdp_vram).l,a0
 	adda.l	(rd_abase).l,a0
 	lea	(rd_shA).l,a1
+	lea	(rd_chgA).l,a2
 	move.w	d6,d0
 	mulu.w	d7,d0
 	lsr.w	#1,d0
 	subq.w	#1,d0				;longs - 1
+	moveq	#0,d2				;long index
+	moveq	#0,d3				;listed
 .ca	move.l	(a0)+,d1
 	cmp.l	(a1),d1
 	beq	.ca1
-	moveq	#1,d5
 	move.l	d1,(a1)
+	bsr	.note
 .ca1	addq.l	#4,a1
+	addq.w	#1,d2
 	dbf	d0,.ca
+	move.w	d3,(rd_nchgA).l
 	lea	(vdp_vram).l,a0
 	adda.l	(rd_wbase).l,a0
 	lea	(rd_shW).l,a1
+	lea	(rd_chgW).l,a2
 	move.w	(rd_wwidth).l,d0
 	lsl.w	#4,d0				;* 32 rows / 2
 	subq.w	#1,d0
+	moveq	#0,d2
+	moveq	#0,d3
 .cw	move.l	(a0)+,d1
 	cmp.l	(a1),d1
 	beq	.cw1
-	moveq	#1,d5
 	move.l	d1,(a1)
+	bsr	.note
 .cw1	addq.l	#4,a1
+	addq.w	#1,d2
 	dbf	d0,.cw
+	move.w	d3,(rd_nchgW).l
 	; tiles of these cells converted again?
 	lea	(tc_chg).l,a0
 	lea	(rd_aused).l,a1
@@ -1333,10 +1592,32 @@ rd_buildA
 .tu	move.l	(a0)+,d1
 	and.l	(a1)+,d1
 	beq	.tu1
-	moveq	#1,d5
+	moveq	#2,d5
 .tu1	dbf	d0,.tu
 	tst.w	d5
 	beq	.keep
+	cmpi.w	#1,d5
+	bne	.full
+	; a few cells: redraw just those in the overlay (only with whole cell scroll)
+	move.w	(rd_ax0).l,d0
+	or.w	(rd_ay0).l,d0
+	andi.w	#7,d0
+	bne	.full
+	bsr	rd_ovl_cells_changed
+	bra	.keep
+.note	; long d2 of a name table changed: list it (d3 = count), or ask for a full redraw
+	moveq	#1,d1
+	cmpi.w	#2,d5
+	beq.s	.n2
+	cmpi.w	#16,d3
+	bhs.s	.nfull
+	move.w	d2,(a2,d3.w*2)
+	addq.w	#1,d3
+	move.w	d1,d5
+.n2	rts
+.nfull	moveq	#2,d5
+	rts
+.full
 	; rebuild
 	lea	(rd_akeynew).l,a0
 	lea	(rd_akey).l,a1
@@ -1661,112 +1942,15 @@ rd_sprite_blit
 	lea	SPRBUF(a2),a3			;mask
 	move.l	a2,(rd_simg).l
 	move.l	a3,(rd_smask).l
-	move.w	(rd_wb).l,d4			;row bytes
-	move.w	(rd_r0).l,d7			;row in the sprite
-.row	cmp.w	(rd_r1).l,d7
-	bge	.blit
-	; clear the row's 6 + 6 plane rows (the padding stays 0)
-	movea.l	a2,a0
-	movea.l	a3,a1
-	move.w	d4,d0
-	mulu.w	#6,d0
-	lsr.w	#1,d0
-	subq.w	#1,d0
-.clr	clr.w	(a0)+
-	clr.w	(a1)+
-	dbf	d0,.clr
-	; tile row for this line: column major tiles, flips
-	move.w	d7,d1
-	btst	#12,(rd_sat).l
-	beq	.nvf
-	move.w	(rd_sch).l,d1
-	lsl.w	#3,d1
-	subq.w	#1,d1
-	sub.w	d7,d1
-.nvf	move.w	d1,d2
-	lsr.w	#3,d2				;tile row in the sprite
-	andi.w	#7,d1				;line in the tile
-	lsl.w	#2,d1				;offset in the plane cache
-	moveq	#0,d6				;column drawn
-.col	cmp.w	(rd_ncol).l,d6
-	bge	.nextrow
-	move.w	d6,d0
-	add.w	(rd_c0).l,d0			;column in the sprite
-	move.w	(rd_sat).l,d3
-	btst	#11,d3
-	beq	.nhf
-	move.w	(rd_scw).l,d5
-	subq.w	#1,d5
-	sub.w	d0,d5
-	move.w	d5,d0
-.nhf	mulu.w	(rd_sch).l,d0
-	add.w	d2,d0
-	add.w	d3,d0
-	andi.l	#$7FF,d0
-	btst	#11,d3
-	beq	.nf2
-	bset	#11,d0
-.nf2	lea	(tp_mk).l,a0
-	move.l	d0,d5
-	lsl.l	#3,d5
-	move.w	d1,d3
-	lsr.w	#2,d3
-	add.w	d3,d5
-	move.b	(a0,d5.l),d3			;mask byte
-	beq	.ncol
-	lea	(tp_pl).l,a0
-	lsl.l	#5,d0
-	add.w	d1,d0
-	move.l	(a0,d0.l),d0			;planes 0-3
-	; store: image planes at d6 + p * wb, mask 6 times
-	lea	(a2,d6.w),a0
-	lea	(a3,d6.w),a1
-	rol.l	#8,d0
-	move.b	d0,(a0)
-	adda.w	d4,a0
-	rol.l	#8,d0
-	move.b	d0,(a0)
-	adda.w	d4,a0
-	rol.l	#8,d0
-	move.b	d0,(a0)
-	adda.w	d4,a0
-	rol.l	#8,d0
-	move.b	d0,(a0)
-	adda.w	d4,a0
-	moveq	#0,d5
-	btst	#0,(rd_spal+1).l
-	beq	.p4
-	move.b	d3,d5
-.p4	move.b	d5,(a0)
-	adda.w	d4,a0
-	moveq	#0,d5
-	btst	#1,(rd_spal+1).l
-	beq	.p5
-	move.b	d3,d5
-.p5	move.b	d5,(a0)
-	move.b	d3,(a1)
-	adda.w	d4,a1
-	move.b	d3,(a1)
-	adda.w	d4,a1
-	move.b	d3,(a1)
-	adda.w	d4,a1
-	move.b	d3,(a1)
-	adda.w	d4,a1
-	move.b	d3,(a1)
-	adda.w	d4,a1
-	move.b	d3,(a1)
-.ncol	addq.w	#1,d6
-	bra	.col
-.nextrow
-	move.w	d4,d0
-	mulu.w	#6,d0
-	adda.w	d0,a2
-	adda.w	d0,a3
-	addq.w	#1,d7
-	bra	.row
+	IFD	SPRBLIT
+	bsr	rd_spr_build
+	ELSE
+	bra	rd_spr_cpu
+	ENDIF
 .blit	move.w	(rd_r1).l,d5
 	sub.w	(rd_r0).l,d5			;rows
 	ble	.x
+	move.w	(rd_wb).l,d4			;bytes a row
 	bsr	rd_waitblit
 	lea	(CUSTOM).l,a6
 	move.w	(rd_colx).l,d0
@@ -1803,6 +1987,307 @@ rd_sprite_blit
 	move.w	d4,d0
 	lsr.w	#1,d0
 	move.w	d0,$05E(a6)			;BLTSIZH: go
+.x	rts
+
+;	Draw the sprite described by rd_sx..rd_r1 straight into the back buffer: for each line the
+;	tile rows of its columns are merged into one field per plane (up to 32 pixels) and written
+;	with bitfield instructions under the mask.
+rd_spr_cpu
+	move.w	(rd_colx).l,d0
+	addi.w	#SCRX*8,d0
+	move.w	d0,(rd_sbit).l			;bit offset of the first column in a screen row
+	moveq	#0,d6
+	btst	#0,(rd_spal+1).l
+	beq.s	.p4
+	moveq	#-1,d6
+.p4	moveq	#0,d7
+	btst	#1,(rd_spal+1).l
+	beq.s	.p5
+	moveq	#-1,d7
+.p5	movem.l	d6-d7,(rd_spalm).l		;palette planes 4, 5: all or nothing
+	; the columns' tiles (left to right as drawn)
+	lea	(rd_ctiles).l,a0
+	moveq	#0,d1
+.ct	cmp.w	(rd_ncol).l,d1
+	bge.s	.ctd
+	move.w	d1,d0
+	add.w	(rd_c0).l,d0
+	btst	#3,(rd_sat).l			;horizontal flip
+	beq.s	.nh
+	move.w	(rd_scw).l,d2
+	subq.w	#1,d2
+	sub.w	d0,d2
+	move.w	d2,d0
+.nh	mulu.w	(rd_sch).l,d0
+	add.w	(rd_sat).l,d0
+	andi.w	#$7FF,d0
+	btst	#3,(rd_sat).l
+	beq.s	.nf
+	bset	#11,d0
+.nf	move.w	d0,(a0)+
+	addq.w	#1,d1
+	bra.s	.ct
+.ctd	; lines
+	move.w	(rd_r0).l,d5
+.line	cmp.w	(rd_r1).l,d5
+	bge	.x
+	; source line: tile row and line in the tile (vertical flip from the other end)
+	move.w	d5,d0
+	btst	#4,(rd_sat).l
+	beq.s	.nv
+	move.w	(rd_sch).l,d0
+	lsl.w	#3,d0
+	subq.w	#1,d0
+	sub.w	d5,d0
+.nv	move.w	d0,d1
+	lsr.w	#3,d1				;tile row
+	andi.w	#7,d0				;line
+	; gather the columns into plane longs d2 (p0), d3 (p1), rd_gp2 (p2), a5 (p3) and the mask a6
+	moveq	#0,d2
+	moveq	#0,d3
+	clr.l	(rd_gp2).l
+	suba.l	a5,a5
+	suba.l	a6,a6
+	lea	(rd_ctiles).l,a0
+	move.w	(rd_ncol).l,d7
+	subq.w	#1,d7
+.g	moveq	#0,d6
+	move.w	(a0)+,d6			;tile of the column's top row
+	add.w	d1,d6				;this row's tile (columns are tile rows apart)
+	andi.w	#$FFF,d6
+	lea	(tp_mk).l,a1
+	lsl.l	#3,d6
+	add.w	d0,d6
+	move.l	a6,d4				;(mask in d4 for the moment)
+	lsl.l	#8,d4
+	move.b	(a1,d6.l),d4
+	movea.l	d4,a6
+	lsl.l	#2,d6
+	lea	(tp_pl).l,a1
+	move.l	(a1,d6.l),d6			;p0 p1 p2 p3 of this column's line
+	rol.l	#8,d6
+	lsl.l	#8,d2
+	move.b	d6,d2
+	rol.l	#8,d6
+	lsl.l	#8,d3
+	move.b	d6,d3
+	rol.l	#8,d6
+	move.l	(rd_gp2).l,d4
+	lsl.l	#8,d4
+	move.b	d6,d4
+	move.l	d4,(rd_gp2).l
+	rol.l	#8,d6
+	move.l	a5,d4
+	lsl.l	#8,d4
+	move.b	d6,d4
+	movea.l	d4,a5
+	dbf	d7,.g
+	; left align (4 - columns bytes)
+	move.w	(rd_ncol).l,d7
+	subq.w	#4,d7
+	neg.w	d7
+	lsl.w	#3,d7				;bits to shift
+	move.l	a6,d6				;mask
+	beq	.nl				;nothing on this line
+	lsl.l	d7,d6
+	lsl.l	d7,d2
+	lsl.l	d7,d3
+	move.l	(rd_gp2).l,d4
+	lsl.l	d7,d4
+	move.l	a5,d0
+	lsl.l	d7,d0
+	movea.l	d0,a5
+	; screen line
+	movea.l	(rd_back).l,a1
+	move.w	(rd_sy).l,d0
+	add.w	d5,d0
+	mulu.w	#SROW,d0
+	adda.l	d0,a1
+	move.w	(rd_sbit).l,d1
+	move.l	d6,d7
+	not.l	d7				;keep mask
+	bfextu	(a1){d1:32},d0
+	and.l	d7,d0
+	or.l	d2,d0
+	bfins	d0,(a1){d1:32}
+	bfextu	SBPR(a1){d1:32},d0
+	and.l	d7,d0
+	or.l	d3,d0
+	bfins	d0,SBPR(a1){d1:32}
+	bfextu	2*SBPR(a1){d1:32},d0
+	and.l	d7,d0
+	or.l	d4,d0
+	bfins	d0,2*SBPR(a1){d1:32}
+	move.l	a5,d4
+	bfextu	3*SBPR(a1){d1:32},d0
+	and.l	d7,d0
+	or.l	d4,d0
+	bfins	d0,3*SBPR(a1){d1:32}
+	bfextu	4*SBPR(a1){d1:32},d0
+	and.l	d7,d0
+	move.l	d6,d4
+	and.l	(rd_spalm).l,d4
+	or.l	d4,d0
+	bfins	d0,4*SBPR(a1){d1:32}
+	bfextu	5*SBPR(a1){d1:32},d0
+	and.l	d7,d0
+	move.l	d6,d4
+	and.l	(rd_spalm+4).l,d4
+	or.l	d4,d0
+	bfins	d0,5*SBPR(a1){d1:32}
+.nl	addq.w	#1,d5
+	bra	.line
+.x	rts
+
+;	Build the image (a2) and mask (a3) of the sprite described by rd_sx..rd_r1: lines rd_r0 to
+;	rd_r1-1, columns rd_c0 on (rd_ncol of them), rows of rd_wb bytes per plane (4 or 6).
+SPRLINE	MACRO					;one line of one column; \1 = bytes a plane row
+	move.b	(a1),d3
+	adda.w	d5,a1
+	move.l	(a0),d0
+	adda.w	d4,a0
+	tst.b	d3
+	beq.s	.z\@				;transparent: the cleared buffer is right
+	rol.l	#8,d0
+	move.b	d0,(a2)
+	rol.l	#8,d0
+	move.b	d0,\1(a2)
+	rol.l	#8,d0
+	move.b	d0,2*\1(a2)
+	rol.l	#8,d0
+	move.b	d0,3*\1(a2)
+	move.b	d3,d1
+	and.b	d6,d1
+	move.b	d1,4*\1(a2)
+	move.b	d3,d1
+	and.b	d7,d1
+	move.b	d1,5*\1(a2)
+	move.b	d3,(a3)
+	move.b	d3,\1(a3)
+	move.b	d3,2*\1(a3)
+	move.b	d3,3*\1(a3)
+	move.b	d3,4*\1(a3)
+	move.b	d3,5*\1(a3)
+.z\@	lea	6*\1(a2),a2
+	lea	6*\1(a3),a3
+	ENDM
+
+rd_spr_build
+	ifd	STATS
+	addq.l	#1,(rd_dbg_key).l		;(statistics: sprites built)
+	endif
+	; clear both: lines * 6 * wb bytes each
+	move.w	(rd_r1).l,d0
+	sub.w	(rd_r0).l,d0
+	mulu.w	(rd_wb).l,d0
+	mulu.w	#6,d0
+	lsr.w	#2,d0
+	subq.w	#1,d0
+	bmi	.x
+	movea.l	a2,a0
+	movea.l	a3,a1
+.clr	clr.l	(a0)+
+	clr.l	(a1)+
+	dbf	d0,.clr
+	; palette planes
+	moveq	#0,d6
+	btst	#0,(rd_spal+1).l
+	beq.s	.p4
+	moveq	#-1,d6
+.p4	moveq	#0,d7
+	btst	#1,(rd_spal+1).l
+	beq.s	.p5
+	moveq	#-1,d7
+.p5	clr.w	(rd_bcol).l
+.col	move.w	(rd_bcol).l,d0
+	cmp.w	(rd_ncol).l,d0
+	bge	.x
+	add.w	(rd_c0).l,d0			;column in the sprite
+	btst	#3,(rd_sat).l			;horizontal flip (bit 11)
+	beq.s	.nhf
+	move.w	(rd_scw).l,d1
+	subq.w	#1,d1
+	sub.w	d0,d1
+	move.w	d1,d0
+.nhf	mulu.w	(rd_sch).l,d0
+	add.w	(rd_sat).l,d0
+	andi.w	#$7FF,d0
+	btst	#3,(rd_sat).l
+	beq.s	.nf2
+	bset	#11,d0
+.nf2	move.w	d0,(rd_btile).l			;tile of the column's first tile row
+	; tile rows
+	clr.w	(rd_btr).l
+.tr	move.w	(rd_btr).l,d0
+	cmp.w	(rd_sch).l,d0
+	bge	.ncol
+	lsl.w	#3,d0				;first sprite line of the tile row
+	move.w	d0,d1
+	addq.w	#8,d1				;end
+	cmp.w	(rd_r0).l,d0
+	bge.s	.t0
+	move.w	(rd_r0).l,d0
+.t0	cmp.w	(rd_r1).l,d1
+	ble.s	.t1
+	move.w	(rd_r1).l,d1
+.t1	sub.w	d0,d1				;lines in this tile row
+	ble	.ntr
+	move.w	d1,d2
+	ifd	STATS
+	ext.l	d1
+	add.l	d1,(rd_dbg_nta).l		;(statistics: lines built)
+	endif
+	subq.w	#1,d2				;loop count
+	; source tile row (vertical flip: from the other end) and line
+	move.w	(rd_btr).l,d1
+	move.w	d0,d3
+	andi.w	#7,d3				;line in the tile
+	moveq	#4,d4
+	moveq	#1,d5
+	btst	#4,(rd_sat).l			;vertical flip (bit 12)
+	beq.s	.nvf
+	move.w	(rd_sch).l,d1
+	subq.w	#1,d1
+	sub.w	(rd_btr).l,d1
+	eori.w	#7,d3
+	moveq	#-4,d4
+	moveq	#-1,d5
+.nvf	ext.l	d1
+	add.w	(rd_btile).l,d1			;(hflip bit 11 of the tile survives the add)
+	andi.l	#$FFF,d1
+	lea	(tp_pl).l,a0
+	move.l	d1,-(sp)
+	lsl.l	#5,d1
+	adda.l	d1,a0
+	lea	(tp_mk).l,a1
+	move.l	(sp)+,d1
+	lsl.l	#3,d1
+	adda.l	d1,a1
+	adda.w	d3,a1
+	lsl.w	#2,d3
+	adda.w	d3,a0
+	; destinations: line (d0 - r0), column
+	sub.w	(rd_r0).l,d0
+	move.w	(rd_wb).l,d1
+	mulu.w	#6,d1
+	mulu.w	d1,d0
+	add.w	(rd_bcol).l,d0
+	movem.l	a2-a3,-(sp)
+	adda.w	d0,a2
+	adda.w	d0,a3
+	cmpi.w	#4,(rd_wb).l
+	bne.s	.w6
+.l4	SPRLINE	4
+	dbf	d2,.l4
+	bra.s	.ld
+.w6
+.l6	SPRLINE	6
+	dbf	d2,.l6
+.ld	movem.l	(sp)+,a2-a3
+.ntr	addq.w	#1,(rd_btr).l
+	bra	.tr
+.ncol	addq.w	#1,(rd_bcol).l
+	bra	.col
 .x	rts
 
 ;	------------------------------------------------------------------------------------------
@@ -2705,10 +3190,29 @@ rd_show
 
 	section	bss,bss
 rd_tline	ds.w	1
+rd_nchgA	ds.w	1
+rd_sbit		ds.w	1
+rd_ctiles	ds.w	4
+		cnop	0,4
+rd_spalm	ds.l	2
+rd_gp2		ds.l	1
+rd_bcol		ds.w	1
+rd_btr		ds.w	1
+rd_btile	ds.w	1
+rd_blitnoc	ds.w	1
+rd_nchgW	ds.w	1
+rd_chgA		ds.w	16
+rd_chgW		ds.w	16
+		cnop	0,4
+rd_dbg_key	ds.l	1
+rd_dbg_nta	ds.l	1
+rd_dbg_ntw	ds.l	1
+rd_dbg_til	ds.l	1
 		cnop	0,4
 rd_frontshow	ds.l	1
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
+rd_ovlcolf	ds.b	2*32*48			;per priority, band: columns with cells
 rd_c0		ds.w	1
 rd_ncol		ds.w	1
 rd_wb		ds.w	1

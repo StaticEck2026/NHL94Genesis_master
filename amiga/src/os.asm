@@ -170,6 +170,9 @@ _start
 	move.l	#CACRF_EnableD,d1
 	jsr	EXEC_CacheControl(a6)
 	bsr	os_save_sram
+	IFD	PROFILE
+	bsr	os_save_prof
+	ENDIF
 	movea.l	(os_backup).l,a1
 	move.l	#$10000,d0
 	jsr	EXEC_FreeMem(a6)
@@ -313,6 +316,40 @@ os_save_sram
 	jsr	DOS_Close(a6)
 .x	movem.l	(sp)+,d1-d4/a0-a1/a6
 	rts
+
+	IFD	PROFILE
+;	PC samples: the code base, the count, then the samples.
+os_save_prof
+	movem.l	d1-d4/a0-a1/a6,-(sp)
+	movea.l	(os_dos).l,a6
+	move.l	#.name,d1
+	move.l	#1006,d2
+	jsr	DOS_Open(a6)
+	move.l	d0,d4
+	beq.s	.x
+	lea	hal_header(pc),a0
+	move.l	a0,(os_iobuf).l
+	move.l	#PROFMAX,d0
+	cmp.l	(prof_count).l,d0
+	bls.s	.full
+	move.l	(prof_count).l,d0
+.full	move.l	d0,(os_iobuf+4).l
+	move.l	d4,d1
+	move.l	#os_iobuf,d2
+	moveq	#8,d3
+	jsr	DOS_Write(a6)
+	move.l	d4,d1
+	move.l	#prof_buf,d2
+	move.l	(os_iobuf+4).l,d3
+	lsl.l	#2,d3
+	jsr	DOS_Write(a6)
+	move.l	d4,d1
+	jsr	DOS_Close(a6)
+.x	movem.l	(sp)+,d1-d4/a0-a1/a6
+	rts
+.name	dc.b	'PROGDIR:nhl94.prof',0
+	even
+	ENDIF
 
 os_savename	dc.b	'PROGDIR:NHL94.sav',0
 	even

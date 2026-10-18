@@ -14,6 +14,10 @@ CIAA_DDRA	equ	$BFE201
 CIAA_SDR	equ	$BFEC01
 CIAA_ICR	equ	$BFED01
 CIAA_CRA	equ	$BFEE01
+CIAA_CRB	equ	$BFEF01
+CIAA_TBLO	equ	$BFE601
+CIAA_TBHI	equ	$BFE701
+
 JOY0DAT		equ	$00A
 JOY1DAT		equ	$00C
 POTGO		equ	$034
@@ -241,6 +245,7 @@ keys_p2	dc.b	0,0,0,0,$51,$52,$50,$53		;F2, F3, F1, F4
 
 	section	bss,bss
 hal_keys	ds.b	128
+
 hal_quit	ds.b	1
 hal_fpsshow	ds.b	1
 		even
