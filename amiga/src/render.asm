@@ -34,6 +34,7 @@ CHPITCH		equ	384			;chunky fallback: bytes per line
 CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
 SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
+CCSLOTS		equ	256			;frame image cache entries (a power of 2)
 SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
 						;frame built, image
 
@@ -83,6 +84,19 @@ rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	4*SCSLOTS		;sprite image cache (rd_sc_get)
 rd_scpos	ds.l	1			;bytes written to its ring so far
+rd_cctab	ds.l	8*CCSLOTS		;frame image cache (rd_group_blit): 2 keys, ring position,
+						;frame built, image, bytes a row (word), frame last
+						;found good
+rd_gx		ds.w	1			;rd_group_blit: the frame's box: x, y, width, height
+rd_gy		ds.w	1
+rd_gw		ds.w	1
+rd_gh		ds.w	1
+rd_gwb		ds.w	1			;bytes a row of its image
+rd_gn		ds.w	1			;sprites
+rd_gimg		ds.l	1
+rd_gxr		ds.w	1			;(the last sprite's x, y)
+rd_gyr		ds.w	1
+rd_grec		ds.l	3*8			;its sprites
 rd_scmin	ds.l	2			;its oldest image used in this frame, in the one before
 rd_tchg		ds.l	2048			;frame each tile was last converted in
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
@@ -219,6 +233,12 @@ rd_init
 .sc	move.l	d0,(a0)
 	lea	16(a0),a0
 	dbf	d1,.sc
+	lea	(rd_cctab).l,a0			;no frame images
+	move.w	#CCSLOTS-1,d1
+.cc	move.l	d0,(a0)
+	clr.w	20(a0)
+	lea	32(a0),a0
+	dbf	d1,.cc
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
@@ -2457,7 +2477,30 @@ rd_sprites_planar
 	subq.w	#1,d5
 	bmi	.x
 .each	subq.l	#8,a4
-	move.w	4(a4),d0
+	; the last sprite of a frame of several (bit 7 of the link byte of the ones before it)?
+	tst.b	3(a4)
+	bmi.s	.one				;(one of a frame drawn sprite by sprite)
+	moveq	#1,d6
+	move.w	d5,d1
+	movea.l	a4,a0
+	bra.s	.gn
+.gl	tst.b	3(a0)
+	bpl.s	.ge
+	addq.w	#1,d6
+.gn	subq.l	#8,a0
+	dbf	d1,.gl
+.ge	cmpi.w	#1,d6
+	beq.s	.one
+	movem.l	d5-d6/a4,-(sp)
+	bsr	rd_group_blit
+	movem.l	(sp)+,d5-d6/a4
+	beq.s	.one				;(not as one image: sprite by sprite)
+	subq.w	#1,d6				;the frame's other sprites are done
+	sub.w	d6,d5
+	lsl.w	#3,d6
+	suba.w	d6,a4
+	bra.s	.n
+.one	move.w	4(a4),d0
 	andi.w	#$8000,d0
 	cmp.w	(rd_pass).l,d0
 	bne	.n
@@ -2466,6 +2509,382 @@ rd_sprites_planar
 	movem.l	(sp)+,d5/a4
 .n	dbf	d5,.each
 .x	rts
+
+;	------------------------------------------------------------------------------------------
+;	A frame of d6 sprites (a4 its last, the sprites before it in the list the others): drawn as
+;	one image, kept in a cache of frame images (rd_cctab, the images in the sprite image ring)
+;	found by the sprites' tiles, sizes, flips, palettes and places in the frame. A frame image
+;	is built by the blitter from the sprites' own images (rd_sc_get), each cut in where it is
+;	in the frame, the first sprite of the list last (on top). Z set if the frame is not drawn
+;	this way (sprites of both priorities, too big, cut off on the left, past the buffer row);
+;	else (Z clear) drawn if of this pass's priority.
+rd_group_blit
+	cmpi.w	#8,d6
+	bhi	.no
+	move.w	d6,(rd_gn).l
+	; priority, box, and per sprite (rd_grec, 12 bytes): attributes (the priority off), x and
+	; y from the last sprite's (bytes), size (long), first tile, tiles
+	move.w	d6,d7
+	subq.w	#1,d7
+	movea.l	a4,a0
+	lea	(rd_grec).l,a1
+	move.w	(a4),d5
+	andi.w	#$3FF,d5
+	move.w	d5,(rd_gyr).l
+	move.w	6(a4),d5
+	andi.w	#$1FF,d5
+	move.w	d5,(rd_gxr).l
+	move.w	4(a4),d4
+	andi.w	#$8000,d4			;priority
+	move.w	#$7FFF,d0			;x0
+	move.w	d0,d1				;y0
+	move.w	#-$7FFF,d2			;x1
+	move.w	d2,d3				;y1
+.bb	move.w	4(a0),d5
+	move.w	d5,d6
+	andi.w	#$8000,d6
+	cmp.w	d4,d6
+	bne	.no
+	andi.w	#$7FFF,d5
+	move.w	d5,(a1)
+	andi.w	#$7FF,d5
+	move.w	d5,8(a1)
+	move.w	(a0),d5
+	andi.w	#$3FF,d5
+	move.w	d5,d6
+	sub.w	(rd_gyr).l,d6
+	move.b	d6,3(a1)
+	subi.w	#128,d5
+	cmp.w	d1,d5
+	bge.s	.b1
+	move.w	d5,d1
+.b1	moveq	#3,d6
+	and.b	2(a0),d6
+	addq.w	#1,d6
+	move.w	d6,10(a1)			;(cells down)
+	lsl.w	#3,d6
+	add.w	d6,d5
+	cmp.w	d3,d5
+	ble.s	.b2
+	move.w	d5,d3
+.b2	move.w	6(a0),d5
+	andi.w	#$1FF,d5
+	move.w	d5,d6
+	sub.w	(rd_gxr).l,d6
+	move.b	d6,2(a1)
+	subi.w	#128,d5
+	cmp.w	d0,d5
+	bge.s	.b3
+	move.w	d5,d0
+.b3	moveq	#0,d6
+	move.b	2(a0),d6
+	move.l	d6,4(a1)
+	andi.w	#$C,d6
+	addq.w	#4,d6
+	add.w	d6,d6				;(cells across * 8)
+	add.w	d6,d5
+	cmp.w	d2,d5
+	ble.s	.b4
+	move.w	d5,d2
+.b4	lsr.w	#3,d6
+	mulu.w	10(a1),d6
+	move.w	d6,10(a1)			;tiles
+	lea	12(a1),a1
+	subq.l	#8,a0
+	dbf	d7,.bb
+	cmp.w	(rd_pass).l,d4
+	bne	.done				;(not drawn in this pass)
+	; on the screen at all?
+	cmpi.w	#SCRH,d1
+	bge	.done
+	tst.w	d3
+	ble	.done
+	cmp.w	(rd_w).l,d0
+	bge	.done
+	tst.w	d2
+	ble	.done
+	cmpi.w	#-SCRX*8,d0
+	blt	.no				;(cut off on the left: sprite by sprite)
+	sub.w	d0,d2				;width
+	sub.w	d1,d3				;height
+	cmpi.w	#128,d2
+	bhi	.no
+	cmpi.w	#128,d3
+	bhi	.no
+	movem.w	d0-d3,(rd_gx).l			;x, y, w, h
+	addi.w	#15,d2
+	lsr.w	#4,d2
+	addq.w	#1,d2
+	add.w	d2,d2
+	move.w	d2,(rd_gwb).l			;bytes a row: the width in words + 1 word
+	add.w	(rd_xorg).l,d0
+	asr.w	#4,d0
+	add.w	d0,d0
+	add.w	d2,d0
+	cmpi.w	#SBPR+4,d0
+	bgt	.no				;(past the buffer row and the next one's margin)
+	; key: two hashes of the records (the first multiplicative, the second rotate and add)
+	move.l	#$811C9DC5,d0
+	moveq	#0,d1
+	move.w	(rd_gn).l,d1
+	move.l	#$01000193,d3
+	lea	(rd_grec).l,a1
+	move.w	(rd_gn).l,d7
+	subq.w	#1,d7
+.kh	move.l	(a1),d2
+	eor.l	d2,d0
+	mulu.l	d3,d0
+	rol.l	#7,d1
+	eor.l	d2,d1
+	add.l	4(a1),d1
+	lea	12(a1),a1
+	dbf	d7,.kh
+	move.l	d0,d2
+	swap	d2
+	andi.w	#CCSLOTS-1,d2
+	lsl.w	#5,d2
+	lea	(rd_cctab).l,a5
+	adda.w	d2,a5				;its entry
+	cmp.l	(a5),d0
+	bne	.build
+	cmp.l	4(a5),d1
+	bne	.build
+	move.w	(rd_gwb).l,d2
+	cmp.w	20(a5),d2
+	bne	.build
+	move.l	(rd_scpos).l,d2
+	sub.l	8(a5),d2			;ring written since
+	cmpi.l	#SCARENA,d2
+	bhi	.build
+	; the sprites' tiles converted since it was built? If it was found good in the frame
+	; before, only this frame's conversions (tc_chg) are looked at
+	move.l	(rd_count).l,d3
+	subq.l	#1,d3
+	cmp.l	24(a5),d3
+	bne.s	.slow
+	lea	(tc_chg).l,a0
+	lea	(rd_grec).l,a1
+	move.w	(rd_gn).l,d7
+	subq.w	#1,d7
+.ff	moveq	#0,d4
+	move.w	8(a1),d4
+	move.w	10(a1),d2
+	bftst	(a0){d4:d2}
+	bne	.build
+	lea	12(a1),a1
+	dbf	d7,.ff
+	bra.s	.good
+.slow	move.l	12(a5),d3
+	lea	(rd_tchg).l,a0
+	lea	(rd_grec).l,a1
+	move.w	(rd_gn).l,d7
+	subq.w	#1,d7
+.tf	move.w	8(a1),d4
+	move.w	10(a1),d2
+	subq.w	#1,d2				;tiles - 1
+.tc	andi.w	#$7FF,d4
+	cmp.l	(a0,d4.w*4),d3
+	blo	.build
+	addq.w	#1,d4
+	dbf	d2,.tc
+	lea	12(a1),a1
+	dbf	d7,.tf
+.good	move.l	(rd_count).l,24(a5)		;(found good in this frame)
+	movea.l	16(a5),a2			;found
+	bra	.draw
+.build	move.w	(rd_gwb).l,d7			;(the tile check above counts in d7)
+	mulu.w	(rd_gh).l,d7
+	mulu.w	#NPLANES,d7			;bytes of the image (and of the mask)
+	movem.l	d0-d1,-(sp)
+	move.l	d7,d1
+	add.l	d1,d1
+	bsr	rd_sc_alloc			;(first: the sprites' images are then not written over)
+	movem.l	(sp)+,d0-d1
+	move.l	d0,(a5)
+	move.l	d1,4(a5)
+	move.l	d2,8(a5)
+	move.l	(rd_count).l,12(a5)
+	move.l	a2,16(a5)
+	move.w	(rd_gwb).l,20(a5)
+	move.l	(rd_count).l,24(a5)
+	cmp.l	(rd_scmin).l,d2
+	bge.s	.c0
+	move.l	d2,(rd_scmin).l
+.c0	; clear image and mask
+	bsr	rd_bq_alloc
+	move.l	#$01000000,$040(a6)		;D only, 0
+	move.l	a2,$054(a6)
+	clr.w	$066(a6)
+	move.w	(rd_gh).l,d0
+	mulu.w	#2*NPLANES,d0
+	move.w	d0,$05C(a6)
+	move.w	(rd_gwb).l,d0
+	lsr.w	#1,d0
+	move.w	d0,$05E(a6)
+	bsr	rd_bq_go
+	; the sprites, the last first
+	move.l	a2,(rd_gimg).l
+	movea.l	a4,a0
+	move.w	(rd_gn).l,d7
+	subq.w	#1,d7
+.bs	movem.l	d7/a0/a5,-(sp)
+	move.w	4(a0),(rd_sat).l
+	move.w	4(a0),d0
+	rol.w	#3,d0
+	andi.w	#3,d0
+	move.w	d0,(rd_spal).l
+	moveq	#3,d0
+	and.b	2(a0),d0
+	addq.w	#1,d0
+	move.w	d0,(rd_sch).l
+	moveq	#$C,d1
+	and.b	2(a0),d1
+	lsr.w	#2,d1
+	addq.w	#1,d1
+	move.w	d1,(rd_scw).l
+	move.w	d1,(rd_ncol).l
+	clr.w	(rd_c0).l
+	addq.w	#1,d1
+	lsr.w	#1,d1
+	addq.w	#1,d1
+	add.w	d1,d1
+	move.w	d1,(rd_wb).l			;bytes a row of the sprite's image
+	move.l	a0,-(sp)
+	bsr	rd_sc_get			;a2 = image, a3 = mask
+	movea.l	(sp)+,a0
+	; where in the frame image: line y * 6 * gwb, word of x, shift
+	move.w	6(a0),d0
+	andi.w	#$1FF,d0
+	subi.w	#128,d0
+	sub.w	(rd_gx).l,d0			;x in the frame
+	move.w	(a0),d1
+	andi.w	#$3FF,d1
+	subi.w	#128,d1
+	sub.w	(rd_gy).l,d1			;y in the frame
+	mulu.w	(rd_gwb).l,d1
+	mulu.w	#NPLANES,d1
+	moveq	#15,d2
+	and.w	d0,d2
+	ror.w	#4,d2				;shift
+	lsr.w	#4,d0
+	add.w	d0,d0
+	add.w	d0,d1
+	movea.l	(rd_gimg).l,a1
+	adda.l	d1,a1				;image
+	move.w	(rd_gh).l,d0
+	mulu.w	(rd_gwb).l,d0
+	mulu.w	#NPLANES,d0
+	lea	(a1,d0.l),a0			;mask
+	move.w	(rd_gwb).l,d3
+	sub.w	(rd_wb).l,d3			;modulo
+	move.w	(rd_sch).l,d4
+	mulu.w	#8*NPLANES,d4			;rows
+	move.w	(rd_wb).l,d5
+	lsr.w	#1,d5				;words
+	bsr	rd_bq_alloc
+	move.w	d2,$042(a6)			;BLTCON1: B shift
+	move.w	d2,d0
+	ori.w	#$0FCA,d0
+	move.w	d0,$040(a6)			;A mask, B image, C, D: AB + /AC
+	move.l	#-1,$044(a6)
+	move.l	a3,$050(a6)
+	move.l	a2,$04C(a6)
+	move.l	a1,$048(a6)
+	move.l	a1,$054(a6)
+	clr.l	$064(a6)			;BLTAMOD, BLTDMOD (set below)
+	clr.w	$062(a6)
+	move.w	d3,$060(a6)
+	move.w	d3,$066(a6)
+	move.w	d4,$05C(a6)
+	move.w	d5,$05E(a6)
+	bsr	rd_bq_go
+	bsr	rd_bq_alloc
+	move.w	d2,d0
+	ori.w	#$0BFA,d0
+	move.w	d0,$040(a6)			;A mask, C, D: A + C
+	clr.w	$042(a6)
+	move.l	#-1,$044(a6)
+	move.l	a3,$050(a6)
+	move.l	a0,$048(a6)
+	move.l	a0,$054(a6)
+	clr.w	$064(a6)
+	move.w	d3,$060(a6)
+	move.w	d3,$066(a6)
+	move.w	d4,$05C(a6)
+	move.w	d5,$05E(a6)
+	bsr	rd_bq_go
+	movem.l	(sp)+,d7/a0/a5
+	subq.l	#8,a0
+	dbf	d7,.bs
+	movea.l	16(a5),a2
+.draw	; the frame image a2 (its mask after it) into the screen
+	move.l	8(a5),d0			;(used in this frame: not written over under the blit)
+	cmp.l	(rd_scmin).l,d0
+	bge.s	.d0
+	move.l	d0,(rd_scmin).l
+.d0	movem.w	(rd_gx).l,d0-d3
+	bsr	rd_mark
+	tst.w	(rd_pass).l
+	bne.s	.nc
+	bsr	rd_cover_rect
+.nc	; rows on the screen: r0 .. r1
+	moveq	#0,d4
+	tst.w	d1
+	bpl.s	.t
+	move.w	d1,d4
+	neg.w	d4
+.t	move.w	#SCRH,d5
+	sub.w	d1,d5
+	cmp.w	d3,d5
+	ble.s	.b
+	move.w	d3,d5
+.b	sub.w	d4,d5				;rows
+	ble	.done
+	move.w	(rd_gwb).l,d6
+	move.w	d3,d7
+	mulu.w	d6,d7
+	mulu.w	#NPLANES,d7			;bytes of the image
+	lea	(a2,d7.l),a3			;mask
+	move.w	d4,d7
+	mulu.w	d6,d7
+	mulu.w	#NPLANES,d7
+	adda.l	d7,a2
+	adda.l	d7,a3
+	add.w	d4,d1				;first line on the screen
+	bsr	rd_bq_alloc
+	add.w	(rd_xorg).l,d0
+	move.w	d0,d2
+	andi.w	#15,d2
+	asr.w	#4,d0
+	add.w	d0,d0
+	ror.w	#4,d2
+	move.w	d2,$042(a6)
+	ori.w	#$0FCA,d2
+	move.w	d2,$040(a6)
+	move.l	#-1,$044(a6)
+	move.l	a3,$050(a6)
+	move.l	a2,$04C(a6)
+	movea.l	(rd_back).l,a0
+	mulu.w	#SROW,d1
+	adda.l	d1,a0
+	adda.w	d0,a0
+	move.l	a0,$048(a6)
+	move.l	a0,$054(a6)
+	clr.w	$064(a6)
+	clr.w	$062(a6)
+	move.w	#SBPR,d0
+	sub.w	d6,d0
+	move.w	d0,$060(a6)
+	move.w	d0,$066(a6)
+	mulu.w	#NPLANES,d5
+	move.w	d5,$05C(a6)
+	lsr.w	#1,d6
+	move.w	d6,$05E(a6)
+	bsr	rd_bq_go
+.done	moveq	#1,d0				;Z clear: done
+	rts
+.no	moveq	#0,d0				;Z set
+	rts
 
 ;	Sprite a4.
 rd_sprite_blit
@@ -2619,6 +3038,40 @@ rd_sprite_blit
 ;	after it was built and the ring has not come round to it again. The players use the same
 ;	few frames over and over: most sprites are found.
 
+;	Room for d1 bytes in the ring: d2 = its position, a2 = its address (rd_scpos moved on). A
+;	blit queued in this frame or the one before may still read an image of the lap before that
+;	this writes over: if one was used there (rd_scmin), they are let finish. Uses d3, d4.
+rd_sc_alloc
+	move.l	(rd_scpos).l,d2
+	move.l	d2,d3
+	andi.l	#SCARENA-1,d3
+	add.l	d1,d3
+	cmpi.l	#SCARENA,d3
+	bls.s	.fit
+	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
+	addi.l	#SCARENA,d2
+.fit	move.l	d2,d3
+	add.l	d1,d3
+	move.l	d3,(rd_scpos).l
+	subi.l	#SCARENA,d3			;the ring below here is written over
+	move.l	(rd_scmin).l,d4
+	cmp.l	(rd_scmin+4).l,d4
+	ble.s	.m
+	move.l	(rd_scmin+4).l,d4
+.m	cmp.l	d3,d4
+	bge.s	.free
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
+	ENDC
+	bsr	rd_waitblit
+	move.l	#$7FFFFFFF,(rd_scmin).l
+	move.l	#$7FFFFFFF,(rd_scmin+4).l
+.free	move.l	d2,d3
+	andi.l	#SCARENA-1,d3
+	lea	(rd_scarena).l,a2
+	adda.l	d3,a2
+	rts
+
 ;	a2 = the image, a3 = the mask of the sprite rd_sat, rd_scw, rd_sch (rd_wb set).
 rd_sc_get
 	movem.l	d0-d7/a0-a1/a4,-(sp)
@@ -2664,43 +3117,13 @@ rd_sc_get
 	dbf	d2,.tc
 	movea.l	12(a4),a2			;found
 	bra	.mask
-.build	move.l	(rd_scpos).l,d2			;room in the ring for image and mask
-	move.l	d7,d1
+.build	move.l	d7,d1				;room in the ring for image and mask
 	add.l	d1,d1
-	move.l	d2,d3
-	andi.l	#SCARENA-1,d3
-	add.l	d1,d3
-	cmpi.l	#SCARENA,d3
-	bls.s	.fit
-	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
-	addi.l	#SCARENA,d2
-.fit	; a blit queued in this frame or the one before may still read an image of the ring
-	; this is written over (from the lap before): if one was used there, let them finish
-	move.l	d2,d3
-	add.l	d1,d3
-	subi.l	#SCARENA,d3			;the ring below here is written over
-	move.l	(rd_scmin).l,d4
-	cmp.l	(rd_scmin+4).l,d4
-	ble.s	.m
-	move.l	(rd_scmin+4).l,d4
-.m	cmp.l	d3,d4
-	bge.s	.free
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
-	ENDC
-	bsr	rd_waitblit
-	move.l	#$7FFFFFFF,(rd_scmin).l
-	move.l	#$7FFFFFFF,(rd_scmin+4).l
-.free	move.l	d0,(a4)
+	bsr	rd_sc_alloc
+	move.l	d0,(a4)
 	move.l	d2,4(a4)
 	move.l	(rd_count).l,8(a4)
-	move.l	d2,d3
-	andi.l	#SCARENA-1,d3
-	lea	(rd_scarena).l,a2
-	adda.l	d3,a2
 	move.l	a2,12(a4)
-	add.l	d1,d2
-	move.l	d2,(rd_scpos).l
 	lea	(a2,d7.l),a3
 	move.l	(rd_r0).l,-(sp)			;all its lines (r0, r1)
 	clr.w	(rd_r0).l

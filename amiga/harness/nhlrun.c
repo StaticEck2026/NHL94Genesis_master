@@ -113,17 +113,25 @@ static void vw_hit(uint32_t a, uint32_t v)
     if (a > vw[i].hi) vw[i].hi = a;
 }
 
+static uint16_t pend_reg[0x38 / 2];
+static int pend_h, pend_w;
 static void watch_hit(uint32_t a, uint32_t v)
 {
     fprintf(stderr, "frame %d: %06x = %02x (was %02x) %s pc=%06x\n", frame, a, v & 0xFF, mem[a],
             in_blit ? "blitter" : "cpu", m68k_get_reg(NULL, M68K_REG_PPC));
+    if (in_blit) {
+        uint16_t *r = pend_reg - 0x40 / 2;
+        fprintf(stderr, "  blit con0 %04x con1 %04x A %06x B %06x C %06x D %06x mods A %d B %d C %d D %d, %d rows of %d words\n",
+                r[0x40 / 2], r[0x42 / 2], (r[0x50 / 2] << 16) | r[0x52 / 2], (r[0x4C / 2] << 16) | r[0x4E / 2],
+                (r[0x48 / 2] << 16) | r[0x4A / 2], (r[0x54 / 2] << 16) | r[0x56 / 2], (int16_t)r[0x64 / 2],
+                (int16_t)r[0x62 / 2], (int16_t)r[0x60 / 2], (int16_t)r[0x66 / 2], pend_h, pend_w);
+    }
 }
 
 /* The blitter, area mode, ascending and descending (no line mode). A blit's memory accesses are
    made when its time is up (the hardware makes them over that time), so a CPU write to what a
    pending blit reads or writes shows; NHL_EARLYBLIT=1 makes them at the start instead. */
-static uint16_t pend_reg[0x38 / 2];
-static int pend_h, pend_w, pend_run;
+static int pend_run;
 static void blit_exec(void);
 
 static void do_blit(int h, int w)
