@@ -53,10 +53,11 @@ GoalieOdds	=	10
 ; .pld entry), .pld players ended by an empty String, then 4 Strings: city, abbreviation, nickname, arena.
 ;------------------------
 ;------------------------
-; .sr: 4 bytes, bytes 0 and 3 are never read. byte 1: high nibble = penalty kill deficit, low nibble = power
-; play bonus; byte 2: high nibble = home bonus, low nibble = visitor bonus (negated)
-;x - not read
-;x - not read
+; .sr: 4 bytes, byte 3 is never read. byte 0: scoring odds of simulated games (SetScore): bits 4-6 = offense
+; row, bits 0-2 = defense row of the weights table; byte 1: high nibble = penalty kill deficit, low nibble =
+; power play bonus; byte 2: high nibble = home bonus, low nibble = visitor bonus (negated)
+;q - scoring odds offense row (bits 4-6)
+;r - scoring odds defense row (bits 0-2)
 ;e - penalty kill deficit
 ;b - power play bonus
 
@@ -95,7 +96,7 @@ AllStarsEast						;ASE
 	incbin	..\Extracted\NHL94\Graphics\Pals\ASEh.pal
 	incbin	..\Extracted\NHL94\Graphics\Pals\ASEv.pal
 .sr
-;		xxeb,hvxx
+;		qreb,hvxx
 	dc.w	$7720,$00E8
 .godds								;starting goalie weights, 4 nibbles (PickStartingGoalie)
 	dc.b	203,192
