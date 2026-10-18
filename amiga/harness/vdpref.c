@@ -10,6 +10,7 @@
 #include "vdpref.h"
 
 static const uint8_t *R, *V, *C, *VS;
+uint8_t *vdpref_index;
 
 static int rw(const uint8_t *p, int a) { return (p[a] << 8) | p[a + 1]; }
 
@@ -116,6 +117,7 @@ int vdpref_render(uint8_t *out, int *pw, int *ph, const uint8_t *regs, const uin
             if (a & 0x80) c = a;
             if (s & 0x80) c = s;
             line[x] = c & 0x3F;
+            if (vdpref_index) vdpref_index[y * W + x] = c;
         }
         for (int x = 0; x < W; x++) {
             int col = display ? rw(C, line[x] * 2) : 0;
@@ -155,7 +157,7 @@ int png_write(const char *name, const uint8_t *rgb, int w, int h)
     ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
     chunk(f, "IHDR", ihdr, 13);
     uLongf rawlen = (uLongf)(w * 3 + 1) * h;
-    static uint8_t raw[(320 * 2 * 3 + 1) * 480], z[(320 * 2 * 3 + 1) * 480 + 1024];
+    static uint8_t raw[(1024 * 3 + 1) * 1024], z[(1024 * 3 + 1) * 1024 + 4096];
     for (int y = 0; y < h; y++) {
         raw[y * (w * 3 + 1)] = 0;
         memcpy(raw + y * (w * 3 + 1) + 1, rgb + y * w * 3, w * 3);
@@ -175,4 +177,32 @@ int vdpref_png(const char *name, const uint8_t *regs, const uint8_t *vram, const
     int w, h;
     vdpref_render(rgb, &w, &h, regs, vram, cram, vsram);
     return png_write(name, rgb, w, h);
+}
+
+void vdpref_stats(int frame, const uint8_t *regs, const uint8_t *vram, const uint8_t *vsram)
+{
+    R = regs; V = vram; VS = vsram;
+    int h40 = (R[12] & 0x81) != 0;
+    int pa = (R[2] & 0x38) << 10, pb = (R[4] & 7) << 13, pwin = (R[3] & (h40 ? 0x3C : 0x3E)) << 10;
+    int sat = (R[5] & (h40 ? 0x7E : 0x7F)) << 9, hsb = (R[13] & 0x3F) << 10;
+    static const int sz[4] = {32, 64, 32, 128};
+    int cw = sz[R[16] & 3], ch = sz[(R[16] >> 4) & 3];
+    int nza = 0, nzb = 0, pala = 0, palb = 0, pria = 0, prib = 0;
+    for (int i = 0; i < cw * ch; i++) {
+        int ea = rw(V, (pa + i * 2) & 0xFFFF), eb = rw(V, (pb + i * 2) & 0xFFFF);
+        if (ea & 0x7FF) { nza++; pala |= 1 << ((ea >> 13) & 3); if (ea & 0x8000) pria++; }
+        if (eb & 0x7FF) { nzb++; palb |= 1 << ((eb >> 13) & 3); if (eb & 0x8000) prib++; }
+    }
+    int ns = 0, link = 0, sprpal = 0, sprpri = 0;
+    do {
+        int a = (sat + link * 8) & 0xFFFF;
+        link = V[a + 3] & 0x7F;
+        int at = rw(V, a + 4);
+        sprpal |= 1 << ((at >> 13) & 3);
+        if (at & 0x8000) sprpri++;
+        ns++;
+    } while (link && ns < 80);
+    printf("f%d %s mode11=%02x plane %dx%d A@%04x(%d cells pal%x pri%d) B@%04x(%d cells pal%x pri%d) win@%04x h=%02x v=%02x spr=%d pal%x pri%d hs=%d,%d vs=%d,%d\n",
+           frame, h40 ? "H40" : "H32", R[11], cw, ch, pa, nza, pala, pria, pb, nzb, palb, prib, pwin, R[17], R[18],
+           ns, sprpal, sprpri, rw(V, hsb), rw(V, hsb + 2), rw(VS, 0), rw(VS, 2));
 }

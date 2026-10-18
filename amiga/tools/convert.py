@@ -196,7 +196,8 @@ def convert_line(code, ctx):
     if op2.lower() == 'btst' and args2 and re.search(r'\(IO_Z80BUS\)\.l', args2, re.I):
         args2 = re.sub(r'\(IO_Z80BUS\)\.l', '(hal_zero).l', args2, flags=re.I)
     # Code grows (32-bit RAM addresses), so let vasm size every branch (bra.l on the 68020).
-    if sz2 and re.match(r'^(bra|bsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo))$', op2, re.I):
+    if sz2 and re.match(r'^(bra|bsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo))$', op2, re.I) \
+            and '*' not in (args2 or ''):     # bra.w *+4 counts on the branch's own size
         sz2 = None
     line = lab + ws + op2 + (sz2 or '') + ((ws2 + args2) if args2 is not None else '')
     return [line] + extra
@@ -332,8 +333,60 @@ def _vdp_once(rel, lines, labin, final):
     return out
 
 
+WAITOPS = ('cmp', 'cmpi', 'tst', 'btst')
+
+
+IDLE_SKIP = {'sound94.asm'}     # its loops are Z80 bus waits inside the vblank code
+
+
+def idle_pass(rel, lines):
+    """Put jsr hal_idle at the top of busy-wait loops: a local label, at most 3 compare / test
+    instructions, then a conditional branch back to the label. The renderer runs meanwhile."""
+    out = list(lines)
+    if rel in IDLE_SKIP:
+        return out
+    code = [split_comment(l)[0] for l in lines]
+    n = 0
+    for i, c in enumerate(code):
+        m = re.match(r'^(\.[\w]+)\s*(\S.*)?$', c)
+        if not m:
+            continue
+        lab = m.group(1)
+        body = [m.group(2)] if m.group(2) else []
+        j = i + 1
+        while len(body) < 5 and j < len(code):
+            if code[j].strip():
+                if re.match(r'^[A-Za-z_.]', code[j]):
+                    break
+                body.append(code[j].strip())
+            j += 1
+        k = 0
+        while k < len(body) and k < 3:
+            mm = re.match(r'^([a-z]+)', body[k], re.I)
+            if not mm or mm.group(1).lower() not in WAITOPS or ')+' in body[k] or '-(' in body[k]:
+                break
+            k += 1
+        if k == 0 or k >= len(body):
+            continue
+        mb = re.match(r'^b(ne|eq|pl|mi|lt|ge|gt|le|cc|cs|hi|ls)(\.[sw])?\s+(\S+)$', body[k], re.I)
+        if not mb or mb.group(3) != lab:
+            continue
+        if m.group(2):      # label and instruction on one line: split them
+            cm = split_comment(lines[i])[1]
+            out[i] = lab + '\n\tjsr\t(hal_idle).l\n\t' + m.group(2) + cm
+        else:
+            out[i] = lines[i] + '\n\tjsr\t(hal_idle).l'
+        n += 1
+        idle_report.append('%s:%d %s' % (rel, i + 1, lab))
+    return out
+
+
+idle_report = []
+
+
 def convert_file(rel, text, out):
-    lines = text.split('\n')
+    lines = idle_pass(rel, text.split('\n'))
+    lines = '\n'.join(lines).split('\n')
     split = []
     for ln in lines:
         if re.match(r'^(\S*\s+)(include|incbin)(\s+)', ln, re.I):
@@ -382,7 +435,7 @@ def main():
                 fh.write(text)
     patches.finish()
     with open(os.path.join(out, 'convert_report.txt'), 'w') as fh:
-        fh.write('\n'.join(report) + '\n\n' + '\n'.join(vdp_report) + '\n')
+        fh.write('\n'.join(report) + '\n\n' + '\n'.join(vdp_report) + '\n\nidle:\n' + '\n'.join(idle_report) + '\n')
 
 
 if __name__ == '__main__':

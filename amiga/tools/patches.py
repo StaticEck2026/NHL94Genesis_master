@@ -129,3 +129,15 @@ P('sound94.asm', """	move.b	#0,$97(a1)
 	clr.w	(IO_Z80BUS).l""", """	move.b	#0,$97(a1)
 	jsr	(snd_z80_cmd).l
 	clr.w	(IO_Z80BUS).l""")
+
+# Tile data written through the data port (not by DMA): tell the renderer's tile cache.
+P('video94.asm', """	movem.l	d0-d4/a0-a2,-(sp)
+	exg	d1,d0
+	movea.l	a0,a2""", """	movem.l	d0-d4/a0-a2,-(sp)
+	jsr	(hal_vdp_dirty).l		;d0 = words, d1 = vram address
+	exg	d1,d0
+	movea.l	a0,a2""")
+P('video94.asm', """	move.l	#0,(a0)					;playfield 1/2
+	move.w	(sp)+,(disflags).w""", """	move.l	#0,(a0)					;playfield 1/2
+	jsr	(hal_vdp_dirty_all).l		;all of VRAM was cleared
+	move.w	(sp)+,(disflags).w""")

@@ -9,10 +9,18 @@
 	include	"hal_macros.i"
 	include	"macros/genesis.mac"
 
+	section	game,code			;first hunk: AmigaDOS starts here
+	section	bss,bss
+bss_start
+	section	chip,bss_c
+chip_start
 	section	game,code
 
 	include	"hal.asm"
+	include	"os.asm"
+	include	"input.asm"
 	include	"vdp.asm"
+	include	"render.asm"
 
 	include	"teamdata94.asm"
 	include	"frames94.asm"
@@ -45,3 +53,10 @@
 	include	"goalie94.asm"
 	include	"title94.asm"
 ;checksum94.asm: not used (cartridge ROM check)
+
+	section	game,code
+game_end
+	section	bss,bss
+bss_end
+	section	chip,bss_c
+chip_end

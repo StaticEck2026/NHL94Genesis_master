@@ -5,7 +5,7 @@
 VRAMSIZE	equ	$10000
 VSLACK		equ	$400			;writes that run past the end of a memory land here
 
-	section	vdpbss,bss
+	section	bss,bss
 	cnop	0,4
 vdp_vram	ds.b	VRAMSIZE+VSLACK
 vdp_cram	ds.w	64			;9-bit Genesis colours, ----bbb-ggg-rrr-
@@ -132,6 +132,7 @@ vdp_command
 
 ;	DoDMA: copy d0 words from a0 to VRAM address d1. Keeps every register.
 hal_vdp_dma
+	jsr	(hal_vdp_dirty).l
 	movem.l	d0-d1/a0-a1,-(sp)
 	lea	(vdp_vram).l,a1
 	andi.l	#$FFFF,d1
@@ -147,6 +148,11 @@ hal_vdp_dma
 ;	DoDMA_nd2: VRAM to VRAM copy, d0 = bytes, d1 = destination, d2 = source.
 hal_vdp_copy
 	movem.l	d0-d2/a0-a1,-(sp)
+	move.l	d0,-(sp)
+	addq.w	#1,d0
+	lsr.w	#1,d0				;bytes to words
+	jsr	(hal_vdp_dirty).l
+	move.l	(sp)+,d0
 	lea	(vdp_vram).l,a0
 	movea.l	a0,a1
 	andi.l	#$FFFF,d1
@@ -163,6 +169,7 @@ hal_vdp_copy
 
 ;	DoFill: write d0 words of d2 from VRAM address d1 (the game's loop writes d0/2 longs).
 hal_vdp_fill
+	jsr	(hal_vdp_dirty).l
 	movem.l	d0-d1/a0,-(sp)
 	lea	(vdp_vram).l,a0
 	andi.l	#$FFFF,d1

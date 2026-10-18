@@ -12,3 +12,5 @@ cp amiga/src/*.asm amiga/src/*.i output/amiga/src/
 cd output/amiga/src
 "$VASM" -Fhunkexe -m68020 -nocase -quiet -o ../nhl94.game -L ../nhl94.lst nhl94_amiga.asm
 ls -l ../nhl94.game
+"$VASM" -Fhunkexe -m68020 -nocase -quiet -o ../NHL94 stub.asm
+ls -l ../NHL94
