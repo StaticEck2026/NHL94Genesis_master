@@ -7,8 +7,8 @@
 ;	  CD32 play            Start
 ;	Keyboard, player 1: cursor keys, Z = A, X = B, C = C, Return = Start
 ;	          player 2: F1 = A, F2 = B, F3 = C, F4 = Start
-;	Esc goes back to the Workbench (the save file is written then). F6 switches the wide view,
-;	F7 the audio filter.
+;	Esc goes back to the Workbench (the save file is written then). F7 switches the audio
+;	filter.
 
 CIAA_PRA	equ	$BFE001
 CIAA_DDRA	equ	$BFE201
@@ -79,12 +79,7 @@ hal_int2
 	bne	.nf10
 	not.b	(hal_fpsshow).l
 	bra	.hs
-.nf10	cmpi.b	#$55,d1				;F6: wide view of the H32 screens
-	bne	.nf6
-	not.b	(rd_wide).l
-	addq.l	#1,(hal_vdp_gen).l		;(draw again)
-	bra	.hs
-.nf6	cmpi.b	#$56,d1				;F7: audio filter
+.nf10	cmpi.b	#$56,d1				;F7: audio filter
 	bne	.nf7
 	jsr	(snd_filter_toggle).l
 	bra	.hs

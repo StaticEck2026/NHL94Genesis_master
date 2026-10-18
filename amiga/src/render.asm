@@ -57,8 +57,6 @@ rd_sprites	ds.l	2*80
 rd_spn		ds.w	1
 rd_w		ds.w	1			;screen width 256 / 320
 rd_cells	ds.w	1			;tiles across +1
-rd_dw		ds.w	1			;Amiga screen width (320 for H32 in the wide view)
-rd_xo		ds.w	1			;Amiga screen x of the Genesis screen's x 0
 rd_cw		ds.w	1			;plane B cells across, down
 rd_ch		ds.w	1
 rd_bx0		ds.w	1			;plane B pixel at screen 0, 0
@@ -75,6 +73,8 @@ rd_scroll	ds.w	1			;scroll mode this frame
 rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
 rd_frontcop	ds.l	1
+rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
+rd_shownvb	ds.l	1			;rd_vblanks when the last frame was given to the display
 rd_lastframe	ds.l	1
 rd_lastgen	ds.l	2
 rd_count	ds.l	1			;frames drawn
@@ -199,6 +199,7 @@ rd_init
 	move.l	d0,(rd_Bkey).l
 	move.l	d0,(rd_lastgen).l
 	move.l	d0,(rd_palgen).l
+	move.l	d0,(rd_shownvb).l		;(nothing shown yet)
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
@@ -399,6 +400,7 @@ rd_frame
 .blk	tst.l	(a0)+				;(both tables)
 	dbne	d0,.blk
 	bne.s	.draw
+	bsr	rd_vsync
 	bsr	rd_show
 	addq.l	#1,(rd_count).l
 	bra	.skip
@@ -413,22 +415,7 @@ rd_frame
 	moveq	#41,d1
 .h32	move.w	d0,(rd_w).l
 	move.w	d1,(rd_cells).l
-	; the Amiga screen: 320 wide in H32 too when the wide view is on (rd_xo: where the
-	; Genesis screen's x 0 is; the game keeps the sprites of a wider area, hal_cullx)
-	move.w	d0,(rd_dw).l
-	clr.w	(rd_xo).l
-	move.l	#$0090FF70,(hal_cullx).l
-	cmpi.w	#256,d0
-	bne.s	.nw
-	tst.b	(rd_wide).l
-	beq.s	.nw
-	tst.b	(hal_play).l			;only for the rink: the other H32 screens (the pause
-	beq.s	.nw				;menu) have no picture beyond the 256 columns
-	sf	(hal_play).l
-	move.w	#320,(rd_dw).l
-	move.w	#32,(rd_xo).l
-	move.l	#$00B0FF50,(hal_cullx).l
-.nw	; fast path?
+	; fast path?
 	move.b	11(a5),d0
 	andi.b	#7,d0
 	bne	.chunky				;line / cell scroll or column vscroll
@@ -441,10 +428,9 @@ rd_frame
 .chunky	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches (all redrawn and
 						;restored on the way back)
-	move.w	(rd_w).l,(rd_dw).l		;(the chunky path draws the Genesis screen only)
-	clr.w	(rd_xo).l
 	move.w	#SCRX*8,(rd_xorg).l
 	clr.w	(rd_brow0).l
+	bsr	rd_vsync
 	bsr	rd_chunky
 .shown	bsr	rd_show
 	addq.l	#1,(rd_count).l
@@ -478,6 +464,7 @@ rd_planesize
 rd_fast
 	bsr	rd_updateB
 	bsr	rd_scrollpos
+	bsr	rd_vsync			;(from here on the back buffer is written)
 	tst.w	(rd_scroll).l
 	beq.s	.copy
 	bsr	rd_restore			;scroll mode: plane B is in the buffer, mended
@@ -485,7 +472,7 @@ rd_fast
 .copy	bsr	rd_blitB
 	moveq	#0,d0				;(to be mended when back in scroll mode)
 	moveq	#0,d1
-	move.w	(rd_dw).l,d2
+	move.w	(rd_w).l,d2
 	move.w	#SCRH,d3
 	bsr	rd_mark
 .b	bsr	rd_collect_sprites
@@ -558,6 +545,17 @@ rd_verify
 	move.b	d5,(rd_vfail+3).l
 	rts
 	ENDC
+
+;	Wait until the display has the frame rd_show gave it: its copper list is taken at the next
+;	vertical blank, and until then the back buffer and its copper list are still the ones on
+;	the screen (drawing into them would show: sprites wiped, half drawn frames). Keeps all.
+rd_vsync
+	move.l	d0,-(sp)
+.w	move.l	(rd_vblanks).l,d0
+	cmp.l	(rd_shownvb).l,d0
+	beq.s	.w
+	move.l	(sp)+,d0
+	rts
 
 rd_waitblit
 .q	tst.b	(rd_bqbusy).l			;the queue first
@@ -636,11 +634,17 @@ rd_bq_start
 	move.w	$05E-$058(a0),$05E-$058(a1)	;BLTSIZH: go
 	rts
 
-;	Level 3: the blitter has finished. The next entry, or the queue is idle.
+;	Level 3: the blitter has finished (the next entry, or the queue is idle), or a vertical
+;	blank (counted: rd_vsync).
 rd_bq_int
 	movem.l	d0/a0-a1,-(sp)
 	move.w	(CUSTOM+$01E).l,d0		;INTREQR
-	btst	#6,d0
+	btst	#5,d0
+	beq.s	.nvb
+	move.w	#$0020,(CUSTOM+INTREQ).l
+	move.w	#$0020,(CUSTOM+INTREQ).l
+	addq.l	#1,(rd_vblanks).l
+.nvb	btst	#6,d0
 	beq	.x
 	move.w	#$0040,(CUSTOM+INTREQ).l
 	move.w	#$0040,(CUSTOM+INTREQ).l
@@ -895,8 +899,7 @@ rd_list_hiB
 ;	screen is in the back buffer. Scroll mode when the plane is 64 x 32 cells and the screen's
 ;	columns do not wrap around its right edge: then the buffer holds the plane (column x at bit
 ;	x + 32, row y at rows y and y + 256) and the screen is the window on it at the scroll
-;	position. In the wide view the Genesis screen's place in the 320 columns (rd_xo) moves
-;	from the middle towards the side at the plane's edges, so that the window stays in it.
+;	position.
 rd_scrollpos
 	lea	(vdp_regs).l,a5
 	moveq	#0,d0
@@ -921,35 +924,11 @@ rd_scrollpos
 	bne	.copy
 	cmpi.w	#32,(rd_ch).l
 	bne	.copy
-	cmpi.w	#256,d0				;the last start that keeps 256 columns in the plane
+	move.w	#512,d1				;the last start that keeps the screen's columns in the
+	sub.w	(rd_w).l,d1			;plane
+	cmp.w	d1,d0
 	bhi	.copy
-	cmpi.w	#320,(rd_dw).l
-	bne	.scroll
-	tst.w	(rd_xo).l
-	bne.s	.wide
-	cmpi.w	#512-320,d0			;H40
-	bhi	.copy
-	bra.s	.scroll
-.wide	moveq	#32,d2				;rd_xo: 32 (the middle), at most the plane x, at least
-	cmp.w	d0,d2				;what keeps 320 columns in the plane
-	ble.s	.w1
-	move.w	d0,d2
-.w1	move.w	d0,d1
-	subi.w	#512-320,d1
-	cmp.w	d1,d2
-	bge.s	.w2
-	move.w	d1,d2
-.w2	move.w	d2,(rd_xo).l
-	sub.w	d2,d0
-	; the game keeps the sprites of the columns shown (its x is from the Genesis screen's
-	; x 128), a margin of 16 and 16 more for the next frame's move
-	move.w	#320-128+32,d1
-	sub.w	d2,d1
-	move.w	d1,(hal_cullx).l
-	move.w	#-128-32,d1
-	sub.w	d2,d1
-	move.w	d1,(hal_cullxn).l
-.scroll	move.w	d0,(rd_bx0).l
+	move.w	d0,(rd_bx0).l
 	move.w	#1,(rd_scroll).l
 	addi.w	#SCRX*8,d0
 	move.w	d0,(rd_xorg).l
@@ -959,9 +938,7 @@ rd_scrollpos
 	add.l	(rd_buf).l,d1
 	move.l	d1,(rd_back).l
 	rts
-.copy	sub.w	(rd_xo).l,d0			;(wide view: from further left)
-	and.w	d3,d0
-	move.w	d0,(rd_bx0).l
+.copy	move.w	d0,(rd_bx0).l
 	clr.w	(rd_scroll).l
 	move.w	#SCRX*8,(rd_xorg).l
 	clr.w	(rd_brow0).l
@@ -1097,7 +1074,7 @@ rd_blitB
 	lsl.w	#3,d0				;plane width
 	move.w	(rd_bx0).l,d1
 	sub.w	d1,d0				;pixels to the right edge
-	move.w	(rd_dw).l,d2
+	move.w	(rd_w).l,d2
 	cmp.w	d2,d0
 	bge	.one
 	; two pieces: [bx0, W) at screen 0, then [0, w-(W-bx0)) at screen W-bx0
@@ -1663,7 +1640,7 @@ rd_ovl_blit
 	sub.w	d2,d3
 .b	tst.w	d3
 	ble	.bx
-	; only the Genesis screen's columns (the wide view shows plane B and sprites beyond)
+	; only the screen's columns
 	tst.w	d0
 	bpl.s	.g0
 	moveq	#0,d0
@@ -1678,7 +1655,6 @@ rd_ovl_blit
 	sub.w	d0,d4
 	addq.w	#1,d4				;pixels
 	movem.l	d0-d3,-(sp)
-	add.w	(rd_xo).l,d0			;to Amiga screen pixels
 	move.w	d2,d1
 	move.w	d4,d2
 	bsr	rd_mark
@@ -1687,7 +1663,7 @@ rd_ovl_blit
 	bsr	rd_cover_rect
 .nocov	movem.l	(sp)+,d0-d3
 	; the overlay's words (x 0 is its bit 32) that hold the pixels and one more, masked out,
-	; that carries the shift to the screen's bits (rd_xorg + rd_xo + x)
+	; that carries the shift to the screen's bits (rd_xorg + x)
 	addi.w	#4*8,d0
 	addi.w	#4*8,d1
 	lsr.w	#4,d0				;first word
@@ -1695,7 +1671,6 @@ rd_ovl_blit
 	sub.w	d0,d1
 	addq.w	#2,d1				;words
 	move.w	(rd_xorg).l,d6
-	add.w	(rd_xo).l,d6
 	subi.w	#4*8,d6				;screen bit - overlay bit
 	moveq	#15,d5
 	and.w	d6,d5				;shift
@@ -2210,7 +2185,6 @@ rd_sprite_blit
 	move.w	6(a4),d3
 	andi.w	#$1FF,d3
 	subi.w	#128,d3
-	add.w	(rd_xo).l,d3
 	move.w	d3,(rd_sx).l			;x
 	move.w	4(a4),(rd_sat).l
 	; whole sprite off screen?
@@ -2220,7 +2194,7 @@ rd_sprite_blit
 	lsl.w	#3,d4
 	add.w	d0,d4
 	ble	.x
-	cmp.w	(rd_dw).l,d3
+	cmp.w	(rd_w).l,d3
 	bge	.x
 	move.w	d1,d4
 	lsl.w	#3,d4
@@ -2833,7 +2807,7 @@ rd_fixups
 	lsl.w	#3,d1
 	subq.w	#1,d1
 	and.w	d1,d0
-	cmp.w	(rd_dw).l,d0
+	cmp.w	(rd_w).l,d0
 	blt	.xok
 	sub.w	d1,d0
 	subq.w	#1,d0				;- plane width
@@ -3664,8 +3638,8 @@ rd_hex8
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	The back buffer's copper list: 6 interleaved planes, 2x fetch (FMODE 1), 320 (H40, the wide
-;	view) or 256 pixels from the buffer's bit rd_xorg, 224 lines, the 64 colours. The fetch
+;	The back buffer's copper list: 6 interleaved planes, 2x fetch (FMODE 1), 320 (H40) or 256
+;	(H32) pixels from the buffer's bit rd_xorg, 224 lines, the 64 colours. The fetch
 ;	starts on a 32 pixel boundary up to 31 pixels before and BPLCON1 delays it to the first
 ;	pixel. It becomes the copper's list from the next frame; the buffers swap.
 COPMOVE	MACRO
@@ -3689,7 +3663,7 @@ rd_show
 .pal	move.w	#$0038,d3			;DDFSTRT: 288 pixels fetched, the window shows the
 	move.w	#$00B8,d4			;DDFSTOP  last 256 of the first 256 + 32
 	move.w	#SROW-36,d5			;modulo
-	cmpi.w	#320,(rd_dw).l
+	cmpi.w	#320,(rd_w).l
 	bne	.dw
 	move.b	#$81,d1				;H40: 320 pixels
 	move.b	#$C1,d2
@@ -3776,6 +3750,7 @@ rd_show
 	move.l	#$FFFFFFFE,(a0)+
 	move.l	(rd_backcop).l,d0
 	move.l	d0,(CUSTOM+$080).l		;COP1LC: from the next frame
+	move.l	(rd_vblanks).l,(rd_shownvb).l	;(after the write: a blank before it is not the one)
 	move.l	(rd_frontcop).l,(rd_backcop).l
 	move.l	d0,(rd_frontcop).l
 	; the other buffer, its dirty map

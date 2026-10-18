@@ -27,13 +27,14 @@
 static uint8_t *mem;
 static int irq6_pending;
 static long long blit_busy_until;
-static int intena, blit_irq, blit_end_pending;
+static int intena, blit_irq, blit_end_pending, vb_irq;
 long long blitstat[3];   /* the blitter's level 3 interrupt */
 
 static void update_irq(void)
 {
     int level = 0;
     if (blit_irq && (intena & 0x4040) == 0x4040) level = 3;
+    if (vb_irq && (intena & 0x4020) == 0x4020) level = 3;   /* vertical blank, once a frame */
     if (irq6_pending) level = 6;
     m68k_set_irq(level);
 }
@@ -72,7 +73,7 @@ static uint32_t custom_read(uint32_t a, int size)
     }
     if (off == 0x004) return 0;    /* VPOSR */
     if (off == 0x01C) return intena;
-    if (off == 0x01E) return blit_irq ? 0x40 : 0;
+    if (off == 0x01E) return (blit_irq ? 0x40 : 0) | (vb_irq ? 0x20 : 0);
     if (off == 0x002) {             /* DMACONR: blitter busy while a blit runs */
         long long c = cycles_total + m68k_cycles_run();
         return c < blit_busy_until ? 0x4000 : 0;
@@ -234,6 +235,7 @@ static void custom_write(uint32_t a, uint32_t v)
     creg[off / 2] = v;
     if (off == 0x09A) { if (v & 0x8000) intena |= v & 0x7FFF; else intena &= ~v; update_irq(); }
     if (off == 0x09C && (v & 0x40)) { blit_irq = (v & 0x8000) != 0; update_irq(); }
+    if (off == 0x09C && (v & 0x20)) { vb_irq = (v & 0x8000) != 0; update_irq(); }
     if (off == 0x058) do_blit((v >> 6) ? (v >> 6) : 1024, (v & 63) ? (v & 63) : 64);
     if (off == 0x05E) do_blit(creg[0x5C / 2] & 0x7FFF ? creg[0x5C / 2] & 0x7FFF : 0x8000, (v & 0x7FF) ? (v & 0x7FF) : 0x800);
     if (off == 0x180 && v == 0xF00) red_screen = 1;
@@ -558,6 +560,7 @@ int main(int argc, char **argv)
                    (int16_t)rd16(vram + hs + 2), (int16_t)rd16(vsram + 2));
         }
         irq6_pending = 1;
+        vb_irq = 1;
         update_irq();
         int shot = every && frame % every == 0;
         for (int k = 0; k < nshots; k++) if (shots[k] == frame) shot = 1;

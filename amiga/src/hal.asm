@@ -86,7 +86,7 @@ hal_set_vectors
 	move.l	a1,$64(a0)			;level 1
 	move.l	a1,$68(a0)			;level 2
 	lea	rd_bq_int(pc),a2
-	move.l	a2,$6C(a0)			;level 3: the blit queue
+	move.l	a2,$6C(a0)			;level 3: the blit queue, the vertical blank count
 	move.l	a1,$70(a0)			;level 4
 	move.l	a1,$74(a0)			;level 5
 	move.l	a1,$7C(a0)			;level 7
@@ -121,7 +121,8 @@ hal_start_timer
 	move.b	#$11,(CIAB_CRB).l
 	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
-	move.w	#$C000|$2000|$0040,(CUSTOM+INTENA).l	;master, EXTER (level 6), BLIT (level 3)
+	move.w	#$C000|$2000|$0040|$0020,(CUSTOM+INTENA).l	;master, EXTER (level 6), BLIT and VERTB
+							;(level 3)
 	rts
 
 ;	Level 6. The CIA-B timer is the Genesis vertical blank: count it and run the game's handler
@@ -353,14 +354,6 @@ hal_exception
 	move.l	12(sp),(hal_exc_info+12).l
 	move.w	#$F00,(CUSTOM+$180).l
 .hang	bra	.hang
-
-;	find3d (display94.asm) keeps the sprites of objects within these of the camera: the
-;	Genesis' +-$90, wider in the wide view (rd_frame sets them).
-hal_cullx	dc.w	$0090
-hal_cullxn	dc.w	$FF70
-rd_wide		dc.b	-1			;the wide view (F6)
-hal_play	dc.b	0			;set by find3d: the game is drawing the rink
-		even
 
 	section	bss,bss
 	cnop	0,4

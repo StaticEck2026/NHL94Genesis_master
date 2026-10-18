@@ -2,10 +2,7 @@
 """cmpshots.py DIR: compare each ami_N.png (the Amiga screen the harness took from the copper
 list) with shot_N.png (the reference Genesis renderer) at the Genesis' 8 levels a colour
 channel: the reference renderer's are linear, the Amiga's the measured Genesis output levels
-(render.asm rd_gen2amiga). In the wide view (a 320 pixel Amiga screen, a 256 pixel Genesis
-one) the Genesis screen is where it matches best, 0 to 64 pixels from the left (the renderer
-moves it from the middle at the edges of plane B). Prints the frames that differ; exit status
-1 if any do."""
+(render.asm rd_gen2amiga). Prints the frames that differ; exit status 1 if any do."""
 import glob, os, sys
 import numpy as np
 
@@ -27,14 +24,11 @@ for ami in sorted(glob.glob(os.path.join(sys.argv[1], 'ami_*.png'))):
     a, b = Image.open(ami).convert('RGB'), Image.open(ref).convert('RGB')
     la = ami_levels(a)
     lb = np.rint(np.asarray(b, dtype=np.int32) * 7 / 255).astype(int)
-    offsets = [0]
-    if a.size[0] == 320 and b.size[0] == 256:    # the wide view
-        offsets = range(65)
-    elif a.size != b.size:
+    if a.size != b.size:
         print('%s: size %s, reference %s' % (os.path.basename(ami), a.size, b.size))
         bad += 1
         continue
-    n = min(int((la[:, o:o + b.size[0]] != lb).any(axis=-1).sum()) for o in offsets)
+    n = int((la != lb).any(axis=-1).sum())
     if n:
         print('%s: %d pixels differ' % (os.path.basename(ami), n))
         bad += 1

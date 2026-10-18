@@ -98,19 +98,6 @@ P(j('stubinc', 'ram_addrs.inc'), 'Z80_RAM equ $A00000', 'Z80_RAM equ hal_z80ram'
 P('sound94.asm', 'dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80', 'dc.b	0,0')
 P('sound94.asm', 'dc.b	$09,$3E,fm_instrument_patches>>15', 'dc.b	$09,$3E,0')
 
-# Sprite culling: the left / right limits come from the hardware layer, which widens them for the
-# Amiga's wide view of the H32 screens.
-P('display94.asm', """.crange
-	cmp.w	#$90,d0
-	bgt.w	.offscr
-	cmp.w	#$FF70,d0
-	blt.w	.offscr""", """.crange
-	st	(hal_play).l			;the rink is being drawn (the wide view is for it)
-	cmp.w	(hal_cullx).l,d0
-	bgt.w	.offscr
-	cmp.w	(hal_cullxn).l,d0
-	blt.w	.offscr""")
-
 # Pads: the vblank pad reader takes the Amiga pads.
 replace_routine('sound94.asm', 'ReadJoyData', '''\tmovem.l\td0-d1/a0-a1,-(sp)
 \tjsr\t(hal_readpads).l\t\t;d0 = pad 1, d1 = pad 2 (Genesis bit order, active low)

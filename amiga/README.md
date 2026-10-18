@@ -55,18 +55,13 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. `F6` switches the wide view (below).
-`F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model
+`Esc` quits to the Workbench and writes the save file. `F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model
 1 Genesis).
 
-### Full screen
+### Screen
 
-The menus are 320 pixels wide, the Amiga's full low resolution width. The rink is 256 wide on
-the Genesis (its H32 mode); the Amiga shows it 320 wide, with 32 more pixels of the rink each
-side (at the rink's edges the extra columns are all on the one side that has rink to show). The
-game keeps the sprites of that wider area (its sprite culling is widened to match) and the score
-and clock boxes stay where they were. `F6` switches back to the Genesis' 256 pixels,
-which draws about 15% faster. Screens other than the rink stay as the Genesis shows them.
+Every screen is shown as the Genesis shows it: the menus 320 pixels wide, the rink 256 (the
+Genesis' H32 mode), centred.
 
 In vAmigaWeb, set "visible display area" to "viewport tracking" in the settings: it then zooms to
 the picture the game shows, without the borders. The 4 way play adaptor modes are not
@@ -125,9 +120,12 @@ The hardware layer:
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. Sprites are drawn by the CPU. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
-  and the display window, and frames are double buffered. The colours are AGA 24 bit colours
-  (each written as high then low nibbles) at the levels the Genesis puts out, which are not a
-  straight line from 0 to 255; Extra Half-Brite is switched off so all 64 registers are used.
+  and the display window, and frames are double buffered: a finished frame's copper list is
+  taken at the next vertical blank, and the renderer waits for that blank (counted by the
+  level 3 interrupt) before it draws into the other buffer, which is on the screen until then.
+  The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
+  Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
+  off so all 64 registers are used.
 - `input.asm`: joysticks, CD32 pads and the keyboard, read as two 3 button pads.
 - `sound.asm`: the four Paula voices in place of the Z80, YM2612 and DAC. The game's own 68000
   sound driver runs unchanged. `sound.asm` reads the commands the driver writes for the Z80:
