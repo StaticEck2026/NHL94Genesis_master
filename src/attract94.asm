@@ -136,7 +136,7 @@ setoptions_printpos2				;printz position string, then printx = $1A when a2 is th
 	rts
 
 PickStartingGoalie					;unreferenced. $26(a2) = 0 if a pad has team a2, else (gamelevel <= 2,
-									;line changes on) a value from the team's .sodds
+									;line changes on) a value from the team's .godds
 	movem.l	d0/a0,-(sp)
 	clr.w	$26(a2)
 	bsr.w	FigureJoy
@@ -157,7 +157,7 @@ PickStartingGoalie					;unreferenced. $26(a2) = 0 if a pad has team a2, else (ga
 	move.w	(a2),d0
 	asl.w	#2,d0
 	movea.l	0(a0,d0.w),a0			;team block
-	adda.w	$A(a0),a0				;ScoreOdds offset: a0 = .sodds
+	adda.w	$A(a0),a0				;GoalieOdds offset: a0 = .godds
 	moveq	#4,d0
 	bsr.w	UnpackNibbles
 	bsr.w	WeightedRandomSelect
