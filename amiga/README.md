@@ -127,9 +127,11 @@ The hardware layer:
 - `render.asm`: draws the emulated VDP state in 64 colours on 6 interleaved bitplanes. Tiles are
   cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the
   whole of plane B (512 x 256, its top 224 lines twice for the vertical wrap) and the display
-  hardware scrolls it: the bitplane pointers, a fetch that starts up to 31 pixels early and the
-  BPLCON1 delay. Only what was drawn over it two frames ago and the cells the game changed are
-  blitted back from the bitmap (a dirty map per buffer, 16 pixels by 8 lines a bit). Other
+  hardware scrolls it: the bitplane pointers, a fetch that starts up to 63 pixels early and the
+  BPLCON1 delay. The planes are fetched 64 bits at a time (FMODE 3), which leaves the most of
+  the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
+  cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
+  by 8 lines a bit). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
   the tiles, used again until a tile of theirs changes), and plane B's high priority cells are

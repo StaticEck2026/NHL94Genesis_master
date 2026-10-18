@@ -4078,9 +4078,9 @@ rd_hex8
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	The back buffer's copper list: 6 interleaved planes, 2x fetch (FMODE 1), 320 (H40) or 256
+;	The back buffer's copper list: 6 interleaved planes, 4x fetch (FMODE 3), 320 (H40) or 256
 ;	(H32) pixels from the buffer's bit rd_xorg, 224 lines, the 64 colours. The fetch
-;	starts on a 32 pixel boundary up to 31 pixels before and BPLCON1 delays it to the first
+;	starts on a 64 pixel boundary up to 63 pixels before and BPLCON1 delays it to the first
 ;	pixel. It becomes the copper's list from the next frame; the buffers swap.
 COPMOVE	MACRO
 	move.w	#\1,(a0)+
@@ -4100,37 +4100,29 @@ rd_show
 	bne	.pal
 	move.w	#$1AA1,d1
 	move.w	#$FAA1,d2
-.pal	move.w	#$0038,d3			;DDFSTRT: 288 pixels fetched, the window shows the
-	move.w	#$00B8,d4			;DDFSTOP  last 256 of the first 256 + 32
-	move.w	#SROW-36,d5			;modulo
-	cmpi.w	#320,(rd_w).l
+.pal	moveq	#96,d6				;the window's first pixel: fetched pixel 96 (H32) or 64
+	cmpi.w	#320,(rd_w).l			;(H40), less the delay
 	bne	.dw
 	move.b	#$81,d1				;H40: 320 pixels
 	move.b	#$C1,d2
-	move.w	#$0028,d3			;352 pixels fetched from 32 before the window
-	move.w	#$00C8,d4
-	move.w	#SROW-44,d5
+	moveq	#64,d6
 .dw	move.w	#$08E,(a0)+
 	move.w	d1,(a0)+
 	move.w	#$090,(a0)+
 	move.w	d2,(a0)+
-	move.w	#$092,(a0)+
-	move.w	d3,(a0)+
-	move.w	#$094,(a0)+
-	move.w	d4,(a0)+
-	move.w	#$108,(a0)+			;BPL1MOD: interleaved
-	move.w	d5,(a0)+
-	move.w	#$10A,(a0)+			;BPL2MOD
-	move.w	d5,(a0)+
-	; the first pixel shown: the window shows fetched pixel 32 - delay
+	COPMOVE	$092,#$0018			;DDFSTRT, DDFSTOP: 6 fetches of 64 pixels (384), from 64
+	COPMOVE	$094,#$00B8			;pixels before the H40 window
+	COPMOVE	$108,#SROW-48			;BPL1MOD, BPL2MOD: interleaved
+	COPMOVE	$10A,#SROW-48
+	; the delay puts buffer bit rd_xorg at the window's first pixel; the bit fetched first is
+	; on a 64 bit boundary (it can be before the row: those pixels are not shown)
 	move.w	(rd_xorg).l,d0
-	moveq	#31,d1
-	and.w	d0,d1
-	neg.w	d1
-	andi.w	#31,d1				;delay
+	move.w	d6,d1
+	sub.w	d0,d1
+	andi.w	#63,d1				;delay
 	add.w	d1,d0
-	subi.w	#32,d0				;the bit fetched first
-	lsr.w	#3,d0
+	sub.w	d6,d0				;the bit fetched first
+	asr.w	#3,d0
 	ext.l	d0
 	add.l	(rd_back).l,d0
 	move.w	d1,d2
@@ -4140,12 +4132,16 @@ rd_show
 	or.w	d3,d2				;PF1H5-2, PF2H5-2
 	btst	#4,d1
 	beq.s	.d16
-	ori.w	#$4400,d2			;PF1H6, PF2H6
-.d16	COPMOVE	$100,#$6201			;BPLCON0: 6 planes, colour, ECS bits on
+	ori.w	#$4400,d2			;PF1H6, PF2H6: 16 pixels
+.d16	btst	#5,d1
+	beq.s	.d32
+	ori.w	#$8800,d2			;PF1H7, PF2H7: 32 pixels
+.d32	COPMOVE	$100,#$6201			;BPLCON0: 6 planes, colour, ECS bits on
 	move.w	#$102,(a0)+			;BPLCON1
 	move.w	d2,(a0)+
 	COPMOVE	$104,#$0224			;BPLCON2: KILLEHB (6 planes would be Extra Half-Brite)
-	COPMOVE	$1FC,#$0001			;FMODE: 32 bit bitplane fetch
+	COPMOVE	$1FC,#$0003			;FMODE: 64 bit bitplane fetch (the bus is shared with the
+						;CPU and the blitter: the fewer fetches the better)
 	COPMOVE	$10C,#$0011			;BPLCON4
 	move.w	#$0E0,d1
 	moveq	#NPLANES-1,d2

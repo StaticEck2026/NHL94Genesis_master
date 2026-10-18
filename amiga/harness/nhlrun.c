@@ -291,7 +291,7 @@ static void custom_write(uint32_t a, uint32_t v)
 static void amiga_png(const char *name)
 {
     uint32_t bpl[8] = {0}, pal[256] = {0};
-    int bank = 0, loct = 0, ddf = 0x38, ddfstop = 0xC8, delay = 0, nplanes = 0, mod = 0, ham = 0, killehb = 0;
+    int bank = 0, loct = 0, ddf = 0x38, ddfstop = 0xC8, delay = 0, nplanes = 0, mod = 0, ham = 0, killehb = 0, fmode = 0;
     uint32_t pc = cop1lc;
     for (int i = 0; i < 400 && pc; i++) {
         uint32_t w1 = rd16(pc), w2 = rd16(pc + 2);
@@ -316,6 +316,7 @@ static void amiga_png(const char *name)
         else if (r == 0x100) { nplanes = (w2 >> 12) & 7; ham = (w2 >> 11) & 1; }
         else if (r == 0x104) killehb = (w2 >> 9) & 1;
         else if (r == 0x108) mod = w2;
+        else if (r == 0x1FC) fmode = w2 & 3;
     }
     int diwh = 0x81, diwstop = 0xC1;
     {
@@ -327,9 +328,10 @@ static void amiga_png(const char *name)
             if (r == 0x90) diwstop = v & 0xFF;
         }
     }
-    /* 2x fetch (FMODE 1), lores: 32 pixels per 16 colour clocks; DDFSTRT $38 puts the first
-       pixel fetched at the window position $81, BPLCON1 delays it */
-    int fetch = ((ddfstop - ddf) / 16 + 1) * 4;
+    /* lores fetches of 16 / 32 / 64 pixels (FMODE 0 / 1 / 3) in 8 / 16 / 32 colour clocks;
+       DDFSTRT $38 puts the first pixel fetched at the window position $81, BPLCON1 delays it */
+    int unit = fmode == 0 ? 8 : fmode == 3 ? 32 : 16;
+    int fetch = ((ddfstop - ddf) / unit + 1) * unit / 4;
     int w = (diwstop | 0x100) - diwh, skip = diwh - 0x81 + (0x38 - ddf) * 2 - delay, h = 224, bpr = fetch + mod;
     static uint8_t rgb[320 * 240 * 3];
     for (int y = 0; y < h; y++)
