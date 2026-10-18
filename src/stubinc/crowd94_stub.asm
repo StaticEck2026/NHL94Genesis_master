@@ -15,7 +15,7 @@
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
 ReadCrowdRecord = $F9BE2			;jsr / jmp (x).l
 randomd0s = $1107A					;jsr / jmp (x).l
-sroot = $110BE						;jsr / jmp (x).l
+Sroot = $110BE						;jsr / jmp (x).l
 wallcollb = $14BC2					;jsr / jmp (x).l
 
 ; Main segment code

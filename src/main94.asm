@@ -47,7 +47,7 @@ InitialSP = $FFFFF6					;reset vector 0. 24-bit form of $FFFFFFF6. The game's St
 	dc.l	IRQ7					; 27 ($6C) level 3, not used
 	dc.l	IRQ7					; 28 ($70) level 4: horizontal retrace (not used)
 	dc.l	0						; 29 ($74) level 5: not used
-	dc.l	VBjsr					; 30 ($78) level 6: vertical retrace, jumps through vbint
+	dc.l	VBjsr					; 30 ($78) level 6: vertical retrace, jumps through VBint
 	dc.l	IRQ7					; 31 ($7C) level 7
 
 	dc.l	0,0,0,0					; 32-35 ($80-$8F): trap #0-#3, not used. 0 in retail

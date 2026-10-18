@@ -66,7 +66,7 @@ Crowd_Noise							;The crowd meter each frame: crowd noise on / off (sflags5 bit
 	move.w	(CwdExciteLvl).w,d0
 	ext.l	d0
 	asl.w	#2,d0
-	jsr	(sroot).l
+	jsr	(Sroot).l
 	addi.w	#$41,d0
 	move.w	d0,(CurCrowdMeter).w
 	cmp.w	(CrowdPeak).w,d0
@@ -148,7 +148,7 @@ checkcornercoll						;210 = blue line to the end of the rink, corner radius 64. 
 	cmp.l	#$1000,d3				;.radius^2 = $1000
 	bls.w	.exit
 	exg	d0,d3
-	jsr	(sroot).l
+	jsr	(Sroot).l
 	exg	d0,d3
 	ext.l	d0
 	asl.l	#8,d0

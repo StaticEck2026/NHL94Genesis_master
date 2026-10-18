@@ -104,7 +104,7 @@
 
 ; recbpr	rs.l	1	;record buffer pointer
 
-; VBint	rs.l	1	;address of vblank interupt code (vbint $FFFFC2E4 in stubinc\ram_addrs.inc)
+; VBint	rs.l	1	;address of vblank interupt code (VBint $FFFFC2E4 in stubinc\ram_addrs.inc)
 
 ; Vcount 	rs.w	1	;counter for vblank
 ; OldVcount	rs.w	1

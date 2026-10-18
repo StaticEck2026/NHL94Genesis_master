@@ -3,14 +3,14 @@
 
 EASportsScreen						;Called from Begin. Show the EA Sports screen until a button, or $50 x 4
 									;frames (about 5 s)
-	move.l	#vb2,(vbint).w			;vblank handler
+	move.l	#vb2,(VBint).w			;vblank handler
 	bclr	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
-	move.w	#$A000,(VmMap2).w
+	move.w	#$A000,(VmMAP2).w
 	move.w	#7,(Map2col1).w
-	move.w	#$C000,(VmMap1).w
+	move.w	#$C000,(VmMAP1).w
 	move.w	#7,(Map1col1).w
-	move.w	#$F000,(VmMap3).w
+	move.w	#$F000,(VmMAP3).w
 	move.w	#$F800,(VSPRITES).w
 	move.w	#$FC00,(VSCRLPM).w
 	movea.w	#(palfadenew-M68K_RAM),a0
@@ -67,8 +67,8 @@ DrawMatchupBitmaps					;Called from PrintOptions. Draw the VisTeam and
 	beq.w	.opt
 	tst.w	(OptPlayMode).w
 	bne.w	.draw
-.opt	move.w	(Opt1Team).w,(HomeTeam).w
-	move.w	(Opt2Team).w,(VisTeam).w
+.opt	move.w	(Opt1team).w,(HomeTeam).w
+	move.w	(Opt2team).w,(VisTeam).w
 .draw	bsr.w	printz
 	String	$BF,7,1,0
 	move.w	(VisTeam).w,d1
@@ -165,7 +165,7 @@ PickStartingGoalie					;unreferenced. $26(a2) = 0 if a pad has team a2, else (ga
 .x	movem.l	(sp)+,d0/a0
 	rts
 
-VBlank_SetOptions					;vbint handler stored by setoptions: cramfade unless dfng), plus
+VBlank_SetOptions					;VBint handler stored by setoptions: cramfade unless dfng), plus
 									;DumpSprites2 when dfok is set
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w		;dfng
@@ -174,7 +174,7 @@ VBlank_SetOptions					;vbint handler stored by setoptions: cramfade unless dfng)
 	beq.w	.fade
 	bsr.w	DumpSprites2
 .fade	bsr.w	cramfade
-.nograph	addq.w	#1,(vcount).w
+.nograph	addq.w	#1,(Vcount).w
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte

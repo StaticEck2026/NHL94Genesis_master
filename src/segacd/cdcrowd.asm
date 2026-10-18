@@ -1,5 +1,5 @@
 ; HOCKEY.BIN crowd-volume slew, $238CE-$2391B.
-; The cartridge updatesound. crowdlevel is $17CD2, asv is $1747A.
+; The cartridge updatesound. Crowdlevel is $17CD2, asv is $1747A.
 ; The PSG writes are gone: this builds the old volume byte and returns it in d0.
 
 	org	$238CE

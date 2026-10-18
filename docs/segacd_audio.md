@@ -31,7 +31,7 @@ Names below are the function numbers in Sega's `CDBIOS.INC`. The call shapes in 
 | `$1745C` | change request. `1` means apply `$1745E`. The play site at `$10B48` stores `$FFFF` after it has consumed the word |
 | `$19364` | the word `a0` points at for `MSCSEEK` / `MSCPLAY1` / `MSCPLAYR` |
 | `$1747A` | `asv`, the crowd-volume accumulator from the cartridge |
-| `$17CD2` | `crowdlevel`, same role as cartridge `$FFFFB89C` |
+| `$17CD2` | `Crowdlevel`, same role as cartridge `$FFFFB89C` |
 
 `cdrequest.asm` (`HOCKEY.BIN` `$1C1D2`) is `song`. The game is entered at `$1B000`, and `$1B000 + $1C1D2` is the `jsr $371D2` every call site uses. It reads one word from the stack. A value from `$30` through `$77` stores `1` at `$1745C` and stores `value - $29` at `$1745E`. That range becomes tracks `$07` through `$4E`. Anything outside the range, including song `$79` and song `$7A`, returns without writing either word. `docs/segacd_song.md` is the call list and the `sfx` command next to it.
 
@@ -77,11 +77,11 @@ The shell around the movie player (STARTER runtime `$24E44`) saves BIOS `$8004` 
 
 ## Crowd
 
-On the cartridge, `updatesound` in `display94.asm` slews `asv` toward `crowdlevel` and writes the PSG noise channel: `$C8`, then `1`, then the volume byte `(asv XOR $F) OR $F0`. `KillCrowd` writes `$E7`, `$DF`, `$C8`, `1`, `$FF` to the same port. Gameplay adds to `crowdlevel` on hits, goals, and penalties, and `periodicevents` calls `updatesound`.
+On the cartridge, `updatesound` in `display94.asm` slews `asv` toward `Crowdlevel` and writes the PSG noise channel: `$C8`, then `1`, then the volume byte `(asv XOR $F) OR $F0`. `KillCrowd` writes `$E7`, `$DF`, `$C8`, `1`, `$FF` to the same port. Gameplay adds to `Crowdlevel` on hits, goals, and penalties, and `periodicevents` calls `updatesound`.
 
-`cdcrowd.asm` (`HOCKEY.BIN` `$238CE`) is that slew. `crowdlevel` is `$17CD2` and `asv` is `$1747A`. The scale (`asl #3`, add `$400`, clamp at `$EFF`, step `$28`) is the cartridge math. The routine builds the old volume byte in `d0` and returns. The three PSG stores are not in this copy, and `$C00011` is not written from any of the four code files. No branch and no absolute `jsr` in `HOCKEY.BIN` targets `$238CE`.
+`cdcrowd.asm` (`HOCKEY.BIN` `$238CE`) is that slew. `Crowdlevel` is `$17CD2` and `asv` is `$1747A`. The scale (`asl #3`, add `$400`, clamp at `$EFF`, step `$28`) is the cartridge math. The routine builds the old volume byte in `d0` and returns. The three PSG stores are not in this copy, and `$C00011` is not written from any of the four code files. No branch and no absolute `jsr` in `HOCKEY.BIN` targets `$238CE`.
 
-`crowdlevel` is still stored from gameplay (the `$96` / `$C8` / `$12C` / `$3E8` adds are at the same relative sites as the cartridge). The crowd-frame routine at `$10D28` still compares it with `$15E`. That comparison moves sprites. It does not write a sound chip. `asv` is still cleared and forced to `$FF` from the menu path above, and the dead slew still reads it.
+`Crowdlevel` is still stored from gameplay (the `$96` / `$C8` / `$12C` / `$3E8` adds are at the same relative sites as the cartridge). The crowd-frame routine at `$10D28` still compares it with `$15E`. That comparison moves sprites. It does not write a sound chip. `asv` is still cleared and forced to `$FF` from the menu path above, and the dead slew still reads it.
 
 The selector's track `2` is the loop that replaces a playing track below `7`. It is also the track forced when the status high byte is `$05`, and it is the one given the lower fader (`$300` instead of `$400`). That is the continuous CD bed. The PCM stream below is a separate device.
 

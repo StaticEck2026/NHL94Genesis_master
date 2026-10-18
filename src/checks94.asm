@@ -580,7 +580,7 @@ checkanim							;Goalie animation check; assgoaliectrl branches here too
 	move.w	#SPAgdive,d1			;goalie dive anim.
 	bsr.w	SetSPA					;set animation
 	bset	#pf2aip,pflags2(a3)		;set anim in progress
-	addi.w	#$96,(crowdlevel).w
+	addi.w	#$96,(Crowdlevel).w
 	rts
 .de1
 	movea.w	#(puckcross-M68K_RAM),a0	;puckcross = xcord/frames top to bottom for goalies to react to
@@ -657,7 +657,7 @@ checkanim							;Goalie animation check; assgoaliectrl branches here too
 	movem.w	(sp)+,d0-d1
 	bra.w	.near
 .far
-	bsr.w	sroot
+	bsr.w	Sroot
 	moveq	#1,d2
 	add.w	d0,d2
 	moveq	#$12,d4
@@ -936,7 +936,7 @@ goaliesave
 	move.w	#SPAgglovel2,d1			;reach out glove save
 .13
 	bsr.w	SetSPA
-	addi.w	#$96,(crowdlevel).w
+	addi.w	#$96,(Crowdlevel).w
 	addi.w	#$A,(CwdExciteLvl).w
 	asr.w	Xvel(a3)
 	asr.w	Xvel(a3)
@@ -1012,7 +1012,7 @@ breakaway							;puck carrier a3 on a breakaway: beep on a new assignment and ch
 .c0
 	addq.w	#1,$358(a2)				;add one to breakaway attempt
 	addi.w	#$14,(CwdExciteLvl).w	;add to CwdExcite
-	addi.w	#$C8,(crowdlevel).w		;add to crowdlevel
+	addi.w	#$C8,(Crowdlevel).w		;add to Crowdlevel
 	movem.l	(sp)+,a2
 .nna
 	movem.w	d1,-(sp)				;push d1 on stack
@@ -1152,7 +1152,7 @@ asspuckc							;player a3 is puck handler
 .5
 	addq.w	#1,$358(a2)
 	addi.w	#$14,(CwdExciteLvl).w
-	addi.w	#$C8,(crowdlevel).w
+	addi.w	#$C8,(Crowdlevel).w
 	movem.l	(sp)+,a2
 .6
 	clr.w	temp1(a3)
@@ -1194,7 +1194,7 @@ asspuckc							;player a3 is puck handler
 	beq.w	.shot
 	cmp.w	(cont2team).w,d0
 	beq.w	.shot
-	btst	#1,(vcount+1).w
+	btst	#1,(Vcount+1).w
 	bne.w	.pass
 .shot
 	bsr.w	chk4shot
@@ -1752,7 +1752,7 @@ assnearest
 .addcrowd
 	addq.w	#1,$358(a2)				;add to breakaway attempt
 	addi.w	#$14,(CwdExciteLvl).w	;add to excite level
-	addi.w	#$C8,(crowdlevel).w		;add to crowd level
+	addi.w	#$C8,(Crowdlevel).w		;add to crowd level
 	movem.l	(sp)+,a2				;pop off stack into a2
 .nobreak
 	clr.w	temp3(a3)				;clear temp3
@@ -2359,9 +2359,9 @@ puckpenshot
 .waitvblank
 	btst	#dfok,(disflags).w
 	bne.s	.waitvblank
-	cmpi.w	#$258,(crowdlevel).w
+	cmpi.w	#$258,(Crowdlevel).w
 	bls.w	.setuprink
-	move.w	#$258,(crowdlevel).w
+	move.w	#$258,(Crowdlevel).w
 	addi.w	#$14,(CwdExciteLvl).w
 .setuprink
 	move.w	(ExtraChars).w,d4
@@ -3018,9 +3018,9 @@ puckfaceoff2
 .lockinterrupts
 	move	#$2700,sr
 .limitcrowd
-	cmpi.w	#$258,(crowdlevel).w
+	cmpi.w	#$258,(Crowdlevel).w
 	bls.w	.ntm
-	move.w	#$258,(crowdlevel).w	;limit crowd level
+	move.w	#$258,(Crowdlevel).w	;limit crowd level
 .ntm
 	bset	#dfclock,(disflags).w	;stop clock
 	bclr	#sfpz,(sflags).w		;no pause
@@ -3474,7 +3474,7 @@ pucknorm
 	move.w	Xvel(a2),Xvel(a3)		;Xvel
 	move.w	Yvel(a2),Yvel(a3)		;Yvel
 .nothandled
-	bsr.w	puckIChk
+	bsr.w	PuckIChk
 	bsr.w	ChkOffsides
 	btst	#gmclock,(gmode).w		;check for play stoppage
 	bne.w	.end
@@ -3502,7 +3502,7 @@ pucknorm
 	bne.w	checkpuckcoll
 	bsr.w	puckunflip
 	bra.w	checkpuckcoll
-;	puckIChk, puckunflip / puckflip / puckshadow, findpc, skateto, avdgoal, skatetopuckinit / skatetopuck,
+;	PuckIChk, puckunflip / puckflip / puckshadow, findpc, skateto, avdgoal, skatetopuckinit / skatetopuck,
 ;	assexit / assinsert / assreplace, vtoa, GetHot, SetSPA, doplayeracc, goalieacc, noturn0 / noturn,
 ;	playeracc, MaxSpeed, dostop, stopna, dirtab, UnpackNibbles, WeightedRandomSelect. remap follows.
 ;The source has the real cmp / cmpi; fixopcodes.js patches the cmp encoding after assembly.
@@ -3686,7 +3686,7 @@ a2touchpuck
 	bset	#ifok,(iflags).w		;set icing flag
 	rts
 ; check for icing of puck penalty
-puckIChk
+PuckIChk
 	btst	#ifok,(iflags).w		;#ifok
 	beq.w	rtss2
 	btst	#ifcgl,(iflags).w		;#ifcgl - if crossed goal line
@@ -4600,7 +4600,7 @@ playeracc
 	bsr.w	setpde
 	btst	#0,endurance(a3)
 	beq.w	.ex
-	btst	#0,(vcount+1).w
+	btst	#0,(Vcount+1).w
 	beq.w	.ex
 	addq.w	#1,d0
 	bra.w	setpde

@@ -7,13 +7,13 @@ replayend equ $FFFFAF54				;end of the replay frames ($62 bytes each from M68K_R
 ;$FFFFAFCA is SortCords-SCstruct
 VSCRLPM equ $FFFFB000
 VSPRITES equ $FFFFB002
-VmMap1 equ $FFFFB004
+VmMAP1 equ $FFFFB004
 Map1col1 equ $FFFFB006
-VmMap2 equ $FFFFB008
+VmMAP2 equ $FFFFB008
 Map2col1 equ $FFFFB00A
-VmMap3 equ $FFFFB00C
+VmMAP3 equ $FFFFB00C
 Map3col1 equ $FFFFB00E
-BigFontChars equ $FFFFB010
+BigFontchars equ $FFFFB010
 smallfontchars equ $FFFFB012
 smallfont2chars equ $FFFFB014
 energybarchars equ $FFFFB016
@@ -33,9 +33,9 @@ printfontset equ $FFFFB030
 fodropx equ $FFFFB032
 fodropy equ $FFFFB034
 recbpr equ $FFFFB036
-vbint equ $FFFFB03A
-vcount equ $FFFFB03E
-oldvcount equ $FFFFB040
+VBint equ $FFFFB03A
+Vcount equ $FFFFB03E
+OldVcount equ $FFFFB040
 repeatdelayframes equ $FFFFB042
 asv equ $FFFFB044
 lldisp equ $FFFFB046
@@ -64,15 +64,15 @@ puck_pflags2 equ $FFFFB7AD
 Ylist equ $FFFFB84A
 OOlistpos equ $FFFFB86A
 OOlist equ $FFFFB88A
-crowdframe equ $FFFFB89A
-crowdlevel equ $FFFFB89C
-crowdstep equ $FFFFB89E
-crowdcnt equ $FFFFB8A0
+Crowdframe equ $FFFFB89A
+Crowdlevel equ $FFFFB89C
+Crowdstep equ $FFFFB89E
+Crowdcnt equ $FFFFB8A0
 CwdExciteLvl equ $FFFFB8A2
 MaxCwdExciteLvl equ $FFFFB8A4
 NumCwdExciteLvl equ $FFFFB8A6
 SumCwdExciteLvl equ $FFFFB8A8
-zamx equ $FFFFB8AC
+Zamx equ $FFFFB8AC
 playoffspritex equ $FFFFB8AE
 playoffspritey equ $FFFFB8B0
 clampcounter equ $FFFFB8B2
@@ -281,7 +281,7 @@ horoff	equ	197						;subtracted from the screen y in the horizontal rink view
 ssosize	equ	$14						;bytes per sso object
 ssonum	equ	4						;screen objects not tied to the rink scroll (2 arrows + 2 scoreboard logos)
 ffonum	equ	7						;objects tied to the rink scroll (93 had 5)
-Pencntdwn equ $FFFFC3E6
+PenCntDwn equ $FFFFC3E6
 Penaltytimer equ $FFFFC3E8
 PBnum equ $FFFFC3EA
 InjCntDown equ $FFFFC3EC
@@ -346,9 +346,9 @@ awayuser equ $FFFFD044
 FourWayPlay equ $FFFFD046
 OptPlayMode equ $FFFFD048
 OptNOP equ $FFFFD04A
-Opt1Team equ $FFFFD04C
-Opt2Team equ $FFFFD04E
-OptPerlen equ $FFFFD050
+Opt1team equ $FFFFD04C
+Opt2team equ $FFFFD04E
+Optperlen equ $FFFFD050
 OptGoalie equ $FFFFD052
 OptUserRec equ $FFFFD054
 OptPen equ $FFFFD056

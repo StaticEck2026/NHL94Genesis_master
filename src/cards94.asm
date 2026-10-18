@@ -122,9 +122,9 @@ PlayerCardScreen					;Draw a player card on one side (setupcardflags bit 1: visi
 .7
 	bsr.w	UnpackPicture
 	movea.l	#picturebuf,a2			;tiles
-	move.w	(vcount).w,d3
+	move.w	(Vcount).w,d3
 .loop
-	cmp.w	(vcount).w,d3
+	cmp.w	(Vcount).w,d3
 	beq.s	.loop
 	move.w	#6,d3
 	move.w	#6,d2

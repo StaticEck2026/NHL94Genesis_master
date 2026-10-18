@@ -1869,7 +1869,7 @@ PrintCrowdMeter						;Crowd meter rows: CwdExciteLvl, the average (SumCwdExciteL
 PrintCrowdDB						;Print crowd level d0 as sqrt(d0 * 4) + 65 " dB"
 	ext.l	d0
 	asl.w	#2,d0
-	bsr.w	sroot
+	bsr.w	Sroot
 	addi.w	#$41,d0
 	moveq	#3,d1
 	jsr	(PushNumberWidth).l
@@ -2162,10 +2162,10 @@ GetPlayerCount						;d0 = players on team a2 (records until a length word of 2)
 	bne.s	.loop
 	movem.l	(sp)+,a0
 	rts
-WaitVSyncAndReadInput				;Wait for vcount to change and for a new button press (d1)
-	move.w	(vcount).w,d1
+WaitVSyncAndReadInput				;Wait for Vcount to change and for a new button press (d1)
+	move.w	(Vcount).w,d1
 .wait
-	cmp.w	(vcount).w,d1
+	cmp.w	(Vcount).w,d1
 	beq.s	.wait
 	bsr.w	getpzjoy
 	bsr.w	nodiag

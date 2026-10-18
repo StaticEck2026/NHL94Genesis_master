@@ -41,7 +41,7 @@ ContinuePlayoffs					;Continue playoffs:
 	move.w	(gamelevel).w,d0
 	or.w	(bosgames).w,d0
 	beq.w	.x						;level 0, game 0: nothing played yet
-	bsr.w	maketree
+	bsr.w	MakeTree
 	moveq	#7,d0
 	tst.w	(FourWayPlay).w
 	beq.w	.0
@@ -80,7 +80,7 @@ NewPO								;New playoff generates tree with same team 1. Called from GoNewPlay
 	adda.w	d0,a0					;use d0 as offset
 	lsr.w	#4,d0					;back to the row index
 	moveq	#PlayoffRowTeams-1,d1
-	move.w	(Opt1Team).w,d2			;Team 1 on menu
+	move.w	(Opt1team).w,d2			;Team 1 on menu
 	cmp.w	#NumPlayoffTeams-1,d2	;last playoff team; all-stars clamp to it
 	bls.w	.loop
 	moveq	#NumPlayoffTeams-1,d2
@@ -94,7 +94,7 @@ NewPO								;New playoff generates tree with same team 1. Called from GoNewPlay
 	clr.w	(gamelevel).w			;0-3 for the depth into the playoff tree
 	move.w	#7,(bosgames).w			;0-6 game of series or 7 if not in best of seven
 	cmpi.w	#2,(OptPlayMode).w		;play mode on Main Menu
-	beq.w	maketree				;jump to make playoff tree if play mode is 2
+	beq.w	MakeTree				;jump to make playoff tree if play mode is 2
 	clr.w	(bosgames).w			;best of seven: game 0
 	moveq	#7,d0					;clr games won
 	movea.w	#(gsstruct-M68K_RAM),a0	;Game struct variables start
@@ -103,7 +103,7 @@ NewPO								;New playoff generates tree with same team 1. Called from GoNewPlay
 	clr.w	gspobwins(a0)			;gspobwins
 	adda.w	#gssize,a0				;gssize
 	dbf	d0,.cg						;falls into MakeTree
-maketree							;Make the playoff tree (potree) from playoffseats and WinBits, clear the
+MakeTree							;Make the playoff tree (potree) from playoffseats and WinBits, clear the
 									;scores of this round's games and set their teams
 									;(.sett), then FigureJoy. Called from ContinuePlayoffs and EncodePW; falls
 									;in from NewPO
@@ -204,13 +204,13 @@ FigureJoy							;Set contteams appropriately: cont1team ... cont4team (3 and 4 f
 	beq.w	.it22
 	move.w	#5,d0
 .it22
-	move.w	(a1),(Opt2Team).w
-	move.w	gst2(a1),(Opt1Team).w
+	move.w	(a1),(Opt2team).w
+	move.w	gst2(a1),(Opt1team).w
 	bra.w	.itx
 .it1
 	clr.w	d0
-	move.w	gst2(a1),(Opt2Team).w
-	move.w	(a1),(Opt1Team).w
+	move.w	gst2(a1),(Opt2team).w
+	move.w	(a1),(Opt1team).w
 .itx
 	add.w	(pojoy).w,d0
 	move.w	d1,(gamenum).w
@@ -420,7 +420,7 @@ EncodePW							;After a playoff game compute winners and save the bits if needed
 	move.w	#1,(OptPlayMode).w		;continue playoffs
 	move.w	#1,(TempOptPlayMode).w
 	bsr.w	ResolveGames
-	bsr.w	maketree
+	bsr.w	MakeTree
 	cmpi.w	#4,(gamelevel).w
 	beq.w	.0						;finished playoffs
 	tst.w	(gamenum).w
@@ -432,7 +432,7 @@ EncodePW							;After a playoff game compute winners and save the bits if needed
 	beq.w	rtss2
 	movea.w	#(tpassbits-M68K_RAM),a3	;bits before all games resolved
 	bsr.w	ReadPassBits
-	bra.w	maketree
+	bra.w	MakeTree
 .0
 	movea.w	#(pwddatabuffer-M68K_RAM),a3
 	bsr.w	ClrPassBits
@@ -783,9 +783,9 @@ ShowThreeStars						;End of game Stars of the Game box. Called from UpdatePA whi
 	bne.w	rtss2					;already shown
 	movem.l	d0/a1,-(sp)
 	bset	#dfclock,(disflags).w
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .loop2
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.loop2
 	movem.l	(sp)+,d0/a1
 	movem.l	d0-d5/a0-a4,-(sp)
@@ -1402,7 +1402,7 @@ crash								;printbig d1 then d0 as hex, set the vdp up, copy 8 longs from the
 
 cd0									;$fftt = frame/time for various levels of crowd
 									;excitement. Used by updatecrowdf.
-									;Used by updatecrowdf, indexed by crowd level and crowdstep
+									;Used by updatecrowdf, indexed by crowd level and Crowdstep
 	dc.w	$010c,$020c,$030c,$040c,$050c,$0a0c,$090c,$080c
 	dc.w	$060c,$070c,$080c,$090c,$0a0c,$050c,$040c,$030c
 

@@ -40,7 +40,7 @@ RunSubCommand	move.l	a7,$FF2840
 SetCmdPending	move.w	#$FFFF,$FF2844
 	rts
 
-; Point the VBlank vector ($FD08, cart vbint) at CD code, keeping the old one.
+; Point the VBlank vector ($FD08, cart VBint) at CD code, keeping the old one.
 SwapVBlank	bsr.w	SyncFlag7
 	move.l	$FFFFFD08.w,$FF2846
 	move.l	#$FF24E4,$FFFFFD08.w

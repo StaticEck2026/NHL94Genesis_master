@@ -3,8 +3,8 @@
 ;	Play, and team logos on the setup screen.
 
 ;	Options (d7 = line * 2, the offset from OptPlayMode): 0 OptPlayMode (Regular Season,
-;	Continue Playoffs, New Playoffs, New Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1Team,
-;	6 Opt2Team, 8 OptPerlen, $A OptGoalie, $C OptUserRec (0 On), $E OptPen (0 Off), $10
+;	Continue Playoffs, New Playoffs, New Playoffs/7 game, Shootout), 2 OptNOP, 4 Opt1team,
+;	6 Opt2team, 8 Optperlen, $A OptGoalie, $C OptUserRec (0 On), $E OptPen (0 Off), $10
 ;	OptLine (0 On, 2 Auto). setupcardflags bits: 0 player card up, 1 card side (visitors),
 ;	2 / 3 home / visitors block drawn, 5 C pressed, 6 / 7 home / visitors logo shown.
 ;	printz String first byte, negated: low 2 bits = map, the rest << 9 = printa.
@@ -30,10 +30,10 @@ GameSetUp							;Game setup screen, called from PeriodOver. Builds the screen
 	bne.w	.shootout				;keep the teams
 	moveq	#NumTeams,d0
 	jsr	(randomd0).l
-	move.w	d0,(Opt1Team).w			;random teams after a demo (0 through NumTeams-1)
+	move.w	d0,(Opt1team).w			;random teams after a demo (0 through NumTeams-1)
 	moveq	#NumTeams,d0
 	jsr	(randomd0).l
-	move.w	d0,(Opt2Team).w
+	move.w	d0,(Opt2team).w
 .shootout
 	st	(demoflag).w
 	cmpi.w	#4,(OptPlayMode).w		;check if shootout
@@ -169,8 +169,8 @@ GameSetUp							;Game setup screen, called from PeriodOver. Builds the screen
 	beq.w	.17
 	jsr	(FigureJoy).l
 .17
-	move.w	(Opt2Team).w,-(sp)
-	move.w	(Opt1Team).w,-(sp)
+	move.w	(Opt2team).w,-(sp)
+	move.w	(Opt1team).w,-(sp)
 	bsr.w	ChangeOption			;change the option by d2
 	move.w	(sp)+,d0
 	cmpi.w	#4,(OptPlayMode).w
@@ -178,8 +178,8 @@ GameSetUp							;Game setup screen, called from PeriodOver. Builds the screen
 	tst.w	(OptPlayMode).w
 	bne.w	.19
 .18
-	move.w	(Opt1Team).w,(HomeTeam).w	;Regular Season and Shootout: the menu teams
-	move.w	(Opt2Team).w,(VisTeam).w
+	move.w	(Opt1team).w,(HomeTeam).w	;Regular Season and Shootout: the menu teams
+	move.w	(Opt2team).w,(VisTeam).w
 .19
 	move.w	(HomeTeam).w,(logoteam).w
 	btst	#6,(setupcardflags).w	;home logo shown?
@@ -792,18 +792,18 @@ setoptions							;options screen display: build the game setup screen only: vbla
 									;maps, the TeamBitmaps+8 tiles (LoadSetupTiles), framer, small font and
 									;setup font tiles, the screen and menu bitmaps, the logo box tiles and
 									;defaultsprites2. Called from GameSetUp
-	move.l	#VBlank_SetOptions,(vbint).w
+	move.l	#VBlank_SetOptions,(VBint).w
 	move	#$2500,sr
 	bclr	#dfok,(disflags).w		;#dfok - graphics are ready for transfer (clr = not ready)
 	bset	#dfng,(disflags).w		;#dfng - dont int graphics
 	bclr	#df32c,(disflags).w		;#df32c - 32 bit column mode (clr = off)
 	move.w	#0,(VSCRLPM).w
 	move.w	#$B400,(VSPRITES).w
-	move.w	#$B800,(VmMap3).w
+	move.w	#$B800,(VmMAP3).w
 	move.w	#5,(Map3col1).w
-	move.w	#$C000,(VmMap2).w
+	move.w	#$C000,(VmMAP2).w
 	move.w	#6,(Map2col1).w
-	move.w	#$E000,(VmMap1).w
+	move.w	#$E000,(VmMAP1).w
 	move.w	#6,(Map1col1).w
 	move.w	#0,d0					;fade to color
 	jsr	(setVram).l
@@ -893,10 +893,10 @@ ReadSetupPads						;wait up to $5460 frames (6 minutes) for a press on any pad (
 									;from GameSetUp
 	move.l	#$5460,d6				;21600 frames
 .loop
-	move.w	(vcount).w,d1
-	sub.w	(oldvcount).w,d1
+	move.w	(Vcount).w,d1
+	sub.w	(OldVcount).w,d1
 	beq.s	.loop
-	move.w	(vcount).w,(oldvcount).w
+	move.w	(Vcount).w,(OldVcount).w
 	bclr	#5,(setupcardflags).w
 	jsr	(UpdateRosterPlayers).l
 	jsr	(ReadJoy1).l
@@ -995,7 +995,7 @@ SetupStart							;Start pressed: Copy Goalies to both teams, set pojoy, seed RNG
 	bset	#0,(gmode2).w
 	jsr	(ClearShootout).l
 .1
-	jmp	maketree
+	jmp	MakeTree
 CheckNOPUnused						;unreferenced. Tests OptNOP for 0, 5, 6, 9 and $A and returns: no effect
 	tst.w	(OptNOP).w
 	beq.w	.x

@@ -9,12 +9,12 @@ setupice							;set all variables, send non purgeable graphics, build sprite fra
 									;replay (sflags4 bit 4) and calls LoadHomeTeamGfx
 	movem.l	d0-d7/a0-a6,-(sp)
 	bset	#df32c,(disflags).w		;df32c
-	move.w	#$C000,(VmMap2).w
+	move.w	#$C000,(VmMAP2).w
 	move.w	#6,(Map2col1).w
 	move.w	#$DC00,(VSPRITES).w
-	move.w	#$E000,(VmMap1).w
+	move.w	#$E000,(VmMAP1).w
 	move.w	#6,(Map1col1).w
-	move.w	#$F000,(VmMap3).w
+	move.w	#$F000,(VmMAP3).w
 	move.w	#5,(Map3col1).w
 	move.w	#$FC00,(VSCRLPM).w
 	moveq	#0,d0
@@ -25,9 +25,9 @@ setupice							;set all variables, send non purgeable graphics, build sprite fra
 	clr.w	(Hpos).w
 	clr.w	(Vpos).w
 	move.w	#$7D0,(Oldrow).w
-	st	(zamx).w
+	st	(Zamx).w
 	move.w	#$800,d0
-	move.w	(VmMap1).w,d1
+	move.w	(VmMAP1).w,d1
 	move.w	#$7FF,d2
 	bsr.w	DoFill
 	clr.w	d4
@@ -45,7 +45,7 @@ setupice							;set all variables, send non purgeable graphics, build sprite fra
 	movea.l	#EnergyBarMap+8,a2
 	bsr.w	DecompressGraphicsPlain
 	move.w	d4,(animchars).w		;crowd chars
-	movea.l	#CrowdFrameList+8,a2
+	movea.l	#Crowdframelist+8,a2
 	bsr.w	DecompressGraphicsPlain
 	move.w	d4,(arenaanimchars).w
 	addi.w	#$32,d4
@@ -57,7 +57,7 @@ setupice							;set all variables, send non purgeable graphics, build sprite fra
 	movea.l	#SmallFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
 	dc.l	$43434567,$89ABCDEF		;remap table
-	move.w	d4,(BigFontChars).w
+	move.w	d4,(BigFontchars).w
 	movea.l	#BigFontMap+8,a2
 	bsr.w	DecompressGraphicsWithCallback
 	dc.l	$71234567,$89ABCDEF		;remap table
@@ -98,9 +98,9 @@ setupice							;set all variables, send non purgeable graphics, build sprite fra
 	adda.w	#$1C,a3
 	bsr.w	addframe2				;?? addframe
 	move.l	a5,(DMAlistend).w
-	bsr.w	DoDMAList
+	bsr.w	dodmalist
 	move.w	(sp)+,(disflags).w
-	move.l	#VBlank,(vbint).w
+	move.l	#VBlank,(VBint).w
 	bclr	#dfok,(disflags).w
 	bclr	#dfng,(disflags).w
 	move	#$2300,sr
@@ -117,7 +117,7 @@ setupice_highlight					;Rebuild the rink sprites after a highlight replay withou
 	clr.w	(Hpos).w
 	clr.w	(Vpos).w
 	move.w	#$7D0,(Oldrow).w
-	st	(zamx).w
+	st	(Zamx).w
 	move.w	(spritechars).w,d4
 	bsr.w	defaultsprites
 	bsr.w	setupIceRinkPal
@@ -157,10 +157,10 @@ setupice_highlight					;Rebuild the rink sprites after a highlight replay withou
 	adda.w	#$1C,a3
 	bsr.w	addframe2
 	move.l	a5,(DMAlistend).w
-	bsr.w	DoDMAList
+	bsr.w	dodmalist
 	move.w	#$1C,(palcount).w
 	move.w	(sp)+,(disflags).w
-	move.l	#VBlank,(vbint).w
+	move.l	#VBlank,(VBint).w
 	bclr	#dfok,(disflags).w
 	bclr	#dfng,(disflags).w
 	move	#$2300,sr
@@ -188,10 +188,10 @@ ReloadEnergyBarTiles				;Reload the energy bar tiles (EnergyBarMap+8) at energyb
 	move.w	(energybarchars).w,d4
 	movea.l	#EnergyBarMap+8,a2
 	bra.w	DecompressGraphicsPlain
-ReloadCrowdTiles					;Reload the crowd tiles (CrowdFrameList+8) at animchars. Called from the
+ReloadCrowdTiles					;Reload the crowd tiles (Crowdframelist+8) at animchars. Called from the
 									;replay code and ReloadRinkGraphics
 	move.w	(animchars).w,d4
-	movea.l	#CrowdFrameList+8,a2
+	movea.l	#Crowdframelist+8,a2
 	bra.w	DecompressGraphicsPlain
 ReloadRefHorTiles					;Reload the horizontal ref tiles (RefMap2+8) at
 									;ExtraChars. Called from PauseMode
@@ -754,15 +754,15 @@ IntermissionStart					;reset the clock, song $79, ticker scores, playoff stats a
 									;from StartGame
 	jsr	(ResetClock).w
 	move.w	d0,-(sp)
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .loop
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.loop
 	jsr	(p_turnoff).l
 	move.w	d0,-(sp)
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .loop2
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.loop2
 	move.w	(sp)+,d0
 	move.w	#SngEOP,-(sp)
@@ -819,15 +819,15 @@ PlayoffScreen						;bring up playoff screen if in playoff mode. Called from Game
 									;pressed (PlayoffScreenExit)
 	tst.w	(OptPlayMode).w
 	beq.w	rtss2
-	move.l	#VBlank_Playoff,(vbint).l
+	move.l	#VBlank_Playoff,(VBint).l
 	bclr	#df32c,(disflags).w
 	move.w	#0,(VSCRLPM).w
 	move.w	#$BC00,(VSPRITES).w
-	move.w	#$B000,(VmMap3).w
+	move.w	#$B000,(VmMAP3).w
 	move.w	#6,(Map3col1).w
-	move.w	#$C000,(VmMap2).w
+	move.w	#$C000,(VmMAP2).w
 	move.w	#7,(Map2col1).w
-	move.w	#$E000,(VmMap1).w
+	move.w	#$E000,(VmMAP1).w
 	move.w	#7,(Map1col1).w
 	move.w	#0,d0
 	bsr.w	setVram
@@ -1008,10 +1008,10 @@ waitxc1								;(was PlayoffScreen_waitvsync) Each time palcount runs out, eor t
 	eori.w	#$EE,(palfadenew+$42).w
 	move.w	#$18,(palcount).w
 .wait
-	move.w	(vcount).w,d0
-	cmp.w	(oldvcount).w,d0
+	move.w	(Vcount).w,d0
+	cmp.w	(OldVcount).w,d0
 	beq.s	.wait
-	move.w	d0,(oldvcount).w
+	move.w	d0,(OldVcount).w
 	rts
 PrintSeriesScore					;Print best of 7 wins "t-b" for game struct a2 at printx/printy
 	movea.w	#(mesarea-M68K_RAM),a1
@@ -1064,8 +1064,8 @@ DrawTeamBlocks						;Draw team block d1 (team*2) from the TeamBlocks map (Teambl
 	bsr.w	dobitmap
 	movem.l	(sp)+,d0-d7/a0-a3
 	rts
-VBlank_Playoff						;the PlayoffScreen vblank handler (vbint): dma the sprite table, write
-									;$FEA0+DispAttribCtr to the hscroll, cramfade. Always vcount+1,
+VBlank_Playoff						;the PlayoffScreen vblank handler (VBint): dma the sprite table, write
+									;$FEA0+DispAttribCtr to the hscroll, cramfade. Always Vcount+1,
 									;p_music_vblank, rte
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w
@@ -1084,7 +1084,7 @@ VBlank_Playoff						;the PlayoffScreen vblank handler (vbint): dma the sprite ta
 .nosat
 	bsr.w	cramfade
 .nograph
-	addq.w	#1,(vcount).w
+	addq.w	#1,(Vcount).w
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
@@ -1327,7 +1327,7 @@ ScrollDisplayUp						;Next text line for ScoutTextPlayer: VertLineScrolling + 1;
 	subq.w	#1,(VertLineScrolling).w
 	movem.l	d0-d3,-(sp)
 	move.l	#7,d3
-	move.w	(VmMap1).w,d1
+	move.w	(VmMAP1).w,d1
 	addi.w	#$212,d1
 .loop
 	move.l	#$3A,d0

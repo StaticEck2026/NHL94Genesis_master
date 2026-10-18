@@ -82,7 +82,7 @@ ScoutingReport						;pregame MATCHUPS screen, called from Opening2. Draws the Ro
 	clr.w	(advframe).w			;advantage mark frame
 	move.w	#SngScout,-(sp)			;song $7A
 	jsr	(song).l
-	move.l	#vb2,(vbint).w
+	move.l	#vb2,(VBint).w
 	jsr	(clearTeamStats).l
 	move.l	a0,-(sp)
 	movea.l	#tmstruct,a0
@@ -101,7 +101,7 @@ ScoutingReport						;pregame MATCHUPS screen, called from Opening2. Draws the Ro
 	addi.w	#$24,d4
 	move.w	d4,(vispicchars).w		;visitors picture chars
 	addi.w	#$24,d4
-	move.w	d4,(BigFontChars).w
+	move.w	d4,(BigFontchars).w
 	movea.l	#BigFontMap+8,a2		;big font tiles
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$05431567,$79ABCDEF		;remap table
@@ -173,7 +173,7 @@ ScoutingReport						;pregame MATCHUPS screen, called from Opening2. Draws the Ro
 	bsr.w	DrawMatchupPictures		;pictures
 	bsr.w	PrintMatchupRatings		;ratings
 	move.w	#$18,(palcount).w		;24
-	move.l	#vb2,(vbint).w
+	move.l	#vb2,(VBint).w
 	move	#$2500,sr
 	jsr	(InitScoutingDisplay).l		;a0 = the paragraph list
 	move.w	#$1B,(a0)+				;paragraph numbers in ScoutTextScript: 'Hi, I'm Ron Barr ...'

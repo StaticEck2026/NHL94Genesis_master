@@ -7,17 +7,17 @@ NameEntryScreen						;"NAME ENTRY" screen for the user records (own vblank VBlan
 	movem.l	d0-d7/a0-a6,-(sp)
 	move	#$2700,sr
 	move.w	#2,d4
-	move.l	#VBlank_SetOptions,(vbint).w
+	move.l	#VBlank_SetOptions,(VBint).w
 	bclr	#dfok,(disflags).w
 	bset	#dfng,(disflags).w
 	bclr	#df32c,(disflags).w
 	move.w	#0,(VSCRLPM).w
 	move.w	#$B400,(VSPRITES).w
-	move.w	#$B800,(VmMap3).w
+	move.w	#$B800,(VmMAP3).w
 	move.w	#5,(Map3col1).w
-	move.w	#$C000,(VmMap2).w
+	move.w	#$C000,(VmMAP2).w
 	move.w	#6,(Map2col1).w
-	move.w	#$E000,(VmMap1).w
+	move.w	#$E000,(VmMAP1).w
 	move.w	#6,(Map1col1).w
 	move.w	#0,d0
 	jsr	(setVram).l
@@ -58,7 +58,7 @@ NameEntryScreen						;"NAME ENTRY" screen for the user records (own vblank VBlan
 	move.w	d4,(logobox1chars).w
 	movea.l	#LogoBoxMap+8,a2
 	jsr	(DecompressGraphicsPlain).l
-	move.w	d4,(BigFontChars).w
+	move.w	d4,(BigFontchars).w
 	movea.l	#BigFontMap+8,a2
 	jsr	(DecompressGraphicsWithCallback).l
 	dc.l	$71234567,$89ABCDEF		;remap table
@@ -156,9 +156,9 @@ NameEntryScreen						;"NAME ENTRY" screen for the user records (own vblank VBlan
 .3
 	bsr.w	MoveLogArrows
 .loop2
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .loop3
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.loop3
 	movem.w	d1,-(sp)
 	move.w	(cont1team).w,d1

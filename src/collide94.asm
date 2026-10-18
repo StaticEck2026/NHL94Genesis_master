@@ -778,7 +778,7 @@ FallDown							;player a2 falls down, player a3 is the hitting player. Skips a2 
 	cmpi.w	#$B,SCnum(a3)			;check if SCNum is a player
 	bgt.w	.0						;branch if not player
 	addi.w	#$A,(CwdExciteLvl).w
-	addi.w	#$96,(crowdlevel).w
+	addi.w	#$96,(Crowdlevel).w
 	move.w	d1,-(sp)				;push to stack
 	move.b	#0,temp1(a3)			;clear temp1
 	move.b	#0,glitch(a3)			;clear glitch
@@ -894,7 +894,7 @@ FallDown							;player a2 falls down, player a3 is the hitting player. Skips a2 
 	beq.w	.21						;jump if goalie
 	tst.w	$34(a2)					;check if player checked is goalie
 	beq.w	.21						;jump if goalie
-	addi.w	#$12C,(crowdlevel).w	;add to crowd level
+	addi.w	#$12C,(Crowdlevel).w	;add to crowd level
 	addi.w	#$F,(CwdExciteLvl).w	;add to crowd excite level
 .21
 	move.w	(puckc).w,d0			;move puck carrier SCNum into d0
@@ -954,7 +954,7 @@ setInjuryType						;determines if injury will be for period or game. a2 = player
 									;sflags7 bit 5). Called from FallDown
 	move.w	d0,-(sp)
 	bset	#pf2unav,pflags2(a2)	;set player unavailable
-	addi.w	#$12C,(crowdlevel).w
+	addi.w	#$12C,(Crowdlevel).w
 	addi.w	#$1E,(CwdExciteLvl).w
 	move.w	#SFXoooh2,-(sp)			;sound effect
 	bsr.w	sfx
@@ -1057,7 +1057,7 @@ checkwallcoll						;d2/d3 = x/y to test, a3 = object, wcradiusx/wcradiusy = radi
 	cmp.l	#$1000,d3				;inside the corner circle (64*64)
 	bls.w	.2
 	exg	d0,d3
-	bsr.w	sroot					;distance from the circle center
+	bsr.w	Sroot					;distance from the circle center
 	exg	d0,d3
 	ext.l	d0
 	asl.l	#8,d0
@@ -1176,7 +1176,7 @@ checkgoal							;look for coll with goal/net. a2 = goal struct, a3 = object, d2/
 	btst	#gmclock,(gmode).w		;gmclock: no goal after the whistle
 	bne.w	.deflectsf2
 	move.w	#8,(sp)					;sfx 8 (92 used 31) and crowd
-	addi.w	#$12C,(crowdlevel).w
+	addi.w	#$12C,(Crowdlevel).w
 	addi.w	#$28,(CwdExciteLvl).w
 .deflectsf2
 	bsr.w	sfx
@@ -1255,15 +1255,15 @@ checkgoal							;look for coll with goal/net. a2 = goal struct, a3 = object, d2/
 	bsr.w	ChkShotStat
 	bsr.w	stop_current_song
 	move.w	d0,-(sp)
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .loop
-	cmp.w	(vcount).w,d0			;wait for the next vblank
+	cmp.w	(Vcount).w,d0			;wait for the next vblank
 	beq.s	.loop
 	move.w	(sp)+,d0
 	move.w	#SFXsiren,-(sp)			;SFXsiren (0)
 	bsr.w	sfx
 	jsr	(freezewindow).l
-	addi.w	#$1F4,(crowdlevel).w	;add 500 (92 800)
+	addi.w	#$1F4,(Crowdlevel).w	;add 500 (92 800)
 	movea.w	#(tmstruct-M68K_RAM),a2
 	lea	$364(a2),a1					;tmsize
 	tst.w	Ypos(a3)
@@ -1470,7 +1470,7 @@ checkgoalp							;check for player a3 collision with goal/net a2. Entered from c
 	muls.w	d0,d0
 	muls.w	d1,d1
 	add.l	d1,d0
-	bsr.w	sroot
+	bsr.w	Sroot
 	move.w	d0,d2
 	movem.w	(sp)+,d0-d1
 	addq.w	#1,d2
@@ -1555,7 +1555,7 @@ wallcollb							;Check for puck over wall. a3 = object, d0/d1 = cos/sin of the w
 	movea.l	(sp)+,a3
 	move.w	#SFXbglass,-(sp)
 	bsr.w	sfx
-	addi.w	#$258,(crowdlevel).w
+	addi.w	#$258,(Crowdlevel).w
 	addi.w	#$F,(CwdExciteLvl).w
 .0
 	bset	#sfslock,(sflags).w		;#sfslock
@@ -2107,7 +2107,7 @@ puckglue							;part of puckstick that puckgoalie also branches to. Player a2 ta
 	bclr	#sf3fo,(sflags3).w		;clear flag (not sure what, might have to do with faceoff)
 	beq.w	.snd					;branch if it was cleared already
 	addq.w	#1,$E(a1)				;add 1 to faceoff won
-	addi.w	#$C8,(crowdlevel).w		;add to crowdlevel
+	addi.w	#$C8,(Crowdlevel).w		;add to Crowdlevel
 	move.w	#$C,(sp)				;move C to stack
 	cmpa.w	#(tmstruct-M68K_RAM),a1	;compare if a1 is home
 	bne.w	.snd					;branch if not

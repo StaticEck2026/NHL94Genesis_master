@@ -113,7 +113,7 @@ doinput								;process controller input: d0 = dpad, d1 = new buttons, d2 = chan
 	bra.w	.11
 .10
 	btst	#6,d1
-	bne.w	holdplayer
+	bne.w	Holdplayer
 .11
 	tst.w	position(a3)
 	beq.w	.12
@@ -255,7 +255,7 @@ doinput								;process controller input: d0 = dpad, d1 = new buttons, d2 = chan
 	bsr.w	SetSPA
 	bset	#pf2aip,pflags2(a3)
 	bset	#pfalock,pflags(a3)
-	addi.w	#$96,(crowdlevel).w
+	addi.w	#$96,(Crowdlevel).w
 rtss15
 	rts
 doinput_cbut						;C button (bit 5): hold / release handling for a3, then doinput_chkanim
@@ -326,7 +326,7 @@ doinput_cbut						;C button (bit 5): hold / release handling for a3, then doinpu
 	movem.w	(sp)+,d0-d1
 	bra.w	.near
 .far
-	bsr.w	sroot
+	bsr.w	Sroot
 	moveq	#1,d2
 	add.w	d0,d2
 	moveq	#$12,d4
@@ -801,7 +801,7 @@ burst
 ;
 ; a3 = holder
 ; a0 = player being held
-holdplayer
+Holdplayer
 	bset	#pfalock,pflags(a3)		;lock animation
 	move.w	#SPAhook,d1				;move anim into d1 - normal hold check
 	tst.w	impact(a3)				;check if impact = 0
@@ -1074,7 +1074,7 @@ passtoa0							;pass puck to player a0
 	move.w	d4,d0					;d0 = j
 	muls.w	d0,d0					;j^2
 	sub.l	d3,d0					;j^2 - ((k*a^2)/4)
-	bsr.w	sroot					;square root of d0
+	bsr.w	Sroot					;square root of d0
 	moveq	#1,d3					;limit infinite loop
 	asr.w	#2,d5					;k divide by 4
 	bne.w	.0
@@ -1450,7 +1450,7 @@ doshot
 	muls.w	d0,d0
 	muls.w	d1,d1
 	add.l	d1,d0
-	bsr.w	sroot
+	bsr.w	Sroot
 	tst.w	d0						;distance in pix to goal
 	bne.w	.1
 	addq.w	#1,d0
@@ -1606,7 +1606,7 @@ shotdiradj
 	muls.w	d1,d1					;square d1
 	add.l	d1,d0					;add d1 to d0
 	addq.l	#1,d0					;add 1 to d0
-	bsr.w	sroot					;get square root
+	bsr.w	Sroot					;get square root
 	move.w	d0,d2					;move result into d2
 	movem.w	(sp)+,d0-d1				;pop from stack (distance x and y from G to puck)
 	moveq	#$12,d3					;post?
