@@ -21,6 +21,19 @@ python3 ../../../amiga/tools/ramrel.py ../nhl94.game 4 ramrel.i $HUNKS
 python3 ../../../amiga/tools/ramrel.py ../nhl94.game 4 ramrel2.i $HUNKS >/dev/null
 cmp -s ramrel.i ramrel2.i || { echo "build.sh: the RAM window places moved between the passes"; exit 1; }
 ls -l ../nhl94.game
-"$VASM" -Fhunkexe -m68020 -nocase -quiet -o ../NHL94 stub.asm
+"$VASM" -Fhunkexe -m68000 -nocase -quiet -o ../NHL94 stub.asm
 ls -l ../NHL94
 python3 ../../../amiga/tools/mkicon.py ../NHL94.info
+# A bootable hard drive image (one FFS partition, no RDB) for emulators: needs xdftool
+# (pip install amitools). Its startup-sequence starts the game.
+XDFTOOL=${XDFTOOL:-xdftool}
+if command -v "$XDFTOOL" >/dev/null 2>&1; then
+  printf 'NHL94\n' > startup-sequence
+  rm -f ../nhl94.hdf
+  "$XDFTOOL" ../nhl94.hdf create size=2Mi + format NHL94 ffs + makedir S \
+    + write startup-sequence S/startup-sequence + write ../NHL94 NHL94 + write ../NHL94.info NHL94.info \
+    + write ../nhl94.game NHL94.game >/dev/null
+  ls -l ../nhl94.hdf
+else
+  echo "(no xdftool: nhl94.hdf not made; pip install amitools)"
+fi

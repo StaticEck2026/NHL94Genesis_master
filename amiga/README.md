@@ -9,9 +9,9 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
-- Fast RAM. The game takes about 1.5 MB of any memory and about 0.5 MB of chip RAM, so it does not
-  fit in a stock 2 MB A1200.
-- Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE).
+- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
+  about 0.5 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
+- Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
 
 Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 10 frames a second (FS-UAE,
@@ -22,7 +22,18 @@ the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages a
 
 Copy `output/amiga/NHL94`, `NHL94.info` and `nhl94.game` into the same directory. Start `NHL94`
 from a Shell, or double click its icon. `NHL94` is a small launcher that loads `nhl94.game`. The
-game takes over the machine and gives it back when you quit.
+game takes over the machine and gives it back when you quit. If it cannot run (no AGA, no 68020,
+not enough memory, `nhl94.game` missing), a requester says why.
+
+In an emulator, use the hard drive image `output/amiga/nhl94.hdf`. The build makes it when
+`xdftool` is installed (`pip install amitools`). It boots straight into the game.
+
+- **vAmigaWeb** (vamigaweb.github.io): choose the Amiga 1200 model with fast RAM (the "A1200"
+  preset with 8 MB fast RAM), then drop `nhl94.hdf` onto the page. Do not drop `nhl94.game`
+  itself: an executable that big is put on a high density floppy, and booting that hangs or crashes
+  (it does with any large executable).
+- **FS-UAE, WinUAE, Amiberry**: an A1200 with `fast_memory` of 2 MB or more and `nhl94.hdf` as
+  the first hard drive (or the directory with the three files as a hard drive folder).
 
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
