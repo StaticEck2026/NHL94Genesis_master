@@ -24,6 +24,7 @@ SROW		equ	SBPR*6			;interleaved row of the 6 planes
 SCRX		equ	4			;byte of plane x 0 (scroll mode) / screen x 0 (otherwise)
 BUFH		equ	480			;rows: plane B's 256, then its first 224 again (vertical wrap)
 BUFSIZE		equ	SROW*BUFH
+NBUF		equ	3			;screen buffers: one shown, one waiting to be, one drawn
 DROWS		equ	BUFH/8			;cell rows of the dirty maps
 SCRH		equ	224
 OSBPR		equ	48			;the overlay: 32 pixel margin, 320, 32 margin
@@ -67,7 +68,7 @@ rd_by0		ds.w	1
 rd_back		ds.l	1			;back buffer: screen line 0
 rd_buf		ds.l	1			;back buffer
 rd_dmap		ds.l	1			;its dirty map
-rd_dirty	ds.l	2*DROWS			;per buffer, cell row: the 16 pixel columns of plane B
+rd_dirty	ds.l	NBUF*DROWS		;per buffer, cell row: the 16 pixel columns of plane B
 						;(bit 31 - n: column n) that differ from the bitmap
 rd_bufi		ds.w	1			;the back buffer's number
 rd_xorg		ds.w	1			;bit in a buffer row of screen x 0
@@ -75,7 +76,6 @@ rd_brow0	ds.w	1			;buffer row of screen line 0
 rd_scroll	ds.w	1			;scroll mode this frame
 rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
-rd_frontcop	ds.l	1
 rd_regs		ds.b	32			;the VDP registers (rd_snapshot)
 rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
@@ -83,7 +83,8 @@ rd_sctab	ds.l	4*SCSLOTS		;sprite image cache (rd_sc_get)
 rd_scpos	ds.l	1			;bytes written to its ring so far
 rd_tchg		ds.l	2048			;frame each tile was last converted in
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
-rd_shownvb	ds.l	1			;rd_vblanks when the last frame was given to the display
+rd_shownvb	ds.l	NBUF			;per buffer: rd_vblanks when its copper list was set
+						;($7FFFFFFF: queued, not yet)
 rd_lastframe	ds.l	1
 rd_lastgen	ds.l	2
 rd_count	ds.l	1			;frames drawn
@@ -102,10 +103,10 @@ mkB		ds.b	BMAX*8			;plane B high priority mask (for the CPU: fast memory)
 
 	section	chip,bss_c
 	cnop	0,8
-rd_screens	ds.b	BUFSIZE*2
+rd_screens	ds.b	BUFSIZE*NBUF
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 mkB6		ds.b	BMAX*48			;its high priority mask in each plane's place (blitter)
-rd_cop		ds.l	2*256
+rd_cop		ds.l	NBUF*256			;a copper list per buffer
 rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_ovlmlo	ds.b	OSROW*SCRH		;its low priority mask, each row once per plane (so one blit
@@ -194,20 +195,21 @@ rd_init
 	clr.w	(rd_bufi).l
 	lea	(rd_dirty).l,a0
 	move.l	a0,(rd_dmap).l
-	move.w	#2*DROWS-1,d0
+	move.w	#NBUF*DROWS-1,d0
 .dm	move.l	#-1,(a0)+			;nothing in the buffers yet
 	dbf	d0,.dm
 	move.w	#SCRX*8,(rd_xorg).l
 	clr.w	(rd_brow0).l
 	lea	(rd_cop).l,a0
 	move.l	a0,(rd_backcop).l
-	lea	1024(a0),a1
-	move.l	a1,(rd_frontcop).l
 	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l
 	move.l	d0,(rd_lastgen).l
 	move.l	d0,(rd_palgen).l
-	move.l	d0,(rd_shownvb).l		;(nothing shown yet)
+	lea	(rd_shownvb).l,a0		;(none on the screen)
+	moveq	#NBUF-1,d1
+.sv	move.l	d0,(a0)+
+	dbf	d1,.sv
 	lea	(rd_sctab).l,a0			;no sprite images
 	move.w	#SCSLOTS-1,d1
 .sc	move.l	d0,(a0)
@@ -510,7 +512,7 @@ rd_fast
 	bsr	rd_waitblit
 	bra	rd_verify
 	ENDC
-	bra	rd_waitblit
+	rts					;(the blitter goes on; rd_show queues the swap)
 
 	IFD	VERIFY
 ;	Debug: in scroll mode every cell of the back buffer its dirty map does not name must be the
@@ -558,15 +560,23 @@ rd_verify
 	rts
 	ENDC
 
-;	Wait until the display has the frame rd_show gave it: its copper list is taken at the next
-;	vertical blank, and until then the back buffer and its copper list are still the ones on
-;	the screen (drawing into them would show: sprites wiped, half drawn frames). Keeps all.
+;	Wait until the back buffer is off the screen for good: the frame after it (the next
+;	buffer's) has been given to the display and a vertical blank has passed since, so the
+;	copper shows that one. Its copper list is free then too. With 3 buffers it nearly always is.
+;	Keeps all.
 rd_vsync
-	move.l	d0,-(sp)
+	movem.l	d0-d1/a0,-(sp)
+	move.w	(rd_bufi).l,d1
+	addq.w	#1,d1
+	cmpi.w	#NBUF,d1
+	blo.s	.n
+	moveq	#0,d1
+.n	lsl.w	#2,d1
+	lea	(rd_shownvb).l,a0
 .w	move.l	(rd_vblanks).l,d0
-	cmp.l	(rd_shownvb).l,d0
-	beq.s	.w
-	move.l	(sp)+,d0
+	cmp.l	(a0,d1.w),d0
+	ble.s	.w				;(signed: $7FFFFFFF is not yet)
+	movem.l	(sp)+,d0-d1/a0
 	rts
 
 rd_waitblit
@@ -616,15 +626,18 @@ rd_bq_go
 .w	btst	#6,(CUSTOM+DMACONR).l
 	bne	.w
 	move.w	#$0040,(CUSTOM+INTREQ).l
-	st	(rd_bqbusy).l
 	bsr	rd_bq_start
 .x	movem.l	(sp)+,d0/a0-a1
 	move	(sp)+,sr
 	rts
 
-;	Start the entry at the head (interrupts off). Uses d0, a0, a1.
+;	Start the next blit of the queue (interrupts off); show markers on the way (rd_show: BLTSIZH
+;	0) are carried out: the copper list set, its buffer's rd_shownvb noted. rd_bqbusy: a blit of
+;	the queue runs. Uses d0, a0, a1.
 rd_bq_start
-	move.w	(rd_bqhead).l,d0
+.next	move.w	(rd_bqhead).l,d0
+	cmp.w	(rd_bqtail).l,d0
+	beq.s	.idle
 	lea	(rd_bq).l,a0
 	mulu.w	#BQE,d0
 	adda.l	d0,a0
@@ -632,6 +645,9 @@ rd_bq_start
 	addq.w	#1,d0
 	andi.w	#BQN-1,d0
 	move.w	d0,(rd_bqhead).l
+	tst.w	$05E-$040(a0)
+	beq.s	.mark
+	st	(rd_bqbusy).l
 	lea	(CUSTOM+$040).l,a1
 	move.l	(a0)+,(a1)+			;BLTCON0, BLTCON1
 	move.l	(a0)+,(a1)+			;BLTAFWM, BLTALWM
@@ -644,6 +660,14 @@ rd_bq_start
 	move.w	$074-$058(a0),$074-$058(a1)	;BLTADAT
 	move.w	$05C-$058(a0),$05C-$058(a1)	;BLTSIZV
 	move.w	$05E-$058(a0),$05E-$058(a1)	;BLTSIZH: go
+	rts
+.mark	move.l	$048-$040(a0),(CUSTOM+$080).l	;COP1LC: from the next frame
+	move.w	$04C-$040(a0),d0
+	lsl.w	#2,d0
+	lea	(rd_shownvb).l,a1
+	move.l	(rd_vblanks).l,(a1,d0.w)
+	bra	.next
+.idle	sf	(rd_bqbusy).l
 	rts
 
 ;	Level 3: the blitter has finished (the next entry, or the queue is idle), or a vertical
@@ -662,12 +686,7 @@ rd_bq_int
 	move.w	#$0040,(CUSTOM+INTREQ).l
 	tst.b	(rd_bqbusy).l
 	beq	.x
-	move.w	(rd_bqhead).l,d0
-	cmp.w	(rd_bqtail).l,d0
-	bne	.next
-	sf	(rd_bqbusy).l
-	bra	.x
-.next	bsr	rd_bq_start
+	bsr	rd_bq_start
 .x	movem.l	(sp)+,d0/a0-a1
 	rte
 
@@ -789,7 +808,7 @@ rd_updateB
 
 ;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap.
 rd_cellB
-	; both buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
+	; all buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
 	moveq	#0,d1				;(bit field offsets are longs)
 	move.w	d4,d1
 	lsr.w	#1,d1
@@ -800,10 +819,12 @@ rd_cellB
 	lea	(a1,d2.w*4),a1
 	bfset	(a1){d1:1}
 	bfset	DROWS*4(a1){d1:1}
+	bfset	2*DROWS*4(a1){d1:1}
 	cmpi.w	#DROWS-32,d2
 	bhs.s	.once
 	bfset	32*4(a1){d1:1}
 	bfset	(DROWS+32)*4(a1){d1:1}
+	bfset	(2*DROWS+32)*4(a1){d1:1}
 .once	move.l	a4,-(sp)
 	move.w	d0,(rd_cellpri).l		;bit 15: high priority
 	move.w	d0,d1
@@ -3737,6 +3758,7 @@ rd_gen2amiga
 ;	------------------------------------------------------------------------------------------
 ;	Frames drawn in the last second, top left of the screen in colour 63 (F10 shows it).
 rd_fps
+	bsr	rd_waitblit			;(the CPU draws into the back buffer)
 	move.l	(hal_frames).l,d0
 	sub.l	(rd_fpst).l,d0
 	cmp.w	(hal_hz).l,d0
@@ -3928,21 +3950,35 @@ rd_show
 	cmpi.w	#2,d3
 	bne	.bank
 	move.l	#$FFFFFFFE,(a0)+
-	move.l	(rd_backcop).l,d0
-	move.l	d0,(CUSTOM+$080).l		;COP1LC: from the next frame
-	move.l	(rd_vblanks).l,(rd_shownvb).l	;(after the write: a blank before it is not the one)
-	move.l	(rd_frontcop).l,(rd_backcop).l
-	move.l	d0,(rd_frontcop).l
-	; the other buffer, its dirty map
-	lea	(rd_screens).l,a0
-	lea	(rd_dirty).l,a1
-	eori.w	#1,(rd_bufi).l
-	beq.s	.set
-	adda.l	#BUFSIZE,a0
-	lea	DROWS*4(a1),a1
-.set	move.l	a0,(rd_buf).l
-	move.l	a0,(rd_back).l
-	move.l	a1,(rd_dmap).l
+	; it is shown once the blits queued for it are done: a marker in the blit queue has the
+	; level 3 interrupt set the copper list then (rd_bq_start); the CPU goes on
+	move.w	(rd_bufi).l,d1
+	lea	(rd_shownvb).l,a1
+	move.l	#$7FFFFFFF,(a1,d1.w*4)		;(not on the screen yet)
+	bsr	rd_bq_alloc
+	move.l	(rd_backcop).l,$048(a6)		;the copper list
+	move.w	d1,$04C(a6)			;the buffer
+	clr.w	$05E(a6)			;(a marker, not a blit)
+	bsr	rd_bq_go
+	; the next buffer, its dirty map and copper list
+	addq.w	#1,d1
+	cmpi.w	#NBUF,d1
+	blo.s	.nb
+	moveq	#0,d1
+.nb	move.w	d1,(rd_bufi).l
+	move.l	d1,d0
+	mulu.l	#BUFSIZE,d0
+	add.l	#rd_screens,d0
+	move.l	d0,(rd_buf).l
+	move.l	d0,(rd_back).l
+	move.w	d1,d0
+	mulu.w	#DROWS*4,d0
+	add.l	#rd_dirty,d0
+	move.l	d0,(rd_dmap).l
+	move.w	d1,d0
+	mulu.w	#1024,d0
+	add.l	#rd_cop,d0
+	move.l	d0,(rd_backcop).l
 	rts
 
 	section	bss,bss
