@@ -125,9 +125,10 @@ The hardware layer:
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
   and the display window, and frames are double buffered. A frame is drawn from a snapshot of
   the VDP registers, scroll and sprite list taken when it starts (the game runs several of its
-  frames meanwhile; without it, players could be from a later game frame than the rink). And: a finished frame's copper list is
-  taken at the next vertical blank, and the renderer waits for that blank (counted by the
-  level 3 interrupt) before it draws into the other buffer, which is on the screen until then.
+  frames meanwhile; without it, players could be from a later game frame than the rink). A
+  finished frame's copper list is taken at the next vertical blank, and the renderer waits for
+  that blank (counted by the level 3 interrupt) before it draws into the other buffer, which is
+  on the screen until then.
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.
