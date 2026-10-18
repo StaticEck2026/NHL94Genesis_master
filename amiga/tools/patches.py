@@ -165,3 +165,7 @@ P('video94.asm', """	move.l	#0,(a0)					;playfield 1/2
 	move.w	(sp)+,(disflags).w""", """	move.l	#0,(a0)					;playfield 1/2
 	jsr	(hal_vdp_dirty_all).l		;all of VRAM was cleared
 	move.w	(sp)+,(disflags).w""")
+
+# Build option NOCROWD: no animated crowd sprites in the stands (a few sprites a frame, about a
+# tenth of the renderer's time in play).
+P('display94.asm', 'showcrowd\t\t\t\t\t\t\t;draw crowd sprites', 'showcrowd\n\tIFD\tNOCROWD\n\trts\n\tENDC\n\t\t\t\t\t\t\t;draw crowd sprites')

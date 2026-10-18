@@ -96,6 +96,15 @@ static void vw_hit(uint32_t a, uint32_t v)
 {
     uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
     int i;
+    if (getenv("NHL_VWSTACK")) {        /* the code addresses on the stack: who called */
+        static int seen;
+        if (frame >= atoi(getenv("NHL_VWSTACK")) && seen++ < 3) {
+            uint32_t sp = m68k_get_reg(NULL, M68K_REG_SP);
+            fprintf(stderr, "frame %d: write %06x pc %06x, stack:", frame, a, pc);
+            for (int k = 0; k < 64; k += 2) { uint32_t v = rd32(sp + k); if (v >= 0x200000 && v < 0x300000 && !(v & 1)) fprintf(stderr, " %06x", v); }
+            fprintf(stderr, "\n");
+        }
+    }
     for (i = 0; i < vwn && vw[i].pc != pc; i++) ;
     if (i == vwn) { if (vwn == 64) return; vwn++; vw[i].pc = pc; vw[i].n = vw[i].ch = 0; vw[i].lo = 0xFFFFFFFF; vw[i].hi = 0; }
     vw[i].n++;

@@ -92,6 +92,8 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   on the screen for 1, 2, 3 ... vertical blanks.
 - `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
+- `-DNOCROWD=1` leaves out the animated crowd sprites in the stands (about 4 of the 37 sprites a
+  frame in play, about 9% of the renderer's time).
 - `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
   for now: they do not sound right yet.
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
