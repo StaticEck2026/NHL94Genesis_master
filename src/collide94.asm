@@ -2866,7 +2866,7 @@ Setplass							;set players (a3) initial assignment from .alist by position
 setplayer							;bring player onto the ice and set his attributes. d3 = offset of player
 									;on roster, a3 = sortcord of player. Reads the roster bytes through
 									;AttributeCalc (attribute number in TempWord2). Adds the PP / PK, home /
-									;away and third period bonuses (team ScoreOdds bytes) to some attributes
+									;away and third period bonuses (team ScoutReport bytes) to some attributes
 									;and clamps them with ClampNibble
 	bclr	#pf2inj,pflags2(a3)		;clear line change mode? (I believe pflags2 are 1 off because of fighting
 									;missing)
