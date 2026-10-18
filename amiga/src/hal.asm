@@ -49,7 +49,11 @@ hal_debug
 ;	the 60 Hz timer and jumps to the cartridge's cold start.
 hal_game_main
 	move	#$2700,sr
-	lea	(RAMBASE).l,a0			;clear the Genesis work RAM
+	tst.b	(hal_amiga).l
+	bne	.win				;started from AmigaDOS: the window is in place
+	lea	($C00000).l,a0			;the test harness: a fixed one
+	bsr	ram_relocate
+.win	lea	(RAMBASE).l,a0			;clear the Genesis work RAM
 	move.w	#$10000/4-1,d0
 .clr	clr.l	(a0)+
 	dbf	d0,.clr
@@ -81,7 +85,8 @@ hal_set_vectors
 	lea	hal_int_ignore(pc),a1
 	move.l	a1,$64(a0)			;level 1
 	move.l	a1,$68(a0)			;level 2
-	move.l	a1,$6C(a0)			;level 3
+	lea	rd_bq_int(pc),a2
+	move.l	a2,$6C(a0)			;level 3: the blit queue
 	move.l	a1,$70(a0)			;level 4
 	move.l	a1,$74(a0)			;level 5
 	move.l	a1,$7C(a0)			;level 7
@@ -116,7 +121,7 @@ hal_start_timer
 	move.b	#$11,(CIAB_CRB).l
 	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
-	move.w	#$C000|$2000,(CUSTOM+INTENA).l	;master + EXTER (level 6)
+	move.w	#$C000|$2000|$0040,(CUSTOM+INTENA).l	;master, EXTER (level 6), BLIT (level 3)
 	rts
 
 ;	Level 6. The CIA-B timer is the Genesis vertical blank: count it and run the game's handler

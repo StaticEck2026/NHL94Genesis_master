@@ -1,9 +1,8 @@
 ;	AmigaDOS side: checks the machine, loads the save file, takes the machine over and runs the
 ;	game; on exit (Esc) gives the machine back to the OS and writes the save file.
 ;
-;	The Genesis work RAM is the fixed 64K at RAMBASE (amiga.i). While the game runs that memory
-;	is ours: its OS contents are copied out at the take over and back at the exit. None of the
-;	program's own hunks may be there (they are checked).
+;	The Genesis work RAM window is a 64K aligned block taken at start, in fast memory if there is
+;	some; ram_relocate moves the program's references to it there.
 
 EXEC_Forbid		equ	-132
 EXEC_Permit		equ	-138
@@ -16,6 +15,7 @@ EXEC_CloseLibrary	equ	-414
 EXEC_Supervisor		equ	-30
 EXEC_CacheControl	equ	-648
 EXEC_OpenResource	equ	-498
+EXEC_CacheClearU	equ	-636
 GFX_LoadView		equ	-222
 GFX_WaitTOF		equ	-270
 GFX_OwnBlitter		equ	-456
@@ -28,6 +28,7 @@ DOS_Write		equ	-48
 DOS_Output		equ	-60
 CIA_AbleICR		equ	-18
 MEMF_PUBLIC		equ	1
+MEMF_FAST		equ	4
 CACRF_EnableD		equ	$100
 
 	section	game,code
@@ -60,31 +61,31 @@ _start
 	beq	.aga
 	lea	(.msgaga,pc),a0
 	bra	.error
-.aga	; none of our hunks may lie in the Genesis RAM window
-	lea	(os_sections,pc),a2
-.sec	move.l	(a2)+,d0
-	beq	.secok
-	move.l	(a2)+,d1
-	cmpi.l	#RAMBASE+$10000,d0
-	bhs	.sec
-	cmpi.l	#RAMBASE,d1
-	bls	.sec
-	lea	(.msgmem,pc),a0
-	bra	.error
-.secok	; PAL or NTSC display
+.aga	; PAL or NTSC display
 	movea.l	(os_gfx).l,a0
 	btst	#2,$CE+1(a0)			;DisplayFlags: PAL
 	sne	(hal_pal).l
-	; a buffer for the OS's contents of the Genesis RAM window
-	move.l	#$10000,d0
-	moveq	#MEMF_PUBLIC,d1
+	; the Genesis RAM window: 64K aligned in a 128K block, fast memory if there is some
 	movea.l	(os_exec).l,a6
+	move.l	#$20000,d0
+	moveq	#MEMF_FAST,d1
 	jsr	EXEC_AllocMem(a6)
-	move.l	d0,(os_backup).l
-	bne	.mem
+	tst.l	d0
+	bne	.win
+	move.l	#$20000,d0
+	moveq	#MEMF_PUBLIC,d1
+	jsr	EXEC_AllocMem(a6)
+	tst.l	d0
+	bne	.win
 	lea	(.msgnomem,pc),a0
 	bra	.error
-.mem	bsr	os_load_sram
+.win	move.l	d0,(os_backup).l
+	addi.l	#$FFFF,d0
+	clr.w	d0
+	movea.l	d0,a0
+	bsr	ram_relocate
+	jsr	EXEC_CacheClearU(a6)		;the code has changed
+	bsr	os_load_sram
 	; ciab.resource: which CIA-B interrupts the OS has on
 	lea	(.cianame,pc),a1
 	jsr	EXEC_OpenResource(a6)
@@ -130,15 +131,6 @@ _start
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
 	move.w	#$7FFF,INTREQ(a0)
-	; save the OS's memory in the Genesis RAM window
-	lea	(RAMBASE).l,a0
-	movea.l	(os_backup).l,a1
-	move.w	#$10000/16-1,d0
-.bk	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	dbf	d0,.bk
 	st	(hal_amiga).l
 	; run the game in supervisor mode
 	lea	(os_super,pc),a5
@@ -174,7 +166,7 @@ _start
 	bsr	os_save_prof
 	ENDIF
 	movea.l	(os_backup).l,a1
-	move.l	#$10000,d0
+	move.l	#$20000,d0
 	jsr	EXEC_FreeMem(a6)
 	moveq	#0,d7
 	bra	.close
@@ -199,16 +191,23 @@ _start
 .ciaaname	dc.b	'ciaa.resource',0
 .msgcpu		dc.b	'NHL 94 needs a 68020 or better.',10,0
 .msgaga		dc.b	'NHL 94 needs the AGA chipset (Amiga 1200 / 4000 / CD32).',10,0
-.msgmem		dc.b	'NHL 94 was loaded where it needs its work RAM. Reboot and start it first.',10,0
 .msgnomem	dc.b	'Not enough memory.',10,0
 	even
 
-;	The sections (start, end), for the RAM window check.
-os_sections
-	dc.l	hal_header,game_end
-	dc.l	bss_start,bss_end
-	dc.l	chip_start,chip_end
-	dc.l	0
+;	Move the Genesis RAM window to a0 (64K aligned): add the distance to every long listed in
+;	ram_relocs (ramrel.py), which hold addresses in it. Called once, before the window is used.
+ram_relocate
+	movem.l	d0-d1/a1-a2,-(sp)
+	move.l	a0,d1
+	sub.l	#RAMBASE,d1
+	lea	(ram_relocs).l,a1
+.l	move.l	(a1)+,d0
+	beq	.x
+	movea.l	d0,a2
+	add.l	d1,(a2)
+	bra	.l
+.x	movem.l	(sp)+,d0-d1/a1-a2
+	rts
 
 ;	Supervisor mode, from exec's Supervisor(). Keeps the OS's stack and VBR and starts the game.
 os_super
@@ -232,15 +231,6 @@ hal_exit
 	ori.b	#$80,d0
 	move.b	d0,(CIAB_ICR).l
 	bsr	hal_kbd_exit
-	; the OS's memory back
-	movea.l	(os_backup).l,a0
-	lea	(RAMBASE).l,a1
-	move.w	#$10000/16-1,d0
-.rs	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	move.l	(a0)+,(a1)+
-	dbf	d0,.rs
 	move.l	(os_vbr).l,d0
 	movec	d0,vbr
 	movea.l	(os_ssp).l,sp
@@ -370,7 +360,7 @@ os_dos		ds.l	1
 os_gfx		ds.l	1
 os_ciab		ds.l	1
 os_view		ds.l	1
-os_backup	ds.l	1
+os_backup	ds.l	1			;the block that holds the RAM window
 os_cacr		ds.l	1
 os_intena	ds.w	1
 os_dmacon	ds.w	1

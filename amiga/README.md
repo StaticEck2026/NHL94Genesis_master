@@ -14,17 +14,15 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE).
 - PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
 
-Speed: the game logic alone needs about half of a stock 14 MHz 68020. On a stock A1200 with fast
-RAM, gameplay runs at about 5 frames a second; the menus are fine. An accelerator is
-recommended: a 68030 at 50 MHz manages about 30 frames a second. The renderer's time goes
-mostly on the sprites and the blitter.
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 10 frames a second (FS-UAE,
+cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
+the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
 
 ## Running
 
 Copy `output/amiga/NHL94`, `NHL94.info` and `nhl94.game` into the same directory. Start `NHL94`
-from a Shell, or double click its icon. `NHL94` is a small launcher: it reserves the 64 KB of
-memory where the game keeps the Genesis work RAM, then loads `nhl94.game`. The game takes over
-the machine and gives it back when you quit.
+from a Shell, or double click its icon. `NHL94` is a small launcher that loads `nhl94.game`. The
+game takes over the machine and gives it back when you quit.
 
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
@@ -61,9 +59,12 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 
 `amiga/tools/convert.py` copies `src/` to `output/amiga/src` with these changes:
 
-- The Genesis RAM (`$FFFF0000`) moves to a 64 KB window at `RAMBASE` (`amiga.i`). The 16-bit
-  absolute addresses the game uses for RAM become 32-bit addresses. Word pointers that are
-  sign-extended into address registers are fixed up after they are loaded.
+- The Genesis RAM (`$FFFF0000`) moves to a 64 KB window at `RAMBASE`. The 16-bit absolute
+  addresses the game uses for RAM become 32-bit addresses. Word pointers that are sign-extended
+  into address registers are fixed up after they are loaded. The window must be 64 KB aligned
+  (the game keeps RAM pointers as words), which AmigaDOS cannot do, so `RAMBASE` is a hunk of
+  its own: `amiga/tools/ramrel.py` lists every place that holds its address, and at start the
+  game takes an aligned block (in fast RAM if there is some) and moves those addresses there.
 - Writes to the video chip ports go to the emulated VDP (`vdp.asm`): VRAM, CRAM and VSRAM in
   memory, and DMA, fills and copies done by the CPU. Writes also mark which tiles changed.
 - Z80 bus polling, pad port reads and wait loops are rewritten. A wait loop calls `hal_idle`,
@@ -94,6 +95,9 @@ The hardware layer:
   note takes a free voice, else the quietest released one, else the oldest.
 - `stub.asm`: the launcher.
 
+The renderer queues its blits; the blitter's interrupt starts each next one, so the CPU goes on
+building the next layer meanwhile.
+
 ## Testing without an Amiga
 
 `amiga/harness` is a Linux test harness. It runs the build on the Musashi 68020 core with just
@@ -102,9 +106,12 @@ enough of the Amiga custom chips (blitter, copper list, Paula):
     make -C amiga/harness MUSASHI=/path/to/Musashi
     amiga/harness/regress.sh /tmp/shots
 
-It plays through the attract mode and into a game by pressing Start. At a few frames it compares
-the Amiga screen with a reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels
-differ. `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start.
+It plays through the attract mode and into a game by pressing Start. At a few frames (a second
+argument lists others) it compares the Amiga screen, taken from the copper list, with a
+reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ. A screen can
+lag one VDP update behind when the game changes it mid frame (text being printed, a mode
+change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
+`NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
 
 `amiga/tools/uaerun.sh` runs the build in FS-UAE (A1200, AROS ROM by default) on a virtual X
 display, presses keys at given times and takes screenshots. Add `fast_memory = 8192` with

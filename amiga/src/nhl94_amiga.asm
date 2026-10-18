@@ -9,11 +9,18 @@
 	include	"hal_macros.i"
 	include	"macros/genesis.mac"
 
+	; the hunks, in this order (amiga/build.sh names them for ramrel.py)
 	section	game,code			;first hunk: AmigaDOS starts here
 	section	bss,bss
 bss_start
 	section	chip,bss_c
 chip_start
+	section	sndchip,data_c
+sndchip_start
+	section	ramwin,bss
+RAMBASE		ds.l	1			;the Genesis RAM window: moved at start (ram_relocate)
+	section	ramrel,data
+	include	"ramrel.i"			;where its address is used (ramrel.py)
 	section	game,code
 
 	include	"hal.asm"

@@ -66,12 +66,12 @@ rd_pass		ds.w	1			;0 low priority pass, $8000 high
 rd_tmp		ds.l	8
 rd_cellpri	ds.w	1
 rd_rowbuf	ds.l	2
+mkB		ds.b	BMAX*8			;plane B high priority mask (the CPU's only: fast memory)
 
 	section	chip,bss_c
 	cnop	0,8
 rd_screens	ds.b	SCRSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
-mkB		ds.b	BMAX*8			;plane B high priority mask
 rd_cop		ds.l	2*128
 rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
 rd_ovl		ds.b	SCRSIZE			;plane A / window overlay
@@ -435,10 +435,100 @@ rd_fast
 	bra	rd_waitblit
 
 rd_waitblit
+.q	tst.b	(rd_bqbusy).l			;the queue first
+	bne	.q
 	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
 .w	btst	#6,(CUSTOM+DMACONR).l
 	bne	.w
 	rts
+
+;	------------------------------------------------------------------------------------------
+;	Blit queue: the blits are written into entries laid out like the blitter's registers
+;	$040-$075 and started one after the other by the blitter's interrupt, so the CPU goes on
+;	with its own work. rd_waitblit waits for the queue to empty.
+BQN	equ	64				;entries (a power of 2)
+BQE	equ	$38				;bytes an entry
+
+;	a6 = the next entry, as if it were the custom chips' base (write $040(a6) ... $05E(a6)).
+;	Waits while the queue is full.
+rd_bq_alloc
+	move.l	d0,-(sp)
+.full	move.w	(rd_bqtail).l,d0
+	addq.w	#1,d0
+	andi.w	#BQN-1,d0
+	cmp.w	(rd_bqhead).l,d0
+	beq	.full
+	move.w	(rd_bqtail).l,d0
+	mulu.w	#BQE,d0
+	lea	(rd_bq-$040).l,a6
+	adda.l	d0,a6
+	move.l	(sp)+,d0
+	rts
+
+;	The entry from rd_bq_alloc is complete: queue it, and start it if the blitter is idle.
+rd_bq_go
+	move	sr,-(sp)
+	ori	#$0700,sr
+	movem.l	d0/a0-a1,-(sp)
+	move.w	(rd_bqtail).l,d0
+	addq.w	#1,d0
+	andi.w	#BQN-1,d0
+	move.w	d0,(rd_bqtail).l
+	tst.b	(rd_bqbusy).l
+	bne	.x
+	; idle: a blit started directly may still run; its interrupt is not one of ours
+	btst	#6,(CUSTOM+DMACONR).l
+.w	btst	#6,(CUSTOM+DMACONR).l
+	bne	.w
+	move.w	#$0040,(CUSTOM+INTREQ).l
+	st	(rd_bqbusy).l
+	bsr	rd_bq_start
+.x	movem.l	(sp)+,d0/a0-a1
+	move	(sp)+,sr
+	rts
+
+;	Start the entry at the head (interrupts off). Uses d0, a0, a1.
+rd_bq_start
+	move.w	(rd_bqhead).l,d0
+	lea	(rd_bq).l,a0
+	mulu.w	#BQE,d0
+	adda.l	d0,a0
+	move.w	(rd_bqhead).l,d0
+	addq.w	#1,d0
+	andi.w	#BQN-1,d0
+	move.w	d0,(rd_bqhead).l
+	lea	(CUSTOM+$040).l,a1
+	move.l	(a0)+,(a1)+			;BLTCON0, BLTCON1
+	move.l	(a0)+,(a1)+			;BLTAFWM, BLTALWM
+	move.l	(a0)+,(a1)+			;BLTCPT
+	move.l	(a0)+,(a1)+			;BLTBPT
+	move.l	(a0)+,(a1)+			;BLTAPT
+	move.l	(a0)+,(a1)+			;BLTDPT
+	move.l	$060-$058(a0),$060-$058(a1)	;BLTCMOD, BLTBMOD
+	move.l	$064-$058(a0),$064-$058(a1)	;BLTAMOD, BLTDMOD
+	move.w	$074-$058(a0),$074-$058(a1)	;BLTADAT
+	move.w	$05C-$058(a0),$05C-$058(a1)	;BLTSIZV
+	move.w	$05E-$058(a0),$05E-$058(a1)	;BLTSIZH: go
+	rts
+
+;	Level 3: the blitter has finished. The next entry, or the queue is idle.
+rd_bq_int
+	movem.l	d0/a0-a1,-(sp)
+	move.w	(CUSTOM+$01E).l,d0		;INTREQR
+	btst	#6,d0
+	beq	.x
+	move.w	#$0040,(CUSTOM+INTREQ).l
+	move.w	#$0040,(CUSTOM+INTREQ).l
+	tst.b	(rd_bqbusy).l
+	beq	.x
+	move.w	(rd_bqhead).l,d0
+	cmp.w	(rd_bqtail).l,d0
+	bne	.next
+	sf	(rd_bqbusy).l
+	bra	.x
+.next	bsr	rd_bq_start
+.x	movem.l	(sp)+,d0/a0-a1
+	rte
 
 ;	------------------------------------------------------------------------------------------
 ;	Bring the plane B bitmap up to date with the name table and the tiles.
@@ -735,7 +825,6 @@ rd_blitB
 ;	the left with a zero first word mask carries the shift in.
 rd_blitrect
 	movem.l	d3-d7,-(sp)
-	bsr	rd_waitblit
 	move.w	d7,d0
 	addi.w	#SCRX*8,d0			;destination bit x
 	move.w	d0,(rd_tmp).l
@@ -765,7 +854,7 @@ rd_blitrect
 	andi.w	#15,d1
 	move.w	#$8000,d5
 	asr.w	d1,d5				;last word mask: bits up to the last pixel
-	lea	(CUSTOM).l,a6
+	bsr	rd_bq_alloc
 	move.w	#$07CA,d3			;BLTCON0: B, C, D, AB+/AC
 	tst.b	(rd_blitnoc).l
 	beq.s	.usec
@@ -807,7 +896,8 @@ rd_blitrect
 	move.w	d1,$066(a6)			;BLTDMOD
 	mulu.w	#6,d3
 	move.w	d3,$05C(a6)			;BLTSIZV: lines * 6 planes
-	move.w	d2,$05E(a6)			;BLTSIZH: go
+	move.w	d2,$05E(a6)			;BLTSIZH
+	bsr	rd_bq_go
 	movem.l	(sp)+,d3-d7
 	rts
 
@@ -1308,8 +1398,7 @@ rd_ovl_blit
 	move.w	d1,d4
 	add.w	d4,d4				;bytes a row
 	moveq	#NPLANES-1,d6
-	lea	(CUSTOM).l,a6
-.plane	bsr	rd_waitblit
+.plane	bsr	rd_bq_alloc
 	move.w	#$0FCA,$040(a6)
 	move.w	#0,$042(a6)
 	move.w	#$FFFF,$044(a6)
@@ -1328,6 +1417,7 @@ rd_ovl_blit
 	move.w	d5,$066(a6)			;DMOD
 	move.w	d3,$05C(a6)
 	move.w	d1,$05E(a6)
+	bsr	rd_bq_go
 	lea	SBPR(a0),a0
 	lea	SBPR(a1),a1
 	dbf	d6,.plane
@@ -3384,6 +3474,11 @@ rd_tline	ds.w	1
 rd_nchgA	ds.w	1
 rd_sbit		ds.w	1
 rd_ctiles	ds.w	4
+rd_bqhead	ds.w	1
+rd_bqtail	ds.w	1
+rd_bqbusy	ds.b	1
+		even
+rd_bq		ds.b	BQN*BQE
 rd_c4m		ds.w	1			;$FFFF: 4 columns, $FF00: 3
 		cnop	0,4
 rd_spalm	ds.l	2

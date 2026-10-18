@@ -1,15 +1,9 @@
-;	NHL94: the launcher. Keeps AmigaDOS from loading the game into the Genesis work RAM window
-;	(RAMBASE, amiga.i) by taking every free piece of it, then loads NHL94.game, runs it and
-;	frees everything again. The game itself checks the window and saves / restores whatever the
-;	OS keeps there. Started from the Workbench, it takes the Workbench message and gives the
-;	messages a console window (it opens only if there is something to say).
-
-	include	"amiga.i"
+;	NHL94: the launcher. Loads NHL94.game and runs it. Started from the Workbench, it takes the
+;	Workbench message and gives the messages a console window (it opens only if there is
+;	something to say).
 
 EXEC_Forbid		equ	-132
 EXEC_Permit		equ	-138
-EXEC_AllocAbs		equ	-204
-EXEC_FreeMem		equ	-210
 EXEC_FindTask		equ	-294
 EXEC_GetMsg		equ	-372
 EXEC_ReplyMsg		equ	-378
@@ -22,7 +16,6 @@ DOS_Open		equ	-30
 DOS_Close		equ	-36
 DOS_Output		equ	-60
 DOS_Write		equ	-48
-MAXPIECES		equ	32
 
 	section	stub,code
 start
@@ -54,7 +47,6 @@ start
 	lsr.l	#2,d0
 	move.l	d0,$A0(a4)			;pr_COS (BPTR)
 .out
-	bsr	reserve
 	movea.l	dosbase,a6
 	move.l	#gamename,d1
 	jsr	DOS_LoadSeg(a6)
@@ -73,8 +65,7 @@ start
 	movea.l	dosbase,a6
 	move.l	seglist,d1
 	jsr	DOS_UnLoadSeg(a6)
-.free	bsr	release
-	movea.l	dosbase,a6
+.free	movea.l	dosbase,a6
 	move.l	con,d1
 	beq	.nocon
 	suba.l	a1,a1
@@ -99,66 +90,6 @@ start
 	movea.l	d1,a1
 	jsr	EXEC_ReplyMsg(a6)
 	move.l	(sp)+,d0
-.x	rts
-
-;	Take every free chunk that overlaps the window. AllocAbs changes the free list, so the walk
-;	starts again after each one.
-reserve
-	movea.l	(4).w,a6
-	jsr	EXEC_Forbid(a6)
-.again	cmpi.w	#MAXPIECES,npieces
-	bhs	.done
-	movea.l	$142(a6),a2			;MemList.lh_Head
-.mh	tst.l	(a2)
-	beq	.done				;end of the list
-	movea.l	$10(a2),a3			;mh_First
-.mc	move.l	a3,d0
-	beq	.nextmh
-	move.l	d0,d1
-	add.l	4(a3),d1			;chunk end
-	; overlap with [RAMBASE, RAMBASE+$10000)
-	cmpi.l	#RAMBASE+$10000,d0
-	bhs	.nextmc
-	cmpi.l	#RAMBASE,d1
-	bls	.nextmc
-	cmpi.l	#RAMBASE,d0
-	bhs	.lo
-	move.l	#RAMBASE,d0
-.lo	cmpi.l	#RAMBASE+$10000,d1
-	bls	.hi
-	move.l	#RAMBASE+$10000,d1
-.hi	sub.l	d0,d1				;length
-	movea.l	d0,a1
-	move.l	d1,d0
-	movem.l	d0/a1,-(sp)
-	jsr	EXEC_AllocAbs(a6)
-	movem.l	(sp)+,d1/a1
-	tst.l	d0
-	beq	.nextmc
-	move.w	npieces,d2
-	lsl.w	#3,d2
-	lea	pieces,a0
-	move.l	a1,(a0,d2.w)
-	move.l	d1,4(a0,d2.w)
-	addq.w	#1,npieces
-	bra	.again
-.nextmc	movea.l	(a3),a3
-	bra	.mc
-.nextmh	movea.l	(a2),a2
-	bra	.mh
-.done	jsr	EXEC_Permit(a6)
-	rts
-
-release
-	movea.l	(4).w,a6
-	lea	pieces,a2
-.l	tst.w	npieces
-	beq	.x
-	subq.w	#1,npieces
-	movea.l	(a2)+,a1
-	move.l	(a2)+,d0
-	jsr	EXEC_FreeMem(a6)
-	bra	.l
 .x	rts
 
 print
@@ -190,5 +121,3 @@ dosbase		ds.l	1
 wbmsg		ds.l	1
 con		ds.l	1
 seglist		ds.l	1
-npieces		ds.w	1
-pieces		ds.l	2*MAXPIECES
