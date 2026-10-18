@@ -86,6 +86,8 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DPROFILE=1` samples the program counter 60 times a second and writes `nhl94.prof` on exit;
   `amiga/tools/amiprof.py` turns it into a list of routines.
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
+- `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
+  for now: they do not sound right yet.
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
   not listed for repair must match the bitmap. The test harness reports the first failure.
 
