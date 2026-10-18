@@ -696,6 +696,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
         fprintf(stderr, "renderer: plane B tile scans %u, cells %u, high lists %u; A rebuilds %u, overlay redraws %u, cell updates %u\n",
                 rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
+        fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u\n", rd32(k + 56));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
     }

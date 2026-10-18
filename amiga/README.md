@@ -137,7 +137,8 @@ The hardware layer:
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
   the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
-  blitted back over what was drawn under them; the CPU queues a whole frame for the blitter
+  blitted back over what was drawn under them (found by moving the screen cells something low
+  was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
   without waiting. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
   and the display window, and frames are triple buffered. A frame is drawn from a snapshot of

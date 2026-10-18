@@ -52,6 +52,8 @@ rd_attr		ds.l	8			;chunky fallback: pixel OR value by entry bits 15-13
 chunky		ds.b	CHPITCH*SCRH
 shB		ds.w	BMAX			;plane B name table as drawn in bmB
 rd_hiB		ds.l	BMAX			;plane B high priority cells: column, row (words)
+rd_hibits	ds.l	BMAX/32			;the same as bits (row * plane width + column)
+rd_fixmap	ds.l	2*32			;rd_fixups: the cells to draw again (64 a row)
 rd_hiBn		ds.w	1
 rd_hiBok	ds.w	1			;list matches bmB
 rd_Bkey		ds.l	2			;base, size of the plane in bmB (invalid: redraw all)
@@ -81,6 +83,7 @@ rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	4*SCSLOTS		;sprite image cache (rd_sc_get)
 rd_scpos	ds.l	1			;bytes written to its ring so far
+rd_scmin	ds.l	2			;its oldest image used in this frame, in the one before
 rd_tchg		ds.l	2048			;frame each tile was last converted in
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
 rd_shownvb	ds.l	NBUF			;per buffer: rd_vblanks when its copper list was set
@@ -426,6 +429,8 @@ rd_frame
 	addq.l	#1,(rd_count).l
 	bra	.skip
 .draw	bsr	rd_vsync			;(the state is taken once there is a buffer for it)
+	move.l	(rd_scmin).l,(rd_scmin+4).l	;(the frame before that has been shown: its blits
+	move.l	#$7FFFFFFF,(rd_scmin).l		;are done)
 	move	sr,-(sp)			;the sprite list and the tiles of one game tick: no
 	ori	#$0700,sr			;tick in between
 	bsr	rd_snapshot
@@ -1084,19 +1089,31 @@ rd_list_hiB
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+8).l
 	ENDC
+	lea	(rd_hibits).l,a1
+	moveq	#BMAX/32-1,d0
+.cb	clr.l	(a1)+
+	dbf	d0,.cb
 	lea	(shB).l,a0
 	lea	(rd_hiB).l,a1
+	lea	(rd_hibits).l,a2
+	lea	(tp_cls).l,a3
 	move.w	(rd_cw).l,d6
 	move.w	(rd_ch).l,d7
 	moveq	#0,d5				;row
 	moveq	#0,d3				;count
+	moveq	#0,d2				;cell (bit in rd_hibits)
 .r	moveq	#0,d4
 .c	move.w	(a0)+,d0
 	bpl	.n
+	andi.w	#$FFF,d0
+	tst.b	(a3,d0.w)
+	beq	.n				;(an empty tile: nothing in front)
 	move.w	d4,(a1)+
 	move.w	d5,(a1)+
 	addq.w	#1,d3
-.n	addq.w	#1,d4
+	bfset	(a2){d2:1}
+.n	addq.l	#1,d2
+	addq.w	#1,d4
 	cmp.w	d6,d4
 	bne	.c
 	addq.w	#1,d5
@@ -2657,7 +2674,24 @@ rd_sc_get
 	bls.s	.fit
 	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
 	addi.l	#SCARENA,d2
-.fit	move.l	d0,(a4)
+.fit	; a blit queued in this frame or the one before may still read an image of the ring
+	; this is written over (from the lap before): if one was used there, let them finish
+	move.l	d2,d3
+	add.l	d1,d3
+	subi.l	#SCARENA,d3			;the ring below here is written over
+	move.l	(rd_scmin).l,d4
+	cmp.l	(rd_scmin+4).l,d4
+	ble.s	.m
+	move.l	(rd_scmin+4).l,d4
+.m	cmp.l	d3,d4
+	bge.s	.free
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
+	ENDC
+	bsr	rd_waitblit
+	move.l	#$7FFFFFFF,(rd_scmin).l
+	move.l	#$7FFFFFFF,(rd_scmin+4).l
+.free	move.l	d0,(a4)
 	move.l	d2,4(a4)
 	move.l	(rd_count).l,8(a4)
 	move.l	d2,d3
@@ -2679,7 +2713,11 @@ rd_sc_get
 	move.l	(sp)+,(rd_r0).l
 	movea.l	12(a4),a2
 .mask	lea	(a2,d7.l),a3
-	movem.l	(sp)+,d0-d7/a0-a1/a4
+	move.l	4(a4),d1			;(the oldest image used in this frame)
+	cmp.l	(rd_scmin).l,d1
+	bge.s	.x
+	move.l	d1,(rd_scmin).l
+.x	movem.l	(sp)+,d0-d7/a0-a1/a4
 	rts
 
 ;	Draw the sprite described by rd_sx..rd_r1 straight into the back buffer: for each line the
@@ -3171,17 +3209,141 @@ FIXPAL	MACRO					;palette plane at \1: all of the mask if set
 	adda.w	d3,a3
 	ENDM
 
-;	In scroll mode a blit each (rd_fix_blit, queued), else drawn by the CPU.
+;	The high priority cells of plane B something low was drawn under (rd_cover) get their high
+;	priority pixels drawn again: in scroll mode a blit each (rd_fix_blit, queued), else by the
+;	CPU. A 64 cell wide plane: the screen cell rows of rd_cover, moved to plane columns, ANDed
+;	with the plane rows under them in rd_hibits, give the cells (rd_fixmap); else each cell of
+;	rd_hiB is looked up in rd_cover.
 rd_fixups
 	tst.w	(rd_scroll).l
 	bne.s	.go
 	bsr	rd_waitblit			;(the CPU draws into the back buffer)
-.go	move.w	(rd_hiBn).l,d7
+.go	cmpi.w	#64,(rd_cw).l
+	bne	.list
+	lea	(rd_fixmap).l,a0
+	moveq	#2*32-1,d0
+.cf	clr.l	(a0)+
+	dbf	d0,.cf
+	lea	(rd_fixmap).l,a0
+	lea	(rd_cover).l,a1
+	lea	(rd_tmp).l,a2
+	lea	(rd_hibits).l,a3
+	moveq	#0,d4
+	move.w	(rd_bx0).l,d4
+	moveq	#7,d5
+	and.w	d4,d5				;pixels into the cell (0: one plane column a screen cell)
+	lsr.w	#3,d4
+	neg.l	d4
+	addi.l	#64,d4				;the row twice (128 bits) from here: at plane columns
+	move.w	(rd_by0).l,d6
+	moveq	#7,d3
+	and.w	d6,d3
+	sne	(rd_fixchk).l			;(here: a screen cell row is on 2 plane rows)
+	lsr.w	#3,d6				;plane row of screen cell row 0
+	moveq	#0,d7				;screen cell row
+.sr	move.l	(a1)+,d0
+	move.l	(a1)+,d1
+	move.l	d0,d2
+	or.l	d1,d2
+	beq	.nsr
+	movem.l	d0-d1,(a2)
+	movem.l	d0-d1,8(a2)
+	bfextu	(a2){d4:0},d0			;the covered screen cells at their plane columns
+	addi.l	#32,d4
+	bfextu	(a2){d4:0},d1
+	tst.w	d5
+	beq.s	.one
+	subq.l	#1,d4				;and the column after each
+	bfextu	(a2){d4:0},d2
+	or.l	d2,d1
+	subi.l	#32,d4
+	bfextu	(a2){d4:0},d2
+	or.l	d2,d0
+	addq.l	#1,d4
+	bra.s	.rows
+.one	subi.l	#32,d4
+.rows	move.w	d7,d3
+	add.w	d6,d3
+	andi.w	#31,d3
+	lsl.w	#3,d3
+	move.l	(a3,d3.w),d2
+	and.l	d0,d2
+	or.l	d2,(a0,d3.w)
+	move.l	4(a3,d3.w),d2
+	and.l	d1,d2
+	or.l	d2,4(a0,d3.w)
+	tst.b	(rd_fixchk).l
+	beq.s	.nsr
+	addq.w	#8,d3
+	andi.w	#31*8,d3
+	move.l	(a3,d3.w),d2
+	and.l	d0,d2
+	or.l	d2,(a0,d3.w)
+	move.l	4(a3,d3.w),d2
+	and.l	d1,d2
+	or.l	d2,4(a0,d3.w)
+.nsr	addq.w	#1,d7
+	cmpi.w	#SCRH/8,d7
+	blt	.sr
+	IFD	VERIFY
+	bsr	rd_fixverify
+	ENDC
+	; the cells, row by row
+	sf	(rd_fixchk).l
+	moveq	#0,d5				;row
+.fr	movem.l	(a0),d0-d1
+	addq.l	#8,a0
+	moveq	#0,d4				;column of bit 31 of d0
+.fl	tst.l	d0
+	bne.s	.fb
+	move.l	d1,d0				;the right half
+	moveq	#0,d1
+	addi.w	#32,d4
+	cmpi.w	#64,d4
+	blo.s	.fl
+	bra.s	.fn
+.fb	bfffo	d0{0:0},d2
+	bfclr	d0{d2:1}
+	tst.w	(rd_scroll).l
+	beq.s	.f1
+	btst	#0,d2
+	bne.s	.f1
+	addq.w	#1,d2				;(the blit draws the word: the cell next to it too)
+	bfclr	d0{d2:1}
+	subq.w	#1,d2
+.f1	movem.l	d0-d1/d4-d5/a0,-(sp)
+	add.w	d2,d4
+	bsr	rd_fixcell
+	movem.l	(sp)+,d0-d1/d4-d5/a0
+	bra.s	.fl
+.fn	addq.w	#1,d5
+	cmpi.w	#32,d5
+	blo	.fr
+	rts
+.list	st	(rd_fixchk).l			;every high priority cell, if covered
+	move.w	(rd_hiBn).l,d7
 	subq.w	#1,d7
 	bmi	.x
 	lea	(rd_hiB).l,a4
 .each	move.w	(a4)+,d4			;column
 	move.w	(a4)+,d5			;row
+	bsr	rd_fixcell
+	dbf	d7,.each
+.x	rts
+
+;	Plane B cell d4 (column), d5 (row): if it is on the screen (and, with rd_fixchk set, under a
+;	cell of rd_cover), its high priority pixels are drawn again. Keeps everything.
+	IFD	VERIFY
+;	Debug: every high priority cell the search through rd_hiB and rd_iscovered would draw again
+;	must be in rd_fixmap: else rd_vfail = frame, $FD, column (once).
+rd_fixverify
+	movem.l	d0-d7/a0-a4,-(sp)
+	move.w	(rd_hiBn).l,d7
+	subq.w	#1,d7
+	bmi	.x
+	lea	(rd_hiB).l,a4
+.each	move.w	(a4)+,d4
+	move.w	(a4)+,d5
 	; screen position (wrapping)
 	move.w	d4,d0
 	lsl.w	#3,d0
@@ -3209,18 +3371,64 @@ rd_fixups
 	subq.w	#1,d2
 	cmpi.w	#-8,d2
 	ble	.next
-.yok	; covered?
-	move.w	d0,(rd_fx).l
-	move.w	d2,(rd_fy).l
-	bsr	rd_iscovered
+.yok	bsr	rd_iscovered
 	beq	.next
-	tst.w	(rd_scroll).l
+	move.w	d5,d0
+	lsl.w	#6,d0
+	add.w	d4,d0
+	ext.l	d0
+	lea	(rd_fixmap).l,a0
+	bftst	(a0){d0:1}
+	bne	.next
+	tst.l	(rd_vfail).l
+	bne	.next
+	move.w	(rd_count+2).l,(rd_vfail).l
+	move.b	#$FD,(rd_vfail+2).l
+	move.b	d4,(rd_vfail+3).l
+.next	dbf	d7,.each
+.x	movem.l	(sp)+,d0-d7/a0-a4
+	rts
+	ENDC
+
+rd_fixcell
+	movem.l	d0-d7/a0-a4,-(sp)
+	; screen position (wrapping)
+	move.w	d4,d0
+	lsl.w	#3,d0
+	sub.w	(rd_bx0).l,d0
+	move.w	(rd_cw).l,d1
+	lsl.w	#3,d1
+	subq.w	#1,d1
+	and.w	d1,d0
+	cmp.w	(rd_w).l,d0
+	blt	.xok
+	sub.w	d1,d0
+	subq.w	#1,d0				;- plane width
+	cmpi.w	#-8,d0
+	ble	.next
+.xok	move.w	d5,d2
+	lsl.w	#3,d2
+	sub.w	(rd_by0).l,d2
+	move.w	(rd_ch).l,d1
+	lsl.w	#3,d1
+	subq.w	#1,d1
+	and.w	d1,d2
+	cmpi.w	#SCRH,d2
+	blt	.yok
+	sub.w	d1,d2
+	subq.w	#1,d2
+	cmpi.w	#-8,d2
+	ble	.next
+.yok	tst.b	(rd_fixchk).l
+	beq.s	.go
+	bsr	rd_iscovered			;under something low?
+	beq	.next
+.go	tst.w	(rd_scroll).l
 	beq.s	.cpu
 	bsr	rd_fix_blit
 	bra	.next
 .cpu
 	; redraw from the bitmap (rows of 6 plane rows, then the mask bitmap): its lines on screen
-	move.w	d7,-(sp)
 	move.w	(rd_cw).l,d3
 	moveq	#0,d6				;first line
 	tst.w	d2
@@ -3234,7 +3442,7 @@ rd_fixups
 	moveq	#8,d7
 .bot	sub.w	d6,d7				;lines
 	subq.w	#1,d7
-	bmi	.done
+	bmi	.next
 	add.w	d6,d2
 	mulu.w	#SROW,d2
 	movea.l	(rd_back).l,a1
@@ -3270,9 +3478,8 @@ rd_fixups
 	adda.w	d6,a0
 	adda.w	d3,a2
 	dbf	d4,.row
-.done	move.w	(sp)+,d7
-.next	dbf	d7,.each
-.x	rts
+.next	movem.l	(sp)+,d0-d7/a0-a4
+	rts
 
 ;	Scroll mode: queue the redraw of plane B's high priority pixels of cell d4 (column), d5
 ;	(row), at screen line d2: the bitmap through its mask (mkB6), the cell's word, no shift
@@ -3375,8 +3582,8 @@ rd_sat		ds.w	1
 rd_spal		ds.w	1
 rd_colx		ds.w	1
 rd_ctile	ds.l	1
-rd_fx		ds.w	1
-rd_fy		ds.w	1
+rd_fixchk	ds.b	1			;rd_fixcell: look in rd_cover
+	even
 rd_sh		ds.w	1
 rd_sor		ds.w	1
 rd_c2pw		ds.w	1
