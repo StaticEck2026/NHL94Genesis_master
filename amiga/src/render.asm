@@ -5,7 +5,11 @@
 ;	  * tiles are kept converted to planar form (tile cache, both horizontal orientations), and
 ;	    converted again when their VRAM changes (hal_vdp_dirty);
 ;	  * plane B is kept as a planar bitmap of its whole name table, redrawn only where an entry
-;	    or its tile changed, and copied to the screen by the blitter at the scroll position;
+;	    or its tile changed;
+;	  * scroll mode (a 64 x 32 cell plane B, the rink): each screen buffer holds all of plane B
+;	    and the display hardware scrolls it (bitplane pointers, BPLCON1). What was drawn over
+;	    it, and the cells that changed, are restored from the bitmap by the blitter (rd_dirty);
+;	    otherwise plane B is copied to the screen by the blitter at the scroll position;
 ;	  * plane A, the window and the sprites are drawn on top by the CPU, in Genesis priority
 ;	    order: B, A low, sprites low, B high (redrawn where something low covered it), A high,
 ;	    sprites high.
@@ -15,11 +19,15 @@
 ;	Fallback (line or cell scroll, per column vertical scroll, very large planes): the frame is
 ;	drawn per line in a chunky buffer and converted to planar (rd_chunky).
 
-SBPR		equ	48			;screen bytes per plane row: 32 pixel margin, 320, 32 margin
+SBPR		equ	72			;screen bytes per plane row: 32 pixel margin, plane B's 512, 32
 SROW		equ	SBPR*6			;interleaved row of the 6 planes
-SCRX		equ	4			;byte of screen x = 0
+SCRX		equ	4			;byte of plane x 0 (scroll mode) / screen x 0 (otherwise)
+BUFH		equ	480			;rows: plane B's 256, then its first 224 again (vertical wrap)
+BUFSIZE		equ	SROW*BUFH
+DROWS		equ	BUFH/8			;cell rows of the dirty maps
 SCRH		equ	224
-SCRSIZE		equ	SROW*SCRH
+OSBPR		equ	48			;the overlay: 32 pixel margin, 320, 32 margin
+OSROW		equ	OSBPR*6
 NPLANES		equ	6
 CHPITCH		equ	384			;chunky fallback: bytes per line
 CHLEFT		equ	32			;screen x 0 is at this offset
@@ -55,7 +63,16 @@ rd_cw		ds.w	1			;plane B cells across, down
 rd_ch		ds.w	1
 rd_bx0		ds.w	1			;plane B pixel at screen 0, 0
 rd_by0		ds.w	1
-rd_back		ds.l	1			;back buffer being drawn
+rd_back		ds.l	1			;back buffer: screen line 0
+rd_buf		ds.l	1			;back buffer
+rd_dmap		ds.l	1			;its dirty map
+rd_dirty	ds.l	2*DROWS			;per buffer, cell row: the 16 pixel columns of plane B
+						;(bit 31 - n: column n) that differ from the bitmap
+rd_bufi		ds.w	1			;the back buffer's number
+rd_xorg		ds.w	1			;bit in a buffer row of screen x 0
+rd_brow0	ds.w	1			;buffer row of screen line 0
+rd_scroll	ds.w	1			;scroll mode this frame
+rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
 rd_frontcop	ds.l	1
 rd_lastframe	ds.l	1
@@ -76,15 +93,15 @@ mkB		ds.b	BMAX*8			;plane B high priority mask (the CPU's only: fast memory)
 
 	section	chip,bss_c
 	cnop	0,8
-rd_screens	ds.b	SCRSIZE*2
+rd_screens	ds.b	BUFSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 rd_cop		ds.l	2*256
 	IFD	SPRBLIT
 rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
 	ENDIF
-rd_ovl		ds.b	SCRSIZE			;plane A / window overlay
-rd_ovlmlo	ds.b	SROW*SCRH		;its low priority mask, each row once per plane (so one blit
-rd_ovlmhi	ds.b	SROW*SCRH		;does all 6); the high priority mask (follows the low one)
+rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
+rd_ovlmlo	ds.b	OSROW*SCRH		;its low priority mask, each row once per plane (so one blit
+rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low one)
 
 	section	game,code
 
@@ -165,6 +182,15 @@ rd_init
 	bsr	rd_dirty_all
 	lea	(rd_screens).l,a0
 	move.l	a0,(rd_back).l
+	move.l	a0,(rd_buf).l
+	clr.w	(rd_bufi).l
+	lea	(rd_dirty).l,a0
+	move.l	a0,(rd_dmap).l
+	move.w	#2*DROWS-1,d0
+.dm	move.l	#-1,(a0)+			;nothing in the buffers yet
+	dbf	d0,.dm
+	move.w	#SCRX*8,(rd_xorg).l
+	clr.w	(rd_brow0).l
 	lea	(rd_cop).l,a0
 	move.l	a0,(rd_backcop).l
 	lea	1024(a0),a1
@@ -413,9 +439,12 @@ rd_frame
 	bsr	rd_fast
 	bra	.shown
 .chunky	moveq	#-1,d0
-	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches
+	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches (all redrawn and
+						;restored on the way back)
 	move.w	(rd_w).l,(rd_dw).l		;(the chunky path draws the Genesis screen only)
 	clr.w	(rd_xo).l
+	move.w	#SCRX*8,(rd_xorg).l
+	clr.w	(rd_brow0).l
 	bsr	rd_chunky
 .shown	bsr	rd_show
 	addq.l	#1,(rd_count).l
@@ -448,8 +477,18 @@ rd_planesize
 ;	Fast path
 rd_fast
 	bsr	rd_updateB
-	bsr	rd_blitB
-	bsr	rd_collect_sprites
+	bsr	rd_scrollpos
+	tst.w	(rd_scroll).l
+	beq.s	.copy
+	bsr	rd_restore			;scroll mode: plane B is in the buffer, mended
+	bra.s	.b
+.copy	bsr	rd_blitB
+	moveq	#0,d0				;(to be mended when back in scroll mode)
+	moveq	#0,d1
+	move.w	(rd_dw).l,d2
+	move.w	#SCRH,d3
+	bsr	rd_mark
+.b	bsr	rd_collect_sprites
 	lea	(rd_cover).l,a0			;nothing low drawn yet
 	moveq	#2*32-1,d0
 .c	clr.l	(a0)+
@@ -468,7 +507,57 @@ rd_fast
 	bsr	rd_ovl_blit
 	bsr	rd_waitblit
 	bsr	rd_sprites_planar
+	IFD	VERIFY
+	bsr	rd_waitblit
+	bra	rd_verify
+	ENDC
 	bra	rd_waitblit
+
+	IFD	VERIFY
+;	Debug: in scroll mode every cell of the back buffer its dirty map does not name must be the
+;	bitmap's. The first that is not: rd_vfail = frame, cell row, column (once).
+rd_verify
+	tst.w	(rd_scroll).l
+	beq	.x
+	tst.l	(rd_vfail).l
+	bne	.x
+	movea.l	(rd_dmap).l,a2
+	moveq	#0,d7				;cell row
+.r	move.l	(a2,d7.w*4),d6
+	moveq	#0,d5				;column
+.c	btst	#31,d6
+	bne.s	.n
+	move.w	d7,d0
+	mulu.w	#8*SROW,d0
+	movea.l	(rd_buf).l,a0
+	adda.l	d0,a0
+	lea	SCRX(a0,d5.w*2),a0
+	moveq	#31,d0
+	and.w	d7,d0
+	mulu.w	#8*64*6,d0
+	lea	(bmB).l,a1
+	adda.l	d0,a1
+	lea	(a1,d5.w*2),a1
+	moveq	#8*6-1,d4
+.l	move.w	(a0),d0
+	cmp.w	(a1),d0
+	bne.s	.fail
+	lea	SBPR(a0),a0
+	lea	64(a1),a1
+	dbf	d4,.l
+.n	lsl.l	#1,d6
+	addq.w	#1,d5
+	cmpi.w	#32,d5
+	blt.s	.c
+	addq.w	#1,d7
+	cmpi.w	#DROWS,d7
+	blt.s	.r
+.x	rts
+.fail	move.w	(rd_count+2).l,(rd_vfail).l
+	move.b	d7,(rd_vfail+2).l
+	move.b	d5,(rd_vfail+3).l
+	rts
+	ENDC
 
 rd_waitblit
 .q	tst.b	(rd_bqbusy).l			;the queue first
@@ -662,7 +751,7 @@ rd_updateB
 	tst.l	(rd_btchg).l
 	beq	.next
 	move.w	d0,d1
-	andi.w	#$7FF,d1
+	andi.l	#$7FF,d1
 	bftst	(a2){d1:1}
 	beq	.next
 .draw	move.w	d0,(a1)
@@ -684,9 +773,25 @@ rd_updateB
 
 ;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap.
 rd_cellB
+	; both buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
+	moveq	#0,d1				;(bit field offsets are longs)
+	move.w	d4,d1
+	lsr.w	#1,d1
+	andi.w	#31,d1				;16 pixel column
+	moveq	#31,d2
+	and.w	d5,d2
+	lea	(rd_dirty).l,a1
+	lea	(a1,d2.w*4),a1
+	bfset	(a1){d1:1}
+	bfset	DROWS*4(a1){d1:1}
+	cmpi.w	#DROWS-32,d2
+	bhs.s	.once
+	bfset	32*4(a1){d1:1}
+	bfset	(DROWS+32)*4(a1){d1:1}
+.once
 	move.w	d0,(rd_cellpri).l		;bit 15: high priority
 	move.w	d0,d1
-	andi.w	#$7FF,d1
+	andi.l	#$7FF,d1
 	lea	(rd_bused).l,a1
 	bfset	(a1){d1:1}
 	move.w	(rd_cw).l,d1			;bytes per plane row
@@ -786,9 +891,13 @@ rd_list_hiB
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	Copy plane B to the back buffer at its scroll position (blitter). The bitmap wraps, so up
-;	to 4 rectangles.
-rd_blitB
+;	Plane B's scroll position (rd_bx0, rd_by0: the plane pixel at screen 0, 0) and where the
+;	screen is in the back buffer. Scroll mode when the plane is 64 x 32 cells and the screen's
+;	columns do not wrap around its right edge: then the buffer holds the plane (column x at bit
+;	x + 32, row y at rows y and y + 256) and the screen is the window on it at the scroll
+;	position. In the wide view the Genesis screen's place in the 320 columns (rd_xo) moves
+;	from the middle towards the side at the plane's edges, so that the window stays in it.
+rd_scrollpos
 	lea	(vdp_regs).l,a5
 	moveq	#0,d0
 	move.b	13(a5),d0
@@ -798,18 +907,178 @@ rd_blitB
 	lea	(vdp_vram).l,a0
 	move.w	2(a0,d0.l),d0			;B hscroll
 	neg.w	d0
-	sub.w	(rd_xo).l,d0			;(wide view: from further left)
-	move.w	(rd_cw).l,d1
-	lsl.w	#3,d1
-	subq.w	#1,d1
-	and.w	d1,d0
-	move.w	d0,(rd_bx0).l			;plane x at screen x 0
-	move.w	(vdp_vsram+2).l,d0
-	move.w	(rd_ch).l,d1
-	lsl.w	#3,d1
-	subq.w	#1,d1
-	and.w	d1,d0
-	move.w	d0,(rd_by0).l			;plane y at screen y 0
+	move.w	(rd_cw).l,d3
+	lsl.w	#3,d3
+	subq.w	#1,d3				;plane width - 1
+	and.w	d3,d0				;plane x at Genesis screen x 0
+	move.w	(vdp_vsram+2).l,d1
+	move.w	(rd_ch).l,d2
+	lsl.w	#3,d2
+	subq.w	#1,d2
+	and.w	d2,d1
+	move.w	d1,(rd_by0).l			;plane y at screen y 0
+	cmpi.w	#64,(rd_cw).l
+	bne	.copy
+	cmpi.w	#32,(rd_ch).l
+	bne	.copy
+	cmpi.w	#256,d0				;the last start that keeps 256 columns in the plane
+	bhi	.copy
+	cmpi.w	#320,(rd_dw).l
+	bne	.scroll
+	tst.w	(rd_xo).l
+	bne.s	.wide
+	cmpi.w	#512-320,d0			;H40
+	bhi	.copy
+	bra.s	.scroll
+.wide	moveq	#32,d2				;rd_xo: 32 (the middle), at most the plane x, at least
+	cmp.w	d0,d2				;what keeps 320 columns in the plane
+	ble.s	.w1
+	move.w	d0,d2
+.w1	move.w	d0,d1
+	subi.w	#512-320,d1
+	cmp.w	d1,d2
+	bge.s	.w2
+	move.w	d1,d2
+.w2	move.w	d2,(rd_xo).l
+	sub.w	d2,d0
+	; the game keeps the sprites of the columns shown (its x is from the Genesis screen's
+	; x 128), a margin of 16 and 16 more for the next frame's move
+	move.w	#320-128+32,d1
+	sub.w	d2,d1
+	move.w	d1,(hal_cullx).l
+	move.w	#-128-32,d1
+	sub.w	d2,d1
+	move.w	d1,(hal_cullxn).l
+.scroll	move.w	d0,(rd_bx0).l
+	move.w	#1,(rd_scroll).l
+	addi.w	#SCRX*8,d0
+	move.w	d0,(rd_xorg).l
+	move.w	(rd_by0).l,d1
+	move.w	d1,(rd_brow0).l
+	mulu.w	#SROW,d1
+	add.l	(rd_buf).l,d1
+	move.l	d1,(rd_back).l
+	rts
+.copy	sub.w	(rd_xo).l,d0			;(wide view: from further left)
+	and.w	d3,d0
+	move.w	d0,(rd_bx0).l
+	clr.w	(rd_scroll).l
+	move.w	#SCRX*8,(rd_xorg).l
+	clr.w	(rd_brow0).l
+	move.l	(rd_buf).l,(rd_back).l
+	rts
+
+;	Scroll mode: blit the cells of the back buffer's dirty map back from the plane B bitmap. A
+;	blit per run of columns, for all the following cell rows with the same columns.
+rd_restore
+	movea.l	(rd_dmap).l,a2
+	moveq	#0,d7				;cell row
+.row	move.l	(a2,d7.w*4),d6
+	bne.s	.dirty
+	addq.w	#1,d7
+	cmpi.w	#DROWS,d7
+	blt.s	.row
+	rts
+.dirty	move.w	d7,d5				;first row
+.same	clr.l	(a2,d7.w*4)
+	addq.w	#1,d7
+	cmpi.w	#DROWS,d7
+	bge.s	.grp
+	moveq	#31,d0
+	and.w	d7,d0
+	beq.s	.grp				;(the bitmap's rows wrap there)
+	cmp.l	(a2,d7.w*4),d6
+	beq.s	.same
+.grp	; rows d5 .. d7-1, the columns of d6: the runs
+.run	bfffo	d6{0:0},d1			;first column
+	move.l	d6,d2
+	lsl.l	d1,d2
+	not.l	d2
+	bfffo	d2{0:0},d3			;columns
+	bfclr	d6{d1:d3}
+	bsr	rd_bq_alloc
+	move.l	#$09F00000,$040(a6)		;A to D
+	move.l	#$FFFFFFFF,$044(a6)
+	move.w	d5,d0
+	andi.w	#31,d0
+	mulu.w	#8*64*6,d0			;the bitmap: 64 cells, 6 planes a line
+	lea	(bmB).l,a0
+	adda.l	d0,a0
+	lea	(a0,d1.w*2),a0
+	move.l	a0,$050(a6)			;BLTAPT
+	move.w	d5,d0
+	mulu.w	#8*SROW,d0
+	movea.l	(rd_buf).l,a0
+	adda.l	d0,a0
+	lea	SCRX(a0,d1.w*2),a0
+	move.l	a0,$054(a6)			;BLTDPT
+	add.w	d3,d3				;bytes
+	moveq	#64,d0
+	sub.w	d3,d0
+	move.w	d0,$064(a6)			;BLTAMOD
+	moveq	#SBPR,d0
+	sub.w	d3,d0
+	move.w	d0,$066(a6)			;BLTDMOD
+	move.w	d7,d0
+	sub.w	d5,d0
+	mulu.w	#8*NPLANES,d0
+	move.w	d0,$05C(a6)			;BLTSIZV
+	lsr.w	#1,d3
+	move.w	d3,$05E(a6)			;BLTSIZH
+	bsr	rd_bq_go
+	tst.l	d6
+	bne	.run
+	cmpi.w	#DROWS,d7
+	blt	.row
+	rts
+
+;	Note the rectangle d0 (x), d1 (y), d2 (w), d3 (h) on the screen as drawn over in the back
+;	buffer's dirty map. Keeps everything.
+rd_mark
+	movem.l	d0-d3/a0,-(sp)
+	tst.w	d2
+	ble.s	.x
+	tst.w	d3
+	ble.s	.x
+	add.w	(rd_xorg).l,d0
+	subi.w	#SCRX*8,d0			;plane x
+	add.w	d0,d2
+	subq.w	#1,d2
+	asr.w	#4,d0				;first column (16 pixels)
+	bpl.s	.1
+	moveq	#0,d0
+.1	asr.w	#4,d2				;last
+	cmpi.w	#31,d2
+	ble.s	.2
+	moveq	#31,d2
+.2	sub.w	d0,d2
+	bmi.s	.x
+	addq.w	#1,d2				;columns (32 is coded as 0)
+	add.w	(rd_brow0).l,d1
+	add.w	d1,d3
+	subq.w	#1,d3
+	asr.w	#3,d1				;first cell row
+	bpl.s	.3
+	moveq	#0,d1
+.3	asr.w	#3,d3
+	cmpi.w	#DROWS-1,d3
+	ble.s	.4
+	moveq	#DROWS-1,d3
+.4	sub.w	d1,d3
+	bmi.s	.x
+	ext.l	d0				;(a bit field offset is a long)
+	movea.l	(rd_dmap).l,a0
+	lea	(a0,d1.w*4),a0
+.r	bfset	(a0){d0:d2}
+	addq.l	#4,a0
+	dbf	d3,.r
+.x	movem.l	(sp)+,d0-d3/a0
+	rts
+
+;	------------------------------------------------------------------------------------------
+;	Copy plane B to the back buffer at its scroll position (blitter). The bitmap wraps, so up
+;	to 4 rectangles.
+rd_blitB
 	; vertical pieces: [by0, min(H, by0+224)) then from 0
 	move.w	(rd_ch).l,d6
 	lsl.w	#3,d6				;plane height
@@ -863,7 +1132,7 @@ rd_blitB
 rd_blitrect
 	movem.l	d3-d7,-(sp)
 	move.w	d7,d0
-	addi.w	#SCRX*8,d0			;destination bit x
+	add.w	(rd_xorg).l,d0			;destination bit x
 	move.w	d0,(rd_tmp).l
 	move.w	d0,d6
 	lsr.w	#4,d6				;first destination word
@@ -974,7 +1243,7 @@ rd_collect_sprites
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	Masked write of one 8 pixel row at screen x d0 on the row a1 (back buffer line):
+;	Masked write of one 8 pixel row at screen x d0 on the row a1 (overlay line):
 ;	d1 = planes 0-3 (p0 in the high byte), d2 = palette (planes 4, 5), d3 = mask byte.
 ;	Keeps d0-d3, a1. Uses d4-d7, a0.
 rd_put8
@@ -982,7 +1251,7 @@ rd_put8
 	move.b	d3,d4
 	beq	.x
 	move.w	d0,d5
-	addi.w	#SCRX*8,d5
+	addi.w	#4*8,d5
 	move.w	d5,d6
 	lsr.w	#3,d6
 	lea	(a1,d6.w),a0			;first byte
@@ -994,21 +1263,21 @@ rd_put8
 	rol.l	#8,d1
 	move.b	d1,(a0)
 	rol.l	#8,d1
-	move.b	d1,SBPR(a0)
+	move.b	d1,OSBPR(a0)
 	rol.l	#8,d1
-	move.b	d1,2*SBPR(a0)
+	move.b	d1,2*OSBPR(a0)
 	rol.l	#8,d1
-	move.b	d1,3*SBPR(a0)
+	move.b	d1,3*OSBPR(a0)
 	moveq	#0,d6
 	btst	#0,d2
 	beq	.a4
 	moveq	#-1,d6
-.a4	move.b	d6,4*SBPR(a0)
+.a4	move.b	d6,4*OSBPR(a0)
 	moveq	#0,d6
 	btst	#1,d2
 	beq	.a5
 	moveq	#-1,d6
-.a5	move.b	d6,5*SBPR(a0)
+.a5	move.b	d6,5*OSBPR(a0)
 	rts
 .bmask	; aligned, masked
 	move.b	d4,d6
@@ -1019,32 +1288,32 @@ rd_put8
 	or.b	d1,d7
 	move.b	d7,(a0)
 	rol.l	#8,d1
-	move.b	SBPR(a0),d7
+	move.b	OSBPR(a0),d7
 	and.b	d6,d7
 	or.b	d1,d7
-	move.b	d7,SBPR(a0)
+	move.b	d7,OSBPR(a0)
 	rol.l	#8,d1
-	move.b	2*SBPR(a0),d7
+	move.b	2*OSBPR(a0),d7
 	and.b	d6,d7
 	or.b	d1,d7
-	move.b	d7,2*SBPR(a0)
+	move.b	d7,2*OSBPR(a0)
 	rol.l	#8,d1
-	move.b	3*SBPR(a0),d7
+	move.b	3*OSBPR(a0),d7
 	and.b	d6,d7
 	or.b	d1,d7
-	move.b	d7,3*SBPR(a0)
-	move.b	4*SBPR(a0),d7
+	move.b	d7,3*OSBPR(a0)
+	move.b	4*OSBPR(a0),d7
 	and.b	d6,d7
 	btst	#0,d2
 	beq	.b4
 	or.b	d4,d7
-.b4	move.b	d7,4*SBPR(a0)
-	move.b	5*SBPR(a0),d7
+.b4	move.b	d7,4*OSBPR(a0)
+	move.b	5*OSBPR(a0),d7
 	and.b	d6,d7
 	btst	#1,d2
 	beq	.b5
 	or.b	d4,d7
-.b5	move.b	d7,5*SBPR(a0)
+.b5	move.b	d7,5*OSBPR(a0)
 .x	rts
 .shift	; across two bytes: word read-modify-write (the 68020 allows odd addresses)
 	lsl.w	#8,d4
@@ -1064,39 +1333,39 @@ rd_put8
 	move.w	d1,d3
 	lsl.w	#8,d3
 	lsr.w	d5,d3
-	move.w	SBPR(a0),d7
+	move.w	OSBPR(a0),d7
 	and.w	d6,d7
 	or.w	d3,d7
-	move.w	d7,SBPR(a0)
+	move.w	d7,OSBPR(a0)
 	rol.l	#8,d1
 	move.w	d1,d3
 	lsl.w	#8,d3
 	lsr.w	d5,d3
-	move.w	2*SBPR(a0),d7
+	move.w	2*OSBPR(a0),d7
 	and.w	d6,d7
 	or.w	d3,d7
-	move.w	d7,2*SBPR(a0)
+	move.w	d7,2*OSBPR(a0)
 	rol.l	#8,d1
 	move.w	d1,d3
 	lsl.w	#8,d3
 	lsr.w	d5,d3
-	move.w	3*SBPR(a0),d7
+	move.w	3*OSBPR(a0),d7
 	and.w	d6,d7
 	or.w	d3,d7
-	move.w	d7,3*SBPR(a0)
+	move.w	d7,3*OSBPR(a0)
 	move.l	(sp)+,d3
-	move.w	4*SBPR(a0),d7
+	move.w	4*OSBPR(a0),d7
 	and.w	d6,d7
 	btst	#0,d2
 	beq	.s4
 	or.w	d4,d7
-.s4	move.w	d7,4*SBPR(a0)
-	move.w	5*SBPR(a0),d7
+.s4	move.w	d7,4*OSBPR(a0)
+	move.w	5*OSBPR(a0),d7
 	and.w	d6,d7
 	btst	#1,d2
 	beq	.s5
 	or.w	d4,d7
-.s5	move.w	d7,5*SBPR(a0)
+.s5	move.w	d7,5*OSBPR(a0)
 	rts
 
 ;	Mark the screen cells of the rectangle d0 (x), d1 (y), d2 (w), d3 (h) as covered by
@@ -1129,6 +1398,7 @@ rd_cover_rect
 	asr.w	#3,d3
 	sub.w	d0,d2
 	addq.w	#1,d2				;cells across (at most 40)
+	ext.l	d0				;(a bit field offset is a long)
 	lea	(rd_cover).l,a0
 	lea	(a0,d1.w*8),a0			;first row
 	sub.w	d1,d3				;rows - 1
@@ -1138,8 +1408,8 @@ rd_cover_rect
 	bra.s	.n
 .wide	move.w	d2,d4
 	subi.w	#32,d4
-	move.w	d0,d5
-	addi.w	#32,d5
+	moveq	#32,d5
+	add.l	d0,d5
 	bfset	(a0){d0:0}
 	bfset	(a0){d5:d4}
 .n	addq.l	#8,a0
@@ -1150,18 +1420,6 @@ rd_cover_rect
 ;	------------------------------------------------------------------------------------------
 ;	Plane A and the window. rd_buildA lists their visible non-empty cells (screen x, y, entry);
 ;	the list is kept while their name tables, scroll, window registers and tiles stay the same.
-;	rd_layerA draws the listed cells of priority rd_pass.
-rd_layerA
-	lea	(rd_alist).l,a4
-	move.w	(rd_alistn).l,d7
-	subq.w	#1,d7
-	bmi	.x
-.c	move.w	(a4)+,d1
-	move.w	(a4)+,d2
-	move.w	(a4)+,d0
-	bsr	rd_drawcell
-	dbf	d7,.c
-.x	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	The plane A / window overlay: the listed cells drawn into a screen sized bitmap with a mask
@@ -1178,11 +1436,11 @@ rd_ovl_redraw
 	move.l	#rd_ovl,$054(a6)
 	move.w	#0,$066(a6)
 	move.w	#SCRH*6,$05C(a6)
-	move.w	#SBPR/2,$05E(a6)
+	move.w	#OSBPR/2,$05E(a6)
 	bsr	rd_waitblit
 	move.l	#rd_ovlmlo,$054(a6)
 	move.w	#SCRH*6*2,$05C(a6)		;both masks (they follow each other)
-	move.w	#SBPR/2,$05E(a6)
+	move.w	#OSBPR/2,$05E(a6)
 	; rows used, per priority: x min, x max (pixels), empty = min > max
 	lea	(rd_ovlrows).l,a0
 	moveq	#2*32-1,d0
@@ -1290,7 +1548,7 @@ rd_ovl_cell
 	bge	.done
 	lea	(rd_ovl).l,a1
 	move.w	d7,d3
-	mulu.w	#SROW,d3
+	mulu.w	#OSROW,d3
 	adda.l	d3,a1
 	move.l	(a2),d1
 	move.b	(a3),d3
@@ -1299,10 +1557,10 @@ rd_ovl_cell
 	movem.l	(sp)+,d4-d7/a5
 	; mask: or the row's mask bits in (each plane's copy)
 	move.w	d7,d6
-	mulu.w	#SROW,d6
+	mulu.w	#OSROW,d6
 	lea	(a5,d6.l),a0
 	move.w	d0,d6
-	addi.w	#SCRX*8,d6
+	addi.w	#4*8,d6
 	moveq	#0,d1
 	move.b	d3,d1
 	ror.l	#8,d1
@@ -1314,11 +1572,11 @@ rd_ovl_cell
 	adda.w	d6,a0
 	swap	d1
 	or.w	d1,(a0)
-	or.w	d1,SBPR(a0)
-	or.w	d1,2*SBPR(a0)
-	or.w	d1,3*SBPR(a0)
-	or.w	d1,4*SBPR(a0)
-	or.w	d1,5*SBPR(a0)
+	or.w	d1,OSBPR(a0)
+	or.w	d1,2*OSBPR(a0)
+	or.w	d1,3*OSBPR(a0)
+	or.w	d1,4*OSBPR(a0)
+	or.w	d1,5*OSBPR(a0)
 .skip	adda.w	d4,a2
 	adda.w	d5,a3
 	addq.w	#1,d7
@@ -1416,64 +1674,67 @@ rd_ovl_blit
 	move.w	d4,d1
 .g1	cmp.w	d1,d0
 	bgt	.bx
-	add.w	(rd_xo).l,d0			;to Amiga screen pixels
-	add.w	(rd_xo).l,d1
-	tst.w	(rd_pass).l
-	bne	.nocov
-	movem.l	d0-d3,-(sp)
 	move.w	d1,d4
 	sub.w	d0,d4
-	addq.w	#1,d4
+	addq.w	#1,d4				;pixels
+	movem.l	d0-d3,-(sp)
+	add.w	(rd_xo).l,d0			;to Amiga screen pixels
 	move.w	d2,d1
 	move.w	d4,d2
+	bsr	rd_mark
+	tst.w	(rd_pass).l
+	bne.s	.nocov
 	bsr	rd_cover_rect
-	movem.l	(sp)+,d0-d3
-.nocov	; words
-	addi.w	#SCRX*8,d0
-	addi.w	#SCRX*8,d1
-	tst.w	d0
-	bpl	.x0
-	moveq	#0,d0
-.x0	cmpi.w	#SBPR*8-1,d1
-	ble	.x1
-	move.w	#SBPR*8-1,d1
-.x1	lsr.w	#4,d0
+.nocov	movem.l	(sp)+,d0-d3
+	; the overlay's words (x 0 is its bit 32) that hold the pixels and one more, masked out,
+	; that carries the shift to the screen's bits (rd_xorg + rd_xo + x)
+	addi.w	#4*8,d0
+	addi.w	#4*8,d1
+	lsr.w	#4,d0				;first word
 	lsr.w	#4,d1
 	sub.w	d0,d1
-	addq.w	#1,d1				;words
+	addq.w	#2,d1				;words
+	move.w	(rd_xorg).l,d6
+	add.w	(rd_xo).l,d6
+	subi.w	#4*8,d6				;screen bit - overlay bit
+	moveq	#15,d5
+	and.w	d6,d5				;shift
+	lsr.w	#4,d6
+	add.w	d0,d6				;first screen word
 	add.w	d0,d0				;first byte
+	add.w	d6,d6
 	move.w	d2,d4
-	mulu.w	#SROW,d4			;screen / overlay line offset
-	move.w	d2,d5
-	mulu.w	#SROW,d5			;mask line offset (masks are interleaved like the screen)
-	movea.l	(rd_back).l,a0
-	adda.l	d4,a0
-	adda.w	d0,a0
+	mulu.w	#OSROW,d4
 	lea	(rd_ovl).l,a1
 	adda.l	d4,a1
 	adda.w	d0,a1
-	lea	(a3,d5.l),a2
+	lea	(a3,d4.l),a2			;(the masks are interleaved like the overlay)
 	adda.w	d0,a2
-	move.w	(rd_xo).l,d4
-	lsr.w	#3,d4
-	suba.w	d4,a1				;the overlay is in Genesis screen columns
-	suba.w	d4,a2
+	move.w	d2,d4
+	mulu.w	#SROW,d4
+	movea.l	(rd_back).l,a0
+	adda.l	d4,a0
+	adda.w	d6,a0
 	move.w	d1,d4
 	add.w	d4,d4				;bytes a row
 	; one blit for the 6 planes: rows of the interleaved image, mask and screen
 	bsr	rd_bq_alloc
-	move.w	#$0FCA,$040(a6)
-	move.w	#0,$042(a6)
+	ror.w	#4,d5
+	move.w	d5,$042(a6)			;BLTCON1: B shift
+	ori.w	#$0FCA,d5
+	move.w	d5,$040(a6)			;A shift; A mask, B overlay, C, D: AB + /AC
 	move.w	#$FFFF,$044(a6)
-	move.w	#$FFFF,$046(a6)
+	move.w	#0,$046(a6)			;the extra word
 	move.l	a2,$050(a6)			;A: mask
 	move.l	a1,$04C(a6)			;B: overlay
 	move.l	a0,$048(a6)			;C
 	move.l	a0,$054(a6)			;D
-	move.w	#SBPR,d5
+	move.w	#OSBPR,d5
 	sub.w	d4,d5
 	move.w	d5,$064(a6)			;AMOD
 	move.w	d5,$062(a6)			;BMOD
+	move.w	#SBPR,d5
+	sub.w	d4,d5
 	move.w	d5,$060(a6)			;CMOD
 	move.w	d5,$066(a6)			;DMOD
 	mulu.w	#NPLANES,d3
@@ -1566,11 +1827,11 @@ rd_ovl_cells_changed
 rd_ovl_setcell
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.w	d0,d3
-	andi.w	#$7FF,d3
+	andi.l	#$7FF,d3
 	lea	(rd_aused).l,a3
 	bfset	(a3){d3:1}
 	move.w	d1,d3
-	addi.w	#SCRX*8,d3
+	addi.w	#4*8,d3
 	lsr.w	#3,d3				;byte
 	moveq	#7,d4
 	move.w	d2,d5				;line
@@ -1580,18 +1841,18 @@ rd_ovl_setcell
 	bge.s	.cn
 	lea	(rd_ovl).l,a0
 	move.w	d5,d6
-	mulu.w	#SROW,d6
+	mulu.w	#OSROW,d6
 	adda.l	d6,a0
 	adda.w	d3,a0
 	clr.b	(a0)
-	clr.b	SBPR(a0)
-	clr.b	2*SBPR(a0)
-	clr.b	3*SBPR(a0)
-	clr.b	4*SBPR(a0)
-	clr.b	5*SBPR(a0)
+	clr.b	OSBPR(a0)
+	clr.b	2*OSBPR(a0)
+	clr.b	3*OSBPR(a0)
+	clr.b	4*OSBPR(a0)
+	clr.b	5*OSBPR(a0)
 	lea	(rd_ovlmlo).l,a0
 	move.w	d5,d6
-	mulu.w	#SROW,d6
+	mulu.w	#OSROW,d6
 	adda.l	d6,a0
 	adda.w	d3,a0
 	lea	(rd_ovlmhi-rd_ovlmlo).l,a1
@@ -1599,8 +1860,8 @@ rd_ovl_setcell
 	moveq	#5,d6
 .cm	clr.b	(a0)
 	clr.b	(a1)
-	lea	SBPR(a0),a0
-	lea	SBPR(a1),a1
+	lea	OSBPR(a0),a0
+	lea	OSBPR(a1),a1
 	dbf	d6,.cm
 .cn	addq.w	#1,d5
 	dbf	d4,.cl
@@ -1868,7 +2129,7 @@ rd_buildA
 rd_addcell
 	move.l	d3,-(sp)
 	move.w	d0,d3
-	andi.w	#$7FF,d3
+	andi.l	#$7FF,d3
 	bfset	(a3){d3:1}
 	move.w	d0,d3
 	andi.w	#$FFF,d3
@@ -1903,83 +2164,6 @@ rd_inwindow
 	rts
 .no	cmp.w	d0,d0				;Z set
 	rts
-
-;	Draw entry d0 at screen (d1, d2) if its priority is rd_pass and its tile is not empty.
-;	Keeps d4-d7, a4, a5.
-rd_drawcell
-	move.w	d0,d3
-	andi.w	#$8000,d3
-	cmp.w	(rd_pass).l,d3
-	bne	.x
-	move.w	d0,d3
-	andi.w	#$FFF,d3
-	lea	(tp_cls).l,a0
-	tst.b	(a0,d3.w)
-	beq	.x				;empty tile
-	cmpi.w	#-8,d1
-	ble	.x
-	cmpi.w	#SCRH,d2
-	bge	.x
-	cmpi.w	#-8,d2
-	ble	.x
-	cmp.w	(rd_w).l,d1
-	bge	.x
-	movem.l	d4-d7/a4-a5,-(sp)
-	tst.w	(rd_pass).l
-	bne	.nocov
-	movem.l	d0-d3,-(sp)
-	move.w	d1,d0
-	move.w	d2,d1
-	moveq	#8,d2
-	moveq	#8,d3
-	bsr	rd_cover_rect
-	movem.l	(sp)+,d0-d3
-.nocov	; cache rows
-	lea	(tp_pl).l,a2
-	moveq	#0,d3
-	move.w	d0,d3
-	andi.w	#$FFF,d3
-	lsl.l	#5,d3
-	adda.l	d3,a2
-	lea	(tp_mk).l,a3
-	lsr.l	#2,d3
-	adda.l	d3,a3
-	moveq	#4,d4				;row steps
-	moveq	#1,d5
-	btst	#12,d0
-	beq	.nv
-	lea	28(a2),a2
-	addq.l	#7,a3
-	moveq	#-4,d4
-	moveq	#-1,d5
-.nv	move.w	d0,d6
-	rol.w	#3,d6
-	andi.w	#3,d6				;palette
-	move.w	d1,d0				;x
-	move.w	d2,d7				;y
-	movea.l	(rd_back).l,a1
-	move.w	d7,d3
-	mulu.w	#SROW,d3
-	adda.l	d3,a1
-	move.w	d6,d2				;palette for rd_put8
-	move.w	#7,(rd_rowc).l
-.row	tst.w	d7
-	bmi	.skip
-	cmpi.w	#SCRH,d7
-	bge	.done
-	move.l	(a2),d1
-	move.b	(a3),d3
-	movem.l	d4-d7,-(sp)
-	bsr	rd_put8
-	movem.l	(sp)+,d4-d7
-.skip	adda.w	d4,a2
-	adda.w	d5,a3
-	lea	SROW(a1),a1
-	addq.w	#1,d7
-	subq.w	#1,(rd_rowc).l
-	bpl	.row
-.done	movem.l	(sp)+,d4-d7/a4-a5
-.x	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	Sprites of priority rd_pass, last in the list first. The CPU builds each sprite's image (6
@@ -2042,14 +2226,15 @@ rd_sprite_blit
 	lsl.w	#3,d4
 	add.w	d3,d4
 	ble	.x
-	tst.w	(rd_pass).l
-	bne	.nocov
 	move.w	d3,d0
 	move.w	(rd_sy).l,d1
 	move.w	(rd_scw).l,d2
 	lsl.w	#3,d2
 	move.w	(rd_sch).l,d3
 	lsl.w	#3,d3
+	bsr	rd_mark
+	tst.w	(rd_pass).l
+	bne	.nocov
 	bsr	rd_cover_rect
 .nocov	; columns left of the screen margin are dropped
 	moveq	#0,d6				;first column drawn
@@ -2110,7 +2295,7 @@ rd_sprite_blit
 	bsr	rd_waitblit
 	lea	(CUSTOM).l,a6
 	move.w	(rd_colx).l,d0
-	addi.w	#SCRX*8,d0
+	add.w	(rd_xorg).l,d0
 	move.w	d0,d1
 	andi.w	#15,d1				;shift
 	lsr.w	#4,d0
@@ -2150,7 +2335,7 @@ rd_sprite_blit
 ;	with bitfield instructions under the mask.
 rd_spr_cpu
 	move.w	(rd_colx).l,d0
-	addi.w	#SCRX*8,d0
+	add.w	(rd_xorg).l,d0
 	move.w	d0,(rd_sbit).l			;bit offset of the first column in a screen row
 	moveq	#0,d6
 	btst	#0,(rd_spal+1).l
@@ -2693,7 +2878,8 @@ rd_fixups
 	movea.l	(rd_back).l,a1
 	adda.l	d2,a1
 	move.w	d0,d1
-	addi.w	#SCRX*8,d1			;bit offset
+	add.w	(rd_xorg).l,d1			;bit offset
+	ext.l	d1
 	lsl.w	#3,d5
 	add.w	d6,d5				;plane pixel row
 	mulu.w	d3,d5
@@ -2754,6 +2940,7 @@ rd_iscovered
 .4	sub.w	d4,d5
 	bmi	.no
 	addq.w	#1,d5				;cells across (1 or 2)
+	ext.l	d4				;(a bit field offset is a long)
 	lea	(rd_cover).l,a0
 	lea	(a0,d1.w*8),a0
 	sub.w	d1,d3				;rows - 1 (0 or 1)
@@ -3413,8 +3600,17 @@ rd_fps
 	cmpi.w	#9,d0
 	bls	.t
 	moveq	#9,d0
-.t	movea.l	(rd_back).l,a0
-	lea	SROW*4+SCRX(a0),a0
+.t	movem.l	d0-d3,-(sp)
+	moveq	#-8,d0
+	moveq	#4,d1
+	moveq	#24,d2
+	moveq	#5,d3
+	bsr	rd_mark
+	movem.l	(sp)+,d0-d3
+	movea.l	(rd_back).l,a0
+	move.w	(rd_xorg).l,d2
+	lsr.w	#3,d2
+	lea	SROW*4(a0,d2.w),a0
 	bsr	.digit
 	addq.l	#1,a0
 	move.w	d1,d0
@@ -3467,9 +3663,10 @@ rd_hex8
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	The back buffer's copper list: 6 interleaved planes, 2x fetch (FMODE 1), 320 pixels
-;	fetched from screen x 0 (H40) or -32 (H32, the window shows the middle 256), 224 lines,
-;	the 64 colours. It becomes the copper's list from the next frame; the buffers swap.
+;	The back buffer's copper list: 6 interleaved planes, 2x fetch (FMODE 1), 320 (H40, the wide
+;	view) or 256 pixels from the buffer's bit rd_xorg, 224 lines, the 64 colours. The fetch
+;	starts on a 32 pixel boundary up to 31 pixels before and BPLCON1 delays it to the first
+;	pixel. It becomes the copper's list from the next frame; the buffers swap.
 COPMOVE	MACRO
 	move.w	#\1,(a0)+
 	move.w	\2,(a0)+
@@ -3481,7 +3678,6 @@ rd_show
 	beq	.nofps
 	bsr	rd_fps
 .nofps	movea.l	(rd_backcop).l,a0
-	move.l	(rd_back).l,d0
 	; the 224 lines: from line $3C on PAL, $1A on NTSC (262 lines a frame)
 	move.w	#$3CA1,d1			;DIWSTRT, H32 (256 pixels)
 	move.w	#$1CA1,d2			;DIWSTOP
@@ -3489,23 +3685,50 @@ rd_show
 	bne	.pal
 	move.w	#$1AA1,d1
 	move.w	#$FAA1,d2
-.pal	cmpi.w	#320,(rd_dw).l
-	beq	.w320
-	addi.l	#SCRX-4,d0
-	bra	.dw
-.w320	move.b	#$81,d1				;H40: 320 pixels
+.pal	move.w	#$0038,d3			;DDFSTRT: 288 pixels fetched, the window shows the
+	move.w	#$00B8,d4			;DDFSTOP  last 256 of the first 256 + 32
+	move.w	#SROW-36,d5			;modulo
+	cmpi.w	#320,(rd_dw).l
+	bne	.dw
+	move.b	#$81,d1				;H40: 320 pixels
 	move.b	#$C1,d2
-	addq.l	#SCRX,d0
+	move.w	#$0028,d3			;352 pixels fetched from 32 before the window
+	move.w	#$00C8,d4
+	move.w	#SROW-44,d5
 .dw	move.w	#$08E,(a0)+
 	move.w	d1,(a0)+
 	move.w	#$090,(a0)+
 	move.w	d2,(a0)+
-	COPMOVE	$092,#$0038			;DDFSTRT
-	COPMOVE	$094,#$00C8			;DDFSTOP (2x fetch)
-	COPMOVE	$108,#SROW-40			;BPL1MOD: interleaved
-	COPMOVE	$10A,#SROW-40			;BPL2MOD
-	COPMOVE	$100,#$6201			;BPLCON0: 6 planes, colour, ECS bits on
-	COPMOVE	$102,#0				;BPLCON1
+	move.w	#$092,(a0)+
+	move.w	d3,(a0)+
+	move.w	#$094,(a0)+
+	move.w	d4,(a0)+
+	move.w	#$108,(a0)+			;BPL1MOD: interleaved
+	move.w	d5,(a0)+
+	move.w	#$10A,(a0)+			;BPL2MOD
+	move.w	d5,(a0)+
+	; the first pixel shown: the window shows fetched pixel 32 - delay
+	move.w	(rd_xorg).l,d0
+	moveq	#31,d1
+	and.w	d0,d1
+	neg.w	d1
+	andi.w	#31,d1				;delay
+	add.w	d1,d0
+	subi.w	#32,d0				;the bit fetched first
+	lsr.w	#3,d0
+	ext.l	d0
+	add.l	(rd_back).l,d0
+	move.w	d1,d2
+	andi.w	#15,d2
+	move.w	d2,d3
+	lsl.w	#4,d3
+	or.w	d3,d2				;PF1H5-2, PF2H5-2
+	btst	#4,d1
+	beq.s	.d16
+	ori.w	#$4400,d2			;PF1H6, PF2H6
+.d16	COPMOVE	$100,#$6201			;BPLCON0: 6 planes, colour, ECS bits on
+	move.w	#$102,(a0)+			;BPLCON1
+	move.w	d2,(a0)+
 	COPMOVE	$104,#$0224			;BPLCON2: KILLEHB (6 planes would be Extra Half-Brite)
 	COPMOVE	$1FC,#$0001			;FMODE: 32 bit bitplane fetch
 	COPMOVE	$10C,#$0011			;BPLCON4
@@ -3550,19 +3773,20 @@ rd_show
 	cmpi.w	#2,d3
 	bne	.bank
 	move.l	#$FFFFFFFE,(a0)+
-	move.l	(rd_back).l,(rd_frontshow).l
 	move.l	(rd_backcop).l,d0
 	move.l	d0,(CUSTOM+$080).l		;COP1LC: from the next frame
 	move.l	(rd_frontcop).l,(rd_backcop).l
 	move.l	d0,(rd_frontcop).l
-	move.l	(rd_back).l,d0
+	; the other buffer, its dirty map
 	lea	(rd_screens).l,a0
-	cmp.l	a0,d0
-	bne	.second
-	addi.l	#SCRSIZE,d0
-	bra	.set
-.second	move.l	a0,d0
-.set	move.l	d0,(rd_back).l
+	lea	(rd_dirty).l,a1
+	eori.w	#1,(rd_bufi).l
+	beq.s	.set
+	adda.l	#BUFSIZE,a0
+	lea	DROWS*4(a1),a1
+.set	move.l	a0,(rd_buf).l
+	move.l	a0,(rd_back).l
+	move.l	a1,(rd_dmap).l
 	rts
 
 	section	bss,bss
@@ -3592,7 +3816,6 @@ rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
 		cnop	0,4
-rd_frontshow	ds.l	1
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
 rd_ovlcolf	ds.b	2*32*48			;per priority, band: columns with cells

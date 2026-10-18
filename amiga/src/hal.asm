@@ -36,14 +36,14 @@ hal_header
 
 ;	Debug block, read by the test harness:
 ;	+0  vdp_regs  +4 vdp_vram  +8 vdp_cram  +12 vdp_vsram  +16 exception info (16 longs)
-;	+20 frame counter  +24 pad state
+;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
 hal_debug
 	dc.l	vdp_regs,vdp_vram,vdp_cram,vdp_vsram,hal_exc_info,hal_frames,hal_padstate
 	dc.l	rd_count,chunky
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
-	dc.l	rd_dbg_key
+	dc.l	rd_dbg_key,rd_vfail
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the 60 Hz timer and jumps to the cartridge's cold start.

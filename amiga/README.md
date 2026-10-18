@@ -10,7 +10,7 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
-  about 0.5 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
+  about 1 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
 
@@ -56,8 +56,9 @@ you quit, and is read when it starts.
 
 The menus are 320 pixels wide, the Amiga's full low resolution width. The rink is 256 wide on
 the Genesis (its H32 mode); the Amiga shows it 320 wide, with 32 more pixels of the rink each
-side. The game keeps the sprites of that wider area (its sprite culling is widened to match) and
-the score and clock boxes stay where they were. `F6` switches back to the Genesis' 256 pixels,
+side (at the rink's edges the extra columns are all on the one side that has rink to show). The
+game keeps the sprites of that wider area (its sprite culling is widened to match) and the score
+and clock boxes stay where they were. `F6` switches back to the Genesis' 256 pixels,
 which draws about 15% faster. Screens other than the rink stay as the Genesis shows them.
 
 In vAmigaWeb, set "visible display area" to "viewport tracking" in the settings: it then zooms to
@@ -80,6 +81,8 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DPROFILE=1` samples the program counter 60 times a second and writes `nhl94.prof` on exit;
   `amiga/tools/amiprof.py` turns it into a list of routines.
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
+- `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
+  not listed for repair must match the bitmap. The test harness reports the first failure.
 
 ## How it works
 
@@ -107,8 +110,13 @@ The hardware layer:
 - `os.asm`: takes the machine from the OS and gives it back; keeps the OS's memory in the
   `RAMBASE` window; loads and saves `NHL94.sav`.
 - `render.asm`: draws the emulated VDP state in 64 colours on 6 interleaved bitplanes. Tiles are
-  cached in planar form. Plane B is kept as a bitmap and blitted with the scroll. Plane A and the
-  window are an overlay layer with masks. Sprites are drawn by the CPU. A chunky renderer with
+  cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the
+  whole of plane B (512 x 256, its top 224 lines twice for the vertical wrap) and the display
+  hardware scrolls it: the bitplane pointers, a fetch that starts up to 31 pixels early and the
+  BPLCON1 delay. Only what was drawn over it two frames ago and the cells the game changed are
+  blitted back from the bitmap (a dirty map per buffer, 16 pixels by 8 lines a bit). Other
+  screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
+  layer with masks. Sprites are drawn by the CPU. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
   and the display window, and frames are double buffered. The colours are AGA 24 bit colours
   (each written as high then low nibbles) at the levels the Genesis puts out, which are not a

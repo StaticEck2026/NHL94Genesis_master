@@ -45,8 +45,16 @@ static int frame;
 static inline uint32_t rd8(uint32_t a) { a &= 0xFFFFFF; return mem[a]; }
 static inline uint32_t rd16(uint32_t a) { a &= 0xFFFFFF; return (mem[a] << 8) | mem[a + 1]; }
 static inline uint32_t rd32(uint32_t a) { return (rd16(a) << 16) | rd16(a + 2); }
-static inline void wr8(uint32_t a, uint32_t v) { a &= 0xFFFFFF; mem[a] = v; }
-static inline void wr16(uint32_t a, uint32_t v) { a &= 0xFFFFFF; mem[a] = v >> 8; mem[a + 1] = v; }
+static uint32_t watch_addr = 0xFFFFFFFF;   /* NHL_WATCH=address: report changes of that word */
+static int in_blit;
+static void watch_hit(uint32_t a, uint32_t v);
+static inline void wr8(uint32_t a, uint32_t v)
+{
+    a &= 0xFFFFFF;
+    if ((a & ~1u) == watch_addr && mem[a] != (uint8_t)v) watch_hit(a, v);
+    mem[a] = v;
+}
+static inline void wr16(uint32_t a, uint32_t v) { wr8(a, v >> 8); wr8(a + 1, v); }
 static inline void wr32(uint32_t a, uint32_t v) { wr16(a, v >> 16); wr16(a + 2, v); }
 
 static uint32_t custom_read(uint32_t a, int size)
@@ -78,6 +86,12 @@ static uint16_t creg[0x100];
 static long long blit_words;
 static int blit_warn;
 
+static void watch_hit(uint32_t a, uint32_t v)
+{
+    fprintf(stderr, "frame %d: %06x = %02x (was %02x) %s pc=%06x\n", frame, a, v & 0xFF, mem[a],
+            in_blit ? "blitter" : "cpu", m68k_get_reg(NULL, M68K_REG_PPC));
+}
+
 /* The blitter, area mode, ascending and descending (no line mode). */
 static void do_blit(int h, int w)
 {
@@ -94,6 +108,7 @@ static void do_blit(int h, int w)
     long long blit_start = blit_busy_until;
     uint32_t aold = 0, bold = 0;
     if (con1 & 1) { fprintf(stderr, "blitter line mode not emulated\n"); return; }
+    in_blit = 1;
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             uint32_t a = useA ? rd16(apt) : creg[0x74 / 2];
@@ -129,9 +144,10 @@ static void do_blit(int h, int w)
         if (useC) cpt += desc ? -cmod : cmod;
         if (useD) dpt += desc ? -dmod : dmod;
     }
+    in_blit = 0;
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
         extern long long blitstat[3];
-        blitstat[con0 == 0x0FCA ? 1 : (con0 == 0x07CA || con0 == 0x05C0) ? 0 : 2] += blit_busy_until - blit_start;
+        blitstat[(con0 & 0x0FFF) == 0x0FCA ? 1 : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 2] += blit_busy_until - blit_start;
     }
 }
 
@@ -229,7 +245,7 @@ static void custom_write(uint32_t a, uint32_t v)
 static void amiga_png(const char *name)
 {
     uint32_t bpl[8] = {0}, pal[256] = {0};
-    int bank = 0, loct = 0, ddf = 0x38, nplanes = 0, mod = 0, ham = 0, killehb = 0;
+    int bank = 0, loct = 0, ddf = 0x38, ddfstop = 0xC8, delay = 0, nplanes = 0, mod = 0, ham = 0, killehb = 0;
     uint32_t pc = cop1lc;
     for (int i = 0; i < 400 && pc; i++) {
         uint32_t w1 = rd16(pc), w2 = rd16(pc + 2);
@@ -249,6 +265,8 @@ static void amiga_png(const char *name)
             if (!loct) pal[c] = n << 4 | n;
             else pal[c] = (pal[c] & 0xF0F0F0) | n;
         } else if (r == 0x092) ddf = w2;
+        else if (r == 0x094) ddfstop = w2;
+        else if (r == 0x102) delay = (w2 & 15) | ((w2 >> 10) & 3) << 4;   /* playfield 1, lores pixels */
         else if (r == 0x100) { nplanes = (w2 >> 12) & 7; ham = (w2 >> 11) & 1; }
         else if (r == 0x104) killehb = (w2 >> 9) & 1;
         else if (r == 0x108) mod = w2;
@@ -263,14 +281,17 @@ static void amiga_png(const char *name)
             if (r == 0x90) diwstop = v & 0xFF;
         }
     }
-    (void)ddf;
-    int w = (diwstop | 0x100) - diwh, skip = diwh - 0x81, h = 224, bpr = 40 + mod;
+    /* 2x fetch (FMODE 1), lores: 32 pixels per 16 colour clocks; DDFSTRT $38 puts the first
+       pixel fetched at the window position $81, BPLCON1 delays it */
+    int fetch = ((ddfstop - ddf) / 16 + 1) * 4;
+    int w = (diwstop | 0x100) - diwh, skip = diwh - 0x81 + (0x38 - ddf) * 2 - delay, h = 224, bpr = fetch + mod;
     static uint8_t rgb[320 * 240 * 3];
     for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++) {
             int c = 0, xx = x + skip;
+            if (xx < 0 || xx >= fetch * 8) xx = -1;   /* not fetched: colour 0 */
             for (int p = 0; p < nplanes; p++)
-                if (rd8(bpl[p] + y * bpr + xx / 8) & (0x80 >> (xx & 7))) c |= 1 << p;
+                if (xx >= 0 && (rd8(bpl[p] + y * bpr + xx / 8) & (0x80 >> (xx & 7)))) c |= 1 << p;
             uint32_t col = pal[c];
             if (nplanes == 6 && !ham && !killehb)   /* Extra Half-Brite: colours 32-63 halve 0-31 */
                 col = c >= 32 ? (pal[c - 32] >> 1) & 0x7F7F7F : pal[c];
@@ -464,6 +485,7 @@ int main(int argc, char **argv)
     int frames = 600, every = 0, ncyc = 233000;
     const char *outdir = ".", *exe = NULL, *rawfile = NULL;
     int shots[256], nshots = 0;
+    if (getenv("NHL_WATCH")) watch_addr = strtoul(getenv("NHL_WATCH"), NULL, 16) & 0xFFFFFE;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-f")) frames = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-S")) every = atoi(argv[++i]);
@@ -604,9 +626,22 @@ int main(int argc, char **argv)
         uint32_t k = rd32(dbg + 72);
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
     }
+    {                                   /* VERIFY builds: the scroll buffers' self-check */
+        uint32_t v = rd32(rd32(dbg + 76));
+        if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, cell row %u, column %u\n",
+                       v >> 16, (v >> 8) & 255, v & 255);
+    }
     if (getenv("NHL_PEEK")) {           /* NHL_PEEK=address: a word there at the end */
         uint32_t a = strtoul(getenv("NHL_PEEK"), NULL, 16);
         fprintf(stderr, "peek %06x: %04x\n", a, rd16(a));
+    }
+    if (getenv("NHL_MEM")) {            /* NHL_MEM=address:length:file (hex address, length) */
+        uint32_t ad = 0, ln = 0; char fn[256];
+        if (sscanf(getenv("NHL_MEM"), "%x:%x:%255s", &ad, &ln, fn) == 3) {
+            FILE *f = fopen(fn, "wb");
+            fwrite(mem + (ad & 0xFFFFFF), 1, ln, f);
+            fclose(f);
+        }
     }
     if (getenv("NHL_DUMP")) {
         FILE *f = fopen(getenv("NHL_DUMP"), "wb");
