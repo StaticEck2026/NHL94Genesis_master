@@ -343,6 +343,13 @@ os_save_prof
 	move.l	(os_iobuf+4).l,d3
 	lsl.l	#2,d3
 	jsr	DOS_Write(a6)
+	; then frames drawn and 60 Hz ticks at the F9 mark and now
+	move.l	(rd_count).l,(prof_mark+8).l
+	move.l	(hal_frames).l,(prof_mark+12).l
+	move.l	d4,d1
+	move.l	#prof_mark,d2
+	moveq	#16,d3
+	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)
 .x	movem.l	(sp)+,d1-d4/a0-a1/a6

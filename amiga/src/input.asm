@@ -75,8 +75,16 @@ hal_int2
 	bne	.nesc
 	st	(hal_quit).l
 .nesc	cmpi.b	#$59,d1				;F10: frame rate
-	bne	.hs
+	bne	.nf10
 	not.b	(hal_fpsshow).l
+	bra	.hs
+.nf10
+	IFD	PROFILE
+	cmpi.b	#$58,d1				;F9: mark the start of the frame rate count
+	bne	.hs
+	move.l	(rd_count).l,(prof_mark).l
+	move.l	(hal_frames).l,(prof_mark+4).l
+	ENDIF
 	bra	.hs
 .up	sf	(a0,d1.w)
 .hs	; hold the handshake at least 85 microseconds: 3 lines

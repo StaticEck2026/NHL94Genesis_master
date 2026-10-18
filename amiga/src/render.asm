@@ -2027,117 +2027,282 @@ rd_spr_cpu
 .nf	move.w	d0,(a0)+
 	addq.w	#1,d1
 	bra.s	.ct
-.ctd	; lines
+.ctd	; the screen line of the first line drawn
+	movea.l	(rd_back).l,a0
+	move.w	(rd_sy).l,d0
+	add.w	(rd_r0).l,d0
+	mulu.w	#SROW,d0
+	adda.l	d0,a0
 	move.w	(rd_r0).l,d5
-.line	cmp.w	(rd_r1).l,d5
+	; a run of lines in one tile row at a time: a pointer into the tile cache per column
+.seg	cmp.w	(rd_r1).l,d5
 	bge	.x
-	; source line: tile row and line in the tile (vertical flip from the other end)
 	move.w	d5,d0
-	btst	#4,(rd_sat).l
+	moveq	#8,d7				;lines left in the tile row
+	suba.l	a5,a5
+	addq.l	#4,a5				;source step
+	btst	#4,(rd_sat).l			;vertical flip: from the other end, backwards
 	beq.s	.nv
 	move.w	(rd_sch).l,d0
 	lsl.w	#3,d0
 	subq.w	#1,d0
 	sub.w	d5,d0
-.nv	move.w	d0,d1
-	lsr.w	#3,d1				;tile row
-	andi.w	#7,d0				;line
-	; gather the columns into plane longs d2 (p0), d3 (p1), rd_gp2 (p2), a5 (p3) and the mask a6
-	moveq	#0,d2
-	moveq	#0,d3
-	clr.l	(rd_gp2).l
-	suba.l	a5,a5
-	suba.l	a6,a6
-	lea	(rd_ctiles).l,a0
-	move.w	(rd_ncol).l,d7
+	moveq	#1,d7
+	subq.l	#8,a5
+.nv	moveq	#7,d2
+	and.w	d0,d2				;line in the tile
+	lsr.w	#3,d0				;tile row
+	tst.l	a5
+	bmi.s	.vf
+	sub.w	d2,d7				;8 - line
+	bra.s	.cnt
+.vf	add.w	d2,d7				;line + 1
+.cnt	move.w	(rd_r1).l,d3
+	sub.w	d5,d3
+	cmp.w	d3,d7
+	ble.s	.cn
+	move.w	d3,d7
+.cn	add.w	d7,d5
+	movea.w	d5,a1				;(next line)
 	subq.w	#1,d7
-.g	moveq	#0,d6
-	move.w	(a0)+,d6			;tile of the column's top row
-	add.w	d1,d6				;this row's tile (columns are tile rows apart)
-	andi.w	#$FFF,d6
-	lea	(tp_mk).l,a1
-	lsl.l	#3,d6
-	add.w	d0,d6
-	move.l	a6,d4				;(mask in d4 for the moment)
-	lsl.l	#8,d4
-	move.b	(a1,d6.l),d4
-	movea.l	d4,a6
-	lsl.l	#2,d6
-	lea	(tp_pl).l,a1
-	move.l	(a1,d6.l),d6			;p0 p1 p2 p3 of this column's line
-	rol.l	#8,d6
-	lsl.l	#8,d2
-	move.b	d6,d2
-	rol.l	#8,d6
-	lsl.l	#8,d3
-	move.b	d6,d3
-	rol.l	#8,d6
-	move.l	(rd_gp2).l,d4
-	lsl.l	#8,d4
-	move.b	d6,d4
-	move.l	d4,(rd_gp2).l
-	rol.l	#8,d6
-	move.l	a5,d4
-	lsl.l	#8,d4
-	move.b	d6,d4
-	movea.l	d4,a5
-	dbf	d7,.g
-	; left align (4 - columns bytes)
-	move.w	(rd_ncol).l,d7
-	subq.w	#4,d7
-	neg.w	d7
-	lsl.w	#3,d7				;bits to shift
-	move.l	a6,d6				;mask
-	beq	.nl				;nothing on this line
-	lsl.l	d7,d6
-	lsl.l	d7,d2
-	lsl.l	d7,d3
-	move.l	(rd_gp2).l,d4
-	lsl.l	d7,d4
-	move.l	a5,d0
-	lsl.l	d7,d0
-	movea.l	d0,a5
-	; screen line
-	movea.l	(rd_back).l,a1
-	move.w	(rd_sy).l,d0
-	add.w	d5,d0
-	mulu.w	#SROW,d0
-	adda.l	d0,a1
+	lsl.w	#2,d2				;line offset in the tile
+	lea	(rd_ctiles).l,a6
+	moveq	#0,d3
+	move.w	(a6)+,d3
+	add.w	d0,d3
+	andi.w	#$FFF,d3
+	lsl.l	#5,d3
+	add.w	d2,d3
+	lea	(tp_pl).l,a2
+	adda.l	d3,a2
+	move.w	(rd_ncol).l,d4
 	move.w	(rd_sbit).l,d1
-	move.l	d6,d7
-	not.l	d7				;keep mask
-	bfextu	(a1){d1:32},d0
-	and.l	d7,d0
-	or.l	d2,d0
-	bfins	d0,(a1){d1:32}
-	bfextu	SBPR(a1){d1:32},d0
-	and.l	d7,d0
-	or.l	d3,d0
-	bfins	d0,SBPR(a1){d1:32}
-	bfextu	2*SBPR(a1){d1:32},d0
-	and.l	d7,d0
-	or.l	d4,d0
-	bfins	d0,2*SBPR(a1){d1:32}
-	move.l	a5,d4
-	bfextu	3*SBPR(a1){d1:32},d0
-	and.l	d7,d0
-	or.l	d4,d0
-	bfins	d0,3*SBPR(a1){d1:32}
-	bfextu	4*SBPR(a1){d1:32},d0
-	and.l	d7,d0
-	move.l	d6,d4
-	and.l	(rd_spalm).l,d4
-	or.l	d4,d0
-	bfins	d0,4*SBPR(a1){d1:32}
-	bfextu	5*SBPR(a1){d1:32},d0
-	and.l	d7,d0
-	move.l	d6,d4
-	and.l	(rd_spalm+4).l,d4
-	or.l	d4,d0
-	bfins	d0,5*SBPR(a1){d1:32}
-.nl	addq.w	#1,d5
-	bra	.line
+	subq.w	#2,d4
+	bmi	.c1
+	moveq	#0,d3
+	move.w	(a6)+,d3
+	add.w	d0,d3
+	andi.w	#$FFF,d3
+	lsl.l	#5,d3
+	add.w	d2,d3
+	lea	(tp_pl).l,a3
+	adda.l	d3,a3
+	tst.w	d4
+	beq	.c2
+	moveq	#0,d3
+	move.w	(a6)+,d3
+	add.w	d0,d3
+	andi.w	#$FFF,d3
+	lsl.l	#5,d3
+	add.w	d2,d3
+	lea	(tp_pl).l,a4
+	adda.l	d3,a4
+	subq.w	#1,d4
+	beq	.c3
+	moveq	#0,d3
+	move.w	(a6)+,d3
+	add.w	d0,d3
+	andi.w	#$FFF,d3
+	lsl.l	#5,d3
+	add.w	d2,d3
+	lea	(tp_pl).l,a6
+	adda.l	d3,a6
+	bra	.c4
+.next	move.w	a1,d5
+	bra	.seg
 .x	rts
+
+	; one column: 8 pixel fields. d2 = the line's planes (p0 p1 p2 p3), d3 = mask
+.c1	move.w	(rd_spalm+2).l,d5
+	move.w	(rd_spalm+6).l,d6
+.l1	move.l	(a2),d2
+	adda.l	a5,a2
+	beq	.n1				;all transparent
+	move.l	d2,d3
+	swap	d3
+	or.w	d2,d3
+	move.w	d3,d4
+	lsr.w	#8,d4
+	or.b	d4,d3				;mask
+	move.b	d3,d4
+	not.b	d3				;keep
+	rol.l	#8,d2
+	bfextu	(a0){d1:8},d0
+	and.b	d3,d0
+	or.b	d2,d0
+	bfins	d0,(a0){d1:8}
+	rol.l	#8,d2
+	bfextu	SBPR(a0){d1:8},d0
+	and.b	d3,d0
+	or.b	d2,d0
+	bfins	d0,SBPR(a0){d1:8}
+	rol.l	#8,d2
+	bfextu	2*SBPR(a0){d1:8},d0
+	and.b	d3,d0
+	or.b	d2,d0
+	bfins	d0,2*SBPR(a0){d1:8}
+	rol.l	#8,d2
+	bfextu	3*SBPR(a0){d1:8},d0
+	and.b	d3,d0
+	or.b	d2,d0
+	bfins	d0,3*SBPR(a0){d1:8}
+	move.b	d4,d2
+	and.b	d5,d2
+	bfextu	4*SBPR(a0){d1:8},d0
+	and.b	d3,d0
+	or.b	d2,d0
+	bfins	d0,4*SBPR(a0){d1:8}
+	and.b	d6,d4
+	bfextu	5*SBPR(a0){d1:8},d0
+	and.b	d3,d0
+	or.b	d4,d0
+	bfins	d0,5*SBPR(a0){d1:8}
+.n1	lea	SROW(a0),a0
+	dbf	d7,.l1
+	bra	.next
+
+	; two columns: 16 pixel fields. The two columns' plane bytes are interleaved:
+	; d2 = p0 p2 words, d3 = p1 p3 words, column 0 in the high bytes
+.c2	move.w	(rd_spalm+2).l,d5
+	move.w	(rd_spalm+6).l,d6
+.l2	move.l	(a2),d2
+	adda.l	a5,a2
+	move.l	(a3),d3
+	adda.l	a5,a3
+	move.l	d2,d0
+	or.l	d3,d0
+	beq	.n2				;all transparent
+	move.l	d3,d0
+	lsr.l	#8,d0
+	eor.l	d2,d0
+	andi.l	#$00FF00FF,d0
+	eor.l	d0,d2
+	lsl.l	#8,d0
+	eor.l	d0,d3
+	move.l	d2,d4
+	or.l	d3,d4
+	move.l	d4,d0
+	swap	d0
+	or.w	d0,d4				;mask
+	not.w	d4				;keep
+	swap	d2
+	bfextu	(a0){d1:16},d0
+	and.w	d4,d0
+	or.w	d2,d0
+	bfins	d0,(a0){d1:16}
+	swap	d3
+	bfextu	SBPR(a0){d1:16},d0
+	and.w	d4,d0
+	or.w	d3,d0
+	bfins	d0,SBPR(a0){d1:16}
+	swap	d2
+	bfextu	2*SBPR(a0){d1:16},d0
+	and.w	d4,d0
+	or.w	d2,d0
+	bfins	d0,2*SBPR(a0){d1:16}
+	swap	d3
+	bfextu	3*SBPR(a0){d1:16},d0
+	and.w	d4,d0
+	or.w	d3,d0
+	bfins	d0,3*SBPR(a0){d1:16}
+	move.w	d4,d2
+	not.w	d2				;mask
+	move.w	d2,d3
+	and.w	d5,d2
+	bfextu	4*SBPR(a0){d1:16},d0
+	and.w	d4,d0
+	or.w	d2,d0
+	bfins	d0,4*SBPR(a0){d1:16}
+	and.w	d6,d3
+	bfextu	5*SBPR(a0){d1:16},d0
+	and.w	d4,d0
+	or.w	d3,d0
+	bfins	d0,5*SBPR(a0){d1:16}
+.n2	lea	SROW(a0),a0
+	dbf	d7,.l2
+	bra	.next
+
+	; three or four columns: 32 pixel fields. A 4 x 4 byte transpose of the columns' lines
+	; gives the plane longs d2-d5, column 0 in the high byte
+.c3	movea.l	a4,a6				;(the 4th column reads the 3rd again and is cleared)
+	move.w	#$FF00,(rd_c4m).l
+	bra	.l4
+.c4	move.w	#$FFFF,(rd_c4m).l
+.l4	move.l	(a2),d2
+	adda.l	a5,a2
+	move.l	(a3),d3
+	adda.l	a5,a3
+	move.l	(a4),d4
+	adda.l	a5,a4
+	move.l	(a6),d5
+	adda.l	a5,a6
+	tst.b	(rd_c4m+1).l
+	bne.s	.four
+	moveq	#0,d5
+.four	; bytes: (d2, d3) and (d4, d5)
+	move.l	d3,d0
+	lsr.l	#8,d0
+	eor.l	d2,d0
+	andi.l	#$00FF00FF,d0
+	eor.l	d0,d2
+	lsl.l	#8,d0
+	eor.l	d0,d3
+	move.l	d5,d0
+	lsr.l	#8,d0
+	eor.l	d4,d0
+	andi.l	#$00FF00FF,d0
+	eor.l	d0,d4
+	lsl.l	#8,d0
+	eor.l	d0,d5
+	; words: (d2, d4) and (d3, d5)
+	swap	d4
+	move.w	d2,d0
+	move.w	d4,d2
+	move.w	d0,d4
+	swap	d4
+	swap	d5
+	move.w	d3,d0
+	move.w	d5,d3
+	move.w	d0,d5
+	swap	d5
+	move.l	d2,d6
+	or.l	d3,d6
+	or.l	d4,d6
+	or.l	d5,d6
+	beq	.n4				;all transparent
+	not.l	d6				;keep
+	bfextu	(a0){d1:32},d0
+	and.l	d6,d0
+	or.l	d2,d0
+	bfins	d0,(a0){d1:32}
+	bfextu	SBPR(a0){d1:32},d0
+	and.l	d6,d0
+	or.l	d3,d0
+	bfins	d0,SBPR(a0){d1:32}
+	bfextu	2*SBPR(a0){d1:32},d0
+	and.l	d6,d0
+	or.l	d4,d0
+	bfins	d0,2*SBPR(a0){d1:32}
+	bfextu	3*SBPR(a0){d1:32},d0
+	and.l	d6,d0
+	or.l	d5,d0
+	bfins	d0,3*SBPR(a0){d1:32}
+	move.l	d6,d2
+	not.l	d2				;mask
+	move.l	d2,d3
+	and.l	(rd_spalm).l,d2
+	and.l	(rd_spalm+4).l,d3
+	bfextu	4*SBPR(a0){d1:32},d0
+	and.l	d6,d0
+	or.l	d2,d0
+	bfins	d0,4*SBPR(a0){d1:32}
+	bfextu	5*SBPR(a0){d1:32},d0
+	and.l	d6,d0
+	or.l	d3,d0
+	bfins	d0,5*SBPR(a0){d1:32}
+.n4	lea	SROW(a0),a0
+	dbf	d7,.l4
+	bra	.next
 
 ;	Build the image (a2) and mask (a3) of the sprite described by rd_sx..rd_r1: lines rd_r0 to
 ;	rd_r1-1, columns rd_c0 on (rd_ncol of them), rows of rd_wb bytes per plane (4 or 6).
@@ -3202,6 +3367,7 @@ rd_tline	ds.w	1
 rd_nchgA	ds.w	1
 rd_sbit		ds.w	1
 rd_ctiles	ds.w	4
+rd_c4m		ds.w	1			;$FFFF: 4 columns, $FF00: 3
 		cnop	0,4
 rd_spalm	ds.l	2
 rd_gp2		ds.l	1

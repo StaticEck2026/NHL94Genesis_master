@@ -357,6 +357,7 @@ hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1
+prof_mark	ds.l	4
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
