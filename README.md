@@ -69,6 +69,10 @@ Full ROM builds assemble `src/nhl94.asm`. The listing is `output/build/nhl94 .ls
 
 `npm run build:segacd` (`node tools/build.js --segacd`) assembles the 41 transcribed CD fragments in `src/segacd/` into `output/segacd/` and compares them to the disc files in `cdbin/` (not in the repo), on Windows or Linux with wine. It does not change the cartridge build. What the disc changed, and how far the disassembly goes, is `docs/segacd.md`.
 
+## Amiga 1200
+
+`amiga/build.sh` converts the sources into an AGA Amiga program (`output/amiga/`). It does not change the cartridge build. Requirements, controls and how the port works are in `amiga/README.md`.
+
 ## Build steps explained
 
 `tools/build.js` prints one line per step with a short note under it: prebuild (check the ROM, extract assets), assemble (SNASM68k), fixopcodes (patch the encodings SNASM picks differently from EA's assembler), fixrom (ROM size, header end, checksum) and verify (byte-for-byte against retail). Details in `START_HERE.md`.
