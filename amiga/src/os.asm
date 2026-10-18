@@ -170,7 +170,7 @@ _start
 	jsr	EXEC_FreeMem(a6)
 	moveq	#0,d7
 	bra	.close
-.error	bsr	os_print
+.error	bsr	ezrequest
 .fail	moveq	#20,d7
 .close	movea.l	(os_exec).l,a6
 	move.l	(os_gfx).l,d0
@@ -189,9 +189,10 @@ _start
 .gfxname	dc.b	'graphics.library',0
 .cianame	dc.b	'ciab.resource',0
 .ciaaname	dc.b	'ciaa.resource',0
-.msgcpu		dc.b	'NHL 94 needs a 68020 or better.',10,0
-.msgaga		dc.b	'NHL 94 needs the AGA chipset (Amiga 1200 / 4000 / CD32).',10,0
-.msgnomem	dc.b	'Not enough memory.',10,0
+.msgcpu		dc.b	'NHL 94 needs a 68020 or better.',0
+.msgaga		dc.b	'NHL 94 needs the AGA chipset',10
+		dc.b	'(Amiga 1200 / 4000 / CD32).',0
+.msgnomem	dc.b	'Not enough memory.',0
 	even
 
 ;	Move the Genesis RAM window to a0 (64K aligned): add the distance to every long listed in
@@ -231,31 +232,14 @@ hal_exit
 	ori.b	#$80,d0
 	move.b	d0,(CIAB_ICR).l
 	bsr	hal_kbd_exit
+	jsr	(snd_exit).l
 	move.l	(os_vbr).l,d0
 	movec	d0,vbr
 	movea.l	(os_ssp).l,sp
 	movea.l	(os_exec).l,a6
 	rte					;returns from Supervisor()
 
-;	Print the 0 ended text a0 on the CLI.
-os_print
-	movem.l	d1-d3/a0-a1/a6,-(sp)
-	movea.l	a0,a1
-	moveq	#-1,d3
-.len	addq.l	#1,d3
-	tst.b	(a1)+
-	bne	.len
-	move.l	a0,-(sp)
-	movea.l	(os_dos).l,a6
-	jsr	DOS_Output(a6)
-	move.l	d0,d1
-	move.l	(sp)+,d2
-	beq	.x
-	tst.l	d1
-	beq	.x
-	jsr	DOS_Write(a6)
-.x	movem.l	(sp)+,d1-d3/a0-a1/a6
-	rts
+	include	"request.i"
 
 ;	The save file holds the cartridge's battery RAM ($2000 bytes, in the odd bytes of hal_sram).
 os_load_sram
@@ -333,12 +317,15 @@ os_save_prof
 	move.l	(os_iobuf+4).l,d3
 	lsl.l	#2,d3
 	jsr	DOS_Write(a6)
-	; then frames drawn and 60 Hz ticks at the F9 mark and now
+	; then frames drawn and game frames at the F9 mark and now, and the game frame rate
 	move.l	(rd_count).l,(prof_mark+8).l
 	move.l	(hal_frames).l,(prof_mark+12).l
+	moveq	#0,d0
+	move.w	(hal_hz).l,d0
+	move.l	d0,(prof_mark+16).l
 	move.l	d4,d1
 	move.l	#prof_mark,d2
-	moveq	#16,d3
+	moveq	#52,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)

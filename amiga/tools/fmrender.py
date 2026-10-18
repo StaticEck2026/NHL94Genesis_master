@@ -1,32 +1,38 @@
 #!/usr/bin/env python3
 """Render the game's 32 YM2612 FM patches as Amiga samples (build step of the Amiga port).
 
-Paula has no FM synthesis, so each patch is played as a sample. A patch is rendered at the
-pitch bands it is used at in the songs and sound effects (1.5 octaves a band), so every note
-plays back between 0.71 and 2 times the render rate. A sound that holds is the attack (the
-envelopes until they settle) then a loop of 2 periods; the rest of its envelope (decay, and the
-release at key off) is a volume envelope at run time (amiga/src/sound.asm). A sound that dies
-away by itself is one sample with no loop.
+Paula has no FM synthesis, so each patch is played as a sample: 8 bit, rendered at 11025 Hz.
+A patch is rendered at the pitch bands it is used at in the songs and sound effects (an octave
+a band), so every note plays back at 0.71 to 1.41 times the render rate (7.8 to 15.6 kHz). A sound that holds is the attack (the envelopes until they
+settle) then a loop of 2 periods; the rest of its envelope (decay, and the release at key off)
+is a volume envelope at run time (amiga/src/sound.asm). A sound that dies away by itself is one
+sample with no loop.
 
 The synthesis is a floating point model of the YM2612: 4 operators, the 8 algorithms,
 operator 1 feedback, MUL, TL, AR/D1R/D2R/SL envelopes with key scaling. Carriers are rendered
 at TL 0 (the driver sets their TL from the note volume); modulators keep the patch TL.
-Detune, SSG-EG and the LFO are left out.
+Detune, SSG-EG and the LFO are left out. FM with feedback has harmonics far above the sample
+rate, which would fold back as harsh inharmonic noise: the patches are synthesised at OS times
+the rate and low-pass filtered (windowed sinc) before they are decimated.
 
-Usage: fmrender.py <Extracted/NHL94/Sound directory> out.i
+Needs numpy. Usage: fmrender.py <Extracted/NHL94/Sound directory> out.i
 """
 import glob, math, os, sys
+import numpy as np
 
-SR = 12000                # render rate: a note at the band's pitch plays back at this rate
-BANDS = [20.0, 56.6, 160.0, 453.0, 1280.0]   # band pitches (Hz); a note f uses the highest <= f*sqrt 2
-ATTACK_MAX = 0.30         # at most this much attack before the loop (seconds)
-SETTLE = 0.05             # attack continues this long after the last operator's attack ends
-ONESHOT_MAX = 0.80        # length limit of a sound with no loop
+SR = 11025                # render rate: a note at the band's pitch plays back at this rate
+OS = 8                    # synthesis at OS * SR
+BANDS = [20.0 * 2 ** k for k in range(8)]   # band pitches (Hz); a note f uses the highest <= f*sqrt 2
+ATTACK_MAX = 0.25         # at most this much attack before the loop (seconds)
+SETTLE = 0.04             # attack continues this long after the last operator's attack ends
+ONESHOT_MAX = 0.70        # length limit of a sound with no loop
 DIES = 0.50               # a sound silent this long after its attack is one shot
 FPS = 60                  # run time envelope steps a second
 PAULA = 3546895           # Paula clock (PAL)
 FSTEP = 7670454 / 144 / 2 ** 21   # Hz per fnum unit at block 0 (0.025399)
 EGCLK = 7670454 / 144 / 3         # envelope generator clock (Hz)
+TAPS = 511                # low-pass filter length at OS * SR
+CUTOFF = 0.42             # its cut off, as a fraction of SR
 
 SLOT_OF_BYTE = [0, 2, 1, 3]   # patch byte i -> operator (the chip orders them S1, S3, S2, S4)
 CARRIERS = {0: [3], 1: [3], 2: [3], 3: [3], 4: [1, 3], 5: [1, 2, 3], 6: [1, 2, 3], 7: [0, 1, 2, 3]}
@@ -68,7 +74,7 @@ def keycode(freq):
     return block * 4 + (f11 << 1) + n3
 
 
-def setup(patch, f0):
+def setup(patch, f0, rate):
     ops, alg, fb = parse(patch)
     kc = keycode(f0)
     for o in ops:
@@ -82,7 +88,7 @@ def setup(patch, f0):
         o['att'] = 1023.0
         o['stage'] = 0                  # 0 attack, 1 decay, 2 sustain (second decay)
         o['phase'] = 0.0
-        o['inc'] = f0 * (0.5 if o['mul'] == 0 else o['mul']) / SR
+        o['inc'] = f0 * (0.5 if o['mul'] == 0 else o['mul']) / rate
     return ops, alg, fb
 
 
@@ -110,55 +116,80 @@ def env_step(o, clocks):
 
 
 def render(patch, f0, n, freeze=None):
-    """n samples of the patch keyed on at pitch f0; the envelopes stop moving at sample freeze.
-    Returns (samples, operator states at the end, sample at which every attack had ended)."""
-    ops, alg, fb = setup(patch, f0)
+    """n samples at OS * SR of the patch keyed on at pitch f0; the envelopes stop moving at
+    sample freeze. Returns (samples, operator states at the end, sample at which every attack
+    had ended)."""
+    rate = SR * OS
+    ops, alg, fb = setup(patch, f0, rate)
     carriers = CARRIERS[alg]
-    clocks = EGCLK / SR
-    fbm0 = fbm1 = 0.0
-    out = []
+    # envelopes: stepped at the EG clock, then spread over the samples
+    ticks = int(n * EGCLK / rate) + 2
+    tfreeze = ticks if freeze is None else int(freeze * EGCLK / rate) + 1
+    att = np.zeros((4, ticks))
     attacked = None
-    sin, tau = math.sin, 2 * math.pi
-    tls = [0 if i in carriers else ops[i]['tl'] * 8 for i in range(4)]
-    for t in range(n):
-        if freeze is None or t < freeze:
+    for t in range(ticks):
+        if t < tfreeze:
             for o in ops:
-                env_step(o, clocks)
+                env_step(o, 1.0)
             if attacked is None and all(o['stage'] for o in ops):
-                attacked = t
-        g = []
+                attacked = int(t * rate / EGCLK)
         for i, o in enumerate(ops):
-            a = o['att'] + tls[i]
-            g.append(10 ** (-a * 0.09375 / 20) if a < 1023 else 0.0)
-        p = [o['phase'] for o in ops]
-        s1 = sin(tau * (p[0] + ((fbm0 + fbm1) * 2 ** (fb - 7) if fb else 0.0))) * g[0]
-        fbm0, fbm1 = fbm1, s1
-        if alg == 0:
-            s2 = sin(tau * (p[1] + 4 * s1)) * g[1]; s3 = sin(tau * (p[2] + 4 * s2)) * g[2]
-            y = sin(tau * (p[3] + 4 * s3)) * g[3]
-        elif alg == 1:
-            s2 = sin(tau * p[1]) * g[1]; s3 = sin(tau * (p[2] + 4 * (s1 + s2))) * g[2]
-            y = sin(tau * (p[3] + 4 * s3)) * g[3]
-        elif alg == 2:
-            s2 = sin(tau * p[1]) * g[1]; s3 = sin(tau * (p[2] + 4 * s2)) * g[2]
-            y = sin(tau * (p[3] + 4 * (s1 + s3))) * g[3]
-        elif alg == 3:
-            s2 = sin(tau * (p[1] + 4 * s1)) * g[1]; s3 = sin(tau * p[2]) * g[2]
-            y = sin(tau * (p[3] + 4 * (s2 + s3))) * g[3]
-        elif alg == 4:
-            s2 = sin(tau * (p[1] + 4 * s1)) * g[1]; s3 = sin(tau * p[2]) * g[2]
-            y = s2 + sin(tau * (p[3] + 4 * s3)) * g[3]
-        elif alg == 5:
-            y = (sin(tau * (p[1] + 4 * s1)) * g[1] + sin(tau * (p[2] + 4 * s1)) * g[2]
-                 + sin(tau * (p[3] + 4 * s1)) * g[3])
-        elif alg == 6:
-            y = sin(tau * (p[1] + 4 * s1)) * g[1] + sin(tau * p[2]) * g[2] + sin(tau * p[3]) * g[3]
-        else:
-            y = s1 + sin(tau * p[1]) * g[1] + sin(tau * p[2]) * g[2] + sin(tau * p[3]) * g[3]
-        out.append(y)
-        for o in ops:
-            o['phase'] = (o['phase'] + o['inc']) % 1.0
-    return out, ops, attacked
+            att[i, t] = o['att']
+    tt = np.arange(n) * (EGCLK / rate)
+    gain = []
+    for i in range(4):
+        a = np.interp(tt, np.arange(ticks), att[i]) + (0 if i in carriers else ops[i]['tl'] * 8)
+        gain.append(np.where(a < 1023, 10 ** (-a * 0.09375 / 20), 0.0))
+    t = np.arange(n)
+    ph = [(t * o['inc']) % 1.0 for o in ops]
+    tau = 2 * math.pi
+    # operator 1 with its feedback, one sample after the other
+    s1 = np.empty(n)
+    g0, p0 = gain[0], ph[0]
+    k = 2.0 ** (fb - 7) if fb else 0.0
+    m0 = m1 = 0.0
+    sin = math.sin
+    for j in range(n):
+        v = sin(tau * (p0[j] + (m0 + m1) * k)) * g0[j]
+        s1[j] = v
+        m0, m1 = m1, v
+
+    def op(i, mod=0.0):
+        return np.sin(tau * (ph[i] + 4 * mod)) * gain[i]
+    if alg == 0:
+        y = op(3, op(2, op(1, s1)))
+    elif alg == 1:
+        y = op(3, op(2, s1 + op(1)))
+    elif alg == 2:
+        y = op(3, s1 + op(2, op(1)))
+    elif alg == 3:
+        y = op(3, op(1, s1) + op(2))
+    elif alg == 4:
+        y = op(1, s1) + op(3, op(2))
+    elif alg == 5:
+        y = op(1, s1) + op(2, s1) + op(3, s1)
+    elif alg == 6:
+        y = op(1, s1) + op(2) + op(3)
+    else:
+        y = s1 + op(1) + op(2) + op(3)
+    return y, ops, attacked
+
+
+def lowpass():
+    """Windowed sinc (Blackman) low-pass at OS * SR, cut off CUTOFF * SR, unity gain."""
+    m = np.arange(TAPS) - (TAPS - 1) / 2
+    fc = CUTOFF / OS
+    h = 2 * fc * np.sinc(2 * fc * m) * np.blackman(TAPS)
+    return h / h.sum()
+
+
+LOWPASS = lowpass()
+
+
+def decimate(x):
+    """Filter and keep every OS-th sample (zero phase: output sample j is input sample j * OS)."""
+    y = np.convolve(x, LOWPASS)[(TAPS - 1) // 2:]
+    return y[::OS][:len(x) // OS]
 
 
 def make_sample(patch, band):
@@ -167,24 +198,26 @@ def make_sample(patch, band):
     spc = max(2, round(SR / band))      # samples a period
     f0 = SR / spc
     per2 = 2 * spc                      # the loop: 2 periods (MUL 0 is half the pitch)
-    first, ops, attacked = render(patch, f0, int((ATTACK_MAX + DIES) * SR))
+    first, ops, attacked = render(patch, f0, int((ATTACK_MAX + DIES) * SR * OS))
     if attacked is None:
-        attacked = int(ATTACK_MAX * SR)
+        attacked = int(ATTACK_MAX * SR * OS)
+    attacked //= OS
     loop = max(per2, -(-int(attacked + SETTLE * SR) // per2) * per2)
     loop = min(loop, max(per2, int(ATTACK_MAX * SR) // per2 * per2))
-    _, alg, _ = parse(patch)
     main = ops[3]                       # S4 is a carrier in every algorithm
     if main['att'] >= 1000 or (main['stage'] == 2 and main['rd2'] * EGCLK * DIES > 1023):
         # dies away: one shot, cut where it is silent
-        full, _, _ = render(patch, f0, int(ONESHOT_MAX * SR))
-        last = 0
-        for i, v in enumerate(full):
-            if abs(v) > 0.004:
-                last = i
-        n = min(len(full), last + 1)
-        return full[:n + (n & 1)], n + (n & 1), 0, None
-    full, ops, _ = render(patch, f0, loop + per2, freeze=loop)
-    return full, loop, per2, ops[3]
+        full = decimate(render(patch, f0, int(ONESHOT_MAX * SR * OS))[0])
+        loud = np.nonzero(np.abs(full) > 0.004)[0]
+        n = int(loud[-1]) + 1 if len(loud) else 2
+        n += n & 1
+        return full[:n], n, 0, None
+    # the envelopes stop at the loop; the loop starts once the filter has settled after that
+    settle = -(-(TAPS // OS + 2) // per2) * per2
+    total = loop + settle + per2
+    full, ops, _ = render(patch, f0, total * OS, freeze=loop * OS)
+    out = decimate(full)[:total]
+    return out, loop + settle, per2, ops[3]
 
 
 def bands_used(sound_dir):
@@ -239,12 +272,12 @@ def main():
             datas.append((b, data, ls, ll))
             if op is not None and main is None:
                 main = op
-        peak = max(max(abs(v) for v in d[1]) for d in datas)
+        peak = max(float(np.abs(d[1]).max()) for d in datas)
         scale = 127.0 / max(peak, 1.0)        # quiet patches stay quiet
         for b, data, ls, ll in datas:
             label = 'fm_p%02d_b%d' % (p, b)
             lines.append(label)
-            bs = bytes((int(round(v * scale)) & 0xFF) for v in data)
+            bs = (np.clip(np.round(np.asarray(data) * scale), -127, 127).astype(np.int16) & 0xFF).astype(np.uint8).tobytes()
             if len(bs) & 1:
                 bs += b'\0'
             for i in range(0, len(bs), 32):
@@ -256,7 +289,7 @@ def main():
             total += len(bs)
         table = [made[min(made, key=lambda x: abs(x - b))] for b in range(len(BANDS))]
         if main is None:
-            ops, _, _ = setup(patch, BANDS[bands[0]])
+            ops, _, _ = setup(patch, BANDS[bands[0]], SR * OS)
             main = ops[3]
             r1 = sl = r2 = 0
         else:

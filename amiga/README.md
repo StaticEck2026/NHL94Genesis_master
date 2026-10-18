@@ -9,20 +9,42 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
-- Fast RAM. The game takes about 1.5 MB of any memory and about 0.5 MB of chip RAM, so it does not
-  fit in a stock 2 MB A1200.
-- Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE).
-- PAL or NTSC. The game runs its 60 Hz Genesis timing on either.
+- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
+  about 1.5 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
+- Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
+- PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
+  frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
+  Genesis), 60 on NTSC. `F8` switches between the two.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 10 frames a second (FS-UAE,
-cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
-the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay is shown at a steady 25 frames a second
+on PAL most of the time (each frame on the screen for 2 vertical blanks; heavy moments drop to
+about 17), measured in FS-UAE, cycle exact. The game itself always runs at full speed; it is
+the screen updates that are fewer. `F6` lifts the cap: about 30 frames a second on average,
+but unevenly paced (a frame shows for 1 or 2 vertical blanks), which looks less smooth.
 
 ## Running
 
 Copy `output/amiga/NHL94`, `NHL94.info` and `nhl94.game` into the same directory. Start `NHL94`
 from a Shell, or double click its icon. `NHL94` is a small launcher that loads `nhl94.game`. The
-game takes over the machine and gives it back when you quit.
+game takes over the machine and gives it back when you quit. If it cannot run (no AGA, no 68020,
+not enough memory, `nhl94.game` missing), a requester says why.
+
+In an emulator, use the hard drive image `output/amiga/nhl94.hdf`. The build makes it when
+`xdftool` is installed (`pip install amitools`). It boots straight into the game.
+
+There is also a bootable floppy, `output/amiga/nhl94.adf` (880 KB, double density, so it works
+in the A1200's own drive and in every emulator). The game does not fit on a floppy as it is, so
+there it is `NHL94.pak`, its parts deflate compressed, which the launcher loads and unpacks
+itself. Loading from a real floppy takes about 70 seconds; the hard drive image starts at once.
+To install the floppy on a hard drive, copy `NHL94`, `NHL94.info` and `NHL94.pak` into one
+directory.
+
+- **vAmigaWeb** (vamigaweb.github.io): choose the Amiga 1200 model with fast RAM (the "A1200"
+  preset with 8 MB fast RAM), then drop `nhl94.hdf` onto the page. Do not drop `nhl94.game`
+  itself: an executable that big is put on a high density floppy, and booting that hangs or crashes
+  (it does with any large executable).
+- **FS-UAE, WinUAE, Amiberry**: an A1200 with `fast_memory` of 2 MB or more and `nhl94.hdf` as
+  the first hard drive (or the directory with the three files as a hard drive folder).
 
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
@@ -37,12 +59,23 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. The 4 way play adaptor modes are not
+`Esc` quits to the Workbench and writes the save file. `F6` switches between a steady 25 frames
+a second and as many as there is time for. `F7` switches the Amiga's audio low-pass filter (on
+at start, like the output filter of a model 1 Genesis). `F8` switches the game between 50 and
+60 frames a second.
+
+### Screen
+
+Every screen is shown as the Genesis shows it: the menus 320 pixels wide, the rink 256 (the
+Genesis' H32 mode), centred.
+
+In vAmigaWeb, set "visible display area" to "viewport tracking" in the settings: it then zooms to
+the picture the game shows, without the borders. The 4 way play adaptor modes are not
 available.
 
 ## Building
 
-Needs Python 3, Node.js (for the repository's asset extraction pre-step, see the main README) and
+Needs Python 3 with numpy, Node.js (for the repository's asset extraction pre-step, see the main README) and
 vasm (`vasmm68k_mot`, Motorola syntax; on the `PATH`, in `$VASM`, or at `/opt/amiga/vasm`).
 
     amiga/build.sh
@@ -50,10 +83,23 @@ vasm (`vasmm68k_mot`, Motorola syntax; on the `PATH`, in `$VASM`, or at `/opt/am
 writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94.info`. With
 `VASMFLAGS`:
 
+- `-DWATCHDOG=1` shows a debug screen (the last interrupted program counters) when no frame has
+  been drawn for 4 seconds.
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
-- `-DPROFILE=1` samples the program counter 60 times a second and writes `nhl94.prof` on exit;
-  `amiga/tools/amiprof.py` turns it into a list of routines.
+- `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
+  exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
+  blitter is put on the caller), the frame rate since `F9` was pressed, and how many frames were
+  on the screen for 1, 2, 3 ... vertical blanks.
+- `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
+- `-DNOCROWD=1` leaves out the animated crowd sprites in the stands (about 4 of the 37 sprites a
+  frame in play, about 9% of the renderer's time).
+- `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
+  for now: they do not sound right yet.
+- `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
+  not listed for repair must match the bitmap. It also compares every name table each frame
+  and fails if one changed that the write marks said could not have. The test harness reports
+  the first failure.
 
 ## How it works
 
@@ -76,24 +122,61 @@ handshake, the pad reader and the save RAM.
 
 The hardware layer:
 
-- `hal.asm`: start-up, interrupt vectors, the 60 Hz CIA timer that stands in for the Genesis
+- `hal.asm`: start-up, interrupt vectors, the 50 / 60 Hz CIA timer that stands in for the Genesis
   vertical blank, and the two contexts (the game, and the renderer it runs while the game waits).
 - `os.asm`: takes the machine from the OS and gives it back; keeps the OS's memory in the
   `RAMBASE` window; loads and saves `NHL94.sav`.
 - `render.asm`: draws the emulated VDP state in 64 colours on 6 interleaved bitplanes. Tiles are
-  cached in planar form. Plane B is kept as a bitmap and blitted with the scroll. Plane A and the
-  window are an overlay layer with masks. Sprites are drawn by the CPU. A chunky renderer with
+  cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the
+  whole of plane B (512 x 256, its top 224 lines twice for the vertical wrap) and the display
+  hardware scrolls it: the bitplane pointers, a fetch that starts up to 63 pixels early and the
+  BPLCON1 delay. The planes are fetched 64 bits at a time (FMODE 3), which leaves the most of
+  the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
+  cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
+  by 8 lines a bit). Other
+  screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
+  layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
+  the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
+  blitted back over what was drawn under them (found by moving the screen cells something low
+  was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
+  without waiting. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
-  and the display window, and frames are double buffered.
+  and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
+  the VDP registers, scroll and sprite list taken when it starts, with the changed tiles
+  converted in the same game frame (the game runs several of its frames meanwhile; without it,
+  players could be from a later game frame than the rink). A frame's copper list is handed
+  over by a marker queued after its blits (the level 3 interrupt takes it when the queue gets
+  there) and set at the first vertical blank that keeps the frame before on the screen for 2,
+  so the CPU goes on to the next frame while the blitter finishes. A new frame is begun every
+  2 game frames at most. A buffer is drawn into again only once the frame after it has been
+  on the screen for a vertical blank (counted by the same interrupt). When the game runs at the
+  display's rate (50 Hz PAL, 60 Hz NTSC) its frames are timed by the vertical blank too, so
+  they cannot drift against the frames shown; otherwise by a CIA timer. The game's own
+  interrupt masks (5, 3: the Genesis line interrupt) are lowered to 0 in conversion, so the
+  blit queue is fed while the game's code runs. The renderer only reads which name tables the
+  game may have written (DMA, fills and copies mark the blocks they change, data port writes
+  the block they begin in) and compares only those with its copies.
+  The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
+  Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
+  off so all 64 registers are used.
 - `input.asm`: joysticks, CD32 pads and the keyboard, read as two 3 button pads.
 - `sound.asm`: the four Paula voices in place of the Z80, YM2612 and DAC. The game's own 68000
   sound driver runs unchanged. `sound.asm` reads the commands the driver writes for the Z80:
   key on, key off, frequency, volume and patch per FM channel, and the PCM start, rate and volume.
-  The 32 FM patches are rendered to samples at build time by `amiga/tools/fmrender.py`, a model
-  of the YM2612. Each patch has an attack and a loop at each pitch band it is used at. The rest
-  of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
-  note takes a free voice, else the quietest released one, else the oldest.
-- `stub.asm`: the launcher.
+  All audio is 8 bit at 11 kHz at most. The 32 FM patches are rendered to samples at 11025 Hz at
+  build time by `amiga/tools/fmrender.py`, a model of the YM2612. Each patch has an attack and a
+  loop at each octave band it is used at, so every note plays at 7.8 to 15.6 kHz. The synthesis runs at 8 times the sample rate and is low-pass
+  filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
+  back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
+  note takes a free voice, else the quietest released one, else the oldest. The PCM sounds
+  (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`:
+  most already play at 11 kHz or less and are kept as they are; the two the game plays faster
+  (the glass at 29 kHz, a hit at 12 kHz) are resampled to 11025 Hz and played at a period that
+  keeps their pitch.
+- `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
+  file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
+  decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
+  it has AmigaDOS load `NHL94.game`.
 
 The renderer queues its blits; the blitter's interrupt starts each next one, so the CPU goes on
 building the next layer meanwhile.

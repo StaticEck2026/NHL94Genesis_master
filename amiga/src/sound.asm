@@ -10,15 +10,21 @@
 ;	loop, at the pitch bands the patch is used at). A key on takes a voice (a free one, else
 ;	the quietest released one, else the oldest) and plays the patch's sample at the note's
 ;	pitch; the rest of the patch's envelope (decay, release at key off) is a volume envelope
-;	stepped at 60 Hz. The PCM samples are copied to chip RAM as signed bytes at start.
+;	stepped each game frame. The PCM sounds are samples made at build time too (pcmrender.py: signed,
+;	at most 11 kHz; one played faster on the Genesis is resampled and played at a longer period).
+;	All audio is 8 bit and at most 11 kHz: the FM samples are rendered at 11025 Hz.
+;
+;	The Amiga's audio low-pass filter (the "LED" filter, about 3.3 kHz) is on while the game
+;	runs, as the Genesis model 1's output filter softens its sound; F7 switches it.
 ;
 ;	snd_z80_cmd takes a command from the driver (it is called where the driver hands the Z80
-;	its command); snd_z80_poll, from the 60 Hz interrupt, does the work on Paula.
+;	its command); snd_z80_poll, from the game frame interrupt (50 or 60 Hz, hal_hz), does the
+;	work on Paula. The envelope speeds are made for 60 Hz and scaled to the frame rate, so the
+;	sounds keep their length at 50 Hz (the YM2612's envelopes do not depend on it).
 
 AUD0LC		equ	$0A0			;voice n at + n * $10: LC, LEN, PER, VOL
 PCMHZ		equ	30594			;the Z80 PCM loop: 117 T states at 3.58 MHz
 PAULACLK	equ	3546895
-FRAMECLK	equ	PAULACLK/60		;Paula clocks a frame
 
 ;	voice
 V_OWNER		equ	0			;.b -1 free, 0-6 FM channel, 7 PCM
@@ -43,36 +49,13 @@ ST_PCM		equ	5
 PCM_OWNER	equ	7
 
 	include	"fm_patches.i"		;the FM patch samples and tables (fmrender.py)
+	include	"pcm.i"			;the PCM samples and their table (pcmrender.py)
 
 	section	game,code
 
-;	Start: PCM samples to chip RAM (signed), voices free, Paula quiet.
+;	Start: voices free, Paula quiet.
 snd_init
 	movem.l	d0-d2/a0-a2,-(sp)
-	lea	sfx_shotbh_pcm,a0
-	lea	(snd_pcmdata).l,a1
-	move.l	#fm_instrument_patches-sfx_shotbh_pcm-1,d0
-.cp	move.b	(a0)+,d1
-	eori.b	#$80,d1
-	move.b	d1,(a1)+
-	subq.l	#1,d0
-	bpl	.cp
-	; length of each PCM patch's sound: up to the 0 that ends it
-	lea	pcm_sample_table,a0
-	lea	(snd_pcm_len).l,a1
-	moveq	#14,d2
-.len	move.l	(a0),d0
-	addq.w	#8,a0
-	moveq	#0,d1
-	tst.l	d0
-	beq	.nl
-	movea.l	d0,a2
-.scan	tst.b	(a2)+
-	beq	.nl
-	addq.l	#1,d1
-	bra	.scan
-.nl	move.l	d1,(a1)+
-	dbf	d2,.len
 	lea	(snd_voices).l,a0
 	moveq	#3,d0
 .v	move.b	#-1,V_OWNER(a0)
@@ -89,8 +72,26 @@ snd_init
 .q	clr.w	8(a0)
 	lea	$10(a0),a0
 	dbf	d0,.q
+	; the low-pass filter on (CIA-A port A bit 1 low); the OS's setting kept for the exit
+	move.b	(CIAA_PRA).l,d0
+	andi.b	#2,d0
+	move.b	d0,(snd_ledsave).l
+	bclr	#1,(CIAA_PRA).l
 	movem.l	(sp)+,d0-d2/a0-a2
 	rts
+
+;	F7: the low-pass filter on / off.
+snd_filter_toggle
+	bchg	#1,(CIAA_PRA).l
+	rts
+
+;	Back to the OS: the filter as it was.
+snd_exit
+	bclr	#1,(CIAA_PRA).l
+	tst.b	(snd_ledsave).l
+	beq.s	.x
+	bset	#1,(CIAA_PRA).l
+.x	rts
 
 ;	The driver has written a command to the Z80 RAM: note what it asks for (snd_z80_poll does
 ;	it) and answer as the Z80 does when it is done.
@@ -124,7 +125,7 @@ snd_z80_cmd
 	move	(sp)+,sr
 	rts
 
-;	60 Hz: carry out the driver's commands on Paula and step the envelopes.
+;	Each game frame: carry out the driver's commands on Paula and step the envelopes.
 snd_z80_poll
 	movem.l	d0-d7/a0-a6,-(sp)
 	lea	(hal_z80ram).l,a5
@@ -296,12 +297,26 @@ snd_fm_period
 
 ;	Voice a0 has started a sample of d2 bytes at period d3: frames until it is played.
 snd_sample_frames
+	movem.l	d4-d5,-(sp)
+	moveq	#0,d5
+	move.w	(hal_hz).l,d5
+	move.l	#PAULACLK,d4
+	divu.l	d5,d4				;Paula clocks a frame
 	andi.l	#$FFFF,d3
 	mulu.l	d3,d2
-	divu.l	#FRAMECLK,d2
+	divu.l	d4,d2
 	addq.w	#1,d2
 	move.w	d2,V_FRAMES(a0)
+	movem.l	(sp)+,d4-d5
 	rts
+
+;	d2 = the envelope step d2 (attenuation units a 60 Hz frame) for a frame at hal_hz.
+snd_rate
+	cmpi.w	#60,(hal_hz).l
+	beq.s	.x
+	mulu.w	#6,d2
+	divu.l	#5,d2				;(50 Hz)
+.x	rts
 
 ;	Key on FM channel d1 (patch, frequency and attenuation from the Z80 RAM). d7 |= its voice.
 snd_keyon
@@ -465,9 +480,15 @@ snd_pcm
 	cmpi.w	#15,d2
 	bne	.find
 	bra	.x
-.found	lea	(snd_pcm_len).l,a0
-	move.l	(a0,d2.w*4),d3			;bytes
+.found	lea	(snd_pcm_tab).l,a3		;its sample (pcmrender.py)
+	lsl.w	#3,d2
+	adda.w	d2,a3
+	tst.l	(a3)
 	beq	.x
+	moveq	#0,d3
+	move.w	4(a3),d3			;words
+	beq	.x
+	move.w	6(a3),(snd_pcm_k).l
 	moveq	#-1,d2
 	bsr	snd_alloc
 	bsr	snd_voice_a0
@@ -478,12 +499,7 @@ snd_pcm
 	addq.w	#1,(snd_age).l
 	move.w	(snd_age).l,V_AGE(a0)
 	lea	(snd_pcm_render).l,a2		;a render of its own: the sample, then silence
-	move.l	d0,d2
-	sub.l	#sfx_shotbh_pcm,d2
-	add.l	#snd_pcmdata,d2
-	move.l	d2,(a2)
-	addq.l	#1,d3
-	lsr.l	#1,d3
+	move.l	(a3),(a2)
 	move.w	d3,4(a2)			;words
 	clr.l	6(a2)				;no loop
 	move.l	a2,V_RENDER(a0)
@@ -530,12 +546,17 @@ snd_pcm
 	move.w	d1,V_TL(a0)			;the PCM voice keeps its Paula volume here
 .x	rts
 
-;	d1 = PCM rate (Z80 RAM $8E, steps of 1/256 sample at PCMHZ): d2 = period.
+;	d1 = PCM rate (Z80 RAM $8E, steps of 1/256 sample at PCMHZ): d2 = period (times the sound's
+;	factor, for a sample made at a lower rate).
 snd_pcm_period
 	move.l	#(PAULACLK*16/PCMHZ)*16,d2
 	divu.w	d1,d2				;(rate >= 1: at most 29664)
-	andi.l	#$FFFF,d2
-	cmpi.w	#124,d2
+	mulu.w	(snd_pcm_k).l,d2
+	lsr.l	#8,d2
+	cmpi.l	#$FFFF,d2
+	bls	.k
+	move.l	#$FFFF,d2
+.k	cmpi.w	#124,d2
 	bhs	.x
 	moveq	#124,d2
 .x	rts
@@ -556,6 +577,7 @@ snd_envelopes
 	beq	.nrel
 	moveq	#0,d2
 	move.w	2*FM_BANDS+6(a2),d2		;release
+	bsr	snd_rate
 	add.l	d2,d1
 .nrel	cmpi.b	#ST_ATTACK,d0
 	beq	.att
@@ -567,6 +589,7 @@ snd_envelopes
 	bne	.sus
 	moveq	#0,d2
 	move.w	2*FM_BANDS(a2),d2		;decay
+	bsr	snd_rate
 	add.l	d2,d1
 	sub.l	d2,V_SL(a0)
 	bhi	.set
@@ -574,6 +597,7 @@ snd_envelopes
 	bra	.set
 .sus	moveq	#0,d2
 	move.w	2*FM_BANDS+4(a2),d2		;sustain decay
+	bsr	snd_rate
 	add.l	d2,d1
 	bra	.set
 .att	subq.w	#1,V_FRAMES(a0)
@@ -633,22 +657,19 @@ fm_voltab
 	section	sndchip,data_c
 fm_silence	dc.w	0,0
 
-	section	chip,bss_c
-snd_pcmdata	ds.b	fm_instrument_patches-sfx_shotbh_pcm
-		even
-
 	section	bss,bss
 snd_voices	ds.b	4*V_SIZE
-snd_pcm_len	ds.l	15
 snd_pcm_render	ds.l	4
 snd_pcm_addr	ds.l	1
 snd_age		ds.w	1
+snd_pcm_k	ds.w	1			;the PCM sound's period factor (8.8)
 snd_chvoice	ds.b	8			;voice of each FM channel, -1 = none
 snd_pend_off	ds.b	1
 snd_pend_on	ds.b	1
 snd_pend_att	ds.b	1
 snd_pend_frq	ds.b	1
 snd_pcm_start	ds.b	1
+snd_ledsave	ds.b	1
 		even
 
 	section	game,code

@@ -23,9 +23,11 @@ CIAB_TBLO	equ	$BFD600
 CIAB_TBHI	equ	$BFD700
 PROFMAX		equ	65536
 
-GENESIS_HZ	equ	60
 CIA_CLOCK	equ	709379			;PAL E clock
 CIA_CLOCK_NTSC	equ	715909
+	IFND	RDPACE
+RDPACE		equ	2			;hal_pace at the start
+	ENDC
 
 	section	game,code
 hal_header
@@ -34,19 +36,41 @@ hal_header
 	dc.l	hal_game_main
 	dc.l	hal_debug
 
+;	The timer period for hal_hz frames a second (a running timer takes it at its next
+;	underflow). Keeps all but d0.
+hal_set_rate
+	move.l	d1,-(sp)
+	move.l	#CIA_CLOCK,d0
+	tst.b	(hal_pal).l
+	bne.s	.p
+	move.l	#CIA_CLOCK_NTSC,d0
+.p	move.w	(hal_hz).l,d1
+	divu.w	d1,d0
+	move.b	d0,(CIAB_TALO).l
+	lsr.w	#8,d0
+	move.b	d0,(CIAB_TAHI).l
+	moveq	#60,d1				;the display's own rate: the vertical blank gives the
+	tst.b	(hal_pal).l			;ticks (rd_bq_int), in step with the frames shown
+	beq.s	.n
+	moveq	#50,d1
+.n	cmp.w	(hal_hz).l,d1
+	seq	(hal_vbtick).l
+	move.l	(sp)+,d1
+	rts
+
 ;	Debug block, read by the test harness:
 ;	+0  vdp_regs  +4 vdp_vram  +8 vdp_cram  +12 vdp_vsram  +16 exception info (16 longs)
-;	+20 frame counter  +24 pad state
+;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
 hal_debug
 	dc.l	vdp_regs,vdp_vram,vdp_cram,vdp_vsram,hal_exc_info,hal_frames,hal_padstate
 	dc.l	rd_count,chunky
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
-	dc.l	rd_dbg_key
+	dc.l	rd_dbg_key,rd_vfail
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
-;	the 60 Hz timer and jumps to the cartridge's cold start.
+;	the game frame timer and jumps to the cartridge's cold start.
 hal_game_main
 	move	#$2700,sr
 	tst.b	(hal_amiga).l
@@ -86,7 +110,7 @@ hal_set_vectors
 	move.l	a1,$64(a0)			;level 1
 	move.l	a1,$68(a0)			;level 2
 	lea	rd_bq_int(pc),a2
-	move.l	a2,$6C(a0)			;level 3: the blit queue
+	move.l	a2,$6C(a0)			;level 3: the blit queue, the vertical blank count
 	move.l	a1,$70(a0)			;level 4
 	move.l	a1,$74(a0)			;level 5
 	move.l	a1,$7C(a0)			;level 7
@@ -100,17 +124,19 @@ hal_set_vectors
 	movec	a0,vbr
 	rts
 
-;	CIA-B timer A, continuous, at the Genesis frame rate, on level 6.
+;	CIA-B timer A, continuous, at the game's frame rate (hal_hz), on level 6. The rate is the
+;	display's, as on the console of each region: 50 Hz with a PAL display (a PAL Mega Drive
+;	runs the game at 50 Hz, a sixth slower), 60 Hz with NTSC; F8 switches it.
 hal_start_timer
 	move.b	#$7F,(CIAB_ICR).l		;all CIA-B interrupts off
 	move.b	#0,(CIAB_CRA).l
-	move.w	#CIA_CLOCK/GENESIS_HZ,d0
+	tst.w	(hal_hz).l
+	bne.s	.hz
+	move.w	#60,(hal_hz).l
 	tst.b	(hal_pal).l
-	bne	.pal
-	move.w	#CIA_CLOCK_NTSC/GENESIS_HZ,d0
-.pal	move.b	d0,(CIAB_TALO).l
-	lsr.w	#8,d0
-	move.b	d0,(CIAB_TAHI).l
+	beq.s	.hz
+	move.w	#50,(hal_hz).l
+.hz	bsr	hal_set_rate
 	move.b	#$81,(CIAB_ICR).l		;timer A interrupt on
 	move.b	#$11,(CIAB_CRA).l		;start, continuous, force load
 	IFD	PROFILE
@@ -121,7 +147,8 @@ hal_start_timer
 	move.b	#$11,(CIAB_CRB).l
 	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
-	move.w	#$C000|$2000|$0040,(CUSTOM+INTENA).l	;master, EXTER (level 6), BLIT (level 3)
+	move.w	#$C000|$2000|$0040|$0020,(CUSTOM+INTENA).l	;master, EXTER (level 6), BLIT and VERTB
+							;(level 3)
 	rts
 
 ;	Level 6. The CIA-B timer is the Genesis vertical blank: count it and run the game's handler
@@ -149,32 +176,54 @@ hal_int6
 	IFD	PROFILE
 	btst	#1,d0				;timer B: sample the interrupted pc
 	beq.s	.np
-	movem.l	d1/a0,-(sp)
-	move.l	(prof_pos).l,d1
+	movem.l	d1-d2/a0,-(sp)
+	move.l	18(sp),d2
+	cmpi.l	#rd_waitblit,d2			;waiting for the blitter: the caller instead
+	blo.s	.pc				;(bit 31 set)
+	cmpi.l	#rd_waitblit_end,d2
+	bhs.s	.pc
+	move.l	24(sp),d2
+	bset	#31,d2
+.pc	move.l	(prof_pos).l,d1
 	lea	(prof_buf).l,a0
-	move.l	14(sp),(a0,d1.l*4)
+	move.l	d2,(a0,d1.l*4)
 	addq.l	#1,d1
 	andi.l	#PROFMAX-1,d1
 	move.l	d1,(prof_pos).l
 	addq.l	#1,(prof_count).l
-	movem.l	(sp)+,d1/a0
+	movem.l	(sp)+,d1-d2/a0
 .np
 	ENDIF
+	tst.b	(hal_vbreq).l
+	bne.s	.vb
 	btst	#0,d0
 	beq	.none
-	move.l	(sp)+,d0
+	tst.b	(hal_vbtick).l
+	bne	.none				;(the vertical blank gives the ticks)
+	bra.s	.tick
+.vb	sf	(hal_vbreq).l
+.tick	move.l	(sp)+,d0
 	addq.l	#1,(hal_frames).l
-	addq.w	#1,(hal_wd).l
+	IFD	WATCHDOG			;(debug builds: the game's screen can rightly stay
+	addq.w	#1,(hal_wd).l			; the same for a long time)
 	cmpi.w	#240,(hal_wd).l
 	bne	.nowd
 	jsr	(hal_watchdog).l
-.nowd	jsr	(snd_z80_poll).l
+.nowd
+	ENDIF
+	jsr	(snd_z80_poll).l
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
 	pea	(.post).l
 	move	sr,-(sp)
 	move.l	(VBint).l,-(sp)
 	rts					;into the game's vblank code
-.post	tst.b	(ctx_cur).l
+.post	btst	#2,(sp)				;the interrupted code's interrupt mask
+	bne.s	.nest
+	btst	#1,(sp)
+	bne.s	.nest
+	btst	#0,(sp)
+	bne.s	.nest
+	tst.b	(ctx_cur).l
 	bne	ctx_to_game			;renderer interrupted: back to the waiting game
 	; the game has not waited for a vblank for a while (a wait loop the converter did not
 	; mark): give the renderer this frame's time anyway
@@ -186,6 +235,13 @@ hal_int6
 	clr.w	(hal_starve).l
 	bra	ctx_to_render
 .rte	rte
+.nest	; an interrupt handler was interrupted: switching now would leave it half run until its
+	; context runs again (a blit queue handler, then started twice). The level 3 handler
+	; switches when it ends (hal_swpend).
+	tst.b	(ctx_cur).l
+	beq.s	.rte
+	st	(hal_swpend).l
+	rte
 .none	move.l	(sp)+,d0
 	rte
 
@@ -201,10 +257,13 @@ hal_idle
 	andi.w	#$0700,d0
 	cmpi.w	#$0600,d0
 	bhs	.no				;called from interrupt code: never switch there
+	tst.b	(rd_busy).l
+	bne.s	.go				;a frame half drawn: on with it
 	move.l	(hal_frames).l,d0
-	cmp.l	(rd_lastframe).l,d0
-	beq	.no				;frame already drawn
-	tst.b	(ctx_ready).l
+	sub.l	(rd_lastframe).l,d0
+	cmp.l	(hal_pace).l,d0
+	blo	.no				;too soon for the next frame
+.go	tst.b	(ctx_ready).l
 	beq	.no
 	move.l	(sp)+,d0
 	clr.w	(hal_starve).l
@@ -237,10 +296,13 @@ ctx_to_game
 ;	The renderer's loop: draw each new frame, then give the CPU back.
 rend_main
 	move.l	(hal_frames).l,d0
-	cmp.l	(rd_lastframe).l,d0
-	beq	.yield
-	move.l	d0,(rd_lastframe).l
+	sub.l	(rd_lastframe).l,d0
+	cmp.l	(hal_pace).l,d0
+	blo	.yield
+	move.l	(hal_frames).l,(rd_lastframe).l
+	st	(rd_busy).l
 	jsr	(rd_frame).l
+	sf	(rd_busy).l
 .yield	trap	#1
 	bra	rend_main
 
@@ -270,8 +332,9 @@ hal_display_init
 	move.w	#$83C0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter
 	rts
 
-;	No frame drawn for 4 seconds: a black and white debug screen with the code base, the last
-;	16 interrupted pcs and the last sr / context, in hex.
+;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the
+;	code base, the last 16 interrupted pcs and the last sr / context, in hex.
+	IFD	WATCHDOG
 hal_watchdog
 	movem.l	d0-d2/a0-a2,-(sp)
 	lea	(hal_dbgscr).l,a0
@@ -333,6 +396,7 @@ hal_hex8
 	dbf	d4,.d
 	movem.l	(sp)+,d0-d4/a0-a3
 	rts
+	ENDIF
 
 hal_int_ignore
 	move.w	#$3FFF,(CUSTOM+INTREQ).l
@@ -349,6 +413,11 @@ hal_exception
 	move.w	#$F00,(CUSTOM+$180).l
 .hang	bra	.hang
 
+hal_pace	dc.l	RDPACE			;a new frame every 2 game ticks at most, each shown
+						;for 2 vertical blanks at least (a steady 25 a second
+						;on PAL), or 1: as many as there is time for; F6
+hal_hz		dc.w	0			;game frames a second (0: from the display)
+
 	section	bss,bss
 	cnop	0,4
 hal_vectors	ds.l	64
@@ -362,7 +431,7 @@ hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1
-prof_mark	ds.l	4
+prof_mark	ds.l	5+8			;(+20: frames shown 1 ... 8+ vertical blanks)
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
@@ -377,13 +446,19 @@ ctx_game_sp	ds.l	1
 ctx_rend_sp	ds.l	1
 ctx_cur		ds.b	1			;0 game, -1 renderer running
 ctx_ready	ds.b	1
+rd_busy		ds.b	1			;the renderer is drawing a frame
+hal_vbtick	ds.b	1			;the game ticks come from the vertical blank
+hal_vbreq	ds.b	1			;(one asked for)
+hal_swpend	ds.b	1			;a context switch waits for an interrupt handler's end
 		cnop	0,4
 rend_stack	ds.b	16384
 rend_stack_top
 
 	section	chip,bss_c
 hal_copempty	ds.l	4
+	IFD	WATCHDOG
 hal_dbgcop	ds.l	20
 hal_dbgscr	ds.b	40*200
+	ENDIF
 
 	section	game,code

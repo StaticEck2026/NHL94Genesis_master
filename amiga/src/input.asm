@@ -7,7 +7,8 @@
 ;	  CD32 play            Start
 ;	Keyboard, player 1: cursor keys, Z = A, X = B, C = C, Return = Start
 ;	          player 2: F1 = A, F2 = B, F3 = C, F4 = Start
-;	Esc goes back to the Workbench (the save file is written then).
+;	Esc goes back to the Workbench (the save file is written then). F7 switches the audio
+;	filter, F8 the game's speed (50 / 60 frames a second).
 
 CIAA_PRA	equ	$BFE001
 CIAA_DDRA	equ	$BFE201
@@ -78,12 +79,31 @@ hal_int2
 	bne	.nf10
 	not.b	(hal_fpsshow).l
 	bra	.hs
-.nf10
+.nf10	cmpi.b	#$56,d1				;F7: audio filter
+	bne	.nf7
+	jsr	(snd_filter_toggle).l
+	bra	.hs
+.nf7	cmpi.b	#$55,d1				;F6: a steady 25 frames a second / as many as can be
+	bne	.nf6
+	eori.l	#1^2,(hal_pace).l
+	bra	.hs
+.nf6	cmpi.b	#$57,d1				;F8: 50 / 60 game frames a second
+	bne	.nf8
+	eori.w	#50^60,(hal_hz).l
+	jsr	(hal_set_rate).l
+	bra	.hs
+.nf8
 	IFD	PROFILE
 	cmpi.b	#$58,d1				;F9: mark the start of the frame rate count
 	bne	.hs
 	move.l	(rd_count).l,(prof_mark).l
 	move.l	(hal_frames).l,(prof_mark+4).l
+	lea	(prof_mark+20).l,a0
+	moveq	#7,d1
+.ch	clr.l	(a0)+
+	dbf	d1,.ch
+	moveq	#$58,d1
+	lea	(hal_keys).l,a0
 	ENDIF
 	bra	.hs
 .up	sf	(a0,d1.w)

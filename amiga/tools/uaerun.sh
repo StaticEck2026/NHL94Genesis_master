@@ -1,6 +1,7 @@
 #!/bin/sh
 # Run the Amiga build in FS-UAE (A1200, AROS ROM unless KICK is set) on a virtual X display and
 # take screenshots.  uaerun.sh <seconds> <outdir> [key events: "t:key" pairs, t in seconds]
+# EVERY: seconds between screenshots (5).
 # Needs: fs-uae, Xvfb, ImageMagick (import), xdotool.
 # Sound: UAEAUDIO=openal with ALSOFT_CONF naming an OpenAL Soft config with drivers=wave
 # and [wave] file=out.wav records it.
@@ -14,13 +15,21 @@ cp "$ROOT/output/amiga/NHL94" "$ROOT/output/amiga/NHL94.info" "$W/hd/"
 printf "${UAESTARTUP:-NHL94\n}" > "$W/hd/S/startup-sequence"
 KICK=${KICK:-/opt/amiga/aros-amiga-m68k-rom.bin}
 KEXT=${KEXT:-/opt/amiga/aros-amiga-m68k-ext.bin}
+# FLOPPY=image.adf boots that floppy instead of the hard drive directory (FLOPPYSPEED: 100 is
+# a real drive, 0 turbo)
+if [ -n "$FLOPPY" ]; then
+  DRIVES="floppy_drive_0 = $FLOPPY
+floppy_drive_speed = ${FLOPPYSPEED:-100}"
+else
+  DRIVES="hard_drive_0 = $W/hd
+hard_drive_0_label = NHL94"
+fi
 cat > "$W/run.fs-uae" <<CFG
 [fs-uae]
 amiga_model = ${MODEL:-A1200}
 kickstart_file = $KICK
 kickstart_ext_file = $KEXT
-hard_drive_0 = $W/hd
-hard_drive_0_label = NHL94
+$DRIVES
 fullscreen = 0
 window_width = 768
 window_height = 576
