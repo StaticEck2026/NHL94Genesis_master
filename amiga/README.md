@@ -10,13 +10,13 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
-  about 1.3 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
+  about 1.5 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
   Genesis), 60 on NTSC. `F8` switches between the two.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 16 to 19 frames a second (FS-UAE,
+Speed: on a stock 14 MHz A1200 with fast RAM, gameplay draws about 20 frames a second (FS-UAE,
 cycle exact; the game itself runs at full speed, it is the screen updates that are fewer) and
 the menus are smooth. An accelerator is recommended: a 68030 at 50 MHz manages about 30.
 
@@ -128,12 +128,13 @@ The hardware layer:
   blitted back over what was drawn under them; the CPU queues a whole frame for the blitter
   without waiting. A chunky renderer with
   chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
-  and the display window, and frames are double buffered. A frame is drawn from a snapshot of
+  and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
   the VDP registers, scroll and sprite list taken when it starts (the game runs several of its
   frames meanwhile; without it, players could be from a later game frame than the rink). A
-  finished frame's copper list is taken at the next vertical blank, and the renderer waits for
-  that blank (counted by the level 3 interrupt) before it draws into the other buffer, which is
-  on the screen until then.
+  frame's copper list is set by a marker queued after its blits (the level 3 interrupt sets it
+  when the queue gets there), so the CPU goes on to the next frame while the blitter finishes.
+  A buffer is drawn into again only once the frame after it has been on the screen for a
+  vertical blank (counted by the same interrupt).
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.
