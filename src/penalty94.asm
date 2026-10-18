@@ -25,7 +25,7 @@ AddPenalty2							;forced penalties like face off and game over. d0 = penalty nu
 	movem.l	d1/a0-a1,-(sp)
 	cmp.w	#$E,d0					;goal (92 used 6) and up
 	blt.w	.nonoise
-	addi.w	#$C8,(crowdlevel).w		;200
+	addi.w	#$C8,(Crowdlevel).w		;200
 	move.w	#$C,-(sp)				;song $C for the home team
 	btst	#pfteam,pflags(a3)		;pfteam
 	beq.w	.song
@@ -101,9 +101,9 @@ chkprogress							;control progress of ref and game control thru penalty events.
 .cont
 	btst	#gmpen,(gmode).w		;gmpen: penalty called
 	beq.w	rtss2					;exit if not
-	tst.w	(Pencntdwn).w
+	tst.w	(PenCntDwn).w
 	bmi.w	InProgress
-	sub.w	d7,(Pencntdwn).w
+	sub.w	d7,(PenCntDwn).w
 	bpl.w	rtss2
 	bclr	#gmpendel,(gmode).w		;gmpendel
 	movea.w	#(PenBuf-M68K_RAM),a0
@@ -118,9 +118,9 @@ chkprogress							;control progress of ref and game control thru penalty events.
 	beq.s	.find
 	bmi.s	.find					;negative minutes too
 	bset	#sf2drec,(sflags2).w	;sf2drec: switch to horizontal mode for player to enter penalty box
-	move.w	(vcount).w,-(sp)
+	move.w	(Vcount).w,-(sp)
 	bsr.w	forceblack
-	move.w	(sp)+,(vcount).w
+	move.w	(sp)+,(Vcount).w
 	bsr.w	SetHor
 	move.w	(ExtraChars).w,d4		;load horizontal ref tiles
 	movea.l	#RefMap2+8,a2			;+8
@@ -424,9 +424,9 @@ checkfornewpen						;look for new penalty (entered thru addpenalty(2)). Stops pl
 	clr.w	d1
 	move.b	(a1),d1					;delay for stopping action
 	asl.w	#5,d1
-	cmp.w	(Pencntdwn).w,d1
+	cmp.w	(PenCntDwn).w,d1
 	ble.s	.next
-	move.w	d1,(Pencntdwn).w
+	move.w	d1,(PenCntDwn).w
 	bra.s	.next
 .dc
 	bset	#gmpendel,(gmode).w		;gmpendel
@@ -493,7 +493,7 @@ Stop4Pen							;a0 = penaltylist penalty +2. Stop the clock, set the face off sp
 	addq.w	#4,sp
 	bsr.w	limitfo
 .skipfo
-	clr.w	(Pencntdwn).w
+	clr.w	(PenCntDwn).w
 	bset	#gmpen,(gmode).w		;gmpen
 	jsr	(stop_current_song).l
 	move.w	#SFXwhistle,-(sp)		;whistle (92 used 10)
@@ -1018,25 +1018,21 @@ SetHor								;switch graphics to horizontal ice rink graphics mode
 	btst	#sfpz,(sflags).w		;sfpz
 	bne.w	.ex
 	move.w	#$800,d0				;92 $1000
-	move.w	(VmMap1).w,d1
+	move.w	(VmMAP1).w,d1
 	move.w	#$7FF,d2				;blank tile
 	bsr.w	DoFill
 .ex
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-;	printscores1, PrintTeamNameAndScore, PrintTeamLogoAndScore, EASNLogo,
-;	USBoard, pplpen, linebar, getlinee, AvgCline, ChkShotStat,
-;	loadTeamStruct, SetupTeamForIntermission, RestoreTeamEnergy,
-;	reenergizeteam, Intermission, InitScores, UpdateScores, SetScore, sctab,
-;	NewTicker, NewTicker2, NewTicker3, NewTicker3pt2, GameLabels,
-;	ClearTickerArea, SetTickerAreaPosition, Fprintsmall,
-;	AdvanceStringPtr, DoHiLights, StartHL and StartHL2.
+;	Scoreboard, score ticker, intermission and highlight routines, from printscores1 to StartHL2.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Team struct from HmShots / AwShots (tmsize $364): 0 tmshots, $C tmscore, $16 tmline, $1E tmdata, $22
-;	tmsort, $24 tmap, $26 tmgoalie, $32 tmpde, $66 tmpdst, $9A penalty box list, $E8 per-player shot bytes,
-;	$16A line sets, $34A shots by period, $354 power play shots. Game struct (gsstruct, $10 each): 0 gst1, 2
-;	gst2, 8 gsper, $A gss1, $C gss2, $E gsflags (bit 1 gsfhl, bit 2 gsfso).
+
+;Team struct from HmShots / AwShots (tmsize $364): 0 tmshots, $C tmscore, $16 tmline, $1E tmdata, $22
+;tmsort, $24 tmap, $26 tmgoalie, $32 tmpde, $66 tmpdst, $9A penalty box list, $E8 per-player shot bytes,
+;$16A line sets, $34A shots by period, $354 power play shots. Game struct (gsstruct, $10 each): 0 gst1, 2
+;gst2, 8 gsper, $A gss1, $C gss2, $E gsflags (bit 1 gsfhl, bit 2 gsfso).
 
 printscores1						;Draw scoreboard. Vertical rink: period box and the score box (team names
 									;and scores). Horizontal rink .sbscreen: period and both team logos with
@@ -1342,7 +1338,7 @@ ChkShotStat							;determine if shot taken, add to appropriate stats: crowd, tea
 	bra.w	.addShot
 .Cwdupdate
 	movem.l	d0-d1/a1-a3,-(sp)
-	addi.w	#$64,(crowdlevel).w		;100
+	addi.w	#$64,(Crowdlevel).w		;100
 	addi.w	#$A,(CwdExciteLvl).w
 	move.w	(shotplayer).w,d0
 .addShot
@@ -1463,7 +1459,7 @@ Intermission						;end of period junk (zamboni/stats). Opens the pause menu scre
 	move.w	(ExtraChars).w,d4
 	movea.l	#ZamFrameList+8,a2		;+8
 	bsr.w	DecompressGraphicsPlain
-	move.w	#$140,(zamx).w			;320
+	move.w	#$140,(Zamx).w			;320
 	move.w	(gsp).w,d0
 	tst.w	(OptPlayMode).w
 	beq.w	.ss
@@ -1511,7 +1507,7 @@ Intermission						;end of period junk (zamboni/stats). Opens the pause menu scre
 	tst.w	(cont2team).w
 	bne.s	.wait
 .clrz
-	st	(zamx).w
+	st	(Zamx).w
 	rts
 .sslist								;menu item lists by period, then playoff period
 	dc.l	StartGameText,IntermissionText,IntermissionText,IntermissionText,ExitGameText
@@ -1781,7 +1777,7 @@ StartHL2							;Play hilite for game a0. Start skips it with a random result. A 
 	bsr.w	waitxsr
 	btst	#sbut,d1				;sbut
 	bne.w	.nhl1
-	st	(zamx).w
+	st	(Zamx).w
 	clr.w	(CwdExciteLvl).w
 	move.w	(a0),(HomeTeam).w		;set up teams for game in a0
 	move.w	2(a0),(VisTeam).w
@@ -1853,7 +1849,7 @@ StartHL2							;Play hilite for game a0. Start skips it with a random result. A 
 	dbf	d0,.loop
 	bsr.w	SprSort
 	move.w	#$18,(palcount).w
-	move.w	(vcount).w,(oldvcount).w
+	move.w	(Vcount).w,(OldVcount).w
 	move.w	#$B4,-(sp)				;180 frames after the clock stops
 .0
 	jsr	(DoGameFrame).w

@@ -2,7 +2,7 @@
 ;	other graphics to video memory and scrolls the rink. This file also draws the sprites for the
 ;	rink, the referee, faceoffs, the zamboni and the crowd.
 
-VBlank								;Main vblank code for game play (vbint target, set by setupice and
+VBlank								;Main vblank code for game play (VBint target, set by setupice and
 									;setupice_highlight). DumpSprites when
 									;dfok is set, cramfade, then the game clock. gmode2 bit 2 keeps the clock
 									;running after the whistle, and with gmode2 bit 1 (penalty shot /
@@ -39,7 +39,7 @@ VBlank								;Main vblank code for game play (vbint target, set by setupice and
 	move.w	#SFXbeep2,-(sp)			;SFXbeep2, played when gameclock reaches 60
 	bsr.w	sfx
 .c
-	addq.w	#1,(vcount).w
+	addq.w	#1,(Vcount).w
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
@@ -53,14 +53,14 @@ VBlank								;Main vblank code for game play (vbint target, set by setupice and
 	bne.s	.c
 	subq.w	#1,(shootoutclock).w
 	bra.s	.c
-vb2									;Vblank used for palfades only, no dmas (vbint target). No rte here: falls
+vb2									;Vblank used for palfades only, no dmas (VBint target). No rte here: falls
 									;into IRQ7
 	movem.l	d0-d7/a0-a6,-(sp)
 	btst	#dfng,(disflags).w
 	bne.w	.nograph
 	bsr.w	cramfade
 .nograph
-	addq.w	#1,(vcount).w
+	addq.w	#1,(Vcount).w
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
 IRQ7								;rte only. vb2 falls in; the vector table ($60, $64, ...) points here
@@ -74,7 +74,7 @@ DumpSprites2						;Transfer sprite table, then the dma list. Falls into DoDMAlis
 	move.w	(Sattsize).w,d0			;words
 	move.w	(VSPRITES).w,d1
 	bsr.w	DoDMA
-DoDMAList							;(symbols are case-insensitive). Transfer data from dmalist.
+dodmalist							;(symbols are case-insensitive). Transfer data from dmalist.
 									;Also called from setupice
 	movea.l	(DMAlistend).w,a6
 	cmpa.l	#DMAList,a6
@@ -162,7 +162,7 @@ updatescroll						;Using hpos and vpos set scroll cords; queue rink map rows on 
 	addi.w	#$1E,d0
 	andi.w	#$1F,d0
 	asl.w	#7,d0
-	add.w	(VmMap2).w,d0
+	add.w	(VmMAP2).w,d0
 	move.w	d0,6(a5)
 	move.w	#$1E,d0
 	sub.w	d1,d0
@@ -182,7 +182,7 @@ updatescroll						;Using hpos and vpos set scroll cords; queue rink map rows on 
 	addi.w	#$1D,d0
 	andi.w	#$1F,d0
 	asl.w	#7,d0
-	add.w	(VmMap2).w,d0
+	add.w	(VmMAP2).w,d0
 	move.w	d0,6(a5)
 	move.w	#$3D,d0
 	sub.w	d1,d0
@@ -201,7 +201,7 @@ showref								;draw ref graphics. a5 = dma list, a6 = sprite table, d6 = link c
 	bclr	#sf2refref,(sflags2).w	;sf2refref
 	beq.w	rtss2
 	movea.w	#(RefRamMap-M68K_RAM),a0
-	movea.w	#(VmMap1-M68K_RAM),a1
+	movea.w	#(VmMAP1-M68K_RAM),a1
 	move.w	2(a1),d2
 	moveq	#2,d0					;refy: Xpos on ice screen
 	btst	#sfhor,(sflags).w
@@ -286,7 +286,7 @@ checkfo								;check for face off sprites. 3 entries of fofdata2: word frame, w
 showzam								;zamboni. a5 = dma list, a6 = sprite table, d6 = link counter. Draws frame
 									;1, frame 2-4 picked by x, then frame 5 (home score not ahead) or a .ftab
 									;frame. Called from setvideo
-	move.w	(zamx).w,d0
+	move.w	(Zamx).w,d0
 	bmi.w	rtss2					;no zamboni
 	movea.l	#ZamFrameList,a0
 	lsr.w	#2,d0
@@ -354,11 +354,11 @@ SetSframe							;draw one sprite frame. a0 = framelist, d0/d1 = x/y cords, d2 = 
 	movem.l	(sp)+,d0-d5/a0
 	rts
 showcrowd							;draw crowd sprites: up to 3 frames per PBnum nibble, then the two
-									;crowdframe frames. a5 = dma list, a6 = sprite table, d6 = link counter.
+									;Crowdframe frames. a5 = dma list, a6 = sprite table, d6 = link counter.
 									;No crowd in a reverse angle replay. Called from setvideo
 	btst	#4,(sflags4).w			;check if reverse angle replay
 	bne.w	.x						;branch if so
-	movea.l	#CrowdFrameList,a1
+	movea.l	#Crowdframelist,a1
 	adda.l	4(a1),a1
 	move.w	(Hpos).w,d4
 	move.w	(Vpos).w,d5
@@ -375,9 +375,9 @@ showcrowd							;draw crowd sprites: up to 3 frames per PBnum nibble, then the t
 	lsr.w	#4,d2
 	moveq	#$1D,d3					;frames 29+ (high nibble)
 	bsr.w	.pb
-	move.b	(crowdframe).w,d0
+	move.b	(Crowdframe).w,d0
 	bsr.w	.sc
-	move.b	(crowdframe+1).w,d0
+	move.b	(Crowdframe+1).w,d0
 	bra.w	.sc
 .pb									;d2 = count, d3 = first frame
 	andi.w	#$F,d2
@@ -456,14 +456,14 @@ showcrowd							;draw crowd sprites: up to 3 frames per PBnum nibble, then the t
 	movem.l	(sp)+,d0-d5
 .x
 	rts
-;	showclock, checksso, setsortcords, setffo, uppads, the pad label code
-;	(QueuePadLabel, RenderSmallFontChar, ButtonLabelCharTable),
-;	addframe, addframe2, find3d, updatesound and KillCrowd.
-;	The horizontal clock's .digit and .digits tables sit inside showclock.
+;	Clock, pad label and object helpers from showclock to KillCrowd. The horizontal clock's .digit and
+;	.digits tables sit inside showclock.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
-;	Object offsets: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
-;	ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
+
+;Object offsets: Xpos 0, attribute 4, frame 6, oldframe 8, VRoffs $A, VRchar $12, Ypos $14, Zpos $18.
+;ssosize = $14. DMA list entries (a5): long source, word length in words, word vram.
 
 showclock							;put the game clock on screen. Called from setvideo and PauseMode. On the
 									;horizontal rink the clock is printed (printz / print with .digits; not in
@@ -563,12 +563,12 @@ showclock							;put the game clock on screen. Called from setvideo and PauseMod
 	bsr.w	.char					;minutes tens
 	move.l	a0,(a5)+
 	move.w	#5,(a5)+				;words to transfer
-	movea.w	#(VmMap1-M68K_RAM),a1
+	movea.w	#(VmMAP1-M68K_RAM),a1
 	moveq	#$18,d0					;.clocky = 24
 	moveq	#3,d2					;.clockx = 3
 	btst	#sfhor,(sflags).w		;sfhor (always clear here: the horizontal rink prints the clock above)
 	beq.w	.cv
-	movea.w	#(VmMap2-M68K_RAM),a1
+	movea.w	#(VmMAP2-M68K_RAM),a1
 	moveq	#5,d0					;clock y (93 used 4)
 	moveq	#$D,d2					;.clockx2 = 13
 .cv
@@ -1008,9 +1008,9 @@ find3d								;input: d0 = xfield, d1 = yfield, d2 = height off field. Output: d
 .offscr
 	move.w	#$4E20,d1
 	rts
-updatesound							;move the crowd noise volume (psg noise channel, asv) toward crowdlevel.
+updatesound							;move the crowd noise volume (psg noise channel, asv) toward Crowdlevel.
 									;Called from periodicevents
-	move.w	(crowdlevel).w,d0
+	move.w	(Crowdlevel).w,d0
 	asl.w	#3,d0
 	addi.w	#$400,d0
 	cmp.w	#$EFF,d0

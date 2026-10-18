@@ -19,7 +19,7 @@ puckflip = $102D2					;jsr / jmp (x).l
 randomd0 = $11086					;jsr / jmp (x).l
 setc1player = $C0BC					;jsr / jmp (x).l
 setc2player = $C0DA					;jsr / jmp (x).l
-sroot = $110BE						;jsr / jmp (x).l
+Sroot = $110BE						;jsr / jmp (x).l
 EndOneTimer = $FEFF0				;jsr / jmp (x).l
 vtoa = $10676						;jsr / jmp (x).l
 

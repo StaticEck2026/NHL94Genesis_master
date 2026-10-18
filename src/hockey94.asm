@@ -2,8 +2,8 @@
 ;	end of each period, handles the events that happen every so often and keeps the clock. It
 ;	also runs the pause mode and its screen. Print strings follow the calls that print them.
 
-VBjsr								;Vertical blank interrupt (vector $78), jumps through the vbint RAM vector
-	move.l	(vbint).w,-(sp)			;push handler address
+VBjsr								;Vertical blank interrupt (vector $78), jumps through the VBint RAM vector
+	move.l	(VBint).w,-(sp)			;push handler address
 	rts								;and "return" into it
 
 Begin								;cold start, entered from Start. Clear RAM, init sound and menus, go to
@@ -45,7 +45,7 @@ StartGame							;reset game state for a new game, then start the first period
 	jsr	(ReadJoy1).l				;pad 1 = $E0 at game start forces 30 second periods
 	cmp.b	#$E0,d3
 	bne.w	.chkpen
-	move.w	#3,(OptPerlen).w		;period length index 3 = 30 seconds
+	move.w	#3,(Optperlen).w		;period length index 3 = 30 seconds
 .chkpen	clr.b	(gmode).w
 	cmpi.w	#1,(OptPen).w
 	bne.w	.0
@@ -108,7 +108,7 @@ ResetClock							;set period length and stop clock
 	rts
 
 GetPeriodTime						;Return d0 = period length in seconds for the period length option
-	move.w	(OptPerlen).w,d0
+	move.w	(Optperlen).w,d0
 	asl.w	#1,d0
 	lea	.timetab(pc),a0
 	move.w	0(a0,d0.w),d0
@@ -143,7 +143,7 @@ StartPer							;start a period: reset stack, rink and clock, face off, run the g
 	bclr	#sfwrap,(sflags).w		;sfwrap: reset replay stuff
 	move.w	#$FFFF,(lastsfx).w
 	move.l	#replaystart,(recbpr).w	;replaystart
-	move.w	(vcount).w,(oldvcount).w
+	move.w	(Vcount).w,(OldVcount).w
 	bsr.w	DoGameFrame				;run two frames before the loop
 	move.w	#$FFFF,(palcount).w
 	bsr.w	DoGameFrame
@@ -169,10 +169,10 @@ Gameloop							;Main loop for game
 	bra.s	Gameloop
 
 DoGameFrame							;wait for at least one vblank, then run one frame of game logic
-	move.w	(vcount).w,d7
-	sub.w	(oldvcount).w,d7		;number of frames since last loop
+	move.w	(Vcount).w,d7
+	sub.w	(OldVcount).w,d7		;number of frames since last loop
 	beq.s	DoGameFrame
-	move.w	(vcount).w,(oldvcount).w
+	move.w	(Vcount).w,(OldVcount).w
 	bsr.w	periodicevents
 	bsr.w	updateplayers			;apply velocity and check collisions
 	tst.w	(songdelay).w			;delayed song countdown
@@ -263,33 +263,33 @@ UpdateCwdExcite						;called once per second. Track peak and running total of cr
 
 updatecrowdf						;this is called every game loop with d7 = elapsed frames this will update
 									;the current frame of crowd animation
-	cmpi.w	#$15E,(crowdlevel).w
+	cmpi.w	#$15E,(Crowdlevel).w
 	blt.w	.dec
-	subq.w	#3,(crowdlevel).w		;loud crowd calms down faster
-.dec	sub.w	d7,(crowdlevel).w
+	subq.w	#3,(Crowdlevel).w		;loud crowd calms down faster
+.dec	sub.w	d7,(Crowdlevel).w
 	bpl.w	.0
-	clr.w	(crowdlevel).w
-.0	sub.w	d7,(crowdcnt).w
+	clr.w	(Crowdlevel).w
+.0	sub.w	d7,(Crowdcnt).w
 	bpl.w	.cf
-	move.w	(crowdlevel).w,d0
+	move.w	(Crowdlevel).w,d0
 	lsr.w	#1,d0
 	cmp.w	#$7F,d0
 	bls.w	.1
 	moveq	#$7F,d0
 .1	andi.w	#$60,d0					;%01100000
-	addq.w	#2,(crowdstep).w
-	andi.w	#$1E,(crowdstep).w		;%00011110
-	add.w	(crowdstep).w,d0
+	addq.w	#2,(Crowdstep).w
+	andi.w	#$1E,(Crowdstep).w		;%00011110
+	add.w	(Crowdstep).w,d0
 	movea.l	#cd0,a0					;$fftt frame/time table
-	move.b	0(a0,d0.w),(crowdframe+1).w
+	move.b	0(a0,d0.w),(Crowdframe+1).w
 	clr.w	d1
 	move.b	1(a0,d0.w),d1
 	move.w	(HVcount).l,d2			;HVcount
 	and.w	d1,d2					;random 0..time
 	add.w	d2,d1
-	move.w	d1,(crowdcnt).w			;crowdcnt = time + random
-.cf	clr.b	(crowdframe).w
-	cmpi.w	#$118,(crowdlevel).w	;280
+	move.w	d1,(Crowdcnt).w			;Crowdcnt = time + random
+.cf	clr.b	(Crowdframe).w
+	cmpi.w	#$118,(Crowdlevel).w	;280
 	bls.w	rtss8
 	move.w	(HVcount).l,d0			;HVcount
 	andi.w	#$7F,d0
@@ -297,7 +297,7 @@ updatecrowdf						;this is called every game loop with d7 = elapsed frames this 
 	blt.w	rtss8
 	cmp.w	#$19,d0
 	bgt.w	rtss8
-	move.b	d0,(crowdframe).w		;random extra frame 19-25 when crowd is loud
+	move.b	d0,(Crowdframe).w		;random extra frame 19-25 when crowd is loud
 	rts
 
 clockcont							;monitor period clock and initiate various clock activated events
@@ -358,7 +358,7 @@ clockcont_0							;End of period. Also entered from puckfaceoff
 .n2	adda.w	#SCstruct,a3			;SCstruct
 	dbf	d2,.t2
 .eog	jsr	(ClearPenaltyBuffer).l	;end of game
-	addi.w	#$3E8,(crowdlevel).w	;1000
+	addi.w	#$3E8,(Crowdlevel).w	;1000
 	bset	#gmclock,(gmode).w		;gmclock: stop clock
 	bset	#gmeog,(gmode).w		;set at end of game
 	jsr	(ClearPenalties).l
@@ -423,8 +423,8 @@ startpause4							;pause initiated by cont 4 (4 way play). Also from doinput
 Pausemode							;Game is in pause mode now
 	jsr	(forceblack).l				;fade screen to black
 	move.w	d0,-(sp)
-	move.w	(vcount).w,d0
-.vb	cmp.w	(vcount).w,d0			;Wait for the next vblank
+	move.w	(Vcount).w,d0
+.vb	cmp.w	(Vcount).w,d0			;Wait for the next vblank
 	beq.s	.vb
 	move.w	(sp)+,d0
 	jsr	(p_turnoff).l				;shut off sound
@@ -466,7 +466,7 @@ Pausemode							;Game is in pause mode now
 	move.w	#$18,(palcount).w
 .wait	tst.w	(palcount).w
 	bpl.s	.wait
-	move.w	(vcount).w,(oldvcount).w
+	move.w	(Vcount).w,(OldVcount).w
 	rts
 
 SetupPauseScreen					;Draw routine for the pause menu.

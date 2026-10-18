@@ -24,9 +24,9 @@ SPFsweep	=	SPFshoulderr+8		; 257
 SPFfallback	=	SPFsweep+16			; 273
 SPFfallfwd	=	SPFfallback+32		; 305
 SPFduck	=	SPFfallfwd+32			; 337
-SPFhold	=	SPFduck+8				; 345
+SPFHold	=	SPFduck+8				; 345
 
-SPFgloves	=	SPFhold+8			; 353 not used by any table
+SPFgloves	=	SPFHold+8			; 353 not used by any table
 SPFfight	=	SPFgloves+1			; 354 not used by any table
 SPFfinjury	=	SPFfight+17			; 371 not used by any table
 SPFPen	=	SPFfinjury+6			; 377
@@ -766,14 +766,14 @@ SPAHold_table:
 	dc.w	.7-.t
 	dc.w	0
 
-.0	dc.w	SPFhold,-30
-.1	dc.w	SPFhold+1,-30
-.2	dc.w	SPFhold+2,-30
-.3	dc.w	SPFhold+3,-30
-.4	dc.w	SPFhold+4,-30
-.5	dc.w	SPFhold+5,-30
-.6	dc.w	SPFhold+6,-30
-.7	dc.w	SPFhold+7,-30
+.0	dc.w	SPFHold,-30
+.1	dc.w	SPFHold+1,-30
+.2	dc.w	SPFHold+2,-30
+.3	dc.w	SPFHold+3,-30
+.4	dc.w	SPFHold+4,-30
+.5	dc.w	SPFHold+5,-30
+.6	dc.w	SPFHold+6,-30
+.7	dc.w	SPFHold+7,-30
 
 SPAHold2	=	*-SPAlist			; $0CC2
 SPAHold2_table:						;last time -40 in every direction (93 used -30)
@@ -788,14 +788,14 @@ SPAHold2_table:						;last time -40 in every direction (93 used -30)
 	dc.w	.7-.t
 	dc.w	0
 
-.0	dc.w	SPFhold,-40
-.1	dc.w	SPFhold+1,-40
-.2	dc.w	SPFhold+2,-40
-.3	dc.w	SPFhold+3,-40
-.4	dc.w	SPFhold+4,-40
-.5	dc.w	SPFhold+5,-40
-.6	dc.w	SPFhold+6,-40
-.7	dc.w	SPFhold+7,-40
+.0	dc.w	SPFHold,-40
+.1	dc.w	SPFHold+1,-40
+.2	dc.w	SPFHold+2,-40
+.3	dc.w	SPFHold+3,-40
+.4	dc.w	SPFHold+4,-40
+.5	dc.w	SPFHold+5,-40
+.6	dc.w	SPFHold+6,-40
+.7	dc.w	SPFHold+7,-40
 
 SPAflail	=	*-SPAlist			; $0CF4
 SPAflail_table:						;last time -40 in every direction (93 used -30)

@@ -433,7 +433,7 @@ PeriodStatsScreen					;"Period Stats" menu item (menu lists): both team logos (T
 .13
 	jsr	(PushNumberWidth).l
 	jmp	(print).l
-StatsReport							;(was GameStatisticsScreen) "Game Statistics" menu item (menu lists): both
+StatsReport							;"Game Statistics" menu item (menu lists): both
 									;teams' totals (DisplayStats). There are more rows than the screen:
 									;up / down scroll them (matchupvis the most, $70 or $30 without penalties,
 									;OptPen), start exits (ExitStatsScreen)
@@ -556,7 +556,7 @@ PrintStatScrollArrows				;StatsReport scroll arrows (printz2): up ($7B) when Ver
 	String	CC_SetFont
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
-DisplayStats						;(was DisplayTeamStatsScreen) Team logos (PutTeamBlock), then each
+DisplayStats						;Team logos (PutTeamBlock), then each
 									;TeamStatTextTbl row (TeamStatTextTblNoPen when penalties are off, OptPen)
 									;centred, with the home value at x $22 and the visitors' at x 9
 									;(PrintStatValue); SetStatScroll first

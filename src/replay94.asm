@@ -13,7 +13,7 @@ ReplayMode							;Instant replay play-back control and display code.
 	bclr	#4,(sflags4).w
 	jsr	(ClrHor).l
 	move.w	#$400,d0
-	move.w	(VmMap3).w,d1
+	move.w	(VmMAP3).w,d1
 	move.w	#$7FF,d2
 	bsr.w	DoFill
 	move.w	(ExtraChars).w,d4
@@ -37,11 +37,11 @@ ReplayMode							;Instant replay play-back control and display code.
 	move.w	#$18,(palcount).w
 	moveq	#1,d7
 .top
-	move.w	(vcount).w,d0
-	sub.w	(oldvcount).w,d0
+	move.w	(Vcount).w,d0
+	sub.w	(OldVcount).w,d0
 	cmp.w	d0,d7
 	bhi.s	.top
-	move.w	(vcount).w,(oldvcount).w
+	move.w	(Vcount).w,(OldVcount).w
 	tst.w	(replayicontimer).w
 	bmi.w	.0
 	sub.w	d7,(replayicontimer).w
@@ -586,7 +586,7 @@ RestoreReplayFrame					;a4 = current replay frame address to convert into normal
 	andi.w	#$FFF,d0
 	andi.w	#$F000,(PadControlBits).w
 	or.w	d0,(PadControlBits).w
-	move.w	(a0)+,(crowdframe).w
+	move.w	(a0)+,(Crowdframe).w
 	move.w	(a0)+,(glovecords).w
 	move.b	(a0)+,(PBnum).w
 	clr.w	d0
@@ -715,7 +715,7 @@ updatereplay						;called every frame to save replay events, d7 = elapsed frames
 	bset	#7,(lastsfx+1).w
 	move.b	d7,(a0)+
 	move.w	(PadControlBits).w,(a0)+
-	move.w	(crowdframe).w,(a0)+
+	move.w	(Crowdframe).w,(a0)+
 	move.w	(glovecords).w,(a0)+
 	move.b	(PBnum).w,(a0)+
 	move.w	d0,-(sp)

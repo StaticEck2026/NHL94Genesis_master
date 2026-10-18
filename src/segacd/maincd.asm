@@ -4,6 +4,7 @@
 ;
 ;	The sub CPU owns the game. This CPU drives the VDP and trades commands through
 ;	the gate array ($A1200E flags, $A12010 command words, $A12020 status words).
+;
 ;	$FF0000-$FF34B7 is transcribed and verified. This file is $FF0000-$FF0271.
 ;	maindma.asm through maintext.asm continue it.
 
@@ -40,7 +41,7 @@ RunSubCommand	move.l	a7,$FF2840
 SetCmdPending	move.w	#$FFFF,$FF2844
 	rts
 
-; Point the VBlank vector ($FD08, cart vbint) at CD code, keeping the old one.
+; Point the VBlank vector ($FD08, cart VBint) at CD code, keeping the old one.
 SwapVBlank	bsr.w	SyncFlag7
 	move.l	$FFFFFD08.w,$FF2846
 	move.l	#$FF24E4,$FFFFFD08.w

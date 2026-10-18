@@ -9,7 +9,7 @@ InitSaveRAM							;Called from Begin. Copy the $2000 byte save RAM (the odd byte
 									;$12,$34,$56,$78 to bytes 0-3 and flashes the screen green, or red at the
 									;first bad byte; Start+B+C held flashes green if bytes 0-3 are $12345678,
 									;else red
-	move.l	#VBcount,(vbint).l
+	move.l	#VBcount,(VBint).l
 	move	#$2500,sr
 	clr.w	(ValidSRAM).w			;good until checked
 	jsr	(ReadJoy1).l				;get joypad buttons held
@@ -80,8 +80,8 @@ InitSaveRAM							;Called from Begin. Copy the $2000 byte save RAM (the odd byte
 SRAMWaitVblank						;Wait for the next vblank. Called from InitSaveRAM
 	jsr	(vcountwait).l
 	rts
-VBcount								;vbint handler while InitSaveRAM runs: vcount + 1 only
-	addq.w	#1,(vcount).w			;vblank with counter only
+VBcount								;VBint handler while InitSaveRAM runs: Vcount + 1 only
+	addq.w	#1,(Vcount).w			;vblank with counter only
 	rte
 ValidateSRAM						;Check the save RAM copy in M68K_RAM: byte $1FFF must be the sum of bytes
 									;0-$1FFD, byte $1FFE its complement. ValidSRAM = 0 if they match, -1 if

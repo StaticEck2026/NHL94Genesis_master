@@ -62,7 +62,7 @@ OneTimerPass						;One-timer pass: puckvz = sqrt(12 * onetimerheight), then puck
 	mulu.w	d1,d0
 	swap	d0
 	andi.l	#$FFFF0000,d0
-	jsr	(sroot).l
+	jsr	(Sroot).l
 	move.w	d0,(puckvz).w
 	ext.l	d0
 	move.w	#3,d4
@@ -439,7 +439,7 @@ PuckOnAttackHalf					;d0 = 1 when the puck is on the half of the goal player a3 
 	movem.w	(sp)+,d0-d1
 	rts
 onetimershot						;Do the one-timer shot (doshot), credit the last two passers as the
-									;assists, add to crowdlevel /
+									;assists, add to Crowdlevel /
 									;CwdExciteLvl and to the one-timer attempts ($35C of the team struct).
 									;Called from puckstick
 	move.w	#4,(passdir).w
@@ -456,7 +456,7 @@ onetimershot						;Do the one-timer shot (doshot), credit the last two passers a
 	move.w	$18(a0),$1A(a0)			;move last player to touch puck to assist 1
 	move.w	d0,$18(a0)				;move d0 into player touching puck
 	bset	#7,(sflags8).w			;set bit 7
-	addi.w	#$96,(crowdlevel).w		;add to crowdlevel
+	addi.w	#$96,(Crowdlevel).w		;add to Crowdlevel
 	addi.w	#$A,(CwdExciteLvl).w	;add to Excite Level
 	addq.w	#1,$35C(a0)				;add to one timer attempt
 	movem.l	(sp)+,d0/a0

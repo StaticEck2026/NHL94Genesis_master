@@ -60,10 +60,10 @@ frameSprData
 HotList								;the hot spot byte pair of each frame
 	incbin	..\Extracted\NHL94\Graphics\HotList.bin
 	even
-CrowdFrameList						;showcrowd
+Crowdframelist						;showcrowd
 	incbin	..\Extracted\NHL94\Graphics\Crowd.anim
 	even
-;CrowdFrameList+8: the tiles (setupice, ReloadCrowdTiles)
+;Crowdframelist+8: the tiles (setupice, ReloadCrowdTiles)
 FaceOffSprites						;same size: checkfo
 	incbin	..\Extracted\NHL94\Graphics\FaceOff.anim
 	even

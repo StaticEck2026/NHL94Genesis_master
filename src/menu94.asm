@@ -200,14 +200,14 @@ PutTeamBlock						;Copy 2 rows of 11 map words from TeamBlockMap+d0 to printx / 
 	move.w	(sp)+,(disflags).w
 	movem.l	(sp)+,d0-d2/a0-a1
 	rts
-vcountwait							;wait till vcount changes, then resync vcount. Saves d0. Reads oldvcount
+vcountwait							;wait till Vcount changes, then resync Vcount. Saves d0. Reads OldVcount
 									;twice. Called from PauseMode, and the stats code
 	move.w	d0,-(sp)
-	move.w	(oldvcount).w,d0
-	move.w	(oldvcount).w,d0
+	move.w	(OldVcount).w,d0
+	move.w	(OldVcount).w,d0
 .wait
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.wait
-	move.w	(oldvcount).w,(vcount).w
+	move.w	(OldVcount).w,(Vcount).w
 	move.w	(sp)+,d0
 	rts

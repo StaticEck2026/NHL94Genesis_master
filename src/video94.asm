@@ -109,16 +109,16 @@ forceblack2							;fade to black, keeping palfadenew (saved on the stack and res
 forcefade							;regardless of interupts/disflags fade in new palettes, don't upset
 									;anything else
 	move	sr,-(sp)
-	move.l	(vbint).w,-(sp)
+	move.l	(VBint).w,-(sp)
 	move.w	(disflags).w,-(sp)
 	bclr	#dfng,(disflags).w
-	move.l	#vb2,(vbint).l
+	move.l	#vb2,(VBint).l
 	move	#$2500,sr
 .1
 	tst.w	(palcount).w
 	bpl.s	.1
 	move.w	(sp)+,(disflags).w
-	move.l	(sp)+,(vbint).w
+	move.l	(sp)+,(VBint).w
 	move	(sp)+,sr
 	rts
 ; fade from current color in color ram to color held in palfadenew
@@ -221,7 +221,7 @@ randomd0
 	movem.l	(sp)+,d1-d2
 	rts
 ; returns d0.L^.5 in d0
-sroot
+Sroot
 	tst.l	d0
 	beq.w	rtss2					;zero^.5 = zero
 	cmp.l	#$640,d0				;#40^2
@@ -307,7 +307,7 @@ song
 waitx
 	clr.w	(waitxpad).w
 	neg.w	d0
-	move.w	d0,(vcount).w
+	move.w	d0,(Vcount).w
 .wait
 	bsr.w	ReadJoy1
 	move.w	d3,(waitxpad).w
@@ -328,9 +328,9 @@ waitx
 	tst.w	d1
 	bne.w	rtss2
 .1
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .0
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.0
 	tst.w	d0
 	bmi.s	.wait
@@ -341,11 +341,11 @@ waitx
 waitxsr								;Wait d0 vblanks while the zamboni crosses
 	movem.l	d4-d7/a0-a3,-(sp)
 	neg.w	d0
-	move.w	d0,(vcount).w
+	move.w	d0,(Vcount).w
 .wait
-	cmpi.w	#$708,(zamx).w
+	cmpi.w	#$708,(Zamx).w
 	bhi.w	.nz
-	addq.w	#1,(zamx).w
+	addq.w	#1,(Zamx).w
 .nz
 	moveq	#1,d7
 	jsr	(updatecrowdf).w			;4EB8: target below $8000
@@ -379,7 +379,7 @@ waitxsr								;Wait d0 vblanks while the zamboni crosses
 	tst.w	d1
 	beq.w	.vid
 .key
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 	cmp.w	#$FF88,d0
 	blt.w	.menu
 	moveq	#$FFFFFF88,d0
@@ -391,12 +391,12 @@ waitxsr								;Wait d0 vblanks while the zamboni crosses
 	bset	#7,d1
 	bra.w	.ex
 .resume
-	move.w	(sp)+,(vcount).w
+	move.w	(sp)+,(Vcount).w
 .vid
 	bsr.w	setvideo
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .0
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.0
 	tst.w	d0
 	bmi.w	.wait
@@ -406,9 +406,9 @@ waitxsr								;Wait d0 vblanks while the zamboni crosses
 ; wait for either joystick input
 ; return d1 = new button presses
 waitjoy
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .0
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.0
 	bsr.w	orjoy
 	beq.s	waitjoy
@@ -697,7 +697,7 @@ setVram
 	move.w	#$18,(palcount).w
 	bsr.w	forcefade
 setVram_0							;second half of setVram without the fade: clear vram and set the VDP
-									;registers from disflags, Map1col, VmMap1-3, VSPRITES and VSCRLPM.
+									;registers from disflags, Map1col, VmMAP1-3, VSPRITES and VSCRLPM.
 									;Falls in from setVram, called from EASportsScreen and HiScoreScreen
 	move.w	(disflags).w,-(sp)
 	bset	#dfng,(disflags).w		;#dfng
@@ -724,16 +724,16 @@ setVram_0							;second half of setVram without the fade: clear vram and set the
 .i64
 	move.w	d0,Vctrl-Vdata(a0)
 	move.w	#$8200,d0
-	move.b	(VmMap1).w,d0
+	move.b	(VmMAP1).w,d0
 	lsr.b	#2,d0
 	andi.b	#$38,d0
 	move.w	d0,Vctrl-Vdata(a0)
 	move.w	#$8400,d0
-	move.b	(VmMap2).w,d0
+	move.b	(VmMAP2).w,d0
 	lsr.b	#5,d0
 	move.w	d0,Vctrl-Vdata(a0)
 	move.w	#$8300,d0
-	move.b	(VmMap3).w,d0
+	move.b	(VmMAP3).w,d0
 	lsr.b	#2,d0
 	andi.b	#$3E,d0
 	move.w	d0,Vctrl-Vdata(a0)
@@ -765,15 +765,10 @@ Vmaddr
 	andi.w	#3,d0
 	move.l	d0,Vctrl-Vdata(a0)
 	rts
-;	dobitmap, the tile decompressor (DecompressGraphicsWithCallback,
-;	DecompressGraphicsPlain, DecompressGraphics, DecompressBytecode,
-;	jump_table, the Opcode_* handlers, FlushOutputBuffer), xyVmMap, eraser,
-;	Framer, printz2 / printsmall and the control codes, printz / print,
-;	FormatAndPrintTime, PeriodLabelTable, PushTime, PushNumber,
-;	PushNumberWidth, appendz / appstring, printbigz / printbig, PrintBigChar /
-;	PutBigTile, AddSmallFont, AddFramer and AddTeamBlock.
-;	The decompressor handlers and control code routines sit at the addresses
-;	in jump_table and ControlCodeJumpTable.
+;	Bitmap and tile decompression, text and number printing, and the small and big font routines.
+;	The decompressor handlers and control code routines sit at the addresses in jump_table and
+;	ControlCodeJumpTable.
+;
 ;	EA's compiler emits cmp #imm,Dn as CMP (Bxxx), SNASM emits CMPI (0Cxx). The source has the real cmp /
 ;	cmpi; fixopcodes.js patches the cmp encoding after assembly.
 
@@ -1058,7 +1053,7 @@ xyVmMap
 	movem.l	d0-d2,-(sp)
 	move.w	(printx).w,d0
 	move.w	(printy).w,d1
-	movea.l	#VmMap1,a0
+	movea.l	#VmMAP1,a0
 	adda.w	(printm).w,a0
 	move.w	2(a0),d2
 	asl.w	d2,d1
@@ -1537,7 +1532,7 @@ printbig
 	move.w	(printx).w,d4
 	move.w	(printy).w,d5
 	move.w	(printa).w,d6
-	add.w	(BigFontChars).w,d6
+	add.w	(BigFontchars).w,d6
 	move.w	(a1)+,d3
 	subq.w	#2,d3
 	bra.w	.1
@@ -1552,7 +1547,7 @@ printbig
 	asl.w	#1,d6
 	andi.w	#$F800,d6
 	move.w	d6,(printa).w
-	add.w	(BigFontChars).w,d6
+	add.w	(BigFontchars).w,d6
 	andi.w	#3,d0
 	asl.w	#2,d0
 	subq.w	#4,d0
@@ -1614,7 +1609,7 @@ PutBigTile							;write one big font tile to the map at printx / printy
 	add.w	d6,d3
 	movem.l	d1/a0,-(sp)
 	move.w	d5,d0
-	movea.l	#VmMap1,a0
+	movea.l	#VmMAP1,a0
 	adda.w	(printm).w,a0
 	move.w	2(a0),d1
 	asl.w	d1,d0

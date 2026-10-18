@@ -13,7 +13,7 @@
 
 ; External addresses outside, read from lst/nhl94.bin: jsr / jmp (x).l, movea.l / move.l #x
 ; lea (x).l carry the address; bsr.w / bra.w / Bcc.w is the displacement word address + displacement.
-CrowdFrameList = $A4B54				;#x.
+Crowdframelist = $A4B54				;#x.
 Crowd_Noise = $F6EBE				;jsr / jmp (x).l
 DoDMA = $113E4						;bsr.w / Bcc.w.
 p_music_vblank = $1A50A				;jsr / jmp (x).l.

@@ -601,14 +601,14 @@ DrawPlayoffSprite					;The PlayoffSprite sprite at playoffspritex / playoffsprit
 	rts
 HiScoreScreen						;vb2, the bitmap and HiScoreImg, then wait up to $50 * 4 frames or a
 									;button (waitx). Called from Begin (attract mode)
-	move.l	#vb2,(vbint).w
+	move.l	#vb2,(VBint).w
 	bclr	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
-	move.w	#$A000,(VmMap2).w
+	move.w	#$A000,(VmMAP2).w
 	move.w	#7,(Map2col1).w
-	move.w	#$C000,(VmMap1).w
+	move.w	#$C000,(VmMAP1).w
 	move.w	#7,(Map1col1).w
-	move.w	#$F000,(VmMap3).w
+	move.w	#$F000,(VmMAP3).w
 	move.w	#$F800,(VSPRITES).w
 	move.w	#$FC00,(VSCRLPM).w
 	jsr	(forceblack).l
@@ -820,14 +820,14 @@ newTitleScreen						;the title screen (TitleScreenImg, NHLShieldImg, PAlogoImg, 
 	move	#$2700,sr
 	move.w	(HVcount).l,(seed).w
 	move.w	(HVcount).l,(seed+2).w
-	move.l	#VBlank_TitleScreen,(vbint).l
+	move.l	#VBlank_TitleScreen,(VBint).l
 	bset	#df32c,(disflags).w
 	move.w	#5,(Map3col1).w
-	move.w	#$A000,(VmMap2).w
+	move.w	#$A000,(VmMAP2).w
 	move.w	#7,(Map2col1).w
-	move.w	#$C000,(VmMap1).w
+	move.w	#$C000,(VmMAP1).w
 	move.w	#7,(Map1col1).w
-	move.w	#$F000,(VmMap3).w
+	move.w	#$F000,(VmMAP3).w
 	move.w	#$F800,(VSPRITES).w
 	move.w	#$FC00,(VSCRLPM).w
 	move.w	#0,d0
@@ -996,12 +996,12 @@ CreditsPrintRow						;Credits: clear the row below the screen (Vscroll / 8 + $1C
 	tst.w	2(a1)
 	bpl.s	.loop
 	rts
-CreditsWait							;Credits: wait for vcount, run the clampcounter count down; start (orjoy
+CreditsWait							;Credits: wait for Vcount, run the clampcounter count down; start (orjoy
 									;bit 7) returns from the caller too
 	movem.l	d0-d7/a0-a6,-(sp)
-	move.w	(vcount).w,d0
+	move.w	(Vcount).w,d0
 .loop
-	cmp.w	(vcount).w,d0
+	cmp.w	(Vcount).w,d0
 	beq.s	.loop
 	subq.w	#2,(clampcounter).w
 	bpl.w	.0
@@ -1035,7 +1035,7 @@ VBlank_TitleScreen					;newTitleScreen vblank: line scroll table (SortCords) and
 .0
 	jsr	(cramfade).l
 .1
-	addq.w	#1,(vcount).w
+	addq.w	#1,(Vcount).w
 	jsr	(CreditsScrollStep).l
 	jsr	(p_music_vblank).l
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -1178,12 +1178,12 @@ LeadSongExit						;LeadSong exit
 	move.w	(sp)+,(sflags2).w
 	movem.l	(sp)+,d0/a0-a3
 	rts
-ClearPenalties						;Clear the penalties: PBnum, Penaltytimer, Pencntdwn, PenBuf and both
+ClearPenalties						;Clear the penalties: PBnum, Penaltytimer, PenCntDwn, PenBuf and both
 									;teams' penalty slots (clrTmPdst). Called from clockcont_0
 	movem.l	d0/a0,-(sp)
 	clr.w	(PBnum).w
 	clr.w	(Penaltytimer).w
-	clr.w	(Pencntdwn).w
+	clr.w	(PenCntDwn).w
 	move.w	#$10,d0
 	movea.l	#PenBuf,a0
 .loop
