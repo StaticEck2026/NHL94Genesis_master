@@ -93,28 +93,51 @@ static void watch_hit(uint32_t a, uint32_t v)
             in_blit ? "blitter" : "cpu", m68k_get_reg(NULL, M68K_REG_PPC));
 }
 
-/* The blitter, area mode, ascending and descending (no line mode). */
+/* The blitter, area mode, ascending and descending (no line mode). A blit's memory accesses are
+   made when its time is up (the hardware makes them over that time), so a CPU write to what a
+   pending blit reads or writes shows; NHL_EARLYBLIT=1 makes them at the start instead. */
+static uint16_t pend_reg[0x38 / 2];
+static int pend_h, pend_w, pend_run;
+static void blit_exec(void);
+
 static void do_blit(int h, int w)
 {
-    uint16_t con0 = creg[0x40 / 2], con1 = creg[0x42 / 2];
+    uint16_t con0 = creg[0x40 / 2];
+    int n = !!(con0 & 0x800) + !!(con0 & 0x400) + !!(con0 & 0x200) + !!(con0 & 0x100);
+    if (pend_run) blit_exec();             /* (a blit started while one runs: the old one first) */
+    memcpy(pend_reg, &creg[0x40 / 2], sizeof pend_reg);
+    pend_h = h;
+    pend_w = w;
+    pend_run = 1;
+    blit_busy_until = cycles_total + m68k_cycles_run() + 20 + (long long)h * w * (2 * n + 2);
+    blit_end_pending = 1;
+    if (getenv("NHL_EARLYBLIT")) blit_exec();
+}
+
+static void blit_exec(void)
+{
+    uint16_t *r = pend_reg - 0x40 / 2;     /* (indexed by register offset / 2 as creg is) */
+    int h = pend_h, w = pend_w;
+    pend_run = 0;
+    uint16_t con0 = r[0x40 / 2], con1 = r[0x42 / 2];
     int ash = con0 >> 12, bsh = con1 >> 12, lf = con0 & 0xFF, desc = con1 & 2;
     int useA = con0 & 0x800, useB = con0 & 0x400, useC = con0 & 0x200, useD = con0 & 0x100;
-    uint32_t apt = (creg[0x50 / 2] << 16) | creg[0x52 / 2], bpt = (creg[0x4C / 2] << 16) | creg[0x4E / 2];
-    uint32_t cpt = (creg[0x48 / 2] << 16) | creg[0x4A / 2], dpt = (creg[0x54 / 2] << 16) | creg[0x56 / 2];
-    int16_t amod = creg[0x64 / 2], bmod = creg[0x62 / 2], cmod = creg[0x60 / 2], dmod = creg[0x66 / 2];
-    uint16_t afwm = creg[0x44 / 2], alwm = creg[0x46 / 2];
+    uint32_t apt = (r[0x50 / 2] << 16) | r[0x52 / 2], bpt = (r[0x4C / 2] << 16) | r[0x4E / 2];
+    uint32_t cpt = (r[0x48 / 2] << 16) | r[0x4A / 2], dpt = (r[0x54 / 2] << 16) | r[0x56 / 2];
+    int16_t amod = r[0x64 / 2], bmod = r[0x62 / 2], cmod = r[0x60 / 2], dmod = r[0x66 / 2];
+    uint16_t afwm = r[0x44 / 2], alwm = r[0x46 / 2];
     int step = desc ? -2 : 2;
-    blit_busy_until = cycles_total + m68k_cycles_run() + 20;
-    blit_end_pending = 1;
-    long long blit_start = blit_busy_until;
-    uint32_t aold = 0, bold = 0;
+    long long blit_time = 20;
+    /* the shifters take the bits shifted in from the data registers' last words, as the
+       hardware does: what the previous blit (or a write to BLTxDAT) left there */
+    uint32_t aold = r[0x74 / 2], bold = r[0x72 / 2];
     if (con1 & 1) { fprintf(stderr, "blitter line mode not emulated\n"); return; }
     in_blit = 1;
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-            uint32_t a = useA ? rd16(apt) : creg[0x74 / 2];
-            uint32_t b = useB ? rd16(bpt) : creg[0x72 / 2];
-            uint32_t c = useC ? rd16(cpt) : creg[0x70 / 2];
+            uint32_t a = useA ? rd16(apt) : r[0x74 / 2];
+            uint32_t b = useB ? rd16(bpt) : r[0x72 / 2];
+            uint32_t c = useC ? rd16(cpt) : r[0x70 / 2];
             if (useA) apt += step;
             if (useB) bpt += step;
             if (useC) cpt += step;
@@ -132,13 +155,15 @@ static void do_blit(int h, int w)
             }
             aold = a;
             bold = b;
+            if (useA) creg[0x74 / 2] = a;
+            if (useB) creg[0x72 / 2] = b;
             uint32_t d = 0;
             for (int n = 0; n < 8; n++)
                 if (lf & (1 << n))
                     d |= ((n & 4) ? as : ~as) & ((n & 2) ? bs : ~bs) & ((n & 1) ? c : ~c);
             if (useD) { wr16(dpt, d & 0xFFFF); dpt += step; }
             blit_words++;
-            blit_busy_until += 2 * ((useA != 0) + (useB != 0) + (useC != 0) + (useD != 0)) + 2;
+            blit_time += 2 * ((useA != 0) + (useB != 0) + (useC != 0) + (useD != 0)) + 2;
         }
         if (useA) apt += desc ? -amod : amod;
         if (useB) bpt += desc ? -bmod : bmod;
@@ -149,7 +174,7 @@ static void do_blit(int h, int w)
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
         extern long long blitstat[4];
         int kind = (con0 & 0x0FFF) == 0x0FCA ? (alwm ? 2 : 1) : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 3;
-        blitstat[kind] += blit_busy_until - blit_start;
+        blitstat[kind] += blit_time;
     }
 }
 
@@ -350,6 +375,7 @@ static int run_cycles(int n)
         done += c;
         if (blit_end_pending && cycles_total >= blit_busy_until) {
             blit_end_pending = 0;
+            if (pend_run) blit_exec();
             blit_irq = 1;
             update_irq();
         }

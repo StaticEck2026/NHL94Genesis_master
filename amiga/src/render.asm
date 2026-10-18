@@ -607,6 +607,7 @@ rd_bq_alloc
 	mulu.w	#BQE,d0
 	lea	(rd_bq-$040).l,a6
 	adda.l	d0,a6
+	clr.w	$074(a6)			;BLTADAT: what a shift brings into the first word
 	move.l	(sp)+,d0
 	rts
 
@@ -806,8 +807,10 @@ rd_updateB
 	bsr	rd_list_hiB
 .x	rts
 
-;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap.
+;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap. The blits of the frame
+;	before may still read the bitmap: they are let finish first.
 rd_cellB
+	bsr	rd_waitblit
 	; all buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
 	moveq	#0,d1				;(bit field offsets are longs)
 	move.w	d4,d1
@@ -1785,6 +1788,7 @@ rd_ovl_blit
 ;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
 ;	scrolled by whole cells. d6 = plane cells across, d7 = down.
 rd_ovl_cells_changed
+	bsr	rd_waitblit			;(the frame before's blits may still read the overlay)
 	lea	(rd_aused).l,a3
 	lea	(rd_chgA).l,a4
 	move.w	(rd_nchgA).l,d4
