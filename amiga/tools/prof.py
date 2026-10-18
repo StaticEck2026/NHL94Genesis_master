@@ -8,7 +8,7 @@ keys = [s[0] for s in syms]
 c = collections.Counter()
 n = 0
 for ln in open(sys.argv[2]):
-    v = int(ln, 16) - 0x200000
+    v = int(ln.split()[0], 16) - 0x200000
     i = bisect.bisect_right(keys, v) - 1
     c[syms[i][1] if i >= 0 else '?'] += 1
     n += 1

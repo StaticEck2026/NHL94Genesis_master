@@ -26,6 +26,7 @@
 #define MEMSIZE 0x1000000
 static uint8_t *mem;
 static int irq6_pending;
+static long long blit_busy_until;
 static long long cycles_total;
 static int red_screen;
 static uint32_t dbg;            /* debug block address */
@@ -47,6 +48,10 @@ static uint32_t custom_read(uint32_t a, int size)
         return ((line & 0xFF) << 8) | (h & 0xFF);
     }
     if (off == 0x004) return 0;    /* VPOSR */
+    if (off == 0x002) {             /* DMACONR: blitter busy while a blit runs */
+        long long c = cycles_total + m68k_cycles_run();
+        return c < blit_busy_until ? 0x4000 : 0;
+    }
     (void)size;
     return 0;
 }
@@ -54,6 +59,7 @@ static uint32_t custom_read(uint32_t a, int size)
 static uint32_t cop1lc;
 static uint16_t creg[0x100];
 static long long blit_words;
+static int blit_warn;
 
 /* The blitter, area mode, ascending and descending (no line mode). */
 static void do_blit(int h, int w)
@@ -66,6 +72,7 @@ static void do_blit(int h, int w)
     int16_t amod = creg[0x64 / 2], bmod = creg[0x62 / 2], cmod = creg[0x60 / 2], dmod = creg[0x66 / 2];
     uint16_t afwm = creg[0x44 / 2], alwm = creg[0x46 / 2];
     int step = desc ? -2 : 2;
+    blit_busy_until = cycles_total + m68k_cycles_run() + 20;
     uint32_t aold = 0, bold = 0;
     if (con1 & 1) { fprintf(stderr, "blitter line mode not emulated\n"); return; }
     for (int y = 0; y < h; y++) {
@@ -96,6 +103,7 @@ static void do_blit(int h, int w)
                     d |= ((n & 4) ? as : ~as) & ((n & 2) ? bs : ~bs) & ((n & 1) ? c : ~c);
             if (useD) { wr16(dpt, d & 0xFFFF); dpt += step; }
             blit_words++;
+            blit_busy_until += 2 * ((useA != 0) + (useB != 0) + (useC != 0) + (useD != 0)) + 2;
         }
         if (useA) apt += desc ? -amod : amod;
         if (useB) bpt += desc ? -bmod : bmod;
@@ -107,6 +115,11 @@ static void do_blit(int h, int w)
 static void custom_write(uint32_t a, uint32_t v)
 {
     uint32_t off = a & 0xFFE;
+    if (off >= 0x040 && off <= 0x074 && cycles_total + m68k_cycles_run() < blit_busy_until && blit_warn < 20) {
+        blit_warn++;
+        fprintf(stderr, "frame %d: blitter register %03x written while busy, pc=%06x\n", frame, off,
+                m68k_get_reg(NULL, M68K_REG_PPC));
+    }
     creg[off / 2] = v;
     if (off == 0x058) do_blit((v >> 6) ? (v >> 6) : 1024, (v & 63) ? (v & 63) : 64);
     if (off == 0x05E) do_blit(creg[0x5C / 2] & 0x7FFF ? creg[0x5C / 2] & 0x7FFF : 0x8000, (v & 0x7FF) ? (v & 0x7FF) : 0x800);
@@ -176,7 +189,15 @@ static uint32_t io_read(uint32_t a, int size)
 
 static int is_io(uint32_t a) { a &= 0xFFFFFF; return (a >= 0xBF0000 && a < 0xC00000) || (a >= 0xDFF000 && a < 0xE00000); }
 
-unsigned int m68k_read_memory_8(unsigned int a) { if (is_io(a)) return io_read(a & 0xFFFFFF, 1) & 0xFF; return rd8(a); }
+unsigned int m68k_read_memory_8(unsigned int a)
+{
+    if (is_io(a)) {
+        uint32_t aa = a & 0xFFFFFF;
+        if (aa >= 0xDFF000) { uint32_t v = io_read(aa & ~1, 2); return (aa & 1) ? v & 0xFF : (v >> 8) & 0xFF; }
+        return io_read(aa, 1) & 0xFF;
+    }
+    return rd8(a);
+}
 unsigned int m68k_read_memory_16(unsigned int a) { if (is_io(a)) return io_read(a & 0xFFFFFF, 2) & 0xFFFF; return rd16(a); }
 unsigned int m68k_read_memory_32(unsigned int a) { if (is_io(a)) return (io_read(a & 0xFFFFFF, 2) << 16) | io_read((a + 2) & 0xFFFFFF, 2); return rd32(a); }
 unsigned int m68k_read_disassembler_8(unsigned int a) { return rd8(a); }
@@ -359,7 +380,7 @@ int main(int argc, char **argv)
                 int c = m68k_execute(1000);
                 cycles_total += c;
                 left -= c;
-                fprintf(pf, "%06x\n", m68k_get_reg(NULL, M68K_REG_PC));
+                fprintf(pf, "%06x %04x\n", m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR));
             }
         } else
             cycles_total += m68k_execute(ncyc);
@@ -433,6 +454,9 @@ int main(int argc, char **argv)
         fwrite(mem + (vram & 0xFFFFFF), 1, 0x10000, f);
         fwrite(mem + (rd32(dbg + 36) & 0xFFFFFF), 1, 2048 * 48, f);
         fwrite(mem + (vdpregs & 0xFFFFFF), 1, 32, f);
+        fwrite(mem + (rd32(dbg + 60) & 0xFFFFFF), 1, 288 * 224, f);
+        fwrite(mem + (rd32(dbg + 64) & 0xFFFFFF), 1, 48 * 224 * 2, f);
+        fwrite(mem + (rd32(dbg + 68) & 0xFFFFFF), 1, 256, f);
         fclose(f);
     }
     if (rawfile) {

@@ -73,6 +73,10 @@ rd_screens	ds.b	SCRSIZE*2
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 mkB		ds.b	BMAX*8			;plane B high priority mask
 rd_cop		ds.l	2*128
+rd_sprimg	ds.b	SPRBUF*4		;two (image, mask) pairs
+rd_ovl		ds.b	SCRSIZE			;plane A / window overlay
+rd_ovlmlo	ds.b	SBPR*SCRH		;its low priority mask
+rd_ovlmhi	ds.b	SBPR*SCRH		;its high priority mask (follows the low one)
 
 	section	game,code
 
@@ -94,25 +98,25 @@ rd_init
 	move.w	d3,d5
 	addq.w	#4,d5
 	btst	d5,d0				;left pixel bit p
-	beq.s	.nl
+	beq	.nl
 	move.l	d4,d5
 	addq.l	#1,d5
 	bset	d5,d1
 	bset	d4,d2
 .nl	btst	d3,d0				;right pixel bit p
-	beq.s	.nr
+	beq	.nr
 	bset	d4,d1
 	move.l	d4,d5
 	addq.l	#1,d5
 	bset	d5,d2
 .nr	addq.w	#1,d3
 	cmpi.w	#4,d3
-	bne.s	.pp
+	bne	.pp
 	move.l	d1,(a0)+
 	move.l	d2,(a1)+
 	addq.w	#1,d0
 	cmpi.w	#256,d0
-	bne.s	.pt
+	bne	.pt
 	; chunky tables
 	lea	(rd_nibtab).l,a0
 	lea	(rd_revtab).l,a1
@@ -131,14 +135,14 @@ rd_init
 	move.w	d3,(a1)+
 	addq.w	#1,d0
 	cmpi.w	#256,d0
-	bne.s	.nt
+	bne	.nt
 	lea	(rd_attr).l,a0
 	moveq	#0,d0
 .at	move.l	d0,d1
 	andi.l	#3,d1
 	lsl.l	#4,d1
 	btst	#2,d0
-	beq.s	.np
+	beq	.np
 	ori.l	#$40,d1
 .np	move.l	d1,d2
 	lsl.l	#8,d2
@@ -149,7 +153,7 @@ rd_init
 	move.l	d1,(a0)+
 	addq.w	#1,d0
 	cmpi.w	#8,d0
-	bne.s	.at
+	bne	.at
 	bsr	rd_dirty_all
 	lea	(rd_screens).l,a0
 	move.l	a0,(rd_back).l
@@ -171,7 +175,7 @@ hal_vdp_dirty
 	movem.l	d0-d2/a0,-(sp)
 	addq.l	#1,(hal_vdp_gen).l
 	andi.l	#$FFFF,d0
-	beq.s	.x
+	beq	.x
 	andi.l	#$FFFF,d1
 	add.l	d0,d0
 	add.l	d1,d0
@@ -179,14 +183,14 @@ hal_vdp_dirty
 	lsr.l	#5,d1
 	lsr.l	#5,d0
 	cmpi.l	#2047,d0
-	bls.s	.ok
+	bls	.ok
 	move.l	#2047,d0
 .ok	lea	(tc_dirty).l,a0
 .loop	cmp.l	d0,d1
-	bhi.s	.x
+	bhi	.x
 	bfset	(a0){d1:1}
 	addq.l	#1,d1
-	bra.s	.loop
+	bra	.loop
 .x	movem.l	(sp)+,d0-d2/a0
 	rts
 
@@ -209,12 +213,12 @@ rd_decode_dirty
 	moveq	#0,d3				;any
 .long	move.l	(a4),d6
 	move.l	d6,(a3)+
-	beq.s	.next
+	beq	.next
 	clr.l	(a4)
 	moveq	#1,d3
 	moveq	#31,d5
 .bit	btst	d5,d6
-	beq.s	.nb
+	beq	.nb
 	move.l	d7,d0
 	addi.l	#31,d0
 	sub.l	d5,d0
@@ -225,7 +229,7 @@ rd_decode_dirty
 .next	addq.l	#4,a4
 	addi.l	#32,d7
 	cmpi.l	#2048,d7
-	bne.s	.long
+	bne	.long
 	move.l	d3,d0
 	rts
 
@@ -310,11 +314,11 @@ rd_decode_tile
 	; class: all rows $FF -> opaque, all 0 -> empty
 	moveq	#2,d0
 	tst.b	d4
-	bne.s	.ne
+	bne	.ne
 	moveq	#0,d0
-	bra.s	.cl
+	bra	.cl
 .ne	cmpi.w	#$FF00,d4
-	blo.s	.cl
+	blo	.cl
 	moveq	#1,d0
 .cl	move.b	d0,(a6)
 	move.b	d0,$800(a6)
@@ -346,7 +350,7 @@ rd_frame
 	move.l	(hal_vdp_gen).l,d0
 	add.l	(vdp_cramgen).l,d0
 	cmp.l	(rd_lastgen).l,d0
-	bne.s	.changed
+	bne	.changed
 	cmp.l	(rd_lastgen+4).l,d0
 	beq	.skip
 .changed
@@ -358,7 +362,7 @@ rd_frame
 	moveq	#33,d1
 	move.b	12(a5),d2
 	andi.b	#$81,d2
-	beq.s	.h32
+	beq	.h32
 	move.w	#320,d0
 	moveq	#41,d1
 .h32	move.w	d0,(rd_w).l
@@ -366,13 +370,13 @@ rd_frame
 	; fast path?
 	move.b	11(a5),d0
 	andi.b	#7,d0
-	bne.s	.chunky				;line / cell scroll or column vscroll
+	bne	.chunky				;line / cell scroll or column vscroll
 	bsr	rd_planesize			;d0 = cells across, d1 = down
 	mulu.w	d1,d0
 	cmpi.l	#BMAX,d0
-	bhi.s	.chunky
+	bhi	.chunky
 	bsr	rd_fast
-	bra.s	.shown
+	bra	.shown
 .chunky	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches
 	bsr	rd_chunky
@@ -387,18 +391,18 @@ rd_planesize
 	move.b	16(a5),d1
 	moveq	#32,d0
 	btst	#0,d1
-	beq.s	.w
+	beq	.w
 	moveq	#64,d0
 	btst	#1,d1
-	beq.s	.w
+	beq	.w
 	move.w	#128,d0
 .w	lsr.b	#4,d1
 	btst	#0,d1
-	bne.s	.h1
+	bne	.h1
 	moveq	#32,d1
 	rts
 .h1	btst	#1,d1
-	bne.s	.h2
+	bne	.h2
 	moveq	#64,d1
 	rts
 .h2	move.w	#128,d1
@@ -415,20 +419,23 @@ rd_fast
 .c	clr.l	(a0)+
 	dbf	d0,.c
 	bsr	rd_buildA
-	bsr	rd_waitblit
-	clr.w	(rd_pass).l
-	bsr	rd_layerA
+	tst.b	(rd_ovldirty).l
+	beq	.ovl
+	bsr	rd_ovl_redraw
+.ovl	clr.w	(rd_pass).l
+	bsr	rd_ovl_blit
 	bsr	rd_sprites_planar
+	bsr	rd_waitblit
 	bsr	rd_fixups
 	move.w	#$8000,(rd_pass).l
-	bsr	rd_layerA
+	bsr	rd_ovl_blit
 	bsr	rd_sprites_planar
-	rts
+	bra	rd_waitblit
 
 rd_waitblit
 	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
 .w	btst	#6,(CUSTOM+DMACONR).l
-	bne.s	.w
+	bne	.w
 	rts
 
 ;	------------------------------------------------------------------------------------------
@@ -451,7 +458,7 @@ rd_updateB
 	or.b	d1,d2				;key = base, size
 	moveq	#0,d6				;0 = only changed cells
 	cmp.l	(rd_Bkey).l,d2
-	beq.s	.same
+	beq	.same
 	move.l	d2,(rd_Bkey).l
 	moveq	#1,d6				;redraw everything
 	lea	(rd_bused).l,a1
@@ -479,15 +486,15 @@ rd_updateB
 	move.w	#-1,(rd_hiBok).l		;unchanged unless a cell is redrawn
 .cell	move.w	(a0)+,d0
 	tst.w	d6
-	bne.s	.draw
+	bne	.draw
 	cmp.w	(a1),d0
-	bne.s	.draw
+	bne	.draw
 	tst.l	(rd_btchg).l
-	beq.s	.next
+	beq	.next
 	move.w	d0,d1
 	andi.w	#$7FF,d1
 	bftst	(a2){d1:1}
-	beq.s	.next
+	beq	.next
 .draw	move.w	d0,(a1)
 	clr.w	(rd_hiBok).l
 	movem.l	d4-d7/a0-a2,-(sp)
@@ -496,12 +503,12 @@ rd_updateB
 .next	addq.l	#2,a1
 	addq.w	#1,d4
 	cmp.w	(rd_cw).l,d4
-	bne.s	.nc
+	bne	.nc
 	moveq	#0,d4
 	addq.w	#1,d5
 .nc	dbf	d7,.cell
 	tst.w	(rd_hiBok).l
-	bne.s	.x
+	bne	.x
 	bsr	rd_list_hiB
 .x	rts
 
@@ -539,18 +546,18 @@ rd_cellB
 	moveq	#4,d5				;row step in the cache
 	moveq	#1,d4
 	btst	#12,d0
-	beq.s	.nv
+	beq	.nv
 	lea	28(a0),a0			;vertical flip: last row first
 	addq.l	#7,a2
 	moveq	#-4,d5
 	moveq	#-1,d4
 .nv	moveq	#0,d6				;palette planes
 	btst	#13,d0
-	beq.s	.p0
+	beq	.p0
 	move.b	#$FF,d6
 .p0	moveq	#0,d7
 	btst	#14,d0
-	beq.s	.p1
+	beq	.p1
 	move.b	#$FF,d7
 .p1	move.w	d1,d2
 	mulu.w	#6,d2				;pixel row step
@@ -577,7 +584,7 @@ rd_cellB
 	move.b	(a2),d0
 	adda.w	d4,a2
 	tst.w	(rd_cellpri).l
-	bmi.s	.hi
+	bmi	.hi
 	moveq	#0,d0
 .hi	move.b	d0,(a3)
 	adda.w	d1,a3
@@ -594,16 +601,16 @@ rd_list_hiB
 	moveq	#0,d3				;count
 .r	moveq	#0,d4
 .c	move.w	(a0)+,d0
-	bpl.s	.n
+	bpl	.n
 	move.w	d4,(a1)+
 	move.w	d5,(a1)+
 	addq.w	#1,d3
 .n	addq.w	#1,d4
 	cmp.w	d6,d4
-	bne.s	.c
+	bne	.c
 	addq.w	#1,d5
 	cmp.w	d7,d5
-	bne.s	.r
+	bne	.r
 	move.w	d3,(rd_hiBn).l
 	move.w	#1,(rd_hiBok).l
 	rts
@@ -642,7 +649,7 @@ rd_blitB
 	move.w	#SCRH,d2
 	sub.w	d5,d2				;lines left on screen
 	cmp.w	d2,d3
-	ble.s	.vh
+	ble	.vh
 	move.w	d2,d3
 .vh	; d3 lines from plane y d4 to screen y d5: horizontal pieces, the wrapped one first
 	movem.w	d3-d6,-(sp)
@@ -652,7 +659,7 @@ rd_blitB
 	sub.w	d1,d0				;pixels to the right edge
 	move.w	(rd_w).l,d2
 	cmp.w	d2,d0
-	bge.s	.one
+	bge	.one
 	; two pieces: [bx0, W) at screen 0, then [0, w-(W-bx0)) at screen W-bx0
 	movem.w	d0-d2,-(sp)
 	move.w	d0,d7				;screen x of the second piece
@@ -664,14 +671,14 @@ rd_blitB
 	move.w	d0,d2
 	moveq	#0,d7
 	bsr	rd_blitrect
-	bra.s	.hd
+	bra	.hd
 .one	moveq	#0,d7
 	bsr	rd_blitrect
 .hd	movem.w	(sp)+,d3-d6
 	add.w	d3,d5
 	moveq	#0,d4				;wrapped to the top
 	cmpi.w	#SCRH,d5
-	blt.s	.vp
+	blt	.vp
 	rts
 
 
@@ -694,7 +701,7 @@ rd_blitrect
 	move.w	d7,d0
 	asr.w	#4,d0				;floor(T / 16)
 	andi.w	#15,d7
-	beq.s	.r0
+	beq	.r0
 	addq.w	#1,d0
 	neg.w	d7
 	addi.w	#16,d7				;shift = 16 - (T & 15)
@@ -762,10 +769,10 @@ rd_collect_sprites
 	moveq	#64,d6
 	move.b	12(a5),d1
 	andi.b	#$81,d1
-	beq.s	.32
+	beq	.32
 	andi.w	#$7E,d0
 	moveq	#80,d6
-	bra.s	.b
+	bra	.b
 .32	andi.w	#$7F,d0
 .b	lsl.l	#8,d0
 	add.l	d0,d0
@@ -782,9 +789,9 @@ rd_collect_sprites
 	moveq	#0,d1
 	move.b	3(a0,d0.w),d1
 	andi.b	#$7F,d1
-	beq.s	.done
+	beq	.done
 	cmp.w	d6,d5
-	blt.s	.coll
+	blt	.coll
 .done	move.w	d5,(rd_spn).l
 	rts
 
@@ -804,7 +811,7 @@ rd_put8
 	andi.w	#7,d5
 	bne	.shift
 	cmpi.b	#$FF,d4
-	bne.s	.bmask
+	bne	.bmask
 	; aligned and opaque: plain stores
 	rol.l	#8,d1
 	move.b	d1,(a0)
@@ -816,12 +823,12 @@ rd_put8
 	move.b	d1,3*SBPR(a0)
 	moveq	#0,d6
 	btst	#0,d2
-	beq.s	.a4
+	beq	.a4
 	moveq	#-1,d6
 .a4	move.b	d6,4*SBPR(a0)
 	moveq	#0,d6
 	btst	#1,d2
-	beq.s	.a5
+	beq	.a5
 	moveq	#-1,d6
 .a5	move.b	d6,5*SBPR(a0)
 	rts
@@ -851,13 +858,13 @@ rd_put8
 	move.b	4*SBPR(a0),d7
 	and.b	d6,d7
 	btst	#0,d2
-	beq.s	.b4
+	beq	.b4
 	or.b	d4,d7
 .b4	move.b	d7,4*SBPR(a0)
 	move.b	5*SBPR(a0),d7
 	and.b	d6,d7
 	btst	#1,d2
-	beq.s	.b5
+	beq	.b5
 	or.b	d4,d7
 .b5	move.b	d7,5*SBPR(a0)
 .x	rts
@@ -903,13 +910,13 @@ rd_put8
 	move.w	4*SBPR(a0),d7
 	and.w	d6,d7
 	btst	#0,d2
-	beq.s	.s4
+	beq	.s4
 	or.w	d4,d7
 .s4	move.w	d7,4*SBPR(a0)
 	move.w	5*SBPR(a0),d7
 	and.w	d6,d7
 	btst	#1,d2
-	beq.s	.s5
+	beq	.s5
 	or.w	d4,d7
 .s5	move.w	d7,5*SBPR(a0)
 	rts
@@ -923,21 +930,21 @@ rd_cover_rect
 	add.w	d1,d3
 	subq.w	#1,d3				;y1
 	tst.w	d0
-	bpl.s	.1
+	bpl	.1
 	moveq	#0,d0
 .1	tst.w	d1
-	bpl.s	.2
+	bpl	.2
 	moveq	#0,d1
 .2	cmpi.w	#319,d2
-	ble.s	.3
+	ble	.3
 	move.w	#319,d2
 .3	cmpi.w	#SCRH-1,d3
-	ble.s	.4
+	ble	.4
 	move.w	#SCRH-1,d3
 .4	cmp.w	d0,d2
-	blt.s	.x
+	blt	.x
 	cmp.w	d1,d3
-	blt.s	.x
+	blt	.x
 	asr.w	#3,d0
 	asr.w	#3,d1
 	asr.w	#3,d2
@@ -951,10 +958,10 @@ rd_cover_rect
 	addq.w	#1,d4
 	addq.w	#1,d5
 	cmp.w	d2,d5
-	ble.s	.c
+	ble	.c
 	addq.w	#1,d1
 	cmp.w	d3,d1
-	ble.s	.r
+	ble	.r
 .x	movem.l	(sp)+,d0-d6/a0
 	rts
 
@@ -966,13 +973,243 @@ rd_layerA
 	lea	(rd_alist).l,a4
 	move.w	(rd_alistn).l,d7
 	subq.w	#1,d7
-	bmi.s	.x
+	bmi	.x
 .c	move.w	(a4)+,d1
 	move.w	(a4)+,d2
 	move.w	(a4)+,d0
 	bsr	rd_drawcell
 	dbf	d7,.c
 .x	rts
+
+;	------------------------------------------------------------------------------------------
+;	The plane A / window overlay: the listed cells drawn into a screen sized bitmap with a mask
+;	plane per priority, redrawn only when the list changes. Each frame the blitter cuts the
+;	rows that have cells into the screen, low priority before the sprites, high after.
+
+rd_ovl_redraw
+	sf	(rd_ovldirty).l
+	; clear image and masks (blitter, D only)
+	bsr	rd_waitblit
+	lea	(CUSTOM).l,a6
+	move.w	#$0100,$040(a6)
+	move.w	#0,$042(a6)
+	move.l	#rd_ovl,$054(a6)
+	move.w	#0,$066(a6)
+	move.w	#SCRH*6,$05C(a6)
+	move.w	#SBPR/2,$05E(a6)
+	bsr	rd_waitblit
+	move.l	#rd_ovlmlo,$054(a6)
+	move.w	#SCRH*2,$05C(a6)		;both mask planes (they follow each other)
+	move.w	#SBPR/2,$05E(a6)
+	; rows used, per priority: x min, x max (pixels), empty = min > max
+	lea	(rd_ovlrows).l,a0
+	moveq	#2*32-1,d0
+.ir	move.w	#$7FFF,(a0)+
+	move.w	#-$7FFF,(a0)+
+	dbf	d0,.ir
+	bsr	rd_waitblit
+	; draw the cells
+	lea	(rd_alist).l,a4
+	move.w	(rd_alistn).l,d7
+	subq.w	#1,d7
+	bmi	.x
+.c	move.w	(a4)+,d1			;x
+	move.w	(a4)+,d2			;y
+	move.w	(a4)+,d0			;entry
+	movem.l	d7/a4,-(sp)
+	bsr	rd_ovl_cell
+	movem.l	(sp)+,d7/a4
+	dbf	d7,.c
+.x	rts
+
+;	Cell d0 at (d1, d2) into the overlay.
+rd_ovl_cell
+	; rows table: this cell's 8 lines extend its rows' extents
+	lea	(rd_ovlrows).l,a5
+	tst.w	d0
+	bpl	.lo
+	lea	32*4(a5),a5
+.lo	move.w	d2,d3
+	asr.w	#3,d3
+	addq.w	#1,d3				;rows of 8 lines from y = -8
+	moveq	#1,d4				;the cell can touch 2 bands
+.band	cmpi.w	#31,d3
+	bhi	.nb
+	cmp.w	(a5,d3.w*4),d1
+	bge	.nmin
+	move.w	d1,(a5,d3.w*4)
+.nmin	move.w	d1,d5
+	addq.w	#7,d5
+	cmp.w	2(a5,d3.w*4),d5
+	ble	.nb
+	move.w	d5,2(a5,d3.w*4)
+.nb	addq.w	#1,d3
+	dbf	d4,.band
+	; cache rows
+	lea	(tp_pl).l,a2
+	moveq	#0,d3
+	move.w	d0,d3
+	andi.w	#$FFF,d3
+	lsl.l	#5,d3
+	adda.l	d3,a2
+	lea	(tp_mk).l,a3
+	lsr.l	#2,d3
+	adda.l	d3,a3
+	moveq	#4,d4
+	moveq	#1,d5
+	btst	#12,d0
+	beq	.nv
+	lea	28(a2),a2
+	addq.l	#7,a3
+	moveq	#-4,d4
+	moveq	#-1,d5
+.nv	move.w	d0,d6
+	rol.w	#3,d6
+	andi.w	#3,d6				;palette
+	lea	(rd_ovlmlo).l,a5
+	tst.w	d0
+	bpl	.mlo
+	lea	(rd_ovlmhi).l,a5
+.mlo	move.w	d1,d0				;x
+	move.w	d2,d7				;y
+	move.w	d6,d2
+	move.w	#7,(rd_rowc).l
+.row	tst.w	d7
+	bmi	.skip
+	cmpi.w	#SCRH,d7
+	bge	.done
+	lea	(rd_ovl).l,a1
+	move.w	d7,d3
+	mulu.w	#SROW,d3
+	adda.l	d3,a1
+	move.l	(a2),d1
+	move.b	(a3),d3
+	movem.l	d4-d7/a5,-(sp)
+	bsr	rd_put8
+	movem.l	(sp)+,d4-d7/a5
+	; mask: or the row's mask bits in
+	move.w	d7,d6
+	mulu.w	#SBPR,d6
+	lea	(a5,d6.l),a0
+	move.w	d0,d6
+	addi.w	#SCRX*8,d6
+	moveq	#0,d1
+	move.b	d3,d1
+	ror.l	#8,d1
+	move.w	d6,-(sp)
+	andi.w	#7,d6
+	lsr.l	d6,d1				;mask in the top bits, shifted
+	move.w	(sp)+,d6
+	lsr.w	#3,d6
+	adda.w	d6,a0
+	swap	d1
+	or.w	d1,(a0)
+.skip	adda.w	d4,a2
+	adda.w	d5,a3
+	addq.w	#1,d7
+	subq.w	#1,(rd_rowc).l
+	bpl	.row
+.done	rts
+
+;	Cut the overlay rows of priority rd_pass into the back buffer: per band of 8 lines, the
+;	words from the band's x min to x max, one blit per plane (A the mask plane, B the overlay,
+;	C / D the screen). Low priority bands also mark rd_cover.
+rd_ovl_blit
+	lea	(rd_ovlrows).l,a4
+	movea.l	#rd_ovlmlo,a3
+	tst.w	(rd_pass).l
+	beq	.lo
+	lea	32*4(a4),a4
+	movea.l	#rd_ovlmhi,a3
+.lo	moveq	#0,d7				;band (lines -8 + 8 * band)
+.band	move.w	(a4),d0				;x min
+	move.w	2(a4),d1			;x max
+	cmp.w	d1,d0
+	bgt	.next
+	; lines of the band on screen
+	move.w	d7,d2
+	subq.w	#1,d2
+	lsl.w	#3,d2				;first line
+	moveq	#8,d3				;lines
+	tst.w	d2
+	bpl	.t
+	add.w	d2,d3
+	moveq	#0,d2
+.t	move.w	d2,d4
+	add.w	d3,d4
+	cmpi.w	#SCRH,d4
+	ble	.b
+	move.w	#SCRH,d3
+	sub.w	d2,d3
+.b	tst.w	d3
+	ble	.next
+	tst.w	(rd_pass).l
+	bne	.nocov
+	movem.l	d0-d3,-(sp)
+	move.w	d1,d4
+	sub.w	d0,d4
+	addq.w	#1,d4
+	move.w	d2,d1
+	move.w	d4,d2
+	bsr	rd_cover_rect
+	movem.l	(sp)+,d0-d3
+.nocov	; words
+	addi.w	#SCRX*8,d0
+	addi.w	#SCRX*8,d1
+	tst.w	d0
+	bpl	.x0
+	moveq	#0,d0
+.x0	cmpi.w	#SBPR*8-1,d1
+	ble	.x1
+	move.w	#SBPR*8-1,d1
+.x1	lsr.w	#4,d0
+	lsr.w	#4,d1
+	sub.w	d0,d1
+	addq.w	#1,d1				;words
+	add.w	d0,d0				;first byte
+	move.w	d2,d4
+	mulu.w	#SROW,d4			;screen / overlay line offset
+	move.w	d2,d5
+	mulu.w	#SBPR,d5			;mask line offset
+	movea.l	(rd_back).l,a0
+	adda.l	d4,a0
+	adda.w	d0,a0
+	lea	(rd_ovl).l,a1
+	adda.l	d4,a1
+	adda.w	d0,a1
+	lea	(a3,d5.l),a2
+	adda.w	d0,a2
+	move.w	d1,d4
+	add.w	d4,d4				;bytes a row
+	moveq	#NPLANES-1,d6
+	lea	(CUSTOM).l,a6
+.plane	bsr	rd_waitblit
+	move.w	#$0FCA,$040(a6)
+	move.w	#0,$042(a6)
+	move.w	#$FFFF,$044(a6)
+	move.w	#$FFFF,$046(a6)
+	move.l	a2,$050(a6)			;A: mask
+	move.l	a1,$04C(a6)			;B: overlay plane
+	move.l	a0,$048(a6)			;C
+	move.l	a0,$054(a6)			;D
+	move.w	#SBPR,d5
+	sub.w	d4,d5
+	move.w	d5,$064(a6)			;AMOD
+	move.w	#SROW,d5
+	sub.w	d4,d5
+	move.w	d5,$062(a6)			;BMOD
+	move.w	d5,$060(a6)			;CMOD
+	move.w	d5,$066(a6)			;DMOD
+	move.w	d3,$05C(a6)
+	move.w	d1,$05E(a6)
+	lea	SBPR(a0),a0
+	lea	SBPR(a1),a1
+	dbf	d6,.plane
+.next	addq.l	#4,a4
+	addq.w	#1,d7
+	cmpi.w	#30,d7
+	blt	.band
+	rts
 
 rd_buildA
 	lea	(vdp_regs).l,a5
@@ -984,7 +1221,7 @@ rd_buildA
 	moveq	#0,d2
 	move.w	d1,d3
 	tst.b	d0
-	bpl.s	.top
+	bpl	.top
 	move.w	d1,d2
 	moveq	#28,d3
 .top	move.w	d2,(rd_wy0).l
@@ -996,7 +1233,7 @@ rd_buildA
 	moveq	#0,d2
 	move.w	d1,d3
 	tst.b	d0
-	bpl.s	.left
+	bpl	.left
 	move.w	d1,d2
 	moveq	#41,d3
 .left	move.w	d2,(rd_wx0).l
@@ -1008,10 +1245,10 @@ rd_buildA
 	moveq	#32,d6
 	move.b	12(a5),d1
 	andi.b	#$81,d1
-	beq.s	.w32
+	beq	.w32
 	andi.w	#$3C,d0
 	moveq	#64,d6
-	bra.s	.wb
+	bra	.wb
 .w32	andi.w	#$3E,d0
 .wb	lsl.l	#8,d0
 	lsl.l	#2,d0
@@ -1058,7 +1295,7 @@ rd_buildA
 	moveq	#0,d5				;changed
 	moveq	#5,d0
 .k	cmpm.l	(a0)+,(a1)+
-	beq.s	.k1
+	beq	.k1
 	moveq	#1,d5
 .k1	dbf	d0,.k
 	; name tables against their copies (copied as they are compared)
@@ -1071,7 +1308,7 @@ rd_buildA
 	subq.w	#1,d0				;longs - 1
 .ca	move.l	(a0)+,d1
 	cmp.l	(a1),d1
-	beq.s	.ca1
+	beq	.ca1
 	moveq	#1,d5
 	move.l	d1,(a1)
 .ca1	addq.l	#4,a1
@@ -1084,7 +1321,7 @@ rd_buildA
 	subq.w	#1,d0
 .cw	move.l	(a0)+,d1
 	cmp.l	(a1),d1
-	beq.s	.cw1
+	beq	.cw1
 	moveq	#1,d5
 	move.l	d1,(a1)
 .cw1	addq.l	#4,a1
@@ -1095,7 +1332,7 @@ rd_buildA
 	moveq	#63,d0
 .tu	move.l	(a0)+,d1
 	and.l	(a1)+,d1
-	beq.s	.tu1
+	beq	.tu1
 	moveq	#1,d5
 .tu1	dbf	d0,.tu
 	tst.w	d5
@@ -1118,7 +1355,7 @@ rd_buildA
 	moveq	#0,d5
 .wr	moveq	#0,d4
 .wc	bsr	rd_inwindow
-	beq.s	.wn
+	beq	.wn
 	move.w	d5,d0
 	mulu.w	(rd_wwidth).l,d0
 	add.w	d4,d0
@@ -1131,10 +1368,10 @@ rd_buildA
 	bsr	rd_addcell
 .wn	addq.w	#1,d4
 	cmp.w	(rd_cells).l,d4
-	blt.s	.wc
+	blt	.wc
 	addq.w	#1,d5
 	cmpi.w	#28,d5
-	blt.s	.wr
+	blt	.wr
 	; plane A cells outside the window
 	lea	(vdp_vram).l,a4
 	adda.l	(rd_abase).l,a4
@@ -1175,18 +1412,19 @@ rd_buildA
 	asr.w	#3,d5
 	bsr	rd_inwindow
 	movem.w	(sp)+,d0/d4-d5
-	bne.s	.an
+	bne	.an
 	bsr	rd_addcell
 .an	addq.w	#1,d4
 	cmp.w	(rd_cells).l,d4
-	ble.s	.ac
+	ble	.ac
 	addq.w	#1,d5
 	cmpi.w	#28,d5
-	ble.s	.ar
+	ble	.ar
 	move.l	a2,d0
 	sub.l	#rd_alist,d0
 	divu.w	#6,d0
 	move.w	d0,(rd_alistn).l
+	st	(rd_ovldirty).l
 .keep	rts
 
 ;	Note tile of entry d0 as used; list the cell (d1 x, d2 y) unless the tile is empty or the
@@ -1200,15 +1438,15 @@ rd_addcell
 	andi.w	#$FFF,d3
 	lea	(tp_cls).l,a0
 	tst.b	(a0,d3.w)
-	beq.s	.x
+	beq	.x
 	cmpi.w	#-8,d1
-	ble.s	.x
+	ble	.x
 	cmpi.w	#-8,d2
-	ble.s	.x
+	ble	.x
 	cmpi.w	#SCRH,d2
-	bge.s	.x
+	bge	.x
 	cmp.w	(rd_w).l,d1
-	bge.s	.x
+	bge	.x
 	move.w	d1,(a2)+
 	move.w	d2,(a2)+
 	move.w	d0,(a2)+
@@ -1218,13 +1456,13 @@ rd_addcell
 ;	Z clear if screen cell d4 (column), d5 (row) is in the window. Keeps all but the flags.
 rd_inwindow
 	cmp.w	(rd_wy0).l,d5
-	blt.s	.h
+	blt	.h
 	cmp.w	(rd_wy1).l,d5
-	blt.s	.yes
+	blt	.yes
 .h	cmp.w	(rd_wx0).l,d4
-	blt.s	.no
+	blt	.no
 	cmp.w	(rd_wx1).l,d4
-	bge.s	.no
+	bge	.no
 .yes	moveq	#1,d0				;(callers reload d0)
 	rts
 .no	cmp.w	d0,d0				;Z set
@@ -1252,7 +1490,7 @@ rd_drawcell
 	bge	.x
 	movem.l	d4-d7/a4-a5,-(sp)
 	tst.w	(rd_pass).l
-	bne.s	.nocov
+	bne	.nocov
 	movem.l	d0-d3,-(sp)
 	move.w	d1,d0
 	move.w	d2,d1
@@ -1273,7 +1511,7 @@ rd_drawcell
 	moveq	#4,d4				;row steps
 	moveq	#1,d5
 	btst	#12,d0
-	beq.s	.nv
+	beq	.nv
 	lea	28(a2),a2
 	addq.l	#7,a3
 	moveq	#-4,d4
@@ -1290,25 +1528,31 @@ rd_drawcell
 	move.w	d6,d2				;palette for rd_put8
 	move.w	#7,(rd_rowc).l
 .row	tst.w	d7
-	bmi.s	.skip
+	bmi	.skip
 	cmpi.w	#SCRH,d7
-	bge.s	.done
+	bge	.done
 	move.l	(a2),d1
 	move.b	(a3),d3
-	movem.l	d4-d5,-(sp)
+	movem.l	d4-d7,-(sp)
 	bsr	rd_put8
-	movem.l	(sp)+,d4-d5
+	movem.l	(sp)+,d4-d7
 .skip	adda.w	d4,a2
 	adda.w	d5,a3
 	lea	SROW(a1),a1
 	addq.w	#1,d7
 	subq.w	#1,(rd_rowc).l
-	bpl.s	.row
+	bpl	.row
 .done	movem.l	(sp)+,d4-d7/a4-a5
 .x	rts
 
 ;	------------------------------------------------------------------------------------------
-;	Sprites of priority rd_pass, last in the list first.
+;	Sprites of priority rd_pass, last in the list first. The CPU builds each sprite's image (6
+;	interleaved planes) and mask (the same 6 times) in chip RAM, the blitter cuts it into the
+;	screen at any pixel position. Two image buffers: the next sprite is built while the blitter
+;	draws the last one.
+SPRMAXB		equ	6			;bytes a row: up to 32 pixels and the shift word
+SPRBUF		equ	32*6*SPRMAXB		;one image (or mask)
+
 rd_sprites_planar
 	move.w	(rd_spn).l,d5
 	lea	(rd_sprites).l,a4
@@ -1316,20 +1560,20 @@ rd_sprites_planar
 	lsl.w	#3,d0
 	adda.w	d0,a4
 	subq.w	#1,d5
-	bmi.s	.x
+	bmi	.x
 .each	subq.l	#8,a4
 	move.w	4(a4),d0
 	andi.w	#$8000,d0
 	cmp.w	(rd_pass).l,d0
-	bne.s	.n
+	bne	.n
 	movem.l	d5/a4,-(sp)
-	bsr	rd_sprite_planar
+	bsr	rd_sprite_blit
 	movem.l	(sp)+,d5/a4
 .n	dbf	d5,.each
 .x	rts
 
 ;	Sprite a4.
-rd_sprite_planar
+rd_sprite_blit
 	move.w	(a4),d0
 	andi.w	#$3FF,d0
 	subi.w	#128,d0
@@ -1348,7 +1592,7 @@ rd_sprite_planar
 	subi.w	#128,d3
 	move.w	d3,(rd_sx).l			;x
 	move.w	4(a4),(rd_sat).l
-	; off screen?
+	; whole sprite off screen?
 	cmpi.w	#SCRH,d0
 	bge	.x
 	move.w	d2,d4
@@ -1362,7 +1606,7 @@ rd_sprite_planar
 	add.w	d3,d4
 	ble	.x
 	tst.w	(rd_pass).l
-	bne.s	.nocov
+	bne	.nocov
 	move.w	d3,d0
 	move.w	(rd_sy).l,d1
 	move.w	(rd_scw).l,d2
@@ -1370,80 +1614,195 @@ rd_sprite_planar
 	move.w	(rd_sch).l,d3
 	lsl.w	#3,d3
 	bsr	rd_cover_rect
-.nocov	move.w	(rd_sat).l,d0
+.nocov	; columns left of the screen margin are dropped
+	moveq	#0,d6				;first column drawn
+	move.w	(rd_sx).l,d0
+.lclip	cmpi.w	#-SCRX*8,d0
+	bge	.lok
+	addq.w	#8,d0
+	addq.w	#1,d6
+	bra	.lclip
+.lok	move.w	d0,(rd_colx).l			;screen x of the first column drawn
+	move.w	d6,(rd_c0).l
+	move.w	(rd_scw).l,d0
+	sub.w	d6,d0
+	move.w	d0,(rd_ncol).l			;columns drawn
+	addq.w	#1,d0
+	lsr.w	#1,d0
+	addq.w	#1,d0
+	add.w	d0,d0
+	move.w	d0,(rd_wb).l			;bytes a row: the columns, rounded to words, + 1 word
+	; rows on screen
+	move.w	(rd_sy).l,d0
+	moveq	#0,d1				;first row
+	tst.w	d0
+	bpl	.t
+	move.w	d0,d1
+	neg.w	d1
+.t	move.w	(rd_sch).l,d2
+	lsl.w	#3,d2				;sprite height
+	move.w	#SCRH,d3
+	sub.w	d0,d3				;rows left on screen
+	cmp.w	d3,d2
+	ble	.b
+	move.w	d3,d2
+.b	move.w	d1,(rd_r0).l
+	move.w	d2,(rd_r1).l
+	move.w	(rd_sat).l,d0
 	rol.w	#3,d0
 	andi.w	#3,d0
 	move.w	d0,(rd_spal).l
-	; columns
-	moveq	#0,d6				;column
-.col	move.w	d6,d0
-	lsl.w	#3,d0
-	add.w	(rd_sx).l,d0			;screen x of the column
-	cmpi.w	#-(SCRX*8-8),d0
-	blt	.ncol
-	cmp.w	(rd_w).l,d0
-	bge	.x
-	move.w	d0,(rd_colx).l
-	; tile: base + c' * cells down, c' = column (reversed when flipped)
-	move.w	d6,d1
-	move.w	(rd_sat).l,d3
-	btst	#11,d3
-	beq.s	.nhf
-	move.w	(rd_scw).l,d1
-	subq.w	#1,d1
-	sub.w	d6,d1
-.nhf	mulu.w	(rd_sch).l,d1
-	add.w	d3,d1
-	andi.l	#$7FF,d1
-	btst	#11,d3
-	beq.s	.nf2
-	bset	#11,d1
-.nf2	move.l	d1,(rd_ctile).l
-	; rows
-	moveq	#0,d7
-.row	move.w	(rd_sy).l,d0
-	add.w	d7,d0
-	bmi	.nrow
-	cmpi.w	#SCRH,d0
-	bge	.ncol
-	movea.l	(rd_back).l,a1
-	mulu.w	#SROW,d0
-	adda.l	d0,a1
-	; row within the sprite (flipped?)
+	; build image and mask
+	lea	(rd_sprimg).l,a2
+	tst.b	(rd_sprflip).l
+	beq	.b0
+	lea	SPRBUF*2(a2),a2
+.b0	not.b	(rd_sprflip).l
+	lea	SPRBUF(a2),a3			;mask
+	move.l	a2,(rd_simg).l
+	move.l	a3,(rd_smask).l
+	move.w	(rd_wb).l,d4			;row bytes
+	move.w	(rd_r0).l,d7			;row in the sprite
+.row	cmp.w	(rd_r1).l,d7
+	bge	.blit
+	; clear the row's 6 + 6 plane rows (the padding stays 0)
+	movea.l	a2,a0
+	movea.l	a3,a1
+	move.w	d4,d0
+	mulu.w	#6,d0
+	lsr.w	#1,d0
+	subq.w	#1,d0
+.clr	clr.w	(a0)+
+	clr.w	(a1)+
+	dbf	d0,.clr
+	; tile row for this line: column major tiles, flips
 	move.w	d7,d1
 	btst	#12,(rd_sat).l
-	beq.s	.nvf
+	beq	.nvf
 	move.w	(rd_sch).l,d1
 	lsl.w	#3,d1
 	subq.w	#1,d1
 	sub.w	d7,d1
-.nvf	move.l	(rd_ctile).l,d2
-	move.w	d1,d0
-	lsr.w	#3,d0
-	add.l	d0,d2				;tile of this row (column major)
-	andi.w	#7,d1
-	move.l	d2,d0
-	lsl.l	#3,d0
-	add.w	d1,d0
-	lea	(tp_mk).l,a0
-	move.b	(a0,d0.l),d3			;mask
-	beq.s	.nrow
+.nvf	move.w	d1,d2
+	lsr.w	#3,d2				;tile row in the sprite
+	andi.w	#7,d1				;line in the tile
+	lsl.w	#2,d1				;offset in the plane cache
+	moveq	#0,d6				;column drawn
+.col	cmp.w	(rd_ncol).l,d6
+	bge	.nextrow
+	move.w	d6,d0
+	add.w	(rd_c0).l,d0			;column in the sprite
+	move.w	(rd_sat).l,d3
+	btst	#11,d3
+	beq	.nhf
+	move.w	(rd_scw).l,d5
+	subq.w	#1,d5
+	sub.w	d0,d5
+	move.w	d5,d0
+.nhf	mulu.w	(rd_sch).l,d0
+	add.w	d2,d0
+	add.w	d3,d0
+	andi.l	#$7FF,d0
+	btst	#11,d3
+	beq	.nf2
+	bset	#11,d0
+.nf2	lea	(tp_mk).l,a0
+	move.l	d0,d5
+	lsl.l	#3,d5
+	move.w	d1,d3
+	lsr.w	#2,d3
+	add.w	d3,d5
+	move.b	(a0,d5.l),d3			;mask byte
+	beq	.ncol
 	lea	(tp_pl).l,a0
-	lsl.l	#2,d0
-	move.l	(a0,d0.l),d1			;planes
-	move.w	(rd_spal).l,d2
-	move.w	(rd_colx).l,d0
-	movem.l	d6-d7,-(sp)
-	bsr	rd_put8
-	movem.l	(sp)+,d6-d7
-.nrow	addq.w	#1,d7
-	move.w	(rd_sch).l,d0
-	lsl.w	#3,d0
-	cmp.w	d0,d7
-	blt	.row
+	lsl.l	#5,d0
+	add.w	d1,d0
+	move.l	(a0,d0.l),d0			;planes 0-3
+	; store: image planes at d6 + p * wb, mask 6 times
+	lea	(a2,d6.w),a0
+	lea	(a3,d6.w),a1
+	rol.l	#8,d0
+	move.b	d0,(a0)
+	adda.w	d4,a0
+	rol.l	#8,d0
+	move.b	d0,(a0)
+	adda.w	d4,a0
+	rol.l	#8,d0
+	move.b	d0,(a0)
+	adda.w	d4,a0
+	rol.l	#8,d0
+	move.b	d0,(a0)
+	adda.w	d4,a0
+	moveq	#0,d5
+	btst	#0,(rd_spal+1).l
+	beq	.p4
+	move.b	d3,d5
+.p4	move.b	d5,(a0)
+	adda.w	d4,a0
+	moveq	#0,d5
+	btst	#1,(rd_spal+1).l
+	beq	.p5
+	move.b	d3,d5
+.p5	move.b	d5,(a0)
+	move.b	d3,(a1)
+	adda.w	d4,a1
+	move.b	d3,(a1)
+	adda.w	d4,a1
+	move.b	d3,(a1)
+	adda.w	d4,a1
+	move.b	d3,(a1)
+	adda.w	d4,a1
+	move.b	d3,(a1)
+	adda.w	d4,a1
+	move.b	d3,(a1)
 .ncol	addq.w	#1,d6
-	cmp.w	(rd_scw).l,d6
-	blt	.col
+	bra	.col
+.nextrow
+	move.w	d4,d0
+	mulu.w	#6,d0
+	adda.w	d0,a2
+	adda.w	d0,a3
+	addq.w	#1,d7
+	bra	.row
+.blit	move.w	(rd_r1).l,d5
+	sub.w	(rd_r0).l,d5			;rows
+	ble	.x
+	bsr	rd_waitblit
+	lea	(CUSTOM).l,a6
+	move.w	(rd_colx).l,d0
+	addi.w	#SCRX*8,d0
+	move.w	d0,d1
+	andi.w	#15,d1				;shift
+	lsr.w	#4,d0
+	add.w	d0,d0				;destination byte of the first word
+	ror.w	#4,d1
+	move.w	d1,d2
+	ori.w	#$0FCA,d2			;A mask, B image, C, D; AB + /AC
+	move.w	d2,$040(a6)
+	move.w	d1,$042(a6)
+	move.w	#$FFFF,$044(a6)
+	move.w	#$FFFF,$046(a6)
+	move.l	(rd_smask).l,$050(a6)		;BLTAPT
+	move.l	(rd_simg).l,$04C(a6)		;BLTBPT
+	movea.l	(rd_back).l,a0
+	move.w	(rd_sy).l,d1
+	add.w	(rd_r0).l,d1
+	mulu.w	#SROW,d1
+	adda.l	d1,a0
+	adda.w	d0,a0
+	move.l	a0,$048(a6)			;BLTCPT
+	move.l	a0,$054(a6)			;BLTDPT
+	move.w	#0,$064(a6)			;BLTAMOD
+	move.w	#0,$062(a6)			;BLTBMOD
+	move.w	#SBPR,d0
+	sub.w	d4,d0
+	move.w	d0,$060(a6)			;BLTCMOD
+	move.w	d0,$066(a6)			;BLTDMOD
+	mulu.w	#6,d5
+	move.w	d5,$05C(a6)			;BLTSIZV
+	move.w	d4,d0
+	lsr.w	#1,d0
+	move.w	d0,$05E(a6)			;BLTSIZH: go
 .x	rts
 
 ;	------------------------------------------------------------------------------------------
@@ -1464,7 +1823,7 @@ rd_fixups
 	subq.w	#1,d1
 	and.w	d1,d0
 	cmp.w	(rd_w).l,d0
-	blt.s	.xok
+	blt	.xok
 	sub.w	d1,d0
 	subq.w	#1,d0				;- plane width
 	cmpi.w	#-8,d0
@@ -1477,7 +1836,7 @@ rd_fixups
 	subq.w	#1,d1
 	and.w	d1,d2
 	cmpi.w	#SCRH,d2
-	blt.s	.yok
+	blt	.yok
 	sub.w	d1,d2
 	subq.w	#1,d2
 	cmpi.w	#-8,d2
@@ -1521,11 +1880,11 @@ rd_fixups
 	moveq	#0,d2
 	adda.w	d3,a0
 	tst.b	(a0)
-	beq.s	.p4
+	beq	.p4
 	moveq	#1,d2
 .p4	adda.w	d3,a0
 	tst.b	(a0)
-	beq.s	.p5
+	beq	.p5
 	addq.w	#2,d2
 .p5	lea	(mkB).l,a0
 	move.w	d1,d0
@@ -1558,33 +1917,33 @@ rd_iscovered
 	asr.w	#3,d1
 	asr.w	#3,d3
 	tst.w	d4
-	bpl.s	.1
+	bpl	.1
 	moveq	#0,d4
 .1	tst.w	d1
-	bpl.s	.2
+	bpl	.2
 	moveq	#0,d1
 .2	cmpi.w	#39,d5
-	ble.s	.3
+	ble	.3
 	moveq	#39,d5
 .3	cmpi.w	#27,d3
-	ble.s	.4
+	ble	.4
 	moveq	#27,d3
 .4	lea	(rd_cover).l,a0
 .r	cmp.w	d3,d1
-	bgt.s	.no
+	bgt	.no
 	move.w	d1,d0
 	lsl.w	#6,d0
 	add.w	d4,d0
 	move.w	d4,d2
 .c	cmp.w	d5,d2
-	bgt.s	.nr
+	bgt	.nr
 	tst.b	(a0,d0.w)
-	bne.s	.yes
+	bne	.yes
 	addq.w	#1,d0
 	addq.w	#1,d2
-	bra.s	.c
+	bra	.c
 .nr	addq.w	#1,d1
-	bra.s	.r
+	bra	.r
 .yes	movem.l	(sp)+,d0-d5
 	moveq	#1,d6				;Z clear
 	rts
@@ -1627,7 +1986,7 @@ rd_chunky
 .line	bsr	rd_line
 	addq.w	#1,d7
 	cmpi.w	#SCRH,d7
-	bne.s	.line
+	bne	.line
 	bsr	rd_sprites_chunky
 	bra	rd_c2p
 
@@ -1646,7 +2005,7 @@ rd_row8
 	move.l	(a0,d1.l),d1			;8 nibbles
 	moveq	#0,d3
 	tst.l	d1
-	beq.s	.cls
+	beq	.cls
 	move.l	d1,d2
 	andi.l	#$77777777,d2
 	addi.l	#$77777777,d2
@@ -1654,12 +2013,12 @@ rd_row8
 	andi.l	#$88888888,d2
 	moveq	#2,d3
 	cmpi.l	#$88888888,d2
-	bne.s	.cls
+	bne	.cls
 	moveq	#1,d3
 .cls	lea	(rd_rowbuf).l,a1
 	lea	(rd_nibtab).l,a0
 	btst	#11,d0
-	beq.s	.n
+	beq	.n
 	lea	(rd_revtab).l,a0
 	; flipped: bytes in reverse order through the swapped table
 	moveq	#0,d2
@@ -1668,7 +2027,7 @@ rd_row8
 	move.w	(a0,d2.w*2),(a1)+
 	lsr.l	#8,d1
 	dbf	d0,.f
-	bra.s	.x
+	bra	.x
 .n	moveq	#0,d2
 	moveq	#3,d0
 .nl	rol.l	#8,d1
@@ -1692,10 +2051,10 @@ rd_line
 	lsl.l	#2,d0				;hscroll table
 	move.b	11(a5),d1
 	andi.w	#3,d1
-	beq.s	.hsdone
+	beq	.hsdone
 	move.w	d7,d2
 	cmpi.w	#2,d1
-	bne.s	.hsline
+	bne	.hsline
 	andi.w	#$FFF8,d2
 .hsline	andi.l	#$FFFF,d2
 	lsl.l	#2,d2
@@ -1717,10 +2076,10 @@ rd_line
 	andi.w	#$1F,d1
 	lsl.w	#3,d1
 	tst.b	d0
-	bmi.s	.down
+	bmi	.down
 	cmp.w	d1,d7
 	blt	rd_winline
-	bra.s	.hwin
+	bra	.hwin
 .down	cmp.w	d1,d7
 	bge	rd_winline
 .hwin	move.b	17(a5),d0
@@ -1750,9 +2109,9 @@ rd_winbase
 	move.b	3(a5),d0
 	move.b	12(a5),d1
 	andi.b	#$81,d1
-	beq.s	.32
+	beq	.32
 	andi.w	#$3C,d0
-	bra.s	.b
+	bra	.b
 .32	andi.w	#$3E,d0
 .b	lsl.l	#8,d0
 	lsl.l	#2,d0
@@ -1762,13 +2121,13 @@ rd_line_split
 	lsl.w	#4,d0
 	move.w	d0,-(sp)
 	tst.b	17(a5)
-	bmi.s	.right
+	bmi	.right
 	move.w	(sp),(rd_clipx0).l
 	move.w	(rd_w).l,(rd_clipx1).l
 	bsr	.drawA
 	clr.w	(rd_clipx0).l
 	move.w	(sp)+,(rd_clipx1).l
-	bra.s	.win
+	bra	.win
 .right	clr.w	(rd_clipx0).l
 	move.w	(sp),(rd_clipx1).l
 	bsr	.drawA
@@ -1798,31 +2157,31 @@ rd_plane
 	adda.l	d0,a0
 	move.w	d3,(rd_mode).l
 	cmpi.w	#-1,d1
-	bne.s	.scrolled
+	bne	.scrolled
 	move.w	(rd_cells).l,d4
 	moveq	#5,d5
 	cmpi.w	#41,d4
-	bne.s	.w32
+	bne	.w32
 	moveq	#6,d5
 .w32	moveq	#0,d1
 	move.w	d7,d2
 	move.w	#$FFFF,d3
-	bra.s	.go
+	bra	.go
 .scrolled
 	move.b	16(a5),d4
 	moveq	#5,d5
 	btst	#0,d4
-	beq.s	.wa
+	beq	.wa
 	moveq	#6,d5
 	btst	#1,d4
-	beq.s	.wa
+	beq	.wa
 	moveq	#7,d5
 .wa	moveq	#5,d3
 	btst	#4,d4
-	beq.s	.ha
+	beq	.ha
 	moveq	#6,d3
 	btst	#5,d4
-	beq.s	.ha
+	beq	.ha
 	moveq	#7,d3
 .ha	lea	(vdp_vsram).l,a1
 	move.w	(a1,d2.w),d2
@@ -1869,41 +2228,41 @@ rd_plane
 	move.l	(a4,d6.w*4),d7			;palette / priority bits
 	move.w	(rd_tline).l,d6
 	btst	#12,d0
-	beq.s	.nv
+	beq	.nv
 	eori.w	#7,d6
 .nv	andi.l	#$FFF,d0
 	bsr	rd_row8				;rd_rowbuf, d3 = class
 	tst.w	(rd_mode).l
-	bne.s	.trans
+	bne	.trans
 	; opaque layer: transparent pixels keep the palette (backdrop), never the priority
 	cmpi.b	#1,d3
-	beq.s	.ofast
+	beq	.ofast
 	btst	#6,d7
-	beq.s	.ofast
+	beq	.ofast
 	movea.l	a3,a0
 	moveq	#7,d6
 .opix	move.b	(a0)+,d3
-	beq.s	.oz
+	beq	.oz
 	or.b	d7,d3
 	move.b	d3,(a2)+
 	dbf	d6,.opix
-	bra.s	.next
+	bra	.next
 .oz	move.b	d7,d3
 	andi.b	#$30,d3
 	move.b	d3,(a2)+
 	dbf	d6,.opix
-	bra.s	.next
+	bra	.next
 .ofast	move.l	(a3),d6
 	or.l	d7,d6
 	move.l	d6,(a2)+
 	move.l	4(a3),d6
 	or.l	d7,d6
 	move.l	d6,(a2)+
-	bra.s	.next
+	bra	.next
 .trans	tst.b	d3
-	bne.s	.tdraw
+	bne	.tdraw
 	addq.l	#8,a2
-	bra.s	.next
+	bra	.next
 .tdraw	movem.l	d1/d4,-(sp)
 	move.l	a2,d1
 	sub.l	a6,d1
@@ -1911,17 +2270,17 @@ rd_plane
 	movea.l	a3,a0
 	moveq	#7,d4
 .tp	move.b	(a0)+,d3
-	beq.s	.tn
+	beq	.tn
 	cmpi.w	#2,(rd_mode).l
-	bne.s	.tnc
+	bne	.tnc
 	cmp.w	(rd_clipx0).l,d1
-	blt.s	.tn
+	blt	.tn
 	cmp.w	(rd_clipx1).l,d1
-	bge.s	.tn
+	bge	.tn
 .tnc	btst	#6,d7
-	bne.s	.tw
+	bne	.tw
 	btst	#6,(a2)
-	bne.s	.tn
+	bne	.tn
 .tw	or.b	d7,d3
 	move.b	d3,(a2)
 .tn	addq.l	#1,a2
@@ -1943,7 +2302,7 @@ rd_sprites_chunky
 	lsl.w	#3,d0
 	adda.w	d0,a1
 	subq.w	#1,d5
-	bmi.s	.x
+	bmi	.x
 .each	subq.l	#8,a1
 	movem.l	d5/a1,-(sp)
 	bsr	rd_sprite_chunky
@@ -2007,13 +2366,13 @@ rd_sprite_chunky
 	move.w	d6,d7
 	move.w	(rd_sat).l,d3
 	btst	#12,d3
-	beq.s	.nvf
+	beq	.nvf
 	move.w	(rd_sh).l,d7
 	sub.w	d6,d7
 .nvf	moveq	#0,d1
 .col	move.w	d1,d0
 	btst	#11,d3
-	beq.s	.nhf
+	beq	.nhf
 	move.w	(rd_scw).l,d0
 	subq.w	#1,d0
 	sub.w	d1,d0
@@ -2024,7 +2383,7 @@ rd_sprite_chunky
 	add.w	d3,d0
 	andi.l	#$7FF,d0
 	btst	#11,d3
-	beq.s	.nf2
+	beq	.nf2
 	bset	#11,d0
 .nf2	move.l	d6,-(sp)
 	move.w	d7,d6
@@ -2034,7 +2393,7 @@ rd_sprite_chunky
 	tst.b	d3
 	movem.l	(sp)+,d3
 	movem.l	(sp)+,d6
-	beq.s	.ncol
+	beq	.ncol
 	lea	(rd_rowbuf).l,a0
 	move.w	(rd_sx).l,d0
 	move.w	d1,d2
@@ -2044,21 +2403,21 @@ rd_sprite_chunky
 	adda.w	d2,a3
 	moveq	#7,d4
 .px	move.b	(a0)+,d2
-	beq.s	.pn
+	beq	.pn
 	tst.w	d0
-	bmi.s	.pn
+	bmi	.pn
 	cmp.w	(rd_w).l,d0
-	bge.s	.pn
+	bge	.pn
 	btst	#15,d3
-	bne.s	.pw
+	bne	.pw
 	btst	#6,(a3)
-	bne.s	.pn
+	bne	.pn
 .pw	or.b	(rd_sor+1).l,d2
 	move.b	(a3),d5
 	andi.b	#$40,d5
 	or.b	d5,d2
 	btst	#15,d3
-	beq.s	.pw2
+	beq	.pw2
 	ori.b	#$40,d2
 .pw2	move.b	d2,(a3)
 .pn	addq.l	#1,a3
@@ -2150,7 +2509,7 @@ rd_palette
 	lea	(rd_colours).l,a1
 	moveq	#63,d0
 .c	move.w	(a0)+,d1
-	bsr.s	rd_gen2amiga
+	bsr	rd_gen2amiga
 	move.w	d2,(a1)+
 	dbf	d0,.c
 	lea	(rd_colours).l,a1
@@ -2163,7 +2522,7 @@ rd_palette
 	move.w	d1,64(a1)
 	move.w	d1,96(a1)
 	btst	#6,(vdp_regs+1).l
-	bne.s	.on
+	bne	.on
 	moveq	#31,d0				;display off: black
 .off	clr.l	(a1)+
 	dbf	d0,.off
@@ -2193,6 +2552,79 @@ rd_gen2amiga
 .x7	dc.b	0,2,4,6,9,11,13,15
 
 ;	------------------------------------------------------------------------------------------
+;	Frames drawn in the last second, top left of the screen in colour 63 (F10 shows it).
+rd_fps
+	move.l	(hal_frames).l,d0
+	sub.l	(rd_fpst).l,d0
+	cmpi.l	#GENESIS_HZ,d0
+	blt	.draw
+	move.l	(hal_frames).l,(rd_fpst).l
+	move.l	(rd_count).l,d0
+	sub.l	(rd_fpsc).l,d0
+	move.l	(rd_count).l,(rd_fpsc).l
+	move.w	d0,(rd_fpsv).l
+.draw	moveq	#0,d0
+	move.w	(rd_fpsv).l,d0
+	divu.w	#10,d0
+	move.l	d0,d1
+	swap	d1				;units
+	cmpi.w	#9,d0
+	bls	.t
+	moveq	#9,d0
+.t	movea.l	(rd_back).l,a0
+	lea	SROW*4+SCRX(a0),a0
+	bsr	.digit
+	addq.l	#1,a0
+	move.w	d1,d0
+.digit	; 4x5 digit d0 at byte a0, all 6 planes
+	lea	(.font,pc),a1
+	mulu.w	#5,d0
+	adda.w	d0,a1
+	movea.l	a0,a2
+	moveq	#4,d2
+.r	move.b	(a1)+,d3
+	moveq	#NPLANES-1,d4
+	movea.l	a2,a3
+.p	move.b	d3,(a3)
+	lea	SBPR(a3),a3
+	dbf	d4,.p
+	lea	SROW(a2),a2
+	dbf	d2,.r
+	rts
+.font
+rd_font	dc.b	$E0,$A0,$A0,$A0,$E0, $40,$C0,$40,$40,$E0, $E0,$20,$E0,$80,$E0, $E0,$20,$60,$20,$E0
+	dc.b	$A0,$A0,$E0,$20,$20, $E0,$80,$E0,$20,$E0, $E0,$80,$E0,$A0,$E0, $E0,$20,$40,$40,$40
+	dc.b	$E0,$A0,$E0,$A0,$E0, $E0,$A0,$E0,$20,$E0
+	dc.b	$40,$A0,$E0,$A0,$A0, $C0,$A0,$C0,$A0,$C0, $60,$80,$80,$80,$60, $C0,$A0,$A0,$A0,$C0
+	dc.b	$E0,$80,$C0,$80,$E0, $E0,$80,$C0,$80,$80
+	even
+
+;	Debug: the long d0 as 8 hex digits from byte a0 of a screen (all planes). Keeps a1.
+rd_hex8
+	movem.l	d0-d4/a0-a3,-(sp)
+	moveq	#7,d4
+.d	rol.l	#4,d0
+	moveq	#15,d1
+	and.w	d0,d1
+	lea	(rd_font,pc),a1
+	mulu.w	#5,d1
+	adda.w	d1,a1
+	movea.l	a0,a2
+	moveq	#4,d2
+.r	move.b	(a1)+,d3
+	movea.l	a2,a3
+	moveq	#NPLANES-1,d1
+.p	move.b	d3,(a3)
+	lea	SBPR(a3),a3
+	dbf	d1,.p
+	lea	SROW(a2),a2
+	dbf	d2,.r
+	addq.l	#1,a0
+	dbf	d4,.d
+	movem.l	(sp)+,d0-d4/a0-a3
+	rts
+
+;	------------------------------------------------------------------------------------------
 ;	The back buffer's copper list: 6 interleaved planes, 2x fetch (FMODE 1), 320 pixels
 ;	fetched from screen x 0 (H40) or -32 (H32, the window shows the middle 256), 224 lines,
 ;	the 64 colours. It becomes the copper's list from the next frame; the buffers swap.
@@ -2202,14 +2634,18 @@ COPMOVE	MACRO
 	ENDM
 
 rd_show
-	movea.l	(rd_backcop).l,a0
+	clr.w	(hal_wd).l
+	tst.b	(hal_fpsshow).l
+	beq	.nofps
+	bsr	rd_fps
+.nofps	movea.l	(rd_backcop).l,a0
 	move.l	(rd_back).l,d0
 	cmpi.w	#320,(rd_w).l
-	beq.s	.w320
+	beq	.w320
 	COPMOVE	$08E,#$3CA1			;DIWSTRT
 	COPMOVE	$090,#$1CA1			;DIWSTOP
 	addi.l	#SCRX-4,d0
-	bra.s	.dw
+	bra	.dw
 .w320	COPMOVE	$08E,#$3C81
 	COPMOVE	$090,#$1CC1
 	addq.l	#SCRX,d0
@@ -2250,8 +2686,9 @@ rd_show
 	dbf	d2,.col
 	addq.w	#1,d3
 	cmpi.w	#2,d3
-	bne.s	.bank
+	bne	.bank
 	move.l	#$FFFFFFFE,(a0)+
+	move.l	(rd_back).l,(rd_frontshow).l
 	move.l	(rd_backcop).l,d0
 	move.l	d0,(CUSTOM+$080).l		;COP1LC: from the next frame
 	move.l	(rd_frontcop).l,(rd_backcop).l
@@ -2259,15 +2696,32 @@ rd_show
 	move.l	(rd_back).l,d0
 	lea	(rd_screens).l,a0
 	cmp.l	a0,d0
-	bne.s	.second
+	bne	.second
 	addi.l	#SCRSIZE,d0
-	bra.s	.set
+	bra	.set
 .second	move.l	a0,d0
 .set	move.l	d0,(rd_back).l
 	rts
 
 	section	bss,bss
 rd_tline	ds.w	1
+		cnop	0,4
+rd_frontshow	ds.l	1
+rd_ovldirty	ds.w	1
+rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
+rd_c0		ds.w	1
+rd_ncol		ds.w	1
+rd_wb		ds.w	1
+rd_r0		ds.w	1
+rd_r1		ds.w	1
+rd_sprflip	ds.w	1
+		cnop	0,4
+rd_simg		ds.l	1
+rd_smask	ds.l	1
+rd_fpsv		ds.w	1
+		cnop	0,4
+rd_fpst		ds.l	1
+rd_fpsc		ds.l	1
 		cnop	0,4
 rd_akey		ds.l	6
 rd_akeynew	ds.l	6

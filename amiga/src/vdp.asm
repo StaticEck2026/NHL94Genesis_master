@@ -30,16 +30,16 @@ hal_vdpctl_w
 	movem.l	d0-d1,-(sp)
 	move.w	(hal_ctl_tmp).l,d0
 	tst.w	(vdp_pending).l
-	bne.s	.second
+	bne	.second
 	move.w	d0,d1
 	andi.w	#$C000,d1
 	cmpi.w	#$8000,d1
-	beq.s	.reg
+	beq	.reg
 	move.w	d0,(vdp_first).l		;first half of an address command
 	move.w	#1,(vdp_pending).l
-	bra.s	.x
+	bra	.x
 .reg	bsr	vdp_regwrite
-	bra.s	.x
+	bra	.x
 .second	clr.w	(vdp_pending).l
 	swap	d0
 	move.w	(vdp_first).l,d0
@@ -58,25 +58,26 @@ hal_vdpctl_l
 	swap	d1
 	andi.w	#$C000,d1
 	cmpi.w	#$8000,d1
-	bne.s	.cmd
+	bne	.cmd
 	swap	d0				;two register writes in one long (or a register, then
 	bsr	vdp_regwrite			;the first half of a command)
 	swap	d0
 	move.w	d0,d1
 	andi.w	#$C000,d1
 	cmpi.w	#$8000,d1
-	bne.s	.half
+	bne	.half
 	bsr	vdp_regwrite
-	bra.s	.x
+	bra	.x
 .half	move.w	d0,(vdp_first).l
 	move.w	#1,(vdp_pending).l
-	bra.s	.x
+	bra	.x
 .cmd	bsr	vdp_command
 .x	movem.l	(sp)+,d0-d1
 	rtr
 
 ;	d0.w = $8rvv: register r = vv
 vdp_regwrite
+	addq.l	#1,(hal_vdp_gen).l		;the renderer draws again
 	move.l	a0,-(sp)
 	move.w	d0,d1
 	lsr.w	#8,d1
@@ -89,6 +90,7 @@ vdp_regwrite
 ;	d0.l = address command: CD1-0 in bits 31-30, A13-0 in bits 29-16, CD5-2 in bits 7-4,
 ;	A15-14 in bits 1-0. Points hal_vdp_ptr at the memory and address it selects.
 vdp_command
+	addq.l	#1,(hal_vdp_gen).l
 	movem.l	d2/a0,-(sp)
 	move.l	d0,d1
 	swap	d1
@@ -104,25 +106,25 @@ vdp_command
 	andi.w	#$C,d0				;CD3-2
 	or.w	d0,d2				;d2 = CD3-0
 	cmpi.w	#1,d2
-	bls.s	.vram				;0 read, 1 write
+	bls	.vram				;0 read, 1 write
 	cmpi.w	#3,d2
-	beq.s	.cram
+	beq	.cram
 	cmpi.w	#8,d2
-	beq.s	.cram
+	beq	.cram
 	cmpi.w	#4,d2
-	beq.s	.vsram
+	beq	.vsram
 	cmpi.w	#5,d2
-	beq.s	.vsram
+	beq	.vsram
 	lea	(vdp_dummy).l,a0
-	bra.s	.set
+	bra	.set
 .vram	lea	(vdp_vram).l,a0
 	adda.l	d1,a0
-	bra.s	.set
+	bra	.set
 .cram	andi.w	#$7F,d1
 	lea	(vdp_cram).l,a0
 	adda.w	d1,a0
 	addq.l	#1,(vdp_cramgen).l
-	bra.s	.set
+	bra	.set
 .vsram	andi.w	#$7F,d1
 	lea	(vdp_vsram).l,a0
 	adda.w	d1,a0
@@ -138,7 +140,7 @@ hal_vdp_dma
 	andi.l	#$FFFF,d1
 	adda.l	d1,a1
 	andi.l	#$FFFF,d0
-	beq.s	.x
+	beq	.x
 	subq.l	#1,d0
 .loop	move.w	(a0)+,(a1)+
 	dbf	d0,.loop
@@ -160,7 +162,7 @@ hal_vdp_copy
 	adda.l	d2,a0
 	adda.l	d1,a1
 	andi.l	#$FFFF,d0
-	beq.s	.x
+	beq	.x
 	subq.l	#1,d0
 .loop	move.b	(a0)+,(a1)+
 	dbf	d0,.loop
@@ -176,7 +178,7 @@ hal_vdp_fill
 	adda.l	d1,a0
 	andi.l	#$FFFF,d0
 	lsr.l	#1,d0
-	beq.s	.x
+	beq	.x
 	subq.l	#1,d0
 .loop	move.w	d2,(a0)+
 	move.w	d2,(a0)+
@@ -191,7 +193,7 @@ hal_vdp_init
 	move.l	#(VRAMSIZE+VSLACK)/4-1,d0
 .c	clr.l	(a0)+
 	subq.l	#1,d0
-	bpl.s	.c
+	bpl	.c
 	lea	(vdp_cram).l,a0
 	move.w	#(128+VSLACK+80+VSLACK+VSLACK+32)/4-1,d0
 .c2	clr.l	(a0)+

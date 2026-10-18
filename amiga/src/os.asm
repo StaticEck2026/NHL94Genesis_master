@@ -49,26 +49,26 @@ _start
 	beq	.fail
 	; 68020 or better, AGA
 	btst	#1,$129(a6)			;AttnFlags: AFB_68020
-	bne.s	.cpu
+	bne	.cpu
 	lea	(.msgcpu,pc),a0
 	bra	.error
 .cpu	movea.l	(os_gfx).l,a0
 	btst	#2,$EC(a0)			;ChipRevBits0: GFXB_AA_ALICE
-	bne.s	.aga
+	bne	.aga
 	move.w	(CUSTOM+$07C).l,d0		;Lisa id: $F8 on AGA
 	cmpi.b	#$F8,d0
-	beq.s	.aga
+	beq	.aga
 	lea	(.msgaga,pc),a0
 	bra	.error
 .aga	; none of our hunks may lie in the Genesis RAM window
 	lea	(os_sections,pc),a2
 .sec	move.l	(a2)+,d0
-	beq.s	.secok
+	beq	.secok
 	move.l	(a2)+,d1
 	cmpi.l	#RAMBASE+$10000,d0
-	bhs.s	.sec
+	bhs	.sec
 	cmpi.l	#RAMBASE,d1
-	bls.s	.sec
+	bls	.sec
 	lea	(.msgmem,pc),a0
 	bra	.error
 .secok	; PAL or NTSC display
@@ -81,7 +81,7 @@ _start
 	movea.l	(os_exec).l,a6
 	jsr	EXEC_AllocMem(a6)
 	move.l	d0,(os_backup).l
-	bne.s	.mem
+	bne	.mem
 	lea	(.msgnomem,pc),a0
 	bra	.error
 .mem	bsr	os_load_sram
@@ -89,7 +89,7 @@ _start
 	lea	(.cianame,pc),a1
 	jsr	EXEC_OpenResource(a6)
 	move.l	d0,(os_ciab).l
-	beq.s	.nocia
+	beq	.nocia
 	movea.l	d0,a6
 	moveq	#0,d0
 	jsr	CIA_AbleICR(a6)
@@ -98,7 +98,7 @@ _start
 	lea	(.ciaaname,pc),a1
 	jsr	EXEC_OpenResource(a6)
 	tst.l	d0
-	beq.s	.nocia2
+	beq	.nocia2
 	movea.l	d0,a6
 	moveq	#0,d0
 	jsr	CIA_AbleICR(a6)
@@ -174,16 +174,16 @@ _start
 	move.l	#$10000,d0
 	jsr	EXEC_FreeMem(a6)
 	moveq	#0,d7
-	bra.s	.close
+	bra	.close
 .error	bsr	os_print
 .fail	moveq	#20,d7
 .close	movea.l	(os_exec).l,a6
 	move.l	(os_gfx).l,d0
-	beq.s	.c1
+	beq	.c1
 	movea.l	d0,a1
 	jsr	EXEC_CloseLibrary(a6)
 .c1	move.l	(os_dos).l,d0
-	beq.s	.c2
+	beq	.c2
 	movea.l	d0,a1
 	jsr	EXEC_CloseLibrary(a6)
 .c2	move.l	d7,d0
@@ -251,15 +251,15 @@ os_print
 	moveq	#-1,d3
 .len	addq.l	#1,d3
 	tst.b	(a1)+
-	bne.s	.len
+	bne	.len
 	move.l	a0,-(sp)
 	movea.l	(os_dos).l,a6
 	jsr	DOS_Output(a6)
 	move.l	d0,d1
 	move.l	(sp)+,d2
-	beq.s	.x
+	beq	.x
 	tst.l	d1
-	beq.s	.x
+	beq	.x
 	jsr	DOS_Write(a6)
 .x	movem.l	(sp)+,d1-d3/a0-a1/a6
 	rts
@@ -272,13 +272,13 @@ os_load_sram
 	move.l	#1005,d2			;MODE_OLDFILE
 	jsr	DOS_Open(a6)
 	move.l	d0,d4
-	beq.s	.x
+	beq	.x
 	move.l	d4,d1
 	move.l	#os_iobuf,d2
 	move.l	#$2000,d3
 	jsr	DOS_Read(a6)
 	cmpi.l	#$2000,d0
-	bne.s	.cl
+	bne	.cl
 	lea	(os_iobuf).l,a0
 	lea	(hal_sram+1).l,a1
 	move.w	#$1FFF,d0
@@ -304,7 +304,7 @@ os_save_sram
 	move.l	#1006,d2			;MODE_NEWFILE
 	jsr	DOS_Open(a6)
 	move.l	d0,d4
-	beq.s	.x
+	beq	.x
 	move.l	d4,d1
 	move.l	#os_iobuf,d2
 	move.l	#$2000,d3

@@ -55,7 +55,7 @@ hal_int2
 	movem.l	d0-d1/a0,-(sp)
 	move.b	(CIAA_ICR).l,d0
 	btst	#3,d0
-	beq.s	.x
+	beq	.x
 	move.b	(CIAA_SDR).l,d0
 	ori.b	#$40,(CIAA_CRA).l		;handshake: serial port to output
 	not.b	d0
@@ -65,18 +65,21 @@ hal_int2
 	andi.b	#$7F,d1
 	lea	(hal_keys).l,a0
 	tst.b	d0
-	bmi.s	.up
+	bmi	.up
 	st	(a0,d1.w)
 	cmpi.b	#$45,d1				;Esc
-	bne.s	.hs
+	bne	.nesc
 	st	(hal_quit).l
-	bra.s	.hs
+.nesc	cmpi.b	#$59,d1				;F10: frame rate
+	bne	.hs
+	not.b	(hal_fpsshow).l
+	bra	.hs
 .up	sf	(a0,d1.w)
 .hs	; hold the handshake at least 85 microseconds: 3 lines
 	move.b	(CUSTOM+$006).l,d0
 	moveq	#2,d1
 .w	cmp.b	(CUSTOM+$006).l,d0
-	beq.s	.w
+	beq	.w
 	move.b	(CUSTOM+$006).l,d0
 	dbf	d1,.w
 	andi.b	#$BF,(CIAA_CRA).l		;back to input
@@ -89,7 +92,7 @@ hal_int2
 ;	6 A, 5 C, 4 B, 3 right, 2 left, 1 down, 0 up). Called by the game's vblank code.
 hal_readpads
 	tst.b	(hal_amiga).l
-	beq.s	.harness			;the test harness writes hal_padstate itself
+	beq	.harness			;the test harness writes hal_padstate itself
 	movem.l	d2-d4/a0-a1,-(sp)
 	; player 1: port 2
 	move.w	(CUSTOM+JOY1DAT).l,d0
@@ -118,7 +121,7 @@ hal_readpads
 	move.b	d4,(hal_padstate).l
 	movem.l	(sp)+,d2-d4/a0-a1
 	tst.b	(hal_quit).l
-	beq.s	.harness
+	beq	.harness
 	jmp	hal_exit
 .harness
 	move.w	(hal_padstate).l,d0
@@ -131,19 +134,19 @@ hal_readpads
 joy_dirs
 	moveq	#0,d1
 	btst	#1,d0
-	beq.s	.nr
+	beq	.nr
 	bset	#PB_RIGHT,d1
 .nr	btst	#9,d0
-	beq.s	.nl
+	beq	.nl
 	bset	#PB_LEFT,d1
 .nl	move.w	d0,d2
 	lsr.w	#1,d2
 	eor.w	d0,d2
 	btst	#0,d2
-	beq.s	.nd
+	beq	.nd
 	bset	#PB_DOWN,d1
 .nd	btst	#8,d2
-	beq.s	.nu
+	beq	.nu
 	bset	#PB_UP,d1
 .nu	move.b	d1,d0
 	rts
@@ -158,14 +161,14 @@ joy_buttons
 	; CD32 shift register: fire line as output clocks it, pin 9 is the data
 	move.w	#$6F00,d5			;POTGO for port 2
 	cmpi.w	#14,d3
-	beq.s	.p2
+	beq	.p2
 	move.w	#$F600,d5			;port 1
 .p2	bset	d2,$200(a0)			;fire pin output
 	bclr	d2,(a0)				;low: load
 	move.w	d5,POTGO-POTGOR(a1)
 	moveq	#0,d6
 	moveq	#8,d1				;9 bits: blue, red, yellow, green, fwd, rwd, play, id
-	bra.s	.in
+	bra	.in
 .loop	tst.b	(a0)
 	tst.b	(a0)
 .in	tst.b	(a0)
@@ -178,7 +181,7 @@ joy_buttons
 	bset	d2,(a0)
 	bclr	d2,(a0)
 	btst	d3,d4
-	bne.s	.n
+	bne	.n
 	bset	d1,d6
 .n	dbf	d1,.loop
 	bclr	d2,$200(a0)			;fire pin input again
@@ -188,30 +191,30 @@ joy_buttons
 	move.b	d6,d1
 	andi.b	#3,d1
 	cmpi.b	#2,d1
-	bne.s	.joy
+	bne	.joy
 	btst	#8,d6				;blue
-	beq.s	.c1
+	beq	.c1
 	bset	#PB_B,d0
 .c1	btst	#7,d6				;red
-	beq.s	.c2
+	beq	.c2
 	bset	#PB_C,d0
 .c2	btst	#6,d6				;yellow
-	beq.s	.c3
+	beq	.c3
 	bset	#PB_A,d0
 .c3	btst	#5,d6				;green
-	beq.s	.c4
+	beq	.c4
 	bset	#PB_A,d0
 .c4	btst	#2,d6				;play
-	beq.s	.x
+	beq	.x
 	bset	#PB_START,d0
-	bra.s	.x
+	bra	.x
 .joy	; ordinary joystick: fire (active low) and the second button
 	btst	d2,(a0)
-	bne.s	.j1
+	bne	.j1
 	bset	#PB_C,d0
 .j1	move.w	(a1),d4
 	btst	d3,d4
-	bne.s	.x
+	bne	.x
 	bset	#PB_B,d0
 .x	movem.l	(sp)+,d1-d6/a0-a1
 	rts
@@ -223,10 +226,10 @@ keys_pad
 	moveq	#0,d1
 	moveq	#7,d2
 .k	move.b	(a1,d1.w),d3
-	beq.s	.n
+	beq	.n
 	andi.w	#$7F,d3
 	tst.b	(a0,d3.w)
-	beq.s	.n
+	beq	.n
 	bset	d1,d0
 .n	addq.w	#1,d1
 	dbf	d2,.k
@@ -239,6 +242,7 @@ keys_p2	dc.b	0,0,0,0,$51,$52,$50,$53		;F2, F3, F1, F4
 	section	bss,bss
 hal_keys	ds.b	128
 hal_quit	ds.b	1
+hal_fpsshow	ds.b	1
 		even
 
 	section	game,code

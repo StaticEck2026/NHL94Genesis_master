@@ -362,8 +362,17 @@ def idle_pass(rel, lines):
             j += 1
         k = 0
         while k < len(body) and k < 3:
-            mm = re.match(r'^([a-z]+)', body[k], re.I)
-            if not mm or mm.group(1).lower() not in WAITOPS or ')+' in body[k] or '-(' in body[k]:
+            mm = re.match(r'^([a-z]+)(\.[bwl])?\s+(.*)$', body[k], re.I)
+            if not mm or ')+' in body[k] or '-(' in body[k]:
+                break
+            opn = mm.group(1).lower()
+            ops = split_operands(mm.group(3))
+            if opn in WAITOPS:
+                pass
+            elif opn in ('move', 'sub', 'subi', 'and', 'andi') and len(ops) == 2 \
+                    and re.match(r'^d[0-7]$', ops[1].strip(), re.I):
+                pass                # reads into a data register only
+            else:
                 break
             k += 1
         if k == 0 or k >= len(body):

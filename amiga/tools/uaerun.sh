@@ -39,7 +39,11 @@ while [ $t -lt $SECS ]; do
   sleep 1; t=$((t+1))
   for ev in "$@"; do
     et=${ev%%:*}; key=${ev#*:}
-    if [ "$et" = "$t" ]; then DISPLAY=$DISP xdotool search --class fs-uae windowactivate --sync key --delay 120 $key 2>/dev/null || DISPLAY=$DISP xdotool key $key; fi
+    if [ "$et" = "$t" ]; then
+      WIN=$(DISPLAY=$DISP xdotool search --name "FS-UAE" | head -1)
+      DISPLAY=$DISP xdotool windowfocus "$WIN"
+      DISPLAY=$DISP xdotool keydown "$key"; sleep 0.3; DISPLAY=$DISP xdotool keyup "$key"
+    fi
   done
   if [ $((t % ${EVERY:-5})) -eq 0 ]; then DISPLAY=$DISP import -window root "$OUT/uae_$(printf %03d $t).png"; fi
 done

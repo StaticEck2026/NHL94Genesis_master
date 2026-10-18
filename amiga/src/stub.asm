@@ -31,11 +31,11 @@ start
 	move.l	#gamename,d1
 	jsr	DOS_LoadSeg(a6)
 	move.l	d0,seglist
-	bne.s	.run
+	bne	.run
 	lea	(msgload,pc),a0
 	bsr	print
 	moveq	#20,d7
-	bra.s	.free
+	bra	.free
 .run	movem.l	(sp),d0/a0
 	movea.l	seglist,a1
 	adda.l	a1,a1
@@ -62,25 +62,25 @@ reserve
 	movea.l	(4).w,a6
 	jsr	EXEC_Forbid(a6)
 .again	cmpi.w	#MAXPIECES,npieces
-	bhs.s	.done
+	bhs	.done
 	movea.l	$142(a6),a2			;MemList.lh_Head
 .mh	tst.l	(a2)
-	beq.s	.done				;end of the list
+	beq	.done				;end of the list
 	movea.l	$10(a2),a3			;mh_First
 .mc	move.l	a3,d0
-	beq.s	.nextmh
+	beq	.nextmh
 	move.l	d0,d1
 	add.l	4(a3),d1			;chunk end
 	; overlap with [RAMBASE, RAMBASE+$10000)
 	cmpi.l	#RAMBASE+$10000,d0
-	bhs.s	.nextmc
+	bhs	.nextmc
 	cmpi.l	#RAMBASE,d1
-	bls.s	.nextmc
+	bls	.nextmc
 	cmpi.l	#RAMBASE,d0
-	bhs.s	.lo
+	bhs	.lo
 	move.l	#RAMBASE,d0
 .lo	cmpi.l	#RAMBASE+$10000,d1
-	bls.s	.hi
+	bls	.hi
 	move.l	#RAMBASE+$10000,d1
 .hi	sub.l	d0,d1				;length
 	movea.l	d0,a1
@@ -89,18 +89,18 @@ reserve
 	jsr	EXEC_AllocAbs(a6)
 	movem.l	(sp)+,d1/a1
 	tst.l	d0
-	beq.s	.nextmc
+	beq	.nextmc
 	move.w	npieces,d2
 	lsl.w	#3,d2
 	lea	pieces,a0
 	move.l	a1,(a0,d2.w)
 	move.l	d1,4(a0,d2.w)
 	addq.w	#1,npieces
-	bra.s	.again
+	bra	.again
 .nextmc	movea.l	(a3),a3
-	bra.s	.mc
+	bra	.mc
 .nextmh	movea.l	(a2),a2
-	bra.s	.mh
+	bra	.mh
 .done	jsr	EXEC_Permit(a6)
 	rts
 
@@ -108,12 +108,12 @@ release
 	movea.l	(4).w,a6
 	lea	pieces,a2
 .l	tst.w	npieces
-	beq.s	.x
+	beq	.x
 	subq.w	#1,npieces
 	movea.l	(a2)+,a1
 	move.l	(a2)+,d0
 	jsr	EXEC_FreeMem(a6)
-	bra.s	.l
+	bra	.l
 .x	rts
 
 print
@@ -122,14 +122,14 @@ print
 	moveq	#-1,d3
 .len	addq.l	#1,d3
 	tst.b	(a1)+
-	bne.s	.len
+	bne	.len
 	move.l	a0,-(sp)
 	movea.l	dosbase,a6
 	jsr	DOS_Output(a6)
 	move.l	d0,d1
 	move.l	(sp)+,d2
 	tst.l	d1
-	beq.s	.x
+	beq	.x
 	jsr	DOS_Write(a6)
 .x	movem.l	(sp)+,d1-d3/a0/a6
 	rts
