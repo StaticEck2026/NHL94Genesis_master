@@ -246,7 +246,8 @@ play, by routine, to compare builds; it prints a fingerprint of the game at the 
 the same for two builds that played the same game. The renderer draws every second game frame, the odd or
 the even ones depending on its timing earlier on, and the work can differ between the two:
 `NHL_PHASE=0` or `1` sets which (from frame 2000), and playcost.sh measures both. `NHL_RAMDUMP=file:from:to` writes the Genesis RAM every
-frame. `NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
+frame. `NHL_FREELOG=file` (with `NHL_DETERM`) writes the renderer's cycles each frame, for the
+spread of the cost per frame drawn (the PC samples of `NHL_PROF` carry their frame too). `NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
 buffers each blit reads and writes (plane B restores, sprites, overlay, clears). The harness'
 Start presses pause and resume the game every 120 frames, and each resume restores whole
 screens, so these are not the steady figures of play. For those, a build with `-DSPRLOG=1`

@@ -43,7 +43,7 @@ CHPITCH		equ	384			;chunky fallback: bytes per line
 CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
 SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
-SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
+SCSLOTS		equ	4096			;its table entries (a power of 2): key, ring position,
 						;frame built, image, its box (rd_sc_box), the key's
 						;second long (a data address key: rd_sc_get), 32 bytes
 
@@ -3191,9 +3191,8 @@ rd_sprite_blit
 	move.w	d0,(rd_ncol).l			;columns drawn
 	addq.w	#1,d0
 	lsr.w	#1,d0
-	addq.w	#1,d0
 	add.w	d0,d0
-	move.w	d0,(rd_wb).l			;bytes a row: the columns, rounded to words, + 1 word
+	move.w	d0,(rd_wb).l			;bytes a row: the columns, rounded to words (2 or 4)
 	; rows on screen
 	move.w	(rd_sy).l,d0
 	moveq	#0,d1				;first row
@@ -3296,17 +3295,14 @@ rd_sprite_blit
 	move.w	d3,(a0)
 	movem.l	(sp)+,d0/a0
 	ENDC
-	move.w	(rd_wb).l,d4			;bytes a plane row of the image: 4 or 6
-	move.w	d6,d7				;its first line: * 24 or * 36
-	cmpi.w	#4,d4
-	bne.s	.w6
+	move.w	(rd_wb).l,d4			;bytes a plane row of the image: 2 or 4
+	move.w	d6,d7				;its first line: * 12 or * 24
 	add.w	d7,d7
 	add.w	d6,d7
-	lsl.w	#3,d7
-	bra.s	.wl
-.w6	lsl.w	#3,d7
-	add.w	d6,d7
 	lsl.w	#2,d7
+	cmpi.w	#2,d4
+	beq.s	.wl
+	add.w	d7,d7
 .wl	adda.w	d7,a2
 	adda.w	d7,a3
 	lea	(a2,d2.w*2),a2
@@ -3331,7 +3327,13 @@ rd_sprite_blit
 	move.l	a0,$048(a6)			;BLTCPT
 	move.l	a0,$054(a6)			;BLTDPT
 	add.w	d3,d3				;bytes a row
-	sub.w	d3,d4
+	move.w	d2,d0				;past the image's row (the word the shift goes into):
+	add.w	d0,d0				;that word of the mask is masked off
+	add.w	d3,d0
+	cmp.w	d4,d0
+	bls.s	.lw
+	move.w	#0,$046(a6)			;BLTALWM
+.lw	sub.w	d3,d4
 	move.w	d4,$064(a6)			;BLTAMOD
 	move.w	d4,$062(a6)			;BLTBMOD
 	move.w	#SBPR,d0
@@ -3351,8 +3353,9 @@ rd_sprite_blit
 
 ;	------------------------------------------------------------------------------------------
 ;	Sprite image cache. A sprite's image (6 interleaved planes, rows of rd_wb bytes: its
-;	columns rounded to words and a clear word for the blitter's shift) and its mask (the same
-;	layout, the mask in each plane's place) are built once and kept in a ring of chip RAM
+;	columns rounded to words; the word the blitter's shift goes into is read past the row and
+;	masked off) and its mask (the same layout, the mask in each plane's place) are built once
+;	(in fast memory, then copied) and kept in a ring of chip RAM
 ;	(rd_scarena), found through a hash table by its tiles, size, flips and palette. An image is
 ;	used while none of its tiles was converted again (rd_tchg: the frame each tile last was)
 ;	after it was built and the ring has not come round to it again. The players use the same
@@ -3442,10 +3445,10 @@ rd_sc_get
 	eor.l	d5,d2
 	mulu.l	#$9E3779B1,d2
 	swap	d2
-	andi.w	#SCSLOTS-1,d2
-	lsl.w	#5,d2
+	andi.l	#SCSLOTS-1,d2
+	lsl.l	#5,d2
 	lea	(rd_sctab).l,a4
-	adda.w	d2,a4
+	adda.l	d2,a4
 	; the image size, image and mask
 	move.w	(rd_wb).l,d7
 	mulu.w	(rd_sch).l,d7
@@ -3576,6 +3579,10 @@ rd_sc_box
 	moveq	#0,d2				;last
 	moveq	#0,d3				;line
 .l	move.l	(a0),d4
+	cmpi.w	#2*NPLANES,d6
+	bne.s	.l4
+	clr.w	d4				;(rows of 2 bytes: the next is another plane's)
+.l4	tst.l	d4
 	beq.s	.n
 	or.l	d4,d0
 	tst.w	d1
@@ -3933,8 +3940,9 @@ rd_spr_cpu
 	dbf	d7,.l4
 	bra	.next
 
-;	Build the image (a2) and mask (a3) of the sprite described by rd_sx..rd_r1: lines rd_r0 to
-;	rd_r1-1, columns rd_c0 on (rd_ncol of them), rows of rd_wb bytes per plane (4 or 6).
+;	Build the image (a2) and mask (a3, after the image) of the sprite described by rd_sx..rd_r1:
+;	lines rd_r0 to rd_r1-1, columns rd_c0 on (rd_ncol of them), rows of rd_wb bytes per plane
+;	(2 or 4). Built in fast memory (rd_sbuild), then copied in longs. Keeps a2, a3.
 SPRLINE	MACRO					;one line of one column; \1 = bytes a plane row
 	move.b	(a1),d3
 	adda.w	d5,a1
@@ -3971,11 +3979,14 @@ rd_spr_build
 	addq.l	#1,(rd_dbg_key).l		;(statistics: sprites built)
 	endif
 	bsr	rd_spr_tiles
+	movem.l	a2-a3,-(sp)
 	; clear both: lines * 6 * wb bytes each
 	move.w	(rd_r1).l,d0
 	sub.w	(rd_r0).l,d0
 	mulu.w	(rd_wb).l,d0
 	mulu.w	#6,d0
+	lea	(rd_sbuild).l,a2
+	lea	(a2,d0.w),a3
 	lsr.w	#2,d0
 	subq.w	#1,d0
 	bmi	.x
@@ -4070,20 +4081,32 @@ rd_spr_build
 	movem.l	a2-a3,-(sp)
 	adda.w	d0,a2
 	adda.w	d0,a3
-	cmpi.w	#4,(rd_wb).l
-	bne.s	.w6
+	cmpi.w	#2,(rd_wb).l
+	bne.s	.w4
+.l2	SPRLINE	2
+	dbf	d2,.l2
+	bra.s	.ld
+.w4
 .l4	SPRLINE	4
 	dbf	d2,.l4
-	bra.s	.ld
-.w6
-.l6	SPRLINE	6
-	dbf	d2,.l6
 .ld	movem.l	(sp)+,a2-a3
 .ntr	addq.w	#1,(rd_btr).l
 	bra	.tr
 .ncol	addq.w	#1,(rd_bcol).l
 	bra	.col
-.x	rts
+.x	; into chip memory: image and mask, lines * wb * 12 bytes
+	move.w	(rd_r1).l,d0
+	sub.w	(rd_r0).l,d0
+	mulu.w	(rd_wb).l,d0
+	mulu.w	#3,d0				;longs
+	lea	(rd_sbuild).l,a0
+	movea.l	(sp),a1
+	subq.w	#1,d0
+	bmi.s	.nc
+.cp	move.l	(a0)+,(a1)+
+	dbf	d0,.cp
+.nc	movem.l	(sp)+,a2-a3
+	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	High priority plane B cells under something of low priority: draw them again on top.
@@ -5607,6 +5630,7 @@ rd_ovlcolf	ds.b	2*32*48			;per priority, band: columns with cells
 rd_c0		ds.w	1
 rd_ncol		ds.w	1
 rd_wb		ds.w	1
+rd_sbuild	ds.l	2*4*NPLANES*32/4		;a sprite image and mask being built (rd_spr_build)
 rd_r0		ds.w	1
 rd_r1		ds.w	1
 		cnop	0,4

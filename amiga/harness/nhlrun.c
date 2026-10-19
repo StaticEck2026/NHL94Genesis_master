@@ -165,7 +165,7 @@ static void det_hook(unsigned int pc)
         long long now = cycles_total + m68k_cycles_run();
         if (!prof_next) prof_next = now;
         while (now >= prof_next) {
-            fprintf(prof_f, "%06x %04x %06x\n", prof_pc, prof_sr, prof_ret);
+            fprintf(prof_f, "%06x %04x %06x %d\n", prof_pc, prof_sr, prof_ret, frame);
             prof_next += 1000;
         }
         prof_pc = pc & 0xFFFFFF;
@@ -813,7 +813,14 @@ int main(int argc, char **argv)
         if (getenv("NHL_PROF") && frame >= (getenv("NHL_PROF_FROM") ? atoi(getenv("NHL_PROF_FROM")) : 0)) {
             if (!prof_f) prof_f = fopen(getenv("NHL_PROF"), "w");
         }
+        long long free0 = det_free;
         run_cycles(ncyc);
+        if (getenv("NHL_FREELOG")) {        /* NHL_FREELOG=file: the renderer's (and level 3's)
+                                               cycles each frame, NHL_DETERM */
+            static FILE *ff;
+            if (!ff) ff = fopen(getenv("NHL_FREELOG"), "w");
+            fprintf(ff, "%d %lld %u\n", frame, det_free - free0, rd32(rd32(dbg + 28)));
+        }
         if (red_screen) { dump_exception(); break; }
         if (vwn) {
             for (int i = 0; i < vwn; i++)
