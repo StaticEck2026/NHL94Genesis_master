@@ -86,6 +86,7 @@ hal_debug
 	dc.l	rd_screens,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
 	dc.l	RAMBASE				;+108: the Genesis RAM window
 	dc.l	game_code			;+112: the converted game's code
+	dc.l	rd_lastframe,rd_busy		;+116: the renderer's pacing
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.

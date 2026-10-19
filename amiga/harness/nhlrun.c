@@ -682,6 +682,17 @@ int main(int argc, char **argv)
     }
     for (frame = 1; frame <= frames; frame++) {
         if (frame == 1700) bk_frames0 = rd32(rd32(dbg + 28));
+        if (getenv("NHL_PHASE") && frame >= 1900 && frame < 2000 && !rd8(rd32(dbg + 120))) {
+            /* the game frames the renderer draws (every second one): odd or even ones, as
+               NHL_PHASE says, from frame 2000 (the work differs between the two) */
+            uint32_t gf = rd32(rd32(dbg + 20)), want = atoi(getenv("NHL_PHASE")) & 1;
+            if ((gf & 1) != want) wr32(rd32(dbg + 116), gf - 1);
+        }
+        if (getenv("NHL_DRAWLOG")) {        /* frames drawn so far, each frame (which ticks are drawn) */
+            static FILE *df;
+            if (!df) df = fopen(getenv("NHL_DRAWLOG"), "w");
+            fprintf(df, "%d %u\n", frame, rd32(rd32(dbg + 28)));
+        }
         if (getenv("NHL_RAMDUMP")) {        /* NHL_RAMDUMP=file:from:to: the Genesis RAM, each frame */
             static FILE *rf; char fn[256]; int f0 = 0, f1 = 0;
             if (sscanf(getenv("NHL_RAMDUMP"), "%255[^:]:%d:%d", fn, &f0, &f1) == 3 && frame >= f0 && frame <= f1) {
