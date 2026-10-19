@@ -4288,7 +4288,10 @@ rd_obj_piece
 	adda.l	a5,a0
 	lea	20(a1),a1
 	dbf	d6,.ul
-	; merged: under each line's mask
+	; merged: under each line's mask; inserted if it overlaps no sprite drawn before it (the
+	; image is clear there)
+	movea.l	4(sp),a6			;(its entry: the caller's)
+	bsr	rd_obj_overlap
 	lea	(rd_opbuf).l,a0
 	movea.l	(rd_opline).l,a1
 	move.l	(rd_opx).l,d2
@@ -4298,6 +4301,8 @@ rd_obj_piece
 	move.w	(rd_opat).l,d6
 	move.w	(rd_oplines).l,d7
 	subq.w	#1,d7
+	tst.b	(rd_oovl).l
+	beq	.il
 .ml	move.l	16(a0),d4			;the mask
 	beq	.mn
 	move.l	d4,d5
@@ -4336,6 +4341,76 @@ rd_obj_piece
 .mn	lea	20(a0),a0
 	lea	56(a1),a1
 	dbf	d7,.ml
+	rts
+.il	move.l	16(a0),d4			;(nothing under it: inserted)
+	beq.s	.in
+	move.l	(a0),d0
+	bfins	d0,(a1){d2:d3}
+	move.l	4(a0),d0
+	bfins	d0,8(a1){d2:d3}
+	move.l	8(a0),d0
+	bfins	d0,16(a1){d2:d3}
+	move.l	12(a0),d0
+	bfins	d0,24(a1){d2:d3}
+	btst	#13,d6
+	beq.s	.i4
+	bfins	d4,32(a1){d2:d3}
+.i4	btst	#14,d6
+	beq.s	.i5
+	bfins	d4,40(a1){d2:d3}
+.i5	bfins	d4,48(a1){d2:d3}
+.in	lea	20(a0),a0
+	lea	56(a1),a1
+	dbf	d7,.il
+	rts
+
+;	Does the sprite a6 (rd_opc) overlap one after it in the list (drawn into the image before
+;	it)? rd_oovl. Keeps all but the flags.
+rd_obj_overlap
+	movem.l	d0-d7/a0,-(sp)
+	sf	(rd_oovl).l
+	bsr.s	.box
+	movem.w	d0-d3,-(sp)			;its box
+	lea	12(a6),a0
+	move.w	(rd_on).l,d7
+	mulu.w	#12,d7
+	addi.l	#rd_opc,d7			;the end of the list
+.o	cmpa.l	d7,a0
+	bhs.s	.x
+	exg	a0,a6
+	bsr.s	.box
+	exg	a0,a6
+	cmp.w	4(sp),d0			;(apart: one's left at or past the other's right ...)
+	bge.s	.n
+	cmp.w	(sp),d2
+	ble.s	.n
+	cmp.w	6(sp),d1
+	bge.s	.n
+	cmp.w	2(sp),d3
+	ble.s	.n
+	st	(rd_oovl).l
+	bra.s	.x
+.n	lea	12(a0),a0
+	bra.s	.o
+.x	addq.l	#8,sp
+	movem.l	(sp)+,d0-d7/a0
+	rts
+.box	moveq	#0,d4				;a6's box: d0 left, d1 top, d2 right, d3 bottom
+	move.b	6(a6),d4
+	moveq	#3,d5
+	and.w	d4,d5
+	addq.w	#1,d5
+	lsl.w	#3,d5
+	lsr.w	#2,d4
+	andi.w	#3,d4
+	addq.w	#1,d4
+	lsl.w	#3,d4
+	move.w	8(a6),d0
+	move.w	10(a6),d1
+	move.w	d0,d2
+	add.w	d4,d2
+	move.w	d1,d3
+	add.w	d5,d3
 	rts
 
 ;	The scratch (rd_oscr) into the ring at a2 in the blitter's layout: the image (per line
@@ -6540,6 +6615,8 @@ rd_opw		ds.w	1			;rd_obj_piece: the sprite's tiles across
 rd_oplines	ds.w	1			;its lines
 rd_opat		ds.w	1			;its flips and palette
 rd_okey		ds.w	1			;rd_obj_blit: the object's key
+rd_oovl		ds.b	1			;rd_obj_overlap: the sprite overlaps one drawn before
+	even
 rd_opline	ds.l	1			;rd_obj_piece: its first line in the scratch
 rd_objb		ds.b	4*OBJMAX		;per object: its first sprite, sprites, key (word)
 rd_objp		ds.b	4*OBJMAX
