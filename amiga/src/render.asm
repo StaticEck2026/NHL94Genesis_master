@@ -126,6 +126,9 @@ rd_lastgen	ds.l	2
 rd_count	ds.l	1			;frames drawn
 rd_palgen	ds.l	1			;the CRAM changes and registers the colours are of
 rd_palkey	ds.l	1
+rd_colgen	ds.l	1			;changed when rd_colours change
+rd_copgen	ds.l	2*NBUF			;per buffer: rd_colgen, rd_hudgen its copper list's
+						;colours are of
 rd_colours	ds.w	64			;high nibbles of the 24 bit colours ($0RGB)
 rd_colourslo	ds.w	64			;and the low nibbles
 rd_mode		ds.w	1
@@ -246,6 +249,10 @@ rd_init
 	move.l	d0,(rd_Bkey).l
 	move.l	d0,(rd_lastgen).l
 	move.l	d0,(rd_palgen).l
+	lea	(rd_copgen).l,a0		;no colours in the copper lists
+	moveq	#2*NBUF-1,d1
+.cg	move.l	d0,(a0)+
+	dbf	d1,.cg
 	lea	(rd_shownvb).l,a0		;(none on the screen)
 	moveq	#NBUF-1,d1
 .sv	move.l	d0,(a0)+
@@ -5087,6 +5094,7 @@ rd_palette
 	cmp.l	(rd_palkey).l,d1
 	beq	.on
 .new	move.l	d0,(rd_palgen).l
+	addq.l	#1,(rd_colgen).l
 	move.l	d1,(rd_palkey).l
 	lea	(vdp_cram).l,a0
 	lea	(rd_colours).l,a1
@@ -5374,7 +5382,20 @@ rd_show
 	move.w	d0,(a0)+
 	addq.w	#2,d1
 	dbf	d2,.sp
-	; the 64 colours: per bank of 32 the high nibbles, then (LOCT) the low nibbles
+	; the 64 colours: per bank of 32 the high nibbles, then (LOCT) the low nibbles. Already
+	; there if neither they nor the HUD changed since this buffer's list was made.
+	moveq	#0,d0
+	move.w	(rd_bufi).l,d0
+	lea	(rd_copgen).l,a1
+	lea	(a1,d0.w*8),a1
+	move.l	(rd_colgen).l,d0
+	move.l	(rd_hudgen).l,d1
+	cmp.l	(a1),d0
+	bne.s	.cnew
+	cmp.l	4(a1),d1
+	beq	.cdone
+.cnew	move.l	d0,(a1)+
+	move.l	d1,(a1)
 	lea	(rd_colours).l,a1
 	lea	(rd_colourslo).l,a2
 	moveq	#0,d3
@@ -5429,6 +5450,7 @@ rd_show
 	dbf	d2,.hl
 .nohc
 	move.l	#$FFFFFFFE,(a0)+
+.cdone
 	; it is shown once the blits queued for it are done: a marker in the blit queue has the
 	; level 3 interrupt set the copper list then (rd_bq_start); the CPU goes on
 	moveq	#0,d1				;(a long below)
