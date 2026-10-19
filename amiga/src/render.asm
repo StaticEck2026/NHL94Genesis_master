@@ -1048,6 +1048,10 @@ rd_updateB
 	moveq	#63,d3
 .cu	clr.l	(a1)+
 	dbf	d3,.cu
+	lea	(rd_mkset).l,a1			;(the cells are others: all masks written)
+	moveq	#BMAX/32-1,d3
+.cm	move.l	#-1,(a1)+
+	dbf	d3,.cm
 	lea	(rd_tlhead).l,a1		;(and the tiles' lists of cells)
 	move.w	#2048/2-1,d3
 .ch	clr.l	(a1)+
@@ -1256,6 +1260,7 @@ rd_cellB
 	add.l	d2,d1
 	lea	(rd_hibits).l,a1
 	bfclr	(a1){d1:1}
+	sf	(rd_cellmk).l
 	tst.w	d0
 	bpl.s	.lo
 	move.w	d0,d2
@@ -1265,7 +1270,17 @@ rd_cellB
 	beq.s	.lo
 	lea	(rd_hibits).l,a1
 	bfset	(a1){d1:1}
-.lo	; the cell in its tile's list (rd_btiles)
+	st	(rd_cellmk).l			;(it has a mask)
+.lo	; its masks are written if it has one or had one (rd_mkset); else they are all 0 already
+	lea	(rd_mkset).l,a1
+	tst.b	(rd_cellmk).l
+	beq.s	.m0
+	bfset	(a1){d1:1}
+	st	(rd_cellmw).l
+	bra.s	.m1
+.m0	bfclr	(a1){d1:1}
+	sne	(rd_cellmw).l
+.m1	; the cell in its tile's list (rd_btiles)
 	movem.l	d0/d3/a0,-(sp)
 	andi.w	#$7FF,d0
 	addq.w	#1,d0				;its tile + 1
@@ -1349,9 +1364,9 @@ rd_cellB
 	btst	#14,d0
 	beq	.p1
 	move.b	#$FF,d7
-.p1	move.w	d1,d2
-	mulu.w	#6,d2				;pixel row step
-	moveq	#7,d3
+.p1	moveq	#7,d3
+	tst.b	(rd_cellmw).l
+	beq	.rown
 .row	move.l	(a0),d0
 	adda.w	d5,a0
 	rol.l	#8,d0
@@ -1391,6 +1406,27 @@ rd_cellB
 	move.b	d0,(a4)
 	adda.w	d1,a4
 	dbf	d3,.row
+	movea.l	(sp)+,a4
+	rts
+.rown	move.l	(a0),d0				;(no masks to write)
+	adda.w	d5,a0
+	rol.l	#8,d0
+	move.b	d0,(a1)
+	adda.w	d1,a1
+	rol.l	#8,d0
+	move.b	d0,(a1)
+	adda.w	d1,a1
+	rol.l	#8,d0
+	move.b	d0,(a1)
+	adda.w	d1,a1
+	rol.l	#8,d0
+	move.b	d0,(a1)
+	adda.w	d1,a1
+	move.b	d6,(a1)
+	adda.w	d1,a1
+	move.b	d7,(a1)
+	adda.w	d1,a1
+	dbf	d3,.rown
 	movea.l	(sp)+,a4
 	rts
 
@@ -5722,6 +5758,10 @@ rd_ovlcolf	ds.b	2*32*48			;per priority, band: columns with cells
 rd_c0		ds.w	1
 rd_ncol		ds.w	1
 rd_wb		ds.w	1
+rd_mkset	ds.l	BMAX/32			;plane B cells whose masks (mkB, mkB6) are not all 0
+rd_cellmk	ds.b	1			;rd_cellB: the cell has a mask
+rd_cellmw	ds.b	1			;and its masks are written
+	cnop	0,4
 rd_sbuild	ds.l	2*4*NPLANES*32/4		;a sprite image and mask being built (rd_spr_build)
 rd_r0		ds.w	1
 rd_r1		ds.w	1
