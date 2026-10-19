@@ -17,10 +17,12 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
   Genesis), 60 on NTSC. `F8` switches the display between 50 and 60 Hz (AGA shows either on any
   Amiga, if the monitor takes it), and the game's rate with it.
 
-Speed: on a stock 14 MHz A1200 with fast RAM, gameplay is shown at a steady 25 frames a second
-on PAL most of the time (each frame on the screen for 2 vertical blanks; heavy moments drop to
-about 17), measured in FS-UAE, cycle exact. The game itself always runs at full speed; it is
-the screen updates that are fewer. `F6` lifts the cap: about 30 frames a second on average,
+Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
+`-DBENCH=1` build), gameplay is capped at a steady 25 frames a second on a 50 Hz display, or 30
+on a 60 Hz one (`F8`): 95% (50 Hz) and 92 to 94% (60 Hz) of the frames are on the screen for
+exactly 2 vertical blanks; the others are heavy moments (a faceoff, many new animation frames at
+once, the rink scrolling a long way). The game itself always runs at full speed; it is the
+screen updates that are fewer. `F6` lifts the cap: about 44 frames a second on average at 50 Hz,
 but unevenly paced (a frame shows for 1 or 2 vertical blanks), which looks less smooth.
 
 ## Running
@@ -101,13 +103,15 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   game, its vblank code and the renderer (counted on the CIA-B clock at every switch, so time
   with interrupts off, which the PC samples cannot see into, is counted too).
 - `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
-- `-DBENCH=1` makes a benchmark build that plays the same game every run and every build: the
-  game's random numbers (its reads of the beam position) come from the game frame, Start is
-  pressed at the test harness' frames (into a game from the attract mode), and with `-DPROFILE=1`
-  the frame rate count starts at game frame 2000 (as `F9`) and the game quits at 6000
-  (`BENCHSTART`, `BENCHEND`). Delete `NHL94.sav` before each run: the game reads it. The game
-  can still take another course when it runs long during the menus (a sum of its RAM at the end
-  is in the profile to tell), so compare the mean of a few runs.
+- `-DBENCH=1` makes a benchmark build that plays nearly the same game every run and every
+  build: everything is counted in the game's waits for a frame (one a game frame, however late
+  the frames come): its random numbers (its reads of the beam position) come from that count,
+  Start is pressed at the test harness' counts (into a game from the attract mode), and with
+  `-DPROFILE=1` the frame rate count starts at 2000 (as `F9`) and the game quits at 6000
+  (`BENCHSTART`, `BENCHEND`); the renderer does not take the game's time when it runs long.
+  Delete `NHL94.sav` before each run: the game reads it. The game can still drift when one of
+  its frames runs over (a sum of its RAM at the end is in the profile to tell): runs of one build
+  differ by about 2%, so compare the mean of a few.
 - `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
   waiting for a buffer, the show queued, the queue at it or held, the copper list set, vertical
   blanks, game ticks), written after the profile (`prof_ev`).

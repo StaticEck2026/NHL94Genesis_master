@@ -272,7 +272,11 @@ hal_int6
 	tst.b	(ctx_cur).l
 	bne	ctx_to_game			;renderer interrupted: back to the waiting game
 	; the game has not waited for a vblank for a while (a wait loop the converter did not
-	; mark): give the renderer this frame's time anyway
+	; mark): give the renderer this frame's time anyway (not in BENCH builds: the game's time
+	; would depend on the renderer's)
+	IFD	BENCH
+	rte
+	ENDC
 	addq.w	#1,(hal_starve).l
 	cmpi.w	#3,(hal_starve).l
 	blo.s	.rte
@@ -303,6 +307,9 @@ hal_idle
 	andi.w	#$0700,d0
 	cmpi.w	#$0600,d0
 	bhs	.no				;called from interrupt code: never switch there
+	IFD	BENCH
+	jsr	(bench_wait).l
+	ENDC
 	tst.b	(rd_busy).l
 	bne.s	.go				;a frame half drawn: on with it
 	move.l	(hal_frames).l,d0

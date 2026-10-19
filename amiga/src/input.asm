@@ -156,7 +156,10 @@ hal_readpads
 	or.b	d0,d4
 	move.b	d4,(hal_padstate).l
 	IFD	BENCH
-	bsr	bench_tick
+	tst.b	(bench_start).l
+	beq.s	.nbs
+	bset	#7,(hal_padstate+1).l		;(Start, pad 1)
+.nbs
 	ENDC
 	movem.l	(sp)+,d2-d4/a0-a1
 	tst.b	(hal_quit).l
@@ -182,23 +185,32 @@ prof_f9
 	ENDC
 
 	IFD	BENCH
-;	Benchmark builds (-DBENCH=1, for FS-UAE): the same game every run and every build. The
-;	game's random numbers (HVcount) come from the game frame, Start is pressed at the test
-;	harness' frames (from the attract mode into a game), the frame rate count starts at game
-;	frame BENCHSTART (as F9, PROFILE builds) and the game quits at BENCHEND. Uses d0, d1, a0.
+;	Benchmark builds (-DBENCH=1, for FS-UAE): the same game every run and every build. All is
+;	counted in the game's waits for a frame (the first in each game frame), not in game frames,
+;	so it does not matter when the frames come while the game runs long (the menus): the game's
+;	random numbers (HVcount) come from that count, Start is pressed at the test harness' counts
+;	(from the attract mode into a game), the frame rate count starts at BENCHSTART (as F9,
+;	PROFILE builds) and the game quits at BENCHEND. Keeps all.
 	IFND	BENCHSTART
 BENCHSTART	equ	2000
 	ENDC
 	IFND	BENCHEND
 BENCHEND	equ	6000
 	ENDC
-bench_tick
+bench_wait
+	movem.l	d0-d1/a0,-(sp)
 	move.l	(hal_frames).l,d0
+	cmp.l	(bench_lastf).l,d0
+	beq	.x				;(this frame's wait counted)
+	move.l	d0,(bench_lastf).l
+	addq.l	#1,(bench_n).l
+	move.l	(bench_n).l,d0
 	move.l	d0,d1
 	mulu.l	#$9E3779B1,d1
 	swap	d1
 	move.w	d1,(hal_hv).l
-	cmpi.l	#700,d0				;Start at 700, 820 .. 1180, for 10 frames
+	sf	(bench_start).l
+	cmpi.l	#700,d0				;Start at 700, 820 .. 1180, for 10
 	blo.s	.np
 	cmpi.l	#1190,d0
 	bhs.s	.np
@@ -207,8 +219,8 @@ bench_tick
 	swap	d0
 	cmpi.w	#10,d0
 	bhs.s	.np
-	bset	#7,(hal_padstate+1).l
-.np	move.l	(hal_frames).l,d0
+	st	(bench_start).l
+.np	move.l	(bench_n).l,d0
 	IFD	PROFILE
 	cmpi.l	#BENCHSTART,d0
 	bne.s	.nm
@@ -229,7 +241,12 @@ bench_tick
 	move.l	d0,(prof_mark+128).l
 	ENDC
 .q	st	(hal_quit).l
-.x	rts
+.x	movem.l	(sp)+,d0-d1/a0
+	rts
+bench_lastf	dc.l	-1
+bench_n		dc.l	0
+bench_start	dc.b	0
+	even
 	ENDC
 
 ;	d0 = JOYxDAT -> d0 = direction bits
