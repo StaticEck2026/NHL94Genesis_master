@@ -208,7 +208,9 @@ The hardware layer:
   it has AmigaDOS load `NHL94.game`.
 
 The renderer queues its blits; the blitter's interrupt starts each next one, so the CPU goes on
-building the next layer meanwhile.
+building the next layer meanwhile. A blit that finds the queue empty and the blitter idle is
+written straight into the blitter's registers instead (no entry, no interrupt: the blitter's
+interrupt is on only while the queue runs).
 
 ## Testing without an Amiga
 
@@ -223,7 +225,8 @@ argument lists others) it compares the Amiga screen, taken from the copper list,
 reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ. A screen can
 lag one VDP update behind when the game changes it mid frame (text being printed, a mode
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
-`NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
+`NHL_PROF=file` writes a PC sample every 1000 cycles (the instruction running then), which
+`amiga/harness/rdcost.py` sums.
 `NHL_FIXEDHV=1` gives the game's reads of the beam position (which it uses as random numbers)
 values that depend only on the frame and the read's number in it. `NHL_DETERM=1` does that and
 more, so that every build plays exactly the same game: the renderer's own work takes none of
@@ -232,7 +235,11 @@ renderer's and the blit queue interrupt's do not count), a frame also ends whene
 would only wait (the renderer for a vertical blank, the blitter or room in its queue, or
 giving way; the game waiting with nothing to draw), so each of the game's wait loops goes round
 once a frame however long the renderer took, blits are done at once, and no vertical blank is
-lost or given to the renderer. The CPU core is built with its instruction hook for it.
+lost or given to the renderer. The CPU core is built with its instruction hook and its
+interrupt acknowledge callback for it. With `NHL_DETBLIT=1` as well, blits take their time
+(the CPU's work and the blitter's overlap, as on the Amiga; a wait of the renderer for the
+blitter ends the blit at once), but the game's course is no longer the same for every build:
+the renderer's waits for a free buffer then end frames at other points.
 `amiga/harness/playcost.sh [from] [end]` uses it: Start is pressed only until the game
 begins, then the renderer's harness cycles per frame drawn are counted over uninterrupted
 play, by routine, to compare builds; it prints a fingerprint of the game at the end, which is

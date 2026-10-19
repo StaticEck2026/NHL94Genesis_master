@@ -170,8 +170,8 @@ hal_start_timer
 	move.b	#$11,(CIAB_CRB).l
 	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
-	move.w	#$C000|$2000|$0040|$0020,(CUSTOM+INTENA).l	;master, EXTER (level 6), BLIT and VERTB
-							;(level 3)
+	move.w	#$C000|$2000|$0020,(CUSTOM+INTENA).l	;master, EXTER (level 6), VERTB (level 3;
+							;BLIT while the blit queue runs)
 	rts
 
 ;	Level 6. The CIA-B timer is the Genesis vertical blank: count it and run the game's handler

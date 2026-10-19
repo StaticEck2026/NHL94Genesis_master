@@ -111,6 +111,7 @@ rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	8*SCSLOTS		;sprite image cache (rd_sc_get)
 rd_sslot	ds.w	1			;rd_sc_get: the sprite's place in the list
+rd_rowoff	ds.l	SCRH			;line * SROW
 rd_bl0		ds.w	1			;rd_sc_get: the image's first line with something in it,
 rd_bnl		ds.w	1			;lines from there (0: none),
 rd_bp0		ds.w	1			;first pixel and last pixel across
@@ -262,6 +263,12 @@ rd_init
 .sc	move.l	d0,(a0)
 	lea	32(a0),a0
 	dbf	d1,.sc
+	lea	(rd_rowoff).l,a0		;screen line -> offset in a buffer
+	moveq	#0,d0
+	move.w	#SCRH-1,d1
+.ro	move.l	d0,(a0)+
+	addi.l	#SROW,d0
+	dbf	d1,.ro
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
@@ -700,14 +707,29 @@ rd_waitblit_end
 ;	------------------------------------------------------------------------------------------
 ;	Blit queue: the blits are written into entries laid out like the blitter's registers
 ;	$040-$075 and started one after the other by the blitter's interrupt, so the CPU goes on
-;	with its own work. rd_waitblit waits for the queue to empty.
+;	with its own work. rd_waitblit waits for the queue to empty. While the queue is empty and
+;	the blitter idle, a blit is written straight into the blitter's registers (and started by
+;	its BLTSIZH, the last written): no entry, no interrupt. The blitter's interrupt is on only
+;	while the queue runs (rd_bqint).
 BQN	equ	128				;entries (a power of 2)
 BQE	equ	$40				;bytes an entry ($38 used: a power of 2 to find)
 BQS	equ	6				;(log2 BQE)
 
-;	a6 = the next entry, as if it were the custom chips' base (write $040(a6) ... $05E(a6)).
-;	Waits while the queue is full.
+;	a6 = the next entry, as if it were the custom chips' base (write $040(a6) ... $05E(a6),
+;	BLTSIZH last), or the custom chips if the queue and the blitter are idle. Waits while the
+;	queue is full.
 rd_bq_alloc
+	tst.b	(rd_bqbusy).l
+	bne.s	.q
+	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
+	btst	#6,(CUSTOM+DMACONR).l
+	bne.s	.q
+	lea	(CUSTOM).l,a6			;idle: the blitter's own registers
+	move.w	#0,$074(a6)			;BLTADAT
+	rts
+.q
+;	An entry whatever the blitter does (a show marker).
+rd_bq_allocq
 	move.l	d0,-(sp)
 rd_spin_full
 .full	move.w	(rd_bqtail).l,d0
@@ -723,8 +745,11 @@ rd_spin_full
 	move.l	(sp)+,d0
 	rts
 
-;	The entry from rd_bq_alloc is complete: queue it, and start it if the blitter is idle.
+;	The entry from rd_bq_alloc is complete: queue it, and start it if the blitter is idle (a
+;	blit written straight into the blitter has started already).
 rd_bq_go
+	cmpa.l	#CUSTOM,a6
+	beq.s	.d
 	move	sr,-(sp)
 	ori	#$0700,sr
 	movem.l	d0/a0-a1,-(sp)
@@ -734,15 +759,24 @@ rd_bq_go
 	move.w	d0,(rd_bqtail).l
 	tst.b	(rd_bqbusy).l
 	bne	.x
-	; idle: a blit started directly may still run; its interrupt is not one of ours
+	; the queue was idle: a blit started directly may still run. Its end starts the queue
+	; (rd_bq_int), or it has ended and the queue starts now.
+	st	(rd_bqbusy).l
+	bsr	rd_bq_inton
 	btst	#6,(CUSTOM+DMACONR).l
-.w	btst	#6,(CUSTOM+DMACONR).l
-	bne	.w
-	move.w	#$0040,(CUSTOM+INTREQ).l
+	bne	.x
 	bsr	rd_bq_start
 .x	movem.l	(sp)+,d0/a0-a1
 	move	(sp)+,sr
-	rts
+.d	rts
+
+;	The blitter's interrupt on (the queue runs). Interrupts off.
+rd_bq_inton
+	tst.b	(rd_bqint).l
+	bne.s	.x
+	st	(rd_bqint).l
+	move.w	#$8040,(CUSTOM+INTENA).l
+.x	rts
 
 ;	Start the next blit of the queue (interrupts off); show markers on the way (rd_show: BLTSIZH
 ;	0) are carried out: the copper list set, its buffer's rd_shownvb noted. rd_bqbusy: a blit of
@@ -761,7 +795,10 @@ rd_bq_start
 	andi.w	#BQN-1,d0
 	move.w	d0,(rd_bqhead).l
 	st	(rd_bqbusy).l
-	lea	(CUSTOM+$040).l,a1
+	tst.b	(rd_bqint).l
+	bne.s	.ion
+	bsr	rd_bq_inton
+.ion	lea	(CUSTOM+$040).l,a1
 	move.l	(a0)+,(a1)+			;BLTCON0, BLTCON1
 	move.l	(a0)+,(a1)+			;BLTAFWM, BLTALWM
 	move.l	(a0)+,(a1)+			;BLTCPT
@@ -785,6 +822,8 @@ rd_bq_start
 	st	(rd_bqhold).l
 	rts
 .idle	sf	(rd_bqbusy).l
+	sf	(rd_bqint).l			;(blits started directly: no interrupt)
+	move.w	#$0040,(CUSTOM+INTENA).l
 	rts
 .adv	move.w	(rd_bqhead).l,d0
 	addq.w	#1,d0
@@ -873,6 +912,8 @@ rd_bq_int
 	bne.s	.nbl				;(held: no blit of ours ran)
 	tst.b	(rd_bqbusy).l
 	beq.s	.nbl
+	btst	#6,(CUSTOM+DMACONR).l		;(the end of a blit started directly, its request
+	bne.s	.nbl				;left over: ours still runs)
 	bsr	rd_bq_start
 .nbl	btst	#5,1(sp)
 	beq.s	.x
@@ -1498,9 +1539,13 @@ rd_restore
 	rts
 
 ;	Note the rectangle d0 (x), d1 (y), d2 (w), d3 (h) on the screen as drawn over in the back
-;	buffer's dirty map. Keeps everything.
+;	buffer's dirty map. Keeps everything (rd_mark_u: uses d0-d3/a0).
 rd_mark
 	movem.l	d0-d3/a0,-(sp)
+	bsr.s	rd_mark_u
+	movem.l	(sp)+,d0-d3/a0
+	rts
+rd_mark_u
 	tst.w	d2
 	ble.s	.x
 	tst.w	d3
@@ -1537,8 +1582,7 @@ rd_mark
 .r	bfset	(a0){d0:d2}
 	addq.l	#4,a0
 	dbf	d3,.r
-.x	movem.l	(sp)+,d0-d3/a0
-	rts
+.x	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	Copy plane B to the back buffer at its scroll position (blitter). The bitmap wraps, so up
@@ -1857,9 +1901,13 @@ rd_put8
 	rts
 
 ;	Mark the screen cells of the rectangle d0 (x), d1 (y), d2 (w), d3 (h) as covered by
-;	something of low priority. Keeps everything.
+;	something of low priority. Keeps everything (rd_cover_u: uses d0-d3/a0).
 rd_cover_rect
-	movem.l	d0-d6/a0,-(sp)
+	movem.l	d0-d3/a0,-(sp)
+	bsr.s	rd_cover_u
+	movem.l	(sp)+,d0-d3/a0
+	rts
+rd_cover_u
 	add.w	d0,d2
 	subq.w	#1,d2				;x1
 	add.w	d1,d3
@@ -1894,16 +1942,16 @@ rd_cover_rect
 	bgt.s	.wide
 	bfset	(a0){d0:d2}			;(a width of 32 is coded as 0)
 	bra.s	.n
-.wide	move.w	d2,d4
-	subi.w	#32,d4
-	moveq	#32,d5
-	add.l	d0,d5
-	bfset	(a0){d0:0}
-	bfset	(a0){d5:d4}
+.wide	bfset	(a0){d0:0}
+	moveq	#32,d1
+	add.l	d1,d0
+	sub.w	d1,d2
+	bfset	(a0){d0:d2}
+	sub.l	d1,d0
+	add.w	d1,d2
 .n	addq.l	#8,a0
 	dbf	d3,.r
-.x	movem.l	(sp)+,d0-d6/a0
-	rts
+.x	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	Plane A and the window. rd_buildA lists their visible non-empty cells (screen x, y, entry);
@@ -3208,11 +3256,13 @@ rd_sprite_blit
 	sub.w	(rd_bp0).l,d2
 	addq.w	#1,d2
 	move.w	d5,d3
-	bsr	rd_mark
 	tst.w	(rd_pass).l
-	bne.s	.nc
-	bsr	rd_cover_rect
-.nc	; words: from the first pixel's to the one the last pixel is shifted into (the bits a row
+	bne.s	.mk
+	movem.l	d0-d3,-(sp)
+	bsr	rd_cover_u
+	movem.l	(sp)+,d0-d3
+.mk	bsr	rd_mark_u
+	; words: from the first pixel's to the one the last pixel is shifted into (the bits a row
 	; shifts into the next are past the last pixel: clear in the mask)
 	move.w	(rd_colx).l,d0
 	add.w	(rd_xorg).l,d0			;buffer x of the image's pixel 0
@@ -3246,12 +3296,19 @@ rd_sprite_blit
 	move.w	d3,(a0)
 	movem.l	(sp)+,d0/a0
 	ENDC
-	move.w	(rd_wb).l,d4			;bytes a plane row of the image
-	move.w	d6,d7
-	mulu.w	d4,d7
-	mulu.w	#NPLANES,d7			;its first line
-	adda.l	d7,a2
-	adda.l	d7,a3
+	move.w	(rd_wb).l,d4			;bytes a plane row of the image: 4 or 6
+	move.w	d6,d7				;its first line: * 24 or * 36
+	cmpi.w	#4,d4
+	bne.s	.w6
+	add.w	d7,d7
+	add.w	d6,d7
+	lsl.w	#3,d7
+	bra.s	.wl
+.w6	lsl.w	#3,d7
+	add.w	d6,d7
+	lsl.w	#2,d7
+.wl	adda.w	d7,a2
+	adda.w	d7,a3
 	lea	(a2,d2.w*2),a2
 	lea	(a3,d2.w*2),a3
 	bsr	rd_bq_alloc
@@ -3268,8 +3325,8 @@ rd_sprite_blit
 	movea.l	(rd_back).l,a0
 	move.w	(rd_sy).l,d1
 	add.w	d6,d1
-	mulu.w	#SROW,d1
-	adda.l	d1,a0
+	lea	(rd_rowoff).l,a1
+	adda.l	(a1,d1.w*4),a0
 	adda.w	d0,a0
 	move.l	a0,$048(a6)			;BLTCPT
 	move.l	a0,$054(a6)			;BLTDPT
@@ -3281,7 +3338,10 @@ rd_sprite_blit
 	sub.w	d3,d0
 	move.w	d0,$060(a6)			;BLTCMOD
 	move.w	d0,$066(a6)			;BLTDMOD
-	mulu.w	#NPLANES,d5
+	move.w	d5,d4				;lines * 6 planes
+	add.w	d4,d4
+	add.w	d4,d5
+	add.w	d5,d5
 	move.w	d5,$05C(a6)			;BLTSIZV
 	move.w	d3,d4
 	lsr.w	#1,d4
@@ -3300,9 +3360,9 @@ rd_sprite_blit
 ;	image it had (rd_scmemo): the same sprite there in the next frame, none of its tiles
 ;	changed and the image still in the ring, takes it without the table.
 
-;	a2 = the image, a3 = the mask of the sprite rd_sat, rd_scw, rd_sch (rd_wb set).
+;	a2 = the image, a3 = the mask of the sprite rd_sat, rd_scw, rd_sch (rd_wb set). Uses d0-d3,
+;	d7, a1.
 rd_sc_get
-	movem.l	d0-d7/a0-a1/a4,-(sp)
 	moveq	#0,d0
 	move.w	(rd_sat).l,d0
 	andi.w	#$7FFF,d0			;tile, flips, palette (not the priority)
@@ -3350,10 +3410,11 @@ rd_sc_get
 	move.l	(rd_count).l,4(a1)
 	move.l	12(a1),d1			;(the oldest image used in this frame)
 	cmp.l	(rd_scmin).l,d1
-	bge	.x
+	bge	.xm
 	move.l	d1,(rd_scmin).l
-	bra	.x
+.xm	rts
 .nomemo
+	movem.l	d4-d6/a0/a4,-(sp)
 	; its tiles hold data a DMA sent from consecutive addresses of the program (vdp_tsrc):
 	; then the key is that address (and size, flips, palette: d5), so a frame of animation
 	; sent again, or the same frame on another player, is found whatever its tiles
@@ -3496,7 +3557,7 @@ rd_sc_get
 	cmp.l	(rd_scmin).l,d1
 	bge.s	.x
 	move.l	d1,(rd_scmin).l
-.x	movem.l	(sp)+,d0-d7/a0-a1/a4
+.x	movem.l	(sp)+,d4-d6/a0/a4
 	rts
 
 ;	The box of what the image a2 (d7 bytes, its mask after it) shows into its cache entry a4:
@@ -5457,7 +5518,7 @@ rd_show
 	move.w	(rd_bufi).l,d1
 	lea	(rd_shownvb).l,a1
 	move.l	#$7FFFFFFF,(a1,d1.w*4)		;(not on the screen yet)
-	bsr	rd_bq_alloc
+	bsr	rd_bq_allocq
 	move.l	(rd_backcop).l,$048(a6)		;the copper list
 	move.w	d1,$04C(a6)			;the buffer
 	clr.w	$05E(a6)			;(a marker, not a blit)
@@ -5514,6 +5575,7 @@ rd_bqhead	ds.w	1
 rd_bqtail	ds.w	1
 rd_bqbusy	ds.b	1
 rd_bqhold	ds.b	1			;the queue waits at a show for a vertical blank
+rd_bqint	ds.b	1			;the blitter's interrupt is on
 	even
 rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
 rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)

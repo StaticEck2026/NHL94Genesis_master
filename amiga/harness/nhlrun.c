@@ -146,15 +146,32 @@ static void blit_exec(void);
    when the CPU would wait (the renderer for a vertical blank, the blitter or room in its
    queue; the renderer giving way; the game waiting with nothing to draw) the frame ends at
    once. Blits are done at once. The game's beam position reads are fixed (as
-   NHL_FIXEDHV) and the renderer is not given the game's time when the game runs long. */
+   NHL_FIXEDHV) and the renderer is not given the game's time when the game runs long.
+   NHL_DETBLIT=1: the blits take their time as without NHL_DETERM (the CPU's work and the
+   blitter's overlap), a wait of the renderer for the blitter ending the blit at once. */
 static long long det_free;              /* cycles that did not count */
 static int det_prev_free, det_last_cyc, det_spin, det_loops, det_since, det_why;
 static uint32_t det_endpc;
 static uint32_t det_prev_pc, det_ctx, det_heads[4], det_yield, det_idle;
 static long long det_calls;
+static int det_blit;                    /* NHL_DETBLIT: blits take their time (below) */
+static FILE *prof_f;                    /* NHL_PROF: a PC sample each 1000 cycles run: the */
+static long long prof_next;             /* instruction that ran then */
+static uint32_t prof_pc, prof_sr, prof_ret;
 static void det_hook(unsigned int pc)
 {
     det_calls++;
+    if (prof_f) {
+        long long now = cycles_total + m68k_cycles_run();
+        if (!prof_next) prof_next = now;
+        while (now >= prof_next) {
+            fprintf(prof_f, "%06x %04x %06x\n", prof_pc, prof_sr, prof_ret);
+            prof_next += 1000;
+        }
+        prof_pc = pc & 0xFFFFFF;
+        prof_sr = m68k_get_reg(NULL, M68K_REG_SR);
+        prof_ret = rd32(m68k_get_reg(NULL, M68K_REG_SP)) & 0xFFFFFF;
+    }
     if (!det) return;
     int c = m68k_cycles_run();
     if (det_prev_free) det_free += c - det_last_cyc;
@@ -168,6 +185,18 @@ static void det_hook(unsigned int pc)
        not a tick's switch) or the game's wait finds nothing to draw. The frame ends: so each
        wait loop of the game goes round once a frame, whatever the renderer did */
     if ((pc == det_yield && ipl < 6) || pc == det_idle) { det_spin = 1; det_why = pc == det_idle ? 3 : 2; det_endpc = pc; m68k_end_timeslice(); }
+    if (det_blit && rend && ipl != 6 && pc != det_heads[0] && blit_end_pending &&
+        (pc == det_heads[1] || pc == det_heads[2] || pc == det_heads[3]) &&
+        pc == det_prev_pc && det_since <= 8) {
+        /* the renderer waits for the blitter (the queue, a blit, room in the queue: the second
+           time round the loop): the blit is done now, the wait taking no time */
+        blit_busy_until = cycles_total + c;
+        m68k_end_timeslice();
+        det_loops = 0;
+        det_prev_pc = pc;
+        det_since = 0;
+        return;
+    }
     if (rend && ipl != 6 && (pc == det_heads[0] || pc == det_heads[1] || pc == det_heads[2] || pc == det_heads[3])) {
         /* the renderer at the top of a wait loop: the second time round without leaving it,
            it waits */
@@ -176,6 +205,18 @@ static void det_hook(unsigned int pc)
         det_prev_pc = pc;
         det_since = 0;
     }
+}
+/* An interrupt is taken: the instruction before it counted as it was; the level 3 interrupt's
+   own exception processing (the blit queue's, or the vertical blank's) does not count. */
+static int det_int_ack(int level)
+{
+    if (det) {
+        int c = m68k_cycles_run();
+        if (det_prev_free) det_free += c - det_last_cyc;
+        det_last_cyc = c;
+        if (level == 3) det_prev_free = 1;
+    }
+    return M68K_INT_ACK_AUTOVECTOR;
 }
 
 /* NHL_BLITKINDS: the blitter's time from frame 1700 by kind, the kind being which of the
@@ -233,7 +274,7 @@ static void do_blit(int h, int w)
     blit_busy_until = cycles_total + m68k_cycles_run() + 20 + (long long)h * w * (2 * n + 2);
     blit_end_pending = 1;
     if (getenv("NHL_EARLYBLIT")) blit_exec();
-    if (det) {                          /* (done at once) */
+    if (det && !det_blit) {             /* (done at once) */
         blit_exec();
         blit_busy_until = cycles_total + m68k_cycles_run();
         blit_end_pending = 0;
@@ -536,8 +577,6 @@ void m68k_write_memory_16(unsigned int a, unsigned int v) { if (is_io(a)) { if (
 void m68k_write_memory_32(unsigned int a, unsigned int v) { if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); }
 
 /* Run n cycles in slices, raising the blitter interrupt when a blit's time is up. */
-static FILE *prof_f;                    /* NHL_PROF: a PC sample each 1000 cycles run */
-static long long prof_next;
 static int run_cycles(int n)
 {
     int done = 0;
@@ -553,14 +592,6 @@ static int run_cycles(int n)
         det_last_cyc = c;
         cycles_total += c;
         done += c - (int)(det_free - f0);
-        if (prof_f) {
-            if (!prof_next) prof_next = cycles_total;
-            while (cycles_total >= prof_next) {
-                fprintf(prof_f, "%06x %04x %06x\n", m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR),
-                        rd32(m68k_get_reg(NULL, M68K_REG_SP)) & 0xFFFFFF);
-                prof_next += 1000;
-            }
-        }
         if (det_spin) {                 /* nothing to do until the vertical blank: the frame ends */
             det_spin = 0; det_loops = 0; done = n;
             if (getenv("NHL_DETLOG")) fprintf(stderr, "det frame %d: ends (%s) at %06x\n", frame,
@@ -734,6 +765,7 @@ int main(int argc, char **argv)
     dbg = rd32(code + 12);
     if (getenv("NHL_DETERM")) {
         det = 1;
+        det_blit = getenv("NHL_DETBLIT") != NULL;
         det_ctx = rd32(dbg + 128) & 0xFFFFFF;
         for (int k = 0; k < 4; k++) det_heads[k] = rd32(dbg + 132 + 4 * k) & 0xFFFFFF;
         det_yield = rd32(dbg + 148) & 0xFFFFFF;
@@ -747,6 +779,7 @@ int main(int argc, char **argv)
     wr32(4, entry);
     m68k_pulse_reset();
     m68k_set_instr_hook_callback(det_hook);         /* (after init, which clears it) */
+    m68k_set_int_ack_callback(det_int_ack);
     m68k_set_reg(M68K_REG_PC, entry);
     m68k_set_reg(M68K_REG_SR, 0x2700);
     m68k_set_reg(M68K_REG_SP, 0x1000);
@@ -816,7 +849,9 @@ int main(int argc, char **argv)
                                                while one before it waits, interrupts off; and the
                                                renderer not given the game's time when the game
                                                runs long, hal_starve: its length would count) */
-            for (int k = 0; k < 400 && (vb_irq || irq6_pending); k++) run_cycles(1000);
+            int k;
+            for (k = 0; k < 400 && (vb_irq || irq6_pending); k++) run_cycles(1000);
+            if (k && getenv("NHL_DETLOG")) fprintf(stderr, "det frame %d: %d k cycles more for the interrupts\n", frame, k);
             wr16(rd32(dbg + 124), 0);
         }
         irq6_pending = 1;
