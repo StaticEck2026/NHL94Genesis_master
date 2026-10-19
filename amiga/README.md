@@ -146,11 +146,18 @@ The hardware layer:
   layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
-  cell the game changes are made again (a clock digit), and a whole new set is built into the
-  second of two copies, so the frames queued go on showing the old one. If it does not fit
+  cell the game changes are made again (a clock digit). Each screen buffer shows its own copy
+  of the sprites, brought up to date when its frame is made, so a frame queued before a change
+  keeps the HUD of its own moment (a clock digit changes with the picture). If it does not fit
   (wider, more than 4 groups of 8 columns, 64 lines or 15 colours) it is blitted as before.
-  Sprites are blits of images kept in a cache in chip RAM (built once from
-  the tiles, used again until a tile of theirs changes); only the box of an image's pixels is
+  Sprites are blits of images kept in a cache in chip RAM, built once from the tiles. An image
+  whose tiles a DMA sent from consecutive addresses of the program (the players' animation
+  frames: the VDP layer notes each tile's source address) is found by that address, size,
+  flips and palette, so a frame sent again, or the same frame on another player of the team,
+  is not built again; other images are used until a tile of theirs changes. Changed tiles are
+  converted to planar form at once only if plane A, B or the window uses them; the others
+  (sprites' tiles) when an image of them is built, which the cache mostly spares. Only the box
+  of an image's pixels is
   blitted and marked for the restore (found when it is built: a fifth of the words of the
   whole sprites, and of what is restored), and plane B's high priority cells are
   blitted back over what was drawn under them (found by moving the screen cells something low

@@ -44,7 +44,19 @@ CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
 SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
 SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
-						;frame built, image, its box (rd_sc_box), 32 bytes
+						;frame built, image, its box (rd_sc_box), the key's
+						;second long (a data address key: rd_sc_get), 32 bytes
+
+TNEED	macro					;tile \1 (0-2047, a long) converted if it waits
+	bftst	(tc_pend).l{\1:1}
+	beq.s	.tn\@
+	movem.l	d0-d1,-(sp)
+	move.l	\1,d0
+	moveq	#1,d1
+	bsr	rd_tiles_need
+	movem.l	(sp)+,d0-d1
+.tn\@
+	endm
 
 	section	bss,bss
 	cnop	0,4
@@ -52,6 +64,7 @@ tp_pl		ds.l	4096*8			;tile cache planes: (tile | hflip<<11), 8 rows of p0p1p2p3
 tp_mk		ds.b	4096*8			;mask per row (bit set = pixel not transparent)
 tp_cls		ds.b	4096			;0 empty, 1 opaque, 2 mixed
 tc_dirty	ds.l	64			;one bit per tile: convert before use
+tc_pend		ds.l	64			;one bit per tile: changed, converted when a sprite needs it
 tc_chg		ds.l	64			;tiles converted this frame
 rd_ptab		ds.l	256			;byte (2 pixels) -> its bits in the 4 plane bytes
 rd_pftab	ds.l	256			;the same for the flipped tile
@@ -127,7 +140,7 @@ rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_fpsimg	ds.w	5*NPLANES*NBUF		;the frame rate digits (rd_fps), per buffer
 	cnop	0,8
-rd_hudsd	ds.b	2*8*HUDSPR			;the HUD sprites (rd_hud_build)
+rd_hudsd	ds.b	NBUF*8*HUDSPR		;the HUD sprites: each buffer's copy of rd_hudm
 rd_sprnull	ds.l	4			;a sprite that is not there
 rd_ovlmlo	ds.b	OSROW*SCRH		;its low priority mask, each row once per plane (so one blit
 rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low one)
@@ -241,9 +254,10 @@ rd_init
 ;	------------------------------------------------------------------------------------------
 ;	Tile cache.
 
-;	VRAM d1 (address), d0 (words) changed: convert the tiles it covers again.
+;	VRAM d1 (address), d0 (words) changed: convert the tiles it covers again (and they no
+;	longer hold the data a DMA sent, vdp_tsrc).
 hal_vdp_dirty
-	movem.l	d0-d2/a0,-(sp)
+	movem.l	d0-d2/a0-a1,-(sp)
 	addq.l	#1,(hal_vdp_gen).l
 	andi.l	#$FFFF,d0
 	beq	.x
@@ -257,12 +271,14 @@ hal_vdp_dirty
 	bls	.ok
 	move.l	#2047,d0
 .ok	lea	(tc_dirty).l,a0
+	lea	(vdp_tsrc).l,a1
 .loop	cmp.l	d0,d1
 	bhi	.x
 	bfset	(a0){d1:1}
+	clr.l	(a1,d1.l*4)
 	addq.l	#1,d1
 	bra	.loop
-.x	movem.l	(sp)+,d0-d2/a0
+.x	movem.l	(sp)+,d0-d2/a0-a1
 	rts
 
 hal_vdp_dirty_all
@@ -273,6 +289,10 @@ rd_dirty_all
 	moveq	#63,d0
 .c	move.l	#-1,(a0)+
 	dbf	d0,.c
+	lea	(vdp_tsrc).l,a0
+	move.w	#2048-1,d0
+.s	clr.l	(a0)+
+	dbf	d0,.s
 	movem.l	(sp)+,d0/a0
 	rts
 
@@ -296,6 +316,17 @@ rd_decode_dirty
 	move.l	d7,d0
 	addi.l	#31,d0
 	sub.l	d5,d0
+	; a tile of plane A, B or the window: converted now; another (a sprite's): when a sprite
+	; image of it is made (rd_tiles_need), which the image cache mostly spares
+	bftst	(rd_bused).l{d0:1}
+	bne.s	.now
+	bftst	(rd_aused).l{d0:1}
+	bne.s	.now
+	bfset	(tc_pend).l{d0:1}
+	lea	(rd_tchg).l,a0
+	move.l	(rd_count).l,(a0,d0.l*4)	;(the sprite image cache sees it)
+	bra.s	.nb
+.now	bfclr	(tc_pend).l{d0:1}
 	movem.l	d3/a3,-(sp)
 	bsr	rd_decode_tile
 	movem.l	(sp)+,d3/a3
@@ -305,6 +336,26 @@ rd_decode_dirty
 	cmpi.l	#2048,d7
 	bne	.long
 	move.l	d3,d0
+	rts
+
+;	Tiles d0 (0-2047) to d0 + d1 - 1 (wrapping round): those waiting (tc_pend) converted. Keeps
+;	everything.
+rd_tiles_need
+	movem.l	d0-d7/a0-a6,-(sp)
+	lea	(tc_pend).l,a4
+	move.l	d0,d6
+	move.l	d1,d7
+	subq.w	#1,d7
+	bmi.s	.x
+.t	andi.l	#$7FF,d6
+	bftst	(a4){d6:1}
+	beq.s	.n
+	bfclr	(a4){d6:1}
+	move.l	d6,d0
+	bsr	rd_decode_tile
+.n	addq.l	#1,d6
+	dbf	d7,.t
+.x	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
 ;	Convert tile d0. Uses d0-d4/a0-a3/a5/a6.
@@ -1075,6 +1126,7 @@ rd_cellB
 	andi.l	#$7FF,d1
 	lea	(rd_bused).l,a1
 	bfset	(a1){d1:1}
+	TNEED	d1
 	move.w	(rd_cw).l,d1			;bytes per plane row
 	move.w	d1,d2
 	mulu.w	#6,d2				;bytes per pixel row
@@ -1732,11 +1784,13 @@ rd_cover_rect
 ;	cost the blitter a lot. When the screen is 256 wide (H32: the display leaves the sprites' DMA
 ;	slots free) and the high priority overlay fits, it is shown by up to 4 attached pairs of 64
 ;	pixel wide sprites instead (at most 4 groups of 8 columns, HUDH lines, 15 colours) and not
-;	blitted. Built again (into the other of two copies) when the overlay is redrawn; a cell the
-;	game changes (a clock digit) only has its bytes made again (rd_hud_cell). rd_hudon: in use.
+;	blitted. Built again when the overlay is redrawn; a cell the game changes (a clock digit)
+;	only has its bytes made again (rd_hud_cell). Both in rd_hudm: each screen buffer shows a
+;	copy of it made with its frame (rd_show). rd_hudon: in use.
 rd_hud_off
 	clr.w	(rd_hudon).l
 	st	(rd_hudchg).l
+	addq.l	#1,(rd_hudgen).l
 	movem.l	d0/a0,-(sp)
 	lea	(rd_hudspt).l,a0
 	moveq	#7,d0
@@ -1745,7 +1799,7 @@ rd_hud_off
 	movem.l	(sp)+,d0/a0
 	rts
 
-;	All of it, into the set of sprite data not in use (the frames queued go on showing theirs).
+;	All of it, into rd_hudm.
 rd_hud_build
 	movem.l	d0-d7/a0-a6,-(sp)
 	IFD	STATS
@@ -1832,13 +1886,9 @@ rd_hud_build
 	clr.l	(a0)+
 	clr.l	(a0)+
 	clr.w	(rd_hudnc).l
-	; the other set of sprite data: clear
-	eori.w	#1,(rd_hudset).l
-	lea	(rd_hudsd).l,a0
-	tst.w	(rd_hudset).l
-	beq.s	.s0
-	lea	8*HUDSPR(a0),a0
-.s0	move.l	a0,(rd_hudbase).l
+	; the sprite data: clear
+	lea	(rd_hudm).l,a0
+	move.l	a0,(rd_hudbase).l
 	move.w	#8*HUDSPR/4-1,d0
 .cs	clr.l	(a0)+
 	dbf	d0,.cs
@@ -1935,6 +1985,7 @@ rd_hud_build
 	lea	HUDSPR(a0),a0
 	dbf	d0,.sp
 	move.w	#1,(rd_hudon).l
+	addq.l	#1,(rd_hudgen).l
 	bra.s	.x
 .full	addq.l	#8,sp				;(more than 15 colours: blitted)
 	bsr	rd_hud_off
@@ -1966,7 +2017,8 @@ rd_hud_cell
 .ng	addq.w	#1,d5
 	dbf	d7,.fg
 	bra	.full
-.fd	lea	(rd_hudspt).l,a0
+.fd	addq.l	#1,(rd_hudgen).l
+	lea	(rd_hudspt).l,a0
 	movea.l	(a0,d5.w*8),a3			;even sprite
 	movea.l	4(a0,d5.w*8),a4			;odd
 	move.w	d2,d6				;line
@@ -2485,6 +2537,7 @@ rd_ovl_setcell
 	andi.l	#$7FF,d3
 	lea	(rd_aused).l,a3
 	bfset	(a3){d3:1}
+	TNEED	d3
 	move.w	d1,d3
 	addi.w	#4*8,d3
 	lsr.w	#3,d3				;byte
@@ -2837,6 +2890,7 @@ rd_addcell
 	move.w	d0,d3
 	andi.l	#$7FF,d3
 	bfset	(a3){d3:1}
+	TNEED	d3
 	move.w	d0,d3
 	andi.w	#$FFF,d3
 	lea	(tp_cls).l,a0
@@ -3123,7 +3177,31 @@ rd_sc_get
 	swap	d1
 	clr.w	d1
 	or.l	d1,d0				;key: size << 16 | attributes
-	move.l	d0,d2
+	; its tiles hold data a DMA sent from consecutive addresses of the program (vdp_tsrc):
+	; then the key is that address (and size, flips, palette: d5), so a frame of animation
+	; sent again, or the same frame on another player, is found whatever its tiles
+	moveq	#0,d5				;(0: the key is the tiles)
+	move.w	d0,d1
+	andi.w	#$7FF,d1
+	lea	(vdp_tsrc).l,a0
+	move.l	(a0,d1.w*4),d3
+	beq.s	.tkey
+	move.l	d3,d4
+	move.w	(rd_scw).l,d2
+	mulu.w	(rd_sch).l,d2
+	subq.w	#1,d2
+.cs	andi.w	#$7FF,d1
+	cmp.l	(a0,d1.w*4),d4
+	bne.s	.tkey
+	addq.w	#1,d1
+	addi.l	#32,d4
+	dbf	d2,.cs
+	move.l	d0,d5
+	andi.l	#$000F7800,d5			;size, palette, flips
+	addq.l	#1,d5
+	move.l	d3,d0
+.tkey	move.l	d0,d2
+	eor.l	d5,d2
 	mulu.l	#$9E3779B1,d2
 	swap	d2
 	andi.w	#SCSLOTS-1,d2
@@ -3136,10 +3214,14 @@ rd_sc_get
 	mulu.w	#NPLANES*8,d7			;bytes of the image (and of the mask)
 	cmp.l	(a4),d0
 	bne.s	.bkey
+	cmp.l	24(a4),d5
+	bne.s	.bkey
 	move.l	(rd_scpos).l,d1
 	sub.l	4(a4),d1			;ring written since
 	cmpi.l	#SCARENA,d1
 	bhi.s	.bring
+	tst.l	d5
+	bne.s	.found				;(its data cannot have changed)
 	move.l	8(a4),d3			;built in this frame
 	moveq	#0,d1
 	move.w	d0,d1				;(the tile in bits 10-0)
@@ -3152,7 +3234,7 @@ rd_sc_get
 	blo.s	.btile				;a tile converted since
 	addq.w	#1,d1
 	dbf	d2,.tc
-	movea.l	12(a4),a2			;found
+.found	movea.l	12(a4),a2			;found
 	bra	.mask
 .bkey
 	IFD	STATS
@@ -3196,6 +3278,7 @@ rd_sc_get
 	move.l	#$7FFFFFFF,(rd_scmin).l
 	move.l	#$7FFFFFFF,(rd_scmin+4).l
 .free	move.l	d0,(a4)
+	move.l	d5,24(a4)
 	move.l	d2,4(a4)
 	move.l	(rd_count).l,8(a4)
 	move.l	d2,d3
@@ -3271,10 +3354,23 @@ rd_sc_box
 .x	movem.l	(sp)+,d0-d6/a0
 	rts
 
+;	The tiles of sprite rd_sat (rd_scw x rd_sch) converted, those waiting. Keeps everything.
+rd_spr_tiles
+	movem.l	d0-d1,-(sp)
+	moveq	#0,d0
+	move.w	(rd_sat).l,d0
+	andi.w	#$7FF,d0
+	move.w	(rd_scw).l,d1
+	mulu.w	(rd_sch).l,d1
+	bsr	rd_tiles_need
+	movem.l	(sp)+,d0-d1
+	rts
+
 ;	Draw the sprite described by rd_sx..rd_r1 straight into the back buffer: for each line the
 ;	tile rows of its columns are merged into one field per plane (up to 32 pixels) and written
 ;	with bitfield instructions under the mask.
 rd_spr_cpu
+	bsr	rd_spr_tiles
 	bsr	rd_waitblit			;(the CPU draws into the back buffer)
 	move.w	(rd_colx).l,d0
 	add.w	(rd_xorg).l,d0
@@ -3624,6 +3720,7 @@ rd_spr_build
 	ifd	STATS
 	addq.l	#1,(rd_dbg_key).l		;(statistics: sprites built)
 	endif
+	bsr	rd_spr_tiles
 	; clear both: lines * 6 * wb bytes each
 	move.w	(rd_r1).l,d0
 	sub.w	(rd_r0).l,d0
@@ -4925,12 +5022,39 @@ rd_show
 	addq.w	#2,d1
 	addi.l	#SBPR,d0
 	dbf	d2,.bp
-	; the sprites: the HUD's (rd_hud_build) or none
-	lea	(rd_hudspt).l,a1
+	; the sprites: the HUD's (rd_hud_build) or none. This buffer shows its own copy of them,
+	; brought up to date from rd_hudm now: the frames queued before it keep the HUD of their
+	; moment (a clock digit changes with the rest of the picture)
+	tst.w	(rd_hudon).l
+	beq.s	.hs0
+	movem.l	d3/a2-a3,-(sp)
+	move.w	(rd_bufi).l,d0
+	move.w	d0,d3
+	mulu.w	#8*HUDSPR,d3
+	add.l	#rd_hudsd,d3
+	move.l	d3,(rd_hudcopy).l
+	lea	(rd_hudbgen).l,a1
+	move.l	(rd_hudgen).l,d2
+	cmp.l	(a1,d0.w*4),d2
+	beq.s	.hk
+	move.l	d2,(a1,d0.w*4)
+	lea	(rd_hudm).l,a2			;the sprites in use
+	movea.l	d3,a3
+	move.w	(rd_hudgn).l,d2
+	mulu.w	#2*HUDSPR/4,d2
+	subq.w	#1,d2
+.hcp	move.l	(a2)+,(a3)+
+	dbf	d2,.hcp
+.hk	movem.l	(sp)+,d3/a2-a3
+.hs0	lea	(rd_hudspt).l,a1
 	move.w	#$120,d1
 	moveq	#7,d2
 .sp	move.l	(a1)+,d0
-	move.w	d1,(a0)+
+	cmpi.l	#rd_sprnull,d0
+	beq.s	.sn
+	sub.l	#rd_hudm,d0
+	add.l	(rd_hudcopy).l,d0
+.sn	move.w	d1,(a0)+
 	swap	d0
 	move.w	d0,(a0)+
 	addq.w	#2,d1
@@ -5028,7 +5152,10 @@ rd_show
 
 	section	bss,bss
 rd_tline	ds.w	1
-rd_hudspt	ds.l	8			;the sprites' data (rd_sprnull: none)
+rd_hudspt	ds.l	8			;the sprites' data in rd_hudm (rd_sprnull: none)
+rd_hudgen	ds.l	1			;(changed when it changes)
+rd_hudbgen	ds.l	NBUF			;rd_hudgen when each buffer's copy was made
+rd_hudcopy	ds.l	1			;(rd_show: the back buffer's copy)
 rd_hudon	ds.w	1
 rd_hudchg	ds.w	1			;(the overlay changed: rd_hud_build)
 rd_hudw		ds.w	1			;(the screen width it was built for)
@@ -5037,8 +5164,9 @@ rd_hudn		ds.w	1			;lines
 rd_hudgn	ds.w	1			;groups
 rd_hudg		ds.w	4			;their first overlay row bytes
 rd_hudnc	ds.w	1			;colours used
-rd_hudset	ds.w	1			;the set of sprite data in use (of 2)
-rd_hudbase	ds.l	1			;its address
+rd_hudbase	ds.l	1			;(rd_hudm)
+		cnop	0,4
+rd_hudm		ds.b	8*HUDSPR		;the HUD sprites (rd_hud_build, rd_hud_cell)
 rd_hudcols	ds.b	48			;(columns used)
 rd_hudcm	ds.b	64			;overlay colour -> sprite colour (0: none yet)
 rd_hudmap	ds.b	16			;sprite colour -> overlay colour

@@ -18,6 +18,8 @@ vdp_pending	ds.w	1			;first word of a split address command waiting
 vdp_first	ds.w	1
 vdp_cramgen	ds.l	1			;bumped on every CRAM change the renderer must pick up
 vdp_wmap	ds.l	64			;per 32 byte block of VRAM: a data port write began there
+vdp_tsrc	ds.l	2048			;per tile: the address in the program its data was sent
+						;from by a DMA, 0 if it was written otherwise
 hal_vdp_ptr	ds.l	1			;address the next data port access uses
 hal_ctl_tmp	ds.l	1			;control word / long being written
 
@@ -147,6 +149,7 @@ vdp_command
 
 ;	DoDMA: copy d0 words from a0 to VRAM address d1. Keeps every register.
 hal_vdp_dma
+	bsr	hal_vdp_tsrc
 	movem.l	d0-d4/a0-a2,-(sp)
 	addq.l	#1,(hal_vdp_gen).l
 	lea	(vdp_vram).l,a1
@@ -190,6 +193,51 @@ hal_vdp_dma
 	bhi	.m
 	bfset	(a2){d4:1}
 .m	rts
+
+;	A DMA of d0 words from a0 to VRAM address d1: each tile it fills whole from the program
+;	(constant data: hal_header to game_end) gets its data's address in vdp_tsrc, the others it
+;	writes 0 (the sprite image cache finds images by that address, rd_sc_get). Keeps all.
+hal_vdp_tsrc
+	movem.l	d0-d5/a1,-(sp)
+	andi.l	#$FFFF,d0
+	beq	.x
+	andi.l	#$FFFF,d1
+	add.l	d0,d0
+	move.l	d1,d2
+	add.l	d0,d2				;the end
+	moveq	#0,d5
+	cmpa.l	#hal_header,a0
+	blo.s	.k
+	cmpa.l	#game_end,a0
+	bhs.s	.k
+	moveq	#1,d5				;from the program
+.k	move.l	d1,d3
+	lsr.l	#5,d3				;first tile
+	lea	(vdp_tsrc).l,a1
+.t	cmpi.l	#2047,d3
+	bhi.s	.x
+	move.l	d3,d4
+	lsl.l	#5,d4				;its address
+	cmp.l	d2,d4
+	bhs.s	.x
+	tst.b	d5
+	beq.s	.z
+	cmp.l	d1,d4
+	blo.s	.z				;(begins before the DMA)
+	move.l	d4,d0
+	addi.l	#32,d0
+	cmp.l	d2,d0
+	bhi.s	.z				;(ends after it)
+	move.l	d4,d0
+	sub.l	d1,d0
+	add.l	a0,d0
+	move.l	d0,(a1,d3.l*4)
+	bra.s	.n
+.z	clr.l	(a1,d3.l*4)
+.n	addq.l	#1,d3
+	bra.s	.t
+.x	movem.l	(sp)+,d0-d5/a1
+	rts
 
 ;	DoDMA_nd2: VRAM to VRAM copy, d0 = bytes, d1 = destination, d2 = source.
 hal_vdp_copy
