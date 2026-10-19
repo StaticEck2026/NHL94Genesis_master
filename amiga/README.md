@@ -136,7 +136,11 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   its own: `amiga/tools/ramrel.py` lists every place that holds its address, and at start the
   game takes an aligned block (in fast RAM if there is some) and moves those addresses there.
 - Writes to the video chip ports go to the emulated VDP (`vdp.asm`): VRAM, CRAM and VSRAM in
-  memory, and DMA, fills and copies done by the CPU. Writes also mark which tiles changed.
+  memory, and DMA, fills and copies done by the CPU. Writes also mark which tiles changed. The
+  players' sprite tiles (`Spritetiles`) are native instead: converted to planar rows in place
+  at start, and a DMA from them copies nothing, it only notes where each tile's data is (the
+  renderer takes it from there). The test harness rebuilds those tiles from
+  `Extracted/NHL94/Graphics/Spritetiles.bin` for its reference renderer.
 - Z80 bus polling, pad port reads and wait loops are rewritten. A wait loop calls `hal_idle`,
   which runs the renderer while the game waits for its next frame.
 - vasm syntax: macros, local labels, `incbin` paths and other small differences.

@@ -112,6 +112,8 @@ rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	8*SCSLOTS		;sprite image cache (rd_sc_get)
 rd_sslot	ds.w	1			;rd_sc_get: the sprite's place in the list
 rd_rowoff	ds.l	SCRH			;line * SROW
+rd_sprnat	ds.b	1			;Spritetiles is planar (rd_init)
+	even
 rd_bl0		ds.w	1			;rd_sc_get: the image's first line with something in it,
 rd_bnl		ds.w	1			;lines from there (0: none),
 rd_bp0		ds.w	1			;first pixel and last pixel across
@@ -263,7 +265,36 @@ rd_init
 .sc	move.l	d0,(a0)
 	lea	32(a0),a0
 	dbf	d1,.sc
-	lea	(rd_rowoff).l,a0		;screen line -> offset in a buffer
+	; the players' sprite tiles (Spritetiles) to planar rows in place, as the tile cache holds
+	; them (tp_pl): DMAs from them only note where each tile's data is (vdp_tsrc, hal_vdp_dma)
+	; and the tile cache copies it from here (rd_decode_tile). Once.
+	tst.b	(rd_sprnat).l
+	bne.s	.sn
+	st	(rd_sprnat).l
+	lea	(Spritetiles).l,a0
+	move.l	#SPRTSIZE/4,d7
+	lea	(rd_ptab).l,a5
+	moveq	#0,d2
+.snr	move.l	(a0),d0
+	rol.l	#8,d0
+	move.b	d0,d2
+	move.l	(a5,d2.w*4),d1
+	lsl.l	#2,d1
+	rol.l	#8,d0
+	move.b	d0,d2
+	or.l	(a5,d2.w*4),d1
+	lsl.l	#2,d1
+	rol.l	#8,d0
+	move.b	d0,d2
+	or.l	(a5,d2.w*4),d1
+	lsl.l	#2,d1
+	rol.l	#8,d0
+	move.b	d0,d2
+	or.l	(a5,d2.w*4),d1
+	move.l	d1,(a0)+
+	subq.l	#1,d7
+	bne.s	.snr
+.sn	lea	(rd_rowoff).l,a0		;screen line -> offset in a buffer
 	moveq	#0,d0
 	move.w	#SCRH-1,d1
 .ro	move.l	d0,(a0)+
@@ -379,10 +410,16 @@ rd_tiles_need
 .x	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
-;	Convert tile d0. Uses d0-d4/a0-a3/a5/a6.
+;	Convert tile d0. Uses d0-d4/a0-a3/a5/a6. A tile a DMA sent from the players' sprite tiles
+;	(Spritetiles, planar already: rd_init) is copied from there; VRAM does not hold it.
 rd_decode_tile
 	lea	(rd_tchg).l,a0
 	move.l	(rd_count).l,(a0,d0.l*4)	;(the sprite image cache sees it)
+	lea	(vdp_tsrc).l,a0
+	move.l	(a0,d0.l*4),d1
+	subi.l	#Spritetiles,d1
+	cmpi.l	#SPRTSIZE,d1
+	blo	.nat
 	lea	(vdp_vram).l,a0
 	move.l	d0,d1
 	lsl.l	#5,d1
@@ -460,7 +497,7 @@ rd_decode_tile
 	move.l	d1,(a2)+
 	dbf	d3,.row
 	; class: all rows $FF -> opaque, all 0 -> empty
-	moveq	#2,d0
+.class	moveq	#2,d0
 	tst.b	d4
 	bne	.ne
 	moveq	#0,d0
@@ -471,6 +508,64 @@ rd_decode_tile
 .cl	move.b	d0,(a6)
 	move.b	d0,$800(a6)
 	rts
+.nat	; a native tile: its rows are planar already; the flipped planes are each byte's bits
+	; reversed, the mask the planes ORed
+	lea	(Spritetiles).l,a0
+	adda.l	d1,a0				;its rows
+	move.l	d0,d1
+	lsl.l	#5,d1
+	lea	(tp_pl).l,a1
+	adda.l	d1,a1				;normal planes
+	lea	$800*32(a1),a2			;flipped
+	lea	(tp_mk).l,a3
+	move.l	d0,d1
+	lsl.l	#3,d1
+	adda.l	d1,a3				;masks
+	lea	(tp_cls).l,a6
+	adda.l	d0,a6
+	lea	(rd_rev8,pc),a5
+	moveq	#0,d4				;and of masks : or of masks
+	move.w	#$FF00,d4
+	moveq	#0,d2
+	moveq	#7,d3
+.nr	move.l	(a0)+,d0
+	move.l	d0,(a1)+
+	rol.l	#8,d0				;(p0)
+	move.b	d0,d2
+	move.b	(a5,d2.w),d1
+	rol.l	#8,d0				;(p1)
+	move.b	d0,d2
+	lsl.l	#8,d1
+	move.b	(a5,d2.w),d1
+	rol.l	#8,d0				;(p2)
+	move.b	d0,d2
+	lsl.l	#8,d1
+	move.b	(a5,d2.w),d1
+	rol.l	#8,d0				;(p3; d0 is the row again)
+	move.b	d0,d2
+	lsl.l	#8,d1
+	move.b	(a5,d2.w),d1
+	move.l	d1,(a2)+
+	move.l	d0,d2				;the mask
+	swap	d2
+	or.w	d0,d2
+	move.w	d2,d1
+	lsr.w	#8,d1
+	or.b	d2,d1
+	move.b	d1,(a3)
+	or.b	d1,d4
+	move.w	d4,d2
+	lsr.w	#8,d2
+	and.b	d1,d2
+	lsl.w	#8,d2
+	move.b	d4,d2
+	move.w	d2,d4
+	moveq	#0,d2
+	move.b	d1,d2
+	move.b	(a5,d2.w),$800*8(a3)		;(flipped)
+	addq.l	#1,a3
+	dbf	d3,.nr
+	bra	.class
 
 rd_rev8
 	dc.b	$00,$80,$40,$C0,$20,$A0,$60,$E0,$10,$90,$50,$D0,$30,$B0,$70,$F0
@@ -5750,7 +5845,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	20			;(statistics: see nhlrun)
+rd_dbg_x	ds.l	24			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max

@@ -3,6 +3,8 @@
 ;	screen from them each frame.
 
 VRAMSIZE	equ	$10000
+SPRTSIZE	equ	frameSprData-Spritetiles	;the players' sprite tiles: planar (rd_init), not sent
+						;to VRAM (hal_vdp_dma)
 VSLACK		equ	$400			;writes that run past the end of a memory land here
 
 	section	bss,bss
@@ -147,9 +149,32 @@ vdp_command
 	movem.l	(sp)+,d2/a0
 	rts
 
-;	DoDMA: copy d0 words from a0 to VRAM address d1. Keeps every register.
+;	DoDMA: copy d0 words from a0 to VRAM address d1. Keeps every register. From the players'
+;	sprite tiles (planar, rd_init) whole tiles are not copied: vdp_tsrc says where they are
+;	(hal_vdp_tsrc marks those whose source changed).
 hal_vdp_dma
 	bsr	hal_vdp_tsrc
+	cmpa.l	#Spritetiles,a0
+	blo.s	.cp
+	cmpa.l	#Spritetiles+SPRTSIZE,a0
+	bhs.s	.cp
+	move.w	d1,-(sp)
+	andi.w	#31,(sp)+			;(whole tiles)
+	bne.s	.cp
+	addq.l	#1,(hal_vdp_gen).l
+	rts
+.cp
+	IFD	STATS
+	movem.l	d0,-(sp)			;(statistics: words sent, those of the sprite tiles)
+	andi.l	#$FFFF,d0
+	add.l	d0,(rd_dbg_x+76).l
+	cmpa.l	#Spritetiles,a0
+	blo.s	.st
+	cmpa.l	#Spritetiles+264352,a0
+	bhs.s	.st
+	add.l	d0,(rd_dbg_x+80).l
+.st	movem.l	(sp)+,d0
+	ENDC
 	movem.l	d0-d4/a0-a2,-(sp)
 	addq.l	#1,(hal_vdp_gen).l
 	lea	(vdp_vram).l,a1
@@ -196,9 +221,12 @@ hal_vdp_dma
 
 ;	A DMA of d0 words from a0 to VRAM address d1: each tile it fills whole from the program
 ;	(constant data: hal_header to game_end) gets its data's address in vdp_tsrc, the others it
-;	writes 0 (the sprite image cache finds images by that address, rd_sc_get). Keeps all.
+;	writes 0 (the sprite image cache finds images by that address, rd_sc_get). A tile whose
+;	source was or becomes a native one (Spritetiles) and changes is marked to convert (its data
+;	is not compared in VRAM). Keeps all.
 hal_vdp_tsrc
-	movem.l	d0-d5/a1,-(sp)
+	movem.l	d0-d6/a1-a2,-(sp)
+	lea	(tc_dirty).l,a2
 	andi.l	#$FFFF,d0
 	beq	.x
 	andi.l	#$FFFF,d1
@@ -231,12 +259,23 @@ hal_vdp_tsrc
 	move.l	d4,d0
 	sub.l	d1,d0
 	add.l	a0,d0
+	bra.s	.st
+.z	moveq	#0,d0
+.st	move.l	(a1,d3.l*4),d6			;the source it had
 	move.l	d0,(a1,d3.l*4)
-	bra.s	.n
-.z	clr.l	(a1,d3.l*4)
+	cmp.l	d0,d6
+	beq.s	.n
+	subi.l	#Spritetiles,d6			;a native one before, or now: converted again
+	cmpi.l	#SPRTSIZE,d6
+	blo.s	.mk
+	move.l	d0,d6
+	subi.l	#Spritetiles,d6
+	cmpi.l	#SPRTSIZE,d6
+	bhs.s	.n
+.mk	bfset	(a2){d3:1}
 .n	addq.l	#1,d3
 	bra.s	.t
-.x	movem.l	(sp)+,d0-d5/a1
+.x	movem.l	(sp)+,d0-d6/a1-a2
 	rts
 
 ;	DoDMA_nd2: VRAM to VRAM copy, d0 = bytes, d1 = destination, d2 = source.

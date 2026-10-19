@@ -158,9 +158,11 @@ static int det_blit;                    /* NHL_DETBLIT: blits take their time (b
 static FILE *prof_f;                    /* NHL_PROF: a PC sample each 1000 cycles run: the */
 static long long prof_next;             /* instruction that ran then */
 static uint32_t prof_pc, prof_sr, prof_ret;
+static uint32_t pcc_addr[8]; static long long pcc_n[8]; static int pcc_k; static int pcc_from;
 static void det_hook(unsigned int pc)
 {
     det_calls++;
+    for (int i = 0; i < pcc_k; i++) if ((pc & 0xFFFFFF) == pcc_addr[i] && frame >= pcc_from) pcc_n[i]++;
     if (prof_f) {
         long long now = cycles_total + m68k_cycles_run();
         if (!prof_next) prof_next = now;
@@ -260,6 +262,33 @@ static void blitkind_print(unsigned frames)
         fprintf(stderr, "  %-22s %5.1f%%  %7.0f cycles a frame drawn, %6.1f blits, %7.0f words\n", bk[i].key,
                 100.0 * bk[i].time / tot, (double)bk[i].time / frames, (double)bk[i].n / frames,
                 (double)bk[i].words / frames);
+}
+
+/* The reference renderer's VRAM: the game's, with the tiles a DMA sent from the players' sprite
+   tiles (planar in the program, not copied to VRAM: the debug block from +156) taken from the
+   original data (Extracted/NHL94/Graphics/Spritetiles.bin). */
+static uint8_t *ref_vram(uint32_t vram)
+{
+    static uint8_t v[0x10000], *orig; static long olen = -1;
+    memcpy(v, mem + (vram & 0xFFFFFF), sizeof v);
+    if (olen < 0) {
+        FILE *f = fopen("Extracted/NHL94/Graphics/Spritetiles.bin", "rb");
+        olen = 0;
+        if (f) {
+            fseek(f, 0, SEEK_END); olen = ftell(f); fseek(f, 0, SEEK_SET); orig = malloc(olen);
+            if (fread(orig, 1, olen, f) != (size_t)olen) olen = 0;
+            fclose(f);
+        } else
+            fprintf(stderr, "harness: no Spritetiles.bin: the reference sprites will be wrong\n");
+    }
+    uint32_t st = rd32(dbg + 156), sz = rd32(dbg + 160), ts = rd32(dbg + 164);
+    int np = 0;
+    for (int t = 0; t < 2048; t++) {
+        uint32_t s = rd32(ts + 4 * t) - st;
+        if (s < sz && (long)s + 32 <= olen) { memcpy(v + 32 * t, orig + s, 32); np++; }
+    }
+    if (getenv("NHL_REFLOG")) fprintf(stderr, "ref_vram: spritetiles %06x size %x tsrc %06x olen %ld: %d tiles\n", st, sz, ts, olen, np);
+    return v;
 }
 
 static void do_blit(int h, int w)
@@ -779,6 +808,11 @@ int main(int argc, char **argv)
     wr32(4, entry);
     m68k_pulse_reset();
     m68k_set_instr_hook_callback(det_hook);         /* (after init, which clears it) */
+    if (getenv("NHL_PCCOUNT")) {        /* NHL_PCCOUNT=from:addr,addr...: how often each runs from frame from */
+        char *q = getenv("NHL_PCCOUNT");
+        pcc_from = strtol(q, &q, 10);
+        while (*q && pcc_k < 8) { q++; pcc_addr[pcc_k++] = strtoul(q, &q, 16); }
+    }
     m68k_set_int_ack_callback(det_int_ack);
     m68k_set_reg(M68K_REG_PC, entry);
     m68k_set_reg(M68K_REG_SR, 0x2700);
@@ -869,7 +903,7 @@ int main(int argc, char **argv)
         if (shot) {
             char name[512];
             snprintf(name, sizeof name, "%s/shot_%05d.png", outdir, frame);
-            vdpref_png(name, mem + (vdpregs & 0xFFFFFF), mem + (vram & 0xFFFFFF), mem + (cram & 0xFFFFFF),
+            vdpref_png(name, mem + (vdpregs & 0xFFFFFF), ref_vram(vram), mem + (cram & 0xFFFFFF),
                        mem + (vsram & 0xFFFFFF));
             if (getenv("NHL_DIFF")) {
                 static uint8_t idx[320 * 240];
@@ -878,7 +912,7 @@ int main(int argc, char **argv)
                 vdpref_index = idx;
                 static uint8_t tmp[320 * 240 * 3];
                 int w, h;
-                vdpref_render(tmp, &w, &h, mem + (vdpregs & 0xFFFFFF), mem + (vram & 0xFFFFFF),
+                vdpref_render(tmp, &w, &h, mem + (vdpregs & 0xFFFFFF), ref_vram(vram),
                               mem + (cram & 0xFFFFFF), mem + (vsram & 0xFFFFFF));
                 vdpref_index = NULL;
                 uint32_t ch = rd32(dbg + 32);
@@ -938,6 +972,7 @@ int main(int argc, char **argv)
                 rd32(k + 56), rd32(k + 60));
         fprintf(stderr, "renderer: plane B restored: %u words, %u blits, %u groups of rows; HUD cells made again %u\n",
                 rd32(k + 68), rd32(k + 64), rd32(k + 84), rd32(k + 88));
+        fprintf(stderr, "renderer: DMA words %u, of them sprite tiles %u\n", rd32(k + 92), rd32(k + 96));
         fprintf(stderr, "renderer: sprite images built: not in the table %u, the ring came round %u, a tile converted %u\n",
                 rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
@@ -948,6 +983,7 @@ int main(int argc, char **argv)
         if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, map row %u, column %u\n",
                        v >> 16, (v >> 8) & 255, v & 255);
     }
+    for (int i = 0; i < pcc_k; i++) fprintf(stderr, "pc %06x ran %lld times\n", pcc_addr[i], pcc_n[i]);
     if (getenv("NHL_PEEK")) {           /* NHL_PEEK=address: a word there at the end */
         uint32_t a = strtoul(getenv("NHL_PEEK"), NULL, 16);
         fprintf(stderr, "peek %06x: %04x\n", a, rd16(a));
