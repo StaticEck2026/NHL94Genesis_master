@@ -133,7 +133,7 @@ The hardware layer:
   BPLCON1 delay. The planes are fetched 64 bits at a time (FMODE 3), which leaves the most of
   the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
-  by 8 lines a bit). Other
+  by 4 lines a bit; `-DDLS=n` makes it 2^n lines). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
@@ -142,7 +142,9 @@ The hardware layer:
   second of two copies, so the frames queued go on showing the old one. If it does not fit
   (wider, more than 4 groups of 8 columns, 64 lines or 15 colours) it is blitted as before.
   Sprites are blits of images kept in a cache in chip RAM (built once from
-  the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
+  the tiles, used again until a tile of theirs changes); only the box of an image's pixels is
+  blitted and marked for the restore (found when it is built: a fifth of the words of the
+  whole sprites, and of what is restored), and plane B's high priority cells are
   blitted back over what was drawn under them (found by moving the screen cells something low
   was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
   without waiting. A chunky renderer with
@@ -202,8 +204,13 @@ lag one VDP update behind when the game changes it mid frame (text being printed
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
 `NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
-buffers each blit reads and writes (plane B restores, sprites, overlay, clears), and compares
-the sprite blits with the box their masks actually cover.
+buffers each blit reads and writes (plane B restores, sprites, overlay, clears). The harness'
+Start presses pause and resume the game every 120 frames, and each resume restores whole
+screens, so these are not the steady figures of play. For those, a build with `-DSPRLOG=1`
+logs every sprite blit (`NHL_DBGPORT=1`), and `amiga/harness/rstsim.py log` replays the log:
+the words a frame for the sprites and for restoring under them, whole boxes or trimmed, and
+dirty maps of 8 to 1 lines, all on the same frames (builds that differ play differently: the
+game's random numbers depend on its timing).
 
 `amiga/tools/uaerun.sh` runs the build in FS-UAE (A1200, AROS ROM by default) on a virtual X
 display, presses keys at given times and takes screenshots. Add `fast_memory = 8192` with

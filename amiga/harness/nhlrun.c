@@ -139,7 +139,6 @@ static void blit_exec(void);
 static struct { char key[48]; long long time, words, n; } bk[64];
 static int bkn;
 static unsigned bk_frames0;
-long long trim_full, trim_box;
 static char bk_region(uint32_t a)
 {
     static const char names[] = "SBMcCOFhLH";     /* in their order in the chip section */
@@ -250,22 +249,6 @@ static void blit_exec(void)
         if (useD) dpt += desc ? -dmod : dmod;
     }
     in_blit = 0;
-    if (frame >= 1700 && getenv("NHL_BLITKINDS") && (con0 & 0x0FFF) == 0x0FCA && useA && bk_region(a0) == 'C') {
-        /* sprite blits (cookie cut from the cache): the box of their mask's set bits, lines (6
-           plane rows each) by words, against the blit */
-        int lines = h / 6, l0 = lines, l1 = -1, w0 = w, w1 = -1;
-        for (int y = 0; y < lines; y++)
-            for (int x = 0; x < w; x++) {
-                uint32_t ad = a0 + (uint32_t)(y * 6) * (w * 2 + amod) + x * 2;
-                uint16_t m = rd16(ad);
-                if (x == 0) m &= afwm;
-                if (x == w - 1) m &= alwm;
-                if (m) { if (y < l0) l0 = y; if (y > l1) l1 = y; if (x < w0) w0 = x; if (x > w1) w1 = x; }
-            }
-        extern long long trim_full, trim_box;
-        trim_full += (long long)lines * w * 6;
-        if (l1 >= 0) trim_box += (long long)(l1 - l0 + 1) * (w1 - w0 + 1) * 6;
-    }
     if (frame >= 1700 && getenv("NHL_BLITKINDS"))   /* by the buffers it reads and writes */
         blitkind_add(con0, useA ? a0 : 0, useB ? b0 : 0, useC ? c0 : 0, useD ? d0 : 0, h * w, blit_time);
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
@@ -354,6 +337,11 @@ static void custom_write(uint32_t a, uint32_t v)
         blit_warn++;
         fprintf(stderr, "frame %d: blitter register %03x written while busy, pc=%06x\n", frame, off,
                 m68k_get_reg(NULL, M68K_REG_PPC));
+    }
+    if (off == 0x1F0 && getenv("NHL_DBGPORT")) {      /* a renderer debug log (SPRLOG builds) */
+        if (v == 0x8000) fprintf(stderr, "\ndbg %d", frame);
+        else fprintf(stderr, " %d", (int16_t)v);
+        return;
     }
     creg[off / 2] = v;
     if (off == 0x09A) { if (v & 0x8000) intena |= v & 0x7FFF; else intena &= ~v; update_irq(); }
@@ -796,7 +784,6 @@ int main(int argc, char **argv)
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn, %u game ticks\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)), rd32(rd32(dbg + 20)));
     if (getenv("NHL_BLITKINDS")) blitkind_print(rd32(rd32(dbg + 28)) - bk_frames0);
-    if (getenv("NHL_BLITKINDS")) fprintf(stderr, "sprite blits: %lld words, their masks' boxes %lld\n", trim_full, trim_box);
     if (getenv("NHL_STATS"))
         fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, sprites %.1f M, other %.1f M\n",
                 blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6, blitstat[3] / 1e6);
@@ -807,12 +794,13 @@ int main(int argc, char **argv)
                 rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
         fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u, HUD sprite builds %u\n",
                 rd32(k + 56), rd32(k + 60));
+        fprintf(stderr, "renderer: plane B restored: %u words, %u blits\n", rd32(k + 68), rd32(k + 64));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
     }
     {                                   /* VERIFY builds: the scroll buffers' self-check */
         uint32_t v = rd32(rd32(dbg + 76));
-        if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, cell row %u, column %u\n",
+        if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, map row %u, column %u\n",
                        v >> 16, (v >> 8) & 255, v & 255);
     }
     if (getenv("NHL_PEEK")) {           /* NHL_PEEK=address: a word there at the end */

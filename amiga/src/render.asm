@@ -8,7 +8,8 @@
 ;	    or its tile changed;
 ;	  * scroll mode (a 64 x 32 cell plane B, the rink): each screen buffer holds all of plane B
 ;	    and the display hardware scrolls it (bitplane pointers, BPLCON1). What was drawn over
-;	    it, and the cells that changed, are restored from the bitmap by the blitter (rd_dirty);
+;	    it (only each sprite image's box of pixels is drawn) and the cells that changed are
+;	    restored from the bitmap by the blitter (rd_dirty: 16 pixels by 4 lines a bit);
 ;	    otherwise plane B is copied to the screen by the blitter at the scroll position;
 ;	  * plane A, the window and the sprites are drawn on top by the CPU, in Genesis priority
 ;	    order: B, A low, sprites low, B high (redrawn where something low covered it), A high,
@@ -25,7 +26,12 @@ SCRX		equ	4			;byte of plane x 0 (scroll mode) / screen x 0 (otherwise)
 BUFH		equ	480			;rows: plane B's 256, then its first 224 again (vertical wrap)
 BUFSIZE		equ	SROW*BUFH
 NBUF		equ	3			;screen buffers: one shown, one waiting to be, one drawn
-DROWS		equ	BUFH/8			;cell rows of the dirty maps
+	IFND	DLS
+DLS		equ	2			;dirty maps: a row is 1 << DLS lines
+	ENDC
+DLH		equ	1<<DLS
+DROWS		equ	BUFH>>DLS		;rows of the dirty maps
+DWRAP		equ	256>>DLS		;(the row the buffer's second copy of plane B begins at)
 SCRH		equ	224
 HUDH		equ	64			;HUD sprites: lines at most
 HUDSPR		equ	16+HUDH*16+16		;bytes of one (64 pixels wide: control, lines, end)
@@ -38,7 +44,7 @@ CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
 SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
 SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
-						;frame built, image
+						;frame built, image, its box (rd_sc_box), 32 bytes
 
 	section	bss,bss
 	cnop	0,4
@@ -73,7 +79,7 @@ rd_by0		ds.w	1
 rd_back		ds.l	1			;back buffer: screen line 0
 rd_buf		ds.l	1			;back buffer
 rd_dmap		ds.l	1			;its dirty map
-rd_dirty	ds.l	NBUF*DROWS		;per buffer, cell row: the 16 pixel columns of plane B
+rd_dirty	ds.l	NBUF*DROWS		;per buffer, row of DLH lines: the 16 pixel columns of plane B
 						;(bit 31 - n: column n) that differ from the bitmap
 rd_bufi		ds.w	1			;the back buffer's number
 rd_xorg		ds.w	1			;bit in a buffer row of screen x 0
@@ -84,7 +90,11 @@ rd_backcop	ds.l	1			;its copper list
 rd_regs		ds.b	32			;the VDP registers (rd_snapshot)
 rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
-rd_sctab	ds.l	4*SCSLOTS		;sprite image cache (rd_sc_get)
+rd_sctab	ds.l	8*SCSLOTS		;sprite image cache (rd_sc_get)
+rd_bl0		ds.w	1			;rd_sc_get: the image's first line with something in it,
+rd_bnl		ds.w	1			;lines from there (0: none),
+rd_bp0		ds.w	1			;first pixel and last pixel across
+rd_bp1		ds.w	1
 rd_scpos	ds.l	1			;bytes written to its ring so far
 rd_scmin	ds.l	2			;its oldest image used in this frame, in the one before
 rd_tchg		ds.l	2048			;frame each tile was last converted in
@@ -223,7 +233,7 @@ rd_init
 	lea	(rd_sctab).l,a0			;no sprite images
 	move.w	#SCSLOTS-1,d1
 .sc	move.l	d0,(a0)
-	lea	16(a0),a0
+	lea	32(a0),a0
 	dbf	d1,.sc
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
@@ -544,8 +554,8 @@ rd_fast
 	rts					;(the blitter goes on; rd_show queues the swap)
 
 	IFD	VERIFY
-;	Debug: in scroll mode every cell of the back buffer its dirty map does not name must be the
-;	bitmap's. The first that is not: rd_vfail = frame, cell row, column (once).
+;	Debug: in scroll mode every part of the back buffer its dirty map does not name must be the
+;	bitmap's. The first that is not: rd_vfail = frame, map row, column (once).
 rd_verify
 	tst.w	(rd_scroll).l
 	beq	.x
@@ -558,17 +568,17 @@ rd_verify
 .c	btst	#31,d6
 	bne.s	.n
 	move.w	d7,d0
-	mulu.w	#8*SROW,d0
+	mulu.w	#DLH*SROW,d0
 	movea.l	(rd_buf).l,a0
 	adda.l	d0,a0
 	lea	SCRX(a0,d5.w*2),a0
-	moveq	#31,d0
+	moveq	#DWRAP-1,d0
 	and.w	d7,d0
-	mulu.w	#8*64*6,d0
+	mulu.w	#DLH*64*6,d0
 	lea	(bmB).l,a1
 	adda.l	d0,a1
 	lea	(a1,d5.w*2),a1
-	moveq	#8*6-1,d4
+	moveq	#DLH*6-1,d4
 .l	move.w	(a0),d0
 	cmp.w	(a1),d0
 	bne.s	.fail
@@ -997,16 +1007,23 @@ rd_cellB
 	moveq	#31,d2
 	and.w	d5,d2
 	lea	(rd_dirty).l,a1
+	IFNE	3-DLS
+	lsl.w	#3-DLS,d2			;(its first map row)
+	ENDC
 	lea	(a1,d2.w*4),a1
-	bfset	(a1){d1:1}
+	moveq	#(8>>DLS)-1,d3
+.mr	bfset	(a1){d1:1}
 	bfset	DROWS*4(a1){d1:1}
 	bfset	2*DROWS*4(a1){d1:1}
-	cmpi.w	#DROWS-32,d2
+	cmpi.w	#DROWS-DWRAP,d2
 	bhs.s	.once
-	bfset	32*4(a1){d1:1}
-	bfset	(DROWS+32)*4(a1){d1:1}
-	bfset	(2*DROWS+32)*4(a1){d1:1}
-.once	move.l	a4,-(sp)
+	bfset	DWRAP*4(a1){d1:1}
+	bfset	(DROWS+DWRAP)*4(a1){d1:1}
+	bfset	(2*DROWS+DWRAP)*4(a1){d1:1}
+.once	addq.l	#4,a1
+	addq.w	#1,d2
+	dbf	d3,.mr
+	move.l	a4,-(sp)
 	move.w	d0,(rd_cellpri).l		;bit 15: high priority
 	move.w	d0,d1
 	andi.l	#$7FF,d1
@@ -1182,11 +1199,11 @@ rd_scrollpos
 	move.l	(rd_buf).l,(rd_back).l
 	rts
 
-;	Scroll mode: blit the cells of the back buffer's dirty map back from the plane B bitmap. A
-;	blit per run of columns, for all the following cell rows with the same columns.
+;	Scroll mode: blit the parts of the back buffer its dirty map names back from the plane B
+;	bitmap. A blit per run of columns, for all the following rows with the same columns.
 rd_restore
 	movea.l	(rd_dmap).l,a2
-	moveq	#0,d7				;cell row
+	moveq	#0,d7				;row
 .row	move.l	(a2,d7.w*4),d6
 	bne.s	.dirty
 	addq.w	#1,d7
@@ -1198,7 +1215,7 @@ rd_restore
 	addq.w	#1,d7
 	cmpi.w	#DROWS,d7
 	bge.s	.grp
-	moveq	#31,d0
+	moveq	#DWRAP-1,d0
 	and.w	d7,d0
 	beq.s	.grp				;(the bitmap's rows wrap there)
 	cmp.l	(a2,d7.w*4),d6
@@ -1214,14 +1231,14 @@ rd_restore
 	move.l	#$09F00000,$040(a6)		;A to D
 	move.l	#$FFFFFFFF,$044(a6)
 	move.w	d5,d0
-	andi.w	#31,d0
-	mulu.w	#8*64*6,d0			;the bitmap: 64 cells, 6 planes a line
+	andi.w	#DWRAP-1,d0
+	mulu.w	#DLH*64*6,d0			;the bitmap: 64 cells, 6 planes a line
 	lea	(bmB).l,a0
 	adda.l	d0,a0
 	lea	(a0,d1.w*2),a0
 	move.l	a0,$050(a6)			;BLTAPT
 	move.w	d5,d0
-	mulu.w	#8*SROW,d0
+	mulu.w	#DLH*SROW,d0
 	movea.l	(rd_buf).l,a0
 	adda.l	d0,a0
 	lea	SCRX(a0,d1.w*2),a0
@@ -1235,10 +1252,15 @@ rd_restore
 	move.w	d0,$066(a6)			;BLTDMOD
 	move.w	d7,d0
 	sub.w	d5,d0
-	mulu.w	#8*NPLANES,d0
+	mulu.w	#DLH*NPLANES,d0
 	move.w	d0,$05C(a6)			;BLTSIZV
 	lsr.w	#1,d3
 	move.w	d3,$05E(a6)			;BLTSIZH
+	IFD	STATS
+	mulu.w	d3,d0
+	add.l	d0,(rd_dbg_x+52).l		;(statistics: words restored and blits)
+	addq.l	#1,(rd_dbg_x+48).l
+	ENDC
 	bsr	rd_bq_go
 	tst.l	d6
 	bne	.run
@@ -1271,10 +1293,10 @@ rd_mark
 	add.w	(rd_brow0).l,d1
 	add.w	d1,d3
 	subq.w	#1,d3
-	asr.w	#3,d1				;first cell row
+	asr.w	#DLS,d1				;first row
 	bpl.s	.3
 	moveq	#0,d1
-.3	asr.w	#3,d3
+.3	asr.w	#DLS,d3
 	cmpi.w	#DROWS-1,d3
 	ble.s	.4
 	moveq	#DROWS-1,d3
@@ -2862,13 +2884,6 @@ rd_sprite_blit
 	lsl.w	#3,d4
 	add.w	d3,d4
 	ble	.x
-	move.w	d3,d0
-	move.w	(rd_sy).l,d1
-	move.w	(rd_scw).l,d2
-	lsl.w	#3,d2
-	move.w	(rd_sch).l,d3
-	lsl.w	#3,d3
-	bsr	rd_mark
 	IFD	STATS
 	movem.l	d0-d1/a0,-(sp)
 	addq.l	#1,(rd_dbg_ntw).l		;(statistics: sprites drawn, those of new tiles)
@@ -2882,10 +2897,7 @@ rd_sprite_blit
 	addq.l	#1,(rd_dbg_til).l
 .st0	movem.l	(sp)+,d0-d1/a0
 	ENDC
-	tst.w	(rd_pass).l
-	bne	.nocov
-	bsr	rd_cover_rect
-.nocov	; columns left of the screen margin are dropped
+	; columns left of the screen margin are dropped
 	moveq	#0,d6				;first column drawn
 	move.w	(rd_sx).l,d0
 .lclip	cmpi.w	#-SCRX*8,d0
@@ -2923,50 +2935,120 @@ rd_sprite_blit
 	rol.w	#3,d0
 	andi.w	#3,d0
 	move.w	d0,(rd_spal).l
-	; from the image cache: the whole sprite as 6 interleaved planes and a mask, cut into the
-	; screen by one blit (queued: the CPU goes on). Columns dropped on the left: the CPU draws
+	; from the image cache: the sprite as 6 interleaved planes and a mask, the box of its pixels
+	; cut into the screen by one blit (queued: the CPU goes on). Columns dropped on the left:
+	; the CPU draws
 	tst.w	(rd_c0).l
+	beq.s	.cache
+	move.w	(rd_sx).l,d0			;(the whole sprite)
+	move.w	(rd_sy).l,d1
+	move.w	(rd_scw).l,d2
+	lsl.w	#3,d2
+	move.w	(rd_sch).l,d3
+	lsl.w	#3,d3
+	bsr	rd_mark
+	tst.w	(rd_pass).l
 	bne	rd_spr_cpu
-	bsr	rd_sc_get			;a2 = image, a3 = mask
+	bsr	rd_cover_rect
+	bra	rd_spr_cpu
+.cache	bsr	rd_sc_get			;a2 = image, a3 = mask, rd_bl0 .. rd_bp1 its box
+	; its lines with pixels, on the screen
+	move.w	(rd_bl0).l,d6
+	move.w	d6,d5
+	add.w	(rd_bnl).l,d5
+	cmp.w	(rd_r0).l,d6
+	bge.s	.r0
+	move.w	(rd_r0).l,d6			;first line
+.r0	cmp.w	(rd_r1).l,d5
+	ble.s	.r1
 	move.w	(rd_r1).l,d5
-	sub.w	(rd_r0).l,d5			;rows
+.r1	sub.w	d6,d5				;lines
 	ble	.x
-	move.w	(rd_wb).l,d4			;bytes a plane row
-	move.w	(rd_r0).l,d0			;the first row drawn
-	mulu.w	d4,d0
-	mulu.w	#NPLANES,d0
-	adda.l	d0,a2
-	adda.l	d0,a3
-	bsr	rd_bq_alloc
+	; the box drawn over: for the restore and (low priority) the fixups
 	move.w	(rd_colx).l,d0
-	add.w	(rd_xorg).l,d0
-	move.w	d0,d1
-	andi.w	#15,d1				;shift
+	add.w	(rd_bp0).l,d0
+	move.w	(rd_sy).l,d1
+	add.w	d6,d1
+	move.w	(rd_bp1).l,d2
+	sub.w	(rd_bp0).l,d2
+	addq.w	#1,d2
+	move.w	d5,d3
+	bsr	rd_mark
+	tst.w	(rd_pass).l
+	bne.s	.nc
+	bsr	rd_cover_rect
+.nc	; words: from the first pixel's to the one the last pixel is shifted into (the bits a row
+	; shifts into the next are past the last pixel: clear in the mask)
+	move.w	(rd_colx).l,d0
+	add.w	(rd_xorg).l,d0			;buffer x of the image's pixel 0
+	moveq	#15,d1
+	and.w	d0,d1				;shift
+	move.w	(rd_bp0).l,d2
+	lsr.w	#4,d2				;first word
+	move.w	(rd_bp1).l,d3
+	add.w	d1,d3
+	lsr.w	#4,d3
+	sub.w	d2,d3
+	addq.w	#1,d3				;words
+	IFD	SPRLOG
+	movem.l	d0/a0,-(sp)			;(harness: each sprite blit, NHL_DBGPORT)
+	lea	(CUSTOM+$1F0).l,a0
+	move.w	#$8000,(a0)
+	move.w	(rd_bufi).l,(a0)
+	move.w	(rd_count+2).l,(a0)
+	move.w	(rd_xorg).l,(a0)
+	move.w	(rd_brow0).l,(a0)
+	move.w	(rd_colx).l,(a0)
+	move.w	(rd_sy).l,(a0)
+	move.w	(rd_r0).l,(a0)
+	move.w	(rd_r1).l,(a0)
+	move.w	(rd_ncol).l,(a0)
+	move.w	(rd_wb).l,(a0)
+	move.w	(rd_bp0).l,(a0)
+	move.w	(rd_bp1).l,(a0)
+	move.w	d6,(a0)
+	move.w	d5,(a0)
+	move.w	d3,(a0)
+	movem.l	(sp)+,d0/a0
+	ENDC
+	move.w	(rd_wb).l,d4			;bytes a plane row of the image
+	move.w	d6,d7
+	mulu.w	d4,d7
+	mulu.w	#NPLANES,d7			;its first line
+	adda.l	d7,a2
+	adda.l	d7,a3
+	lea	(a2,d2.w*2),a2
+	lea	(a3,d2.w*2),a3
+	bsr	rd_bq_alloc
 	lsr.w	#4,d0
+	add.w	d2,d0
 	add.w	d0,d0				;destination byte of the first word
 	ror.w	#4,d1
 	move.w	d1,$042(a6)			;BLTCON1: B shift
 	ori.w	#$0FCA,d1
 	move.w	d1,$040(a6)			;A shift; A mask, B image, C, D: AB + /AC
-	move.l	#-1,$044(a6)			;(the last word of each mask row is clear)
+	move.l	#-1,$044(a6)
 	move.l	a3,$050(a6)			;BLTAPT
 	move.l	a2,$04C(a6)			;BLTBPT
 	movea.l	(rd_back).l,a0
 	move.w	(rd_sy).l,d1
-	add.w	(rd_r0).l,d1
+	add.w	d6,d1
 	mulu.w	#SROW,d1
 	adda.l	d1,a0
 	adda.w	d0,a0
 	move.l	a0,$048(a6)			;BLTCPT
 	move.l	a0,$054(a6)			;BLTDPT
-	move.w	#0,$064(a6)			;BLTAMOD
-	move.w	#0,$062(a6)			;BLTBMOD
+	add.w	d3,d3				;bytes a row
+	sub.w	d3,d4
+	move.w	d4,$064(a6)			;BLTAMOD
+	move.w	d4,$062(a6)			;BLTBMOD
 	move.w	#SBPR,d0
-	sub.w	d4,d0
+	sub.w	d3,d0
 	move.w	d0,$060(a6)			;BLTCMOD
 	move.w	d0,$066(a6)			;BLTDMOD
 	mulu.w	#NPLANES,d5
 	move.w	d5,$05C(a6)			;BLTSIZV
+	move.w	d3,d4
 	lsr.w	#1,d4
 	move.w	d4,$05E(a6)			;BLTSIZH
 	bra	rd_bq_go
@@ -2999,7 +3081,7 @@ rd_sc_get
 	mulu.l	#$9E3779B1,d2
 	swap	d2
 	andi.w	#SCSLOTS-1,d2
-	lsl.w	#4,d2
+	lsl.w	#5,d2
 	lea	(rd_sctab).l,a4
 	adda.w	d2,a4
 	; the image size, image and mask
@@ -3074,12 +3156,59 @@ rd_sc_get
 	movem.l	(sp)+,d7/a4
 	move.l	(sp)+,(rd_r0).l
 	movea.l	12(a4),a2
+	bsr	rd_sc_box
 .mask	lea	(a2,d7.l),a3
+	move.l	16(a4),(rd_bl0).l		;its box
+	move.l	20(a4),(rd_bp0).l
 	move.l	4(a4),d1			;(the oldest image used in this frame)
 	cmp.l	(rd_scmin).l,d1
 	bge.s	.x
 	move.l	d1,(rd_scmin).l
 .x	movem.l	(sp)+,d0-d7/a0-a1/a4
+	rts
+
+;	The box of what the image a2 (d7 bytes, its mask after it) shows into its cache entry a4:
+;	first line with a pixel and lines from there (0, 0: none), first and last pixel across.
+;	The mask is all in each row's first 32 pixels. Keeps everything.
+rd_sc_box
+	movem.l	d0-d6/a0,-(sp)
+	lea	(a2,d7.l),a0			;the mask
+	move.w	(rd_wb).l,d6
+	mulu.w	#NPLANES,d6			;bytes a line
+	move.w	(rd_sch).l,d5
+	lsl.w	#3,d5
+	subq.w	#1,d5
+	moveq	#0,d0				;the lines' masks ORed
+	moveq	#-1,d1				;first line
+	moveq	#0,d2				;last
+	moveq	#0,d3				;line
+.l	move.l	(a0),d4
+	beq.s	.n
+	or.l	d4,d0
+	tst.w	d1
+	bpl.s	.f
+	move.w	d3,d1
+.f	move.w	d3,d2
+.n	adda.w	d6,a0
+	addq.w	#1,d3
+	dbf	d5,.l
+	tst.w	d1
+	bpl.s	.some
+	clr.l	16(a4)
+	clr.l	20(a4)
+	bra.s	.x
+.some	move.w	d1,16(a4)
+	sub.w	d1,d2
+	addq.w	#1,d2
+	move.w	d2,18(a4)
+	bfffo	d0{0:0},d1
+	move.w	d1,20(a4)			;first pixel
+	move.l	d0,d4
+	neg.l	d4
+	and.l	d0,d4				;(the lowest bit set)
+	bfffo	d4{0:0},d1
+	move.w	d1,22(a4)			;last pixel
+.x	movem.l	(sp)+,d0-d6/a0
 	rts
 
 ;	Draw the sprite described by rd_sx..rd_r1 straight into the back buffer: for each line the
@@ -4807,6 +4936,7 @@ rd_show
 	move.l	#$FFFFFFFE,(a0)+
 	; it is shown once the blits queued for it are done: a marker in the blit queue has the
 	; level 3 interrupt set the copper list then (rd_bq_start); the CPU goes on
+	moveq	#0,d1				;(a long below)
 	move.w	(rd_bufi).l,d1
 	lea	(rd_shownvb).l,a1
 	move.l	#$7FFFFFFF,(a1,d1.w*4)		;(not on the screen yet)
@@ -4885,7 +5015,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	12			;(statistics: see nhlrun)
+rd_dbg_x	ds.l	16			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
