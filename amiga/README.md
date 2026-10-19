@@ -95,7 +95,9 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
   blitter is put on the caller), the frame rate since `F9` was pressed, how many frames were
   on the screen for 1, 2, 3 ... vertical blanks, how many vertical blanks passed from each
-  frame's game state to its showing, and the sound's delay at the end.
+  frame's game state to its showing, the sound's delay at the end, and the time spent in the
+  game, its vblank code and the renderer (counted on the CIA-B clock at every switch, so time
+  with interrupts off, which the PC samples cannot see into, is counted too).
 - `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
@@ -214,7 +216,13 @@ reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ
 lag one VDP update behind when the game changes it mid frame (text being printed, a mode
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
-`NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
+`NHL_FIXEDHV=1` gives the game's reads of the beam position (which it uses as random numbers)
+values that depend only on the frame and the read's number in it, so every build plays the
+same game (with the real beam position the renderer's speed changes the game's course).
+`amiga/harness/playcost.sh [from] [end]` uses it: Start is pressed only until the game
+begins, then the renderer's harness cycles per frame drawn are counted over uninterrupted
+play, by routine, to compare builds. `NHL_RAMDUMP=file:from:to` writes the Genesis RAM every
+frame. `NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
 buffers each blit reads and writes (plane B restores, sprites, overlay, clears). The harness'
 Start presses pause and resume the game every 120 frames, and each resume restores whole
 screens, so these are not the steady figures of play. For those, a build with `-DSPRLOG=1`

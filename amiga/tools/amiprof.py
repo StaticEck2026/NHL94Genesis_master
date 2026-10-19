@@ -36,5 +36,15 @@ if len(d) >= 8 + 4 * n + 116:
         print('vertical blanks from a frame\'s game state to its showing, 0 .. 6+: ' +
               ' '.join('%d' % x for x in h[:7]) + ' (mean %.2f); the sound\'s delay at the end: %d'
               % (sum(i * x for i, x in enumerate(h[:7])) / sum(h[:7]), h[15]))
+if len(d) >= 8 + 4 * n + 132 and t1 > t0:
+    g, r, v = struct.unpack('>3I', d[124 + 4 * n:136 + 4 * n])
+    lines = 15625.0 if hz == 50 else 15734.0       # (horizontal syncs a second)
+    el = (t1 - t0) / hz
+    tot = (g + r + v) / lines
+    print('time: game %.1f%%, its vblank code %.1f%%, renderer %.1f%% (of %.1f s accounted, %.1f s elapsed)'
+          % (100 * g / lines / el, 100 * v / lines / el, 100 * r / lines / el, tot, el))
+    print('      game %.2f ms a game frame (%.2f of it the vblank code), renderer %.2f ms a frame drawn'
+          % (1000 * (g + v) / lines / (t1 - t0), 1000 * v / lines / (t1 - t0),
+             1000 * r / lines / max(1, c1 - c0)))
 for k, v in c.most_common(int(sys.argv[3]) if len(sys.argv) > 3 else 30):
     print('%6.2f%%  %s' % (100.0 * v / n, k))

@@ -66,10 +66,15 @@ static inline void wr32(uint32_t a, uint32_t v) { wr16(a, v >> 16); wr16(a + 2, 
 static uint32_t custom_read(uint32_t a, int size)
 {
     uint32_t off = a & 0xFFE;
-    if (off == 0x006 && getenv("NHL_FIXEDHV")) {   /* the same "random" beam position every run */
-        static uint32_t reads;
+    if (off == 0x006 && getenv("NHL_FIXEDHV") && dbg && m68k_get_reg(NULL, M68K_REG_PPC) >= rd32(dbg + 112)) {
+        /* the game's reads (its "random" numbers): the same every run and every build, from
+           the frame and the read's number in it (our own timing loops read the beam) */
+        static uint32_t reads; static int rframe;
+        if (rframe != frame) { rframe = frame; reads = 0; }
         reads++;
-        return ((frame * 7 + reads * 13) & 0xFF) << 8 | ((reads * 29) & 0xFF);
+        uint32_t h = (uint32_t)frame * 2654435761u ^ reads * 40503u;
+        h ^= h >> 13; h *= 2246822519u; h ^= h >> 16;
+        return h & 0xFFFF;
     }
     if (off == 0x006) {             /* VHPOSR */
         long long c = cycles_total + m68k_cycles_run();
@@ -677,6 +682,13 @@ int main(int argc, char **argv)
     }
     for (frame = 1; frame <= frames; frame++) {
         if (frame == 1700) bk_frames0 = rd32(rd32(dbg + 28));
+        if (getenv("NHL_RAMDUMP")) {        /* NHL_RAMDUMP=file:from:to: the Genesis RAM, each frame */
+            static FILE *rf; char fn[256]; int f0 = 0, f1 = 0;
+            if (sscanf(getenv("NHL_RAMDUMP"), "%255[^:]:%d:%d", fn, &f0, &f1) == 3 && frame >= f0 && frame <= f1) {
+                if (!rf) rf = fopen(fn, "wb");
+                fwrite(mem + (rd32(dbg + 108) & 0xFFFFFF), 1, 0x10000, rf);
+            }
+        }
         wr16(padstate, pad_at(frame));
         if (getenv("NHL_PROF") && frame >= (getenv("NHL_PROF_FROM") ? atoi(getenv("NHL_PROF_FROM")) : 0)) {
             static FILE *pf;
@@ -795,6 +807,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u, HUD sprite builds %u\n",
                 rd32(k + 56), rd32(k + 60));
         fprintf(stderr, "renderer: plane B restored: %u words, %u blits\n", rd32(k + 68), rd32(k + 64));
+        fprintf(stderr, "renderer: sprite images built: not in the table %u, the ring came round %u, a tile converted %u\n",
+                rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
     }

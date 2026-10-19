@@ -3131,11 +3131,11 @@ rd_sc_get
 	mulu.w	(rd_sch).l,d7
 	mulu.w	#NPLANES*8,d7			;bytes of the image (and of the mask)
 	cmp.l	(a4),d0
-	bne.s	.build
+	bne.s	.bkey
 	move.l	(rd_scpos).l,d1
 	sub.l	4(a4),d1			;ring written since
 	cmpi.l	#SCARENA,d1
-	bhi.s	.build
+	bhi.s	.bring
 	move.l	8(a4),d3			;built in this frame
 	moveq	#0,d1
 	move.w	d0,d1				;(the tile in bits 10-0)
@@ -3145,11 +3145,25 @@ rd_sc_get
 	lea	(rd_tchg).l,a0
 .tc	andi.w	#$7FF,d1
 	cmp.l	(a0,d1.w*4),d3
-	blo.s	.build				;a tile converted since
+	blo.s	.btile				;a tile converted since
 	addq.w	#1,d1
 	dbf	d2,.tc
 	movea.l	12(a4),a2			;found
 	bra	.mask
+.bkey
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+56).l		;(statistics: built: not in the table,
+	ENDC
+	bra.s	.build
+.bring
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+60).l		;the ring came round,
+	ENDC
+	bra.s	.build
+.btile
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+64).l		;a tile converted since)
+	ENDC
 .build	move.l	(rd_scpos).l,d2			;room in the ring for image and mask
 	move.l	d7,d1
 	add.l	d1,d1
@@ -5058,7 +5072,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	16			;(statistics: see nhlrun)
+rd_dbg_x	ds.l	20			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max

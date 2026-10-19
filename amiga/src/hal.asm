@@ -21,6 +21,20 @@ CIAB_TAHI	equ	$BFD500
 CIAB_CRB	equ	$BFDF00
 CIAB_TBLO	equ	$BFD600
 CIAB_TBHI	equ	$BFD700
+CIAB_TODLO	equ	$BFD800			;(the TOD counts horizontal syncs: 64 us)
+CIAB_TODMID	equ	$BFD900
+CIAB_TODHI	equ	$BFDA00
+
+	IFD	PROFILE
+;	(statistics) The time since the last mark (CIA-B TOD lines) into prof_mark's bucket n: 0
+;	the game, 1 the renderer, 2 the game's vblank code and the sound. Keeps everything.
+PACCT	macro
+	move.l	d1,-(sp)
+	moveq	#\1,d1
+	jsr	(prof_acct).l
+	move.l	(sp)+,d1
+	endm
+	ENDC
 PROFMAX		equ	65536
 
 CIA_CLOCK	equ	709379			;PAL E clock
@@ -70,6 +84,8 @@ hal_debug
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
 	dc.l	rd_dbg_key,rd_vfail
 	dc.l	rd_screens,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
+	dc.l	RAMBASE				;+108: the Genesis RAM window
+	dc.l	game_code			;+112: the converted game's code
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -206,6 +222,14 @@ hal_int6
 .vb	sf	(hal_vbreq).l
 .tick	move.l	(sp)+,d0
 	addq.l	#1,(hal_frames).l
+	IFD	PROFILE
+	tst.b	(ctx_cur).l			;(statistics: the context interrupted until now)
+	bne.s	.pr
+	PACCT	0
+	bra.s	.pg
+.pr	PACCT	1
+.pg
+	ENDC
 	IFD	WATCHDOG			;(debug builds: the game's screen can rightly stay
 	addq.w	#1,(hal_wd).l			; the same for a long time)
 	cmpi.w	#240,(hal_wd).l
@@ -219,7 +243,11 @@ hal_int6
 	move	sr,-(sp)
 	move.l	(VBint).l,-(sp)
 	rts					;into the game's vblank code
-.post	btst	#2,(sp)				;the interrupted code's interrupt mask
+.post
+	IFD	PROFILE
+	PACCT	2				;(statistics: the vblank code)
+	ENDC
+	btst	#2,(sp)				;the interrupted code's interrupt mask
 	bne.s	.nest
 	btst	#1,(sp)
 	bne.s	.nest
@@ -278,6 +306,9 @@ hal_idle
 ;	trap #0: game -> renderer
 ctx_to_render
 	ori.w	#$0700,sr			;no vblank half way through the switch
+	IFD	PROFILE
+	PACCT	0
+	ENDC
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	sp,(ctx_game_sp).l
 	st	(ctx_cur).l
@@ -288,12 +319,35 @@ ctx_to_render
 ;	trap #1, or a vblank while drawing: renderer -> game
 ctx_to_game
 	ori.w	#$0700,sr
+	IFD	PROFILE
+	PACCT	1
+	ENDC
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	sp,(ctx_rend_sp).l
 	sf	(ctx_cur).l
 	movea.l	(ctx_game_sp).l,sp
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
+
+	IFD	PROFILE
+;	(statistics) The time since the last mark into bucket d1 of prof_mark+116. Keeps all.
+prof_acct
+	movem.l	d0/d2/a0,-(sp)
+	moveq	#0,d0
+	move.b	(CIAB_TODHI).l,d0		;(reading it latches the others)
+	lsl.w	#8,d0
+	move.b	(CIAB_TODMID).l,d0
+	lsl.l	#8,d0
+	move.b	(CIAB_TODLO).l,d0
+	move.l	d0,d2
+	sub.l	(prof_last).l,d0
+	andi.l	#$FFFFFF,d0
+	move.l	d2,(prof_last).l
+	lea	(prof_mark+116).l,a0
+	add.l	d0,(a0,d1.w*4)
+	movem.l	(sp)+,d0/d2/a0
+	rts
+	ENDC
 
 ;	The renderer's loop: draw each new frame, then give the CPU back.
 rend_main
@@ -445,8 +499,10 @@ hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1
-prof_mark	ds.l	5+8+16			;(+20: frames shown 1 ... 8+ vertical blanks; +52: vertical
-					;blanks from a frame's game state to its showing, 0 ... 6+)
+prof_mark	ds.l	5+8+16+4		;(+20: frames shown 1 ... 8+ vertical blanks; +52: vertical
+					;blanks from a frame's game state to its showing, 0 ... 6+;
+					;+116: time in the game, the renderer, the game's vblank code)
+prof_last	ds.l	1
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high

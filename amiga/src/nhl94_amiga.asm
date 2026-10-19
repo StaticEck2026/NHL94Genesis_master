@@ -29,6 +29,8 @@ RAMBASE		ds.l	1			;the Genesis RAM window: moved at start (ram_relocate)
 	include	"vdp.asm"
 	include	"render.asm"
 
+game_code						;(the converted game from here: the harness tells
+						;its beam position reads from ours)
 	include	"teamdata94.asm"
 	include	"frames94.asm"
 	include	"hockey94.asm"
