@@ -77,7 +77,7 @@ rd_hiB		ds.l	BMAX			;plane B high priority cells: column, row (words)
 rd_hibits	ds.l	BMAX/32			;the same as bits (row * plane width + column)
 rd_fixmap	ds.l	2*32			;rd_fixups: the cells to draw again (64 a row)
 rd_hiBn		ds.w	1
-rd_hiBok	ds.w	1			;list matches bmB
+rd_hiBok	ds.w	1			;list matches bmB (rd_hibits always does: rd_cellB)
 rd_Bkey		ds.l	2			;base, size of the plane in bmB (invalid: redraw all)
 rd_cover	ds.l	2*32			;screen cells something low was drawn on (fixups): a bit
 						;each, 64 a row
@@ -1060,6 +1060,8 @@ rd_updateB
 	dbf	d7,.f
 .fdone	tst.w	(rd_hiBok).l
 	bne	.x
+	cmpi.w	#64,(rd_cw).l
+	beq	.x				;(rd_cellB keeps rd_hibits; the list is not used)
 	bra	rd_list_hiB
 .cell	move.w	(a0)+,d0
 	tst.w	d6
@@ -1086,6 +1088,8 @@ rd_updateB
 .nc	dbf	d7,.cell
 	tst.w	(rd_hiBok).l
 	bne	.x
+	cmpi.w	#64,(rd_cw).l
+	beq	.x
 	bsr	rd_list_hiB
 .x	rts
 
@@ -1127,6 +1131,25 @@ rd_cellB
 	lea	(rd_bused).l,a1
 	bfset	(a1){d1:1}
 	TNEED	d1
+	; its bit in rd_hibits (rd_fixups): high priority, and the tile not empty
+	movem.l	d1-d2,-(sp)
+	move.w	d5,d1
+	mulu.w	(rd_cw).l,d1
+	moveq	#0,d2
+	move.w	d4,d2
+	add.l	d2,d1
+	lea	(rd_hibits).l,a1
+	bfclr	(a1){d1:1}
+	tst.w	d0
+	bpl.s	.lo
+	move.w	d0,d2
+	andi.w	#$FFF,d2
+	lea	(tp_cls).l,a1
+	tst.b	(a1,d2.w)
+	beq.s	.lo
+	lea	(rd_hibits).l,a1
+	bfset	(a1){d1:1}
+.lo	movem.l	(sp)+,d1-d2
 	move.w	(rd_cw).l,d1			;bytes per plane row
 	move.w	d1,d2
 	mulu.w	#6,d2				;bytes per pixel row
@@ -3968,7 +3991,10 @@ rd_fixups
 	cmpi.w	#32,d5
 	blo	.fr
 	rts
-.list	st	(rd_fixchk).l			;every high priority cell, if covered
+.list	tst.w	(rd_hiBok).l
+	bne.s	.lok
+	bsr	rd_list_hiB
+.lok	st	(rd_fixchk).l			;every high priority cell, if covered
 	move.w	(rd_hiBn).l,d7
 	subq.w	#1,d7
 	bmi	.x
