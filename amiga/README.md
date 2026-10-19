@@ -32,6 +32,11 @@ not enough memory, `nhl94.game` missing), a requester says why.
 In an emulator, use the hard drive image `output/amiga/nhl94.hdf`. The build makes it when
 `xdftool` is installed (`pip install amitools`). It boots straight into the game.
 
+Each build is numbered: the number of commits on the branch (`git rev-list --count HEAD`). The
+images are also written as `nhl94-b<number>.hdf` and `.adf`, their volumes are named
+`NHL94-b<number>`, and `version NHL94` in a Shell shows the number and the commit (with a `+`
+if the sources differed from it).
+
 There is also a bootable floppy, `output/amiga/nhl94.adf` (880 KB, double density, so it works
 in the A1200's own drive and in every emulator). The game does not fit on a floppy as it is, so
 there it is `NHL94.pak`, its parts deflate compressed, which the launcher loads and unpacks

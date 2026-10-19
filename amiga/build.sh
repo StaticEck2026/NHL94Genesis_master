@@ -9,6 +9,13 @@ rm -rf output/amiga/src
 mkdir -p output/amiga
 python3 amiga/tools/convert.py output/amiga/src
 cp amiga/src/*.asm amiga/src/*.i output/amiga/src/
+# The build number: the commits on this branch (and the commit, + if the sources differ from
+# it). It names the disk images and their volumes and is in the launcher's version string.
+BUILDNO=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+BUILDID=$(git rev-parse --short HEAD 2>/dev/null || echo none)
+git diff --quiet HEAD -- amiga src tools 2>/dev/null || BUILDID="$BUILDID+"
+printf 'BUILDNO\tequ\t%s\nbuildver\tdc.b\t"$VER: NHL94 b%s (%s)",0\n' "$BUILDNO" "$BUILDNO" "$BUILDID" \
+  > output/amiga/src/build.i
 # The FM patches and the PCM sounds as samples (kept: they only change with their sources or
 # the tools)
 FMI=output/amiga/fm_patches.i
@@ -41,18 +48,20 @@ python3 ../../../amiga/tools/mkicon.py ../NHL94.info
 XDFTOOL=${XDFTOOL:-xdftool}
 if command -v "$XDFTOOL" >/dev/null 2>&1; then
   printf 'NHL94\n' > startup-sequence
-  rm -f ../nhl94.hdf
-  "$XDFTOOL" ../nhl94.hdf create size=2Mi + format NHL94 ffs + makedir S \
+  rm -f ../nhl94.hdf ../nhl94-b*.hdf ../nhl94-b*.adf
+  "$XDFTOOL" ../nhl94.hdf create size=2Mi + format NHL94-b$BUILDNO ffs + makedir S \
     + write startup-sequence S/startup-sequence + write ../NHL94 NHL94 + write ../NHL94.info NHL94.info \
     + write ../nhl94.game NHL94.game >/dev/null
-  ls -l ../nhl94.hdf
+  cp ../nhl94.hdf ../nhl94-b$BUILDNO.hdf
+  ls -l ../nhl94.hdf ../nhl94-b$BUILDNO.hdf
   # A bootable 880 KB floppy: the game packed (pack.py), the launcher loads it
   python3 ../../../amiga/tools/pack.py ../nhl94.game ../NHL94.pak
   rm -f ../nhl94.adf
-  "$XDFTOOL" ../nhl94.adf create + format NHL94 ffs + boot install + makedir S \
+  "$XDFTOOL" ../nhl94.adf create + format NHL94-b$BUILDNO ffs + boot install + makedir S \
     + write startup-sequence S/startup-sequence + write ../NHL94 NHL94 + write ../NHL94.info NHL94.info \
     + write ../NHL94.pak NHL94.pak >/dev/null
-  ls -l ../nhl94.adf
+  cp ../nhl94.adf ../nhl94-b$BUILDNO.adf
+  ls -l ../nhl94.adf ../nhl94-b$BUILDNO.adf
 else
   echo "(no xdftool: nhl94.hdf and nhl94.adf not made; pip install amitools)"
 fi

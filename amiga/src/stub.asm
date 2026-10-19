@@ -306,6 +306,7 @@ pakfree	move.l	a6,-(sp)
 
 	include	"inflate.i"
 
+	include	"build.i"			;(the version string: the build, build.sh)
 dosname		dc.b	'dos.library',0
 gamename	dc.b	'PROGDIR:NHL94.game',0
 pakname		dc.b	'PROGDIR:NHL94.pak',0
