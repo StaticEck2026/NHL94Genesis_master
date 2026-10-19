@@ -140,7 +140,12 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   players' sprite tiles (`Spritetiles`) are native instead: converted to planar rows in place
   at start, and a DMA from them copies nothing, it only notes where each tile's data is (the
   renderer takes it from there). The test harness rebuilds those tiles from
-  `Extracted/NHL94/Graphics/Spritetiles.bin` for its reference renderer.
+  `Extracted/NHL94/Graphics/Spritetiles.bin` for its reference renderer. The players are native
+  objects too: `addframe2`, which writes a player's frame as a few sprites in a row of the
+  sprite table, notes the range and the frame (with its flips and palette); the notes go with
+  the table when it is sent, and the renderer draws each such object as one image, built once
+  from the native tiles (its sprites in their order, at any pixel offsets), kept in the sprite
+  image ring and found by its frame: one blit an object instead of one a sprite.
 - Z80 bus polling, pad port reads and wait loops are rewritten. A wait loop calls `hal_idle`,
   which runs the renderer while the game waits for its next frame.
 - vasm syntax: macros, local labels, `incbin` paths and other small differences.

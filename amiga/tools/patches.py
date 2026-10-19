@@ -95,6 +95,12 @@ P(j('stubinc', 'ports.inc'), 'HVcount equ $C00008', '\tIFD\tBENCH\nHVcount equ h
   '\tELSE\nHVcount equ $DFF006\t\t\t\t;Amiga VHPOSR: beam position\n\tENDC')
 P(j('stubinc', 'ram_addrs.inc'), 'Z80_RAM equ $A00000', 'Z80_RAM equ hal_z80ram')
 
+# Native player objects: addframe2 notes where in the sprite table each object's sprites begin,
+# hal_obj_end the range (the renderer draws the object as one image, rd_obj_blit).
+P('display94.asm', 'and write its sprites\n\tmove.w\tattribute(a3),-(sp)',
+  'and write its sprites\n\tmove.l\ta6,(hal_obj_a6).l\n\tmove.w\tattribute(a3),-(sp)')
+P('display94.asm', '\tmove.w\t(sp)+,attribute(a3)\n\trts\nfind3d', '\tmove.w\t(sp)+,attribute(a3)\n\tjsr\t(hal_obj_end).l\n\trts\nfind3d')
+
 # The Z80 program is never run; its two bytes that hold a bank address cannot be relocated.
 P('sound94.asm', 'dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80', 'dc.b	0,0')
 P('sound94.asm', 'dc.b	$09,$3E,fm_instrument_patches>>15', 'dc.b	$09,$3E,0')

@@ -1898,6 +1898,7 @@ rd_snapshot
 	lea	(vdp_vram).l,a0
 	move.l	(a0,d0.l),(rd_hs).l		;full screen horizontal scroll: A, B
 	bsr	rd_collect_sprites
+	bsr	rd_obj_mark
 	move	(sp)+,sr
 	rts
 
@@ -1921,6 +1922,7 @@ rd_collect_sprites
 	lea	(rd_sprites).l,a1
 	moveq	#0,d1
 	moveq	#0,d5
+	sf	(rd_sprnsq).l			;(the list is the table in order: objects can be used)
 .coll	move.w	d1,d0
 	lsl.w	#3,d0
 	move.l	(a0,d0.w),(a1)+
@@ -1930,7 +1932,10 @@ rd_collect_sprites
 	move.b	3(a0,d0.w),d1
 	andi.b	#$7F,d1
 	beq	.done
-	cmp.w	d6,d5
+	cmp.w	d1,d5
+	beq.s	.sq
+	st	(rd_sprnsq).l
+.sq	cmp.w	d6,d5
 	blt	.coll
 .done	move.w	d5,(rd_spn).l
 	rts
@@ -3321,7 +3326,22 @@ rd_sprites_planar
 	andi.w	#$8000,d0
 	cmp.w	(rd_pass).l,d0
 	bne	.n
-	movem.l	d5/a4,-(sp)
+	lea	(rd_sprgend).l,a0		;the last sprite of an object: all of its sprites as
+	moveq	#0,d1				;one image (rd_obj_blit)
+	move.b	(a0,d5.w),d1
+	beq.s	.one
+	lea	(rd_sprgkey).l,a0
+	move.w	(a0,d5.w*2),d2
+	movem.l	d1/d5/a4,-(sp)
+	bsr	rd_obj_blit
+	movem.l	(sp)+,d1/d5/a4
+	bne.s	.one				;(not: sprite by sprite)
+	subq.w	#1,d1				;its other sprites are drawn too
+	sub.w	d1,d5
+	lsl.w	#3,d1
+	suba.w	d1,a4
+	bra.s	.n
+.one	movem.l	d5/a4,-(sp)
 	bsr	rd_sprite_blit
 	movem.l	(sp)+,d5/a4
 .n	dbf	d5,.each
@@ -3373,7 +3393,35 @@ rd_sprite_blit
 	addq.l	#1,(rd_dbg_til).l
 .st0	movem.l	(sp)+,d0-d1/a0
 	ENDC
-	; columns left of the screen margin are dropped
+	bsr	rd_spr_geom
+	; from the image cache: the sprite as 6 interleaved planes and a mask, the box of its pixels
+	; cut into the screen by one blit (queued: the CPU goes on). Columns dropped on the left:
+	; the CPU draws
+	tst.w	(rd_c0).l
+	beq.s	.cache
+	move.w	(rd_sx).l,d0			;(the whole sprite)
+	move.w	(rd_sy).l,d1
+	move.w	(rd_scw).l,d2
+	lsl.w	#3,d2
+	move.w	(rd_sch).l,d3
+	lsl.w	#3,d3
+	bsr	rd_mark
+	tst.w	(rd_pass).l
+	bne	rd_spr_cpu
+	bsr	rd_cover_rect
+	bra	rd_spr_cpu
+.cache	move.l	a4,d0
+	subi.l	#rd_sprites,d0
+	lsr.w	#3,d0
+	move.w	d0,(rd_sslot).l			;(its place in the list)
+	bsr	rd_sc_get			;a2 = image, a3 = mask, rd_bl0 .. rd_bp1 its box
+	bra	rd_spr_cut
+.x	rts
+
+;	The sprite rd_sx, rd_sy, rd_scw, rd_sch, rd_sat on the screen: the columns drawn (rd_c0,
+;	rd_colx, rd_ncol; those left of the screen margin are dropped), rd_wb, its rows on the
+;	screen (rd_r0, rd_r1), its palette (rd_spal).
+rd_spr_geom
 	moveq	#0,d6				;first column drawn
 	move.w	(rd_sx).l,d0
 .lclip	cmpi.w	#-SCRX*8,d0
@@ -3410,27 +3458,11 @@ rd_sprite_blit
 	rol.w	#3,d0
 	andi.w	#3,d0
 	move.w	d0,(rd_spal).l
-	; from the image cache: the sprite as 6 interleaved planes and a mask, the box of its pixels
-	; cut into the screen by one blit (queued: the CPU goes on). Columns dropped on the left:
-	; the CPU draws
-	tst.w	(rd_c0).l
-	beq.s	.cache
-	move.w	(rd_sx).l,d0			;(the whole sprite)
-	move.w	(rd_sy).l,d1
-	move.w	(rd_scw).l,d2
-	lsl.w	#3,d2
-	move.w	(rd_sch).l,d3
-	lsl.w	#3,d3
-	bsr	rd_mark
-	tst.w	(rd_pass).l
-	bne	rd_spr_cpu
-	bsr	rd_cover_rect
-	bra	rd_spr_cpu
-.cache	move.l	a4,d0
-	subi.l	#rd_sprites,d0
-	lsr.w	#3,d0
-	move.w	d0,(rd_sslot).l			;(its place in the list)
-	bsr	rd_sc_get			;a2 = image, a3 = mask, rd_bl0 .. rd_bp1 its box
+	rts
+
+;	The image a2, mask a3 (rd_bl0 .. rd_bp1 its box) of the sprite rd_spr_geom placed, cut into
+;	the back buffer: one blit, queued.
+rd_spr_cut
 	; its lines with pixels, on the screen
 	move.w	(rd_bl0).l,d6
 	move.w	d6,d5
@@ -3492,14 +3524,19 @@ rd_sprite_blit
 	move.w	d3,(a0)
 	movem.l	(sp)+,d0/a0
 	ENDC
-	move.w	(rd_wb).l,d4			;bytes a plane row of the image: 2 or 4
-	move.w	d6,d7				;its first line: * 12 or * 24
+	move.w	(rd_wb).l,d4			;bytes a plane row of the image: 2 to 8
+	move.w	d6,d7				;its first line: * 6 * wb
+	cmpi.w	#4,d4
+	bhi.s	.wm
 	add.w	d7,d7
 	add.w	d6,d7
-	lsl.w	#2,d7
+	lsl.w	#2,d7				;(* 12)
 	cmpi.w	#2,d4
 	beq.s	.wl
-	add.w	d7,d7
+	add.w	d7,d7				;(* 24)
+	bra.s	.wl
+.wm	mulu.w	d4,d7				;(objects: wider)
+	mulu.w	#6,d7
 .wl	adda.w	d7,a2
 	adda.w	d7,a3
 	lea	(a2,d2.w*2),a2
@@ -3688,44 +3725,14 @@ rd_sc_get
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+64).l		;a tile converted since)
 	ENDC
-.build	move.l	(rd_scpos).l,d2			;room in the ring for image and mask
-	move.l	d7,d1
-	add.l	d1,d1
-	move.l	d2,d3
-	andi.l	#SCARENA-1,d3
-	add.l	d1,d3
-	cmpi.l	#SCARENA,d3
-	bls.s	.fit
-	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
-	addi.l	#SCARENA,d2
-.fit	; a blit queued in this frame or the one before may still read an image of the ring
-	; this is written over (from the lap before): if one was used there, let them finish
-	move.l	d2,d3
-	add.l	d1,d3
-	subi.l	#SCARENA,d3			;the ring below here is written over
-	move.l	(rd_scmin).l,d4
-	cmp.l	(rd_scmin+4).l,d4
-	ble.s	.m
-	move.l	(rd_scmin+4).l,d4
-.m	cmp.l	d3,d4
-	bge.s	.free
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
-	ENDC
-	bsr	rd_waitblit
-	move.l	#$7FFFFFFF,(rd_scmin).l
-	move.l	#$7FFFFFFF,(rd_scmin+4).l
-.free	move.l	d0,(a4)
+.build	move.l	d7,d1
+	add.l	d1,d1				;room in the ring for image and mask
+	bsr	rd_sc_alloc
+	move.l	d0,(a4)
 	move.l	d5,24(a4)
 	move.l	d2,4(a4)
 	move.l	(rd_count).l,8(a4)
-	move.l	d2,d3
-	andi.l	#SCARENA-1,d3
-	lea	(rd_scarena).l,a2
-	adda.l	d3,a2
 	move.l	a2,12(a4)
-	add.l	d1,d2
-	move.l	d2,(rd_scpos).l
 	lea	(a2,d7.l),a3
 	move.l	(rd_r0).l,-(sp)			;all its lines (r0, r1)
 	clr.w	(rd_r0).l
@@ -3758,6 +3765,43 @@ rd_sc_get
 	bge.s	.x
 	move.l	d1,(rd_scmin).l
 .x	movem.l	(sp)+,d4-d6/a0/a4
+	rts
+
+;	Room in the sprite image ring (rd_scarena) for d1 bytes: d2 = its place (the bytes written
+;	to the ring before it), a2 = its address. A blit queued in this frame or the one before may
+;	still read an image of the ring this writes over (from the lap before): if one was used
+;	there, they are let finish. Uses d3, d4.
+rd_sc_alloc
+	move.l	(rd_scpos).l,d2
+	move.l	d2,d3
+	andi.l	#SCARENA-1,d3
+	add.l	d1,d3
+	cmpi.l	#SCARENA,d3
+	bls.s	.fit
+	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
+	addi.l	#SCARENA,d2
+.fit	move.l	d2,d3
+	add.l	d1,d3
+	subi.l	#SCARENA,d3			;the ring below here is written over
+	move.l	(rd_scmin).l,d4
+	cmp.l	(rd_scmin+4).l,d4
+	ble.s	.m
+	move.l	(rd_scmin+4).l,d4
+.m	cmp.l	d3,d4
+	bge.s	.free
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
+	ENDC
+	bsr	rd_waitblit
+	move.l	#$7FFFFFFF,(rd_scmin).l
+	move.l	#$7FFFFFFF,(rd_scmin+4).l
+.free	move.l	d2,d3
+	andi.l	#SCARENA-1,d3
+	lea	(rd_scarena).l,a2
+	adda.l	d3,a2
+	move.l	d2,d3
+	add.l	d1,d3
+	move.l	d3,(rd_scpos).l
 	rts
 
 ;	The box of what the image a2 (d7 bytes, its mask after it) shows into its cache entry a4:
@@ -3806,6 +3850,639 @@ rd_sc_box
 	bfffo	d4{0:0},d1
 	move.w	d1,22(a4)			;last pixel
 .x	movem.l	(sp)+,d0-d6/a0
+	rts
+
+;	------------------------------------------------------------------------------------------
+;	Native player objects. The game's addframe2 writes each player's frame as a few sprites in
+;	a row of the sprite table (Satt): it notes where they begin (hal_obj_a6), hal_obj_end the
+;	range and the object's key (its frame, flips, palette). The ranges go with the table when
+;	it is sent (rd_obj_publish), and the renderer draws each object as one image
+;	(rd_obj_blit): built once from the native tiles (Spritetiles), kept in the sprite image
+;	ring and found by its key; one blit instead of one a sprite.
+OBJMAX		equ	32			;objects in a table
+OBJPC		equ	8			;sprites an object at most
+OBJSLOTS	equ	2048			;object images in the table (a power of 2)
+
+;	addframe2 (a3 = the object) has written its sprites from hal_obj_a6 to a6. Keeps all.
+hal_obj_end
+	move	sr,-(sp)
+	movem.l	d0-d4/a0,-(sp)
+	move.l	a6,d0
+	sub.l	(hal_obj_a6).l,d0
+	lsr.l	#3,d0				;its sprites
+	cmpi.l	#2,d0
+	blo.s	.x				;(one: drawn as it is)
+	cmpi.l	#OBJPC,d0
+	bhi.s	.x
+	move.l	(hal_obj_a6).l,d1
+	subi.l	#Satt,d1
+	bmi.s	.x
+	lsr.l	#3,d1				;the first
+	cmpi.l	#80,d1
+	bhs.s	.x
+	move.w	(rd_objbn).l,d2
+	cmpi.w	#OBJMAX,d2
+	bhs.s	.x
+	addq.w	#1,(rd_objbn).l
+	; its key: the frame, the flips and palette its sprites have them by, the second team's
+	; colour switch (addframe2)
+	move.w	frame(a3),d3
+	andi.w	#$F800,d3
+	move.w	attribute(a3),d4
+	eor.w	d4,d3
+	andi.w	#$7800,d3
+	btst	#0,attribute+1(a3)
+	beq.s	.k
+	bset	#15,d3
+.k	move.w	frame(a3),d4
+	andi.w	#$7FF,d4
+	or.w	d3,d4
+	lea	(rd_objb).l,a0
+	lsl.w	#2,d2
+	move.b	d1,(a0,d2.w)
+	move.b	d0,1(a0,d2.w)
+	move.w	d4,2(a0,d2.w)
+.x	movem.l	(sp)+,d0-d4/a0
+	rtr
+
+;	The sprite table is sent to VRAM (hal_vdp_dma): its objects with it; the next table's from
+;	none. Keeps everything.
+rd_obj_publish
+	movem.l	d0/a0-a1,-(sp)
+	lea	(rd_objb).l,a0
+	lea	(rd_objp).l,a1
+	moveq	#OBJMAX-1,d0
+.c	move.l	(a0)+,(a1)+
+	dbf	d0,.c
+	move.w	(rd_objbn).l,(rd_objpn).l
+	clr.w	(rd_objbn).l
+	movem.l	(sp)+,d0/a0-a1
+	rts
+
+;	rd_sprgend, rd_sprgkey: the objects of the table the sprite list was taken from, noted at
+;	their last sprite (rd_snapshot: no game tick meanwhile).
+rd_obj_mark
+	lea	(rd_sprgend).l,a0
+	moveq	#80/4-1,d0
+.c	clr.l	(a0)+
+	dbf	d0,.c
+	tst.b	(rd_sprnsq).l
+	bne.s	.x
+	lea	(rd_objp).l,a0
+	lea	(rd_sprgend).l,a1
+	lea	(rd_sprgkey).l,a2
+	move.w	(rd_objpn).l,d0
+	bra.s	.e
+.o	moveq	#0,d1
+	moveq	#0,d2
+	move.b	(a0)+,d1			;its first sprite
+	move.b	(a0)+,d2			;sprites
+	move.w	(a0)+,d3			;key
+	add.w	d2,d1
+	cmp.w	(rd_spn).l,d1
+	bhi.s	.e
+	move.b	d2,-1(a1,d1.w)
+	move.w	d3,-2(a2,d1.w*2)
+.e	dbf	d0,.o
+.x	rts
+
+;	The object whose last sprite is a4, d1 sprites (the others before it in the list), d2 its
+;	key: drawn as one image, Z set; or Z clear: to be drawn sprite by sprite (a tile not
+;	native, mixed priorities, too big, cut by the screen's left margin).
+rd_obj_blit
+	move.w	d1,(rd_on).l
+	move.w	d2,(rd_okey).l
+	subq.w	#1,d1
+	lsl.w	#3,d1
+	movea.l	a4,a5
+	suba.w	d1,a5				;the first sprite
+	moveq	#0,d0
+	move.w	d2,d0
+	mulu.w	#40503,d0
+	lsr.l	#5,d0
+	andi.l	#OBJSLOTS-1,d0
+	lsl.l	#5,d0
+	lea	(rd_octab).l,a2
+	adda.l	d0,a2
+	move.l	#$10000,d0			;(an entry in use)
+	move.w	d2,d0
+	cmp.l	(a2),d0
+	bne.s	.miss
+	move.l	(rd_scpos).l,d1
+	sub.l	8(a2),d1
+	cmpi.l	#SCARENA,d1
+	bls.s	.hit
+.miss	bsr	rd_obj_gather
+	bne	.no
+	movem.l	a2/a4-a5,-(sp)
+	bsr	rd_obj_build
+	movem.l	(sp)+,a2/a4-a5
+	bne	.no				;(too big)
+.hit
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+84).l		;(statistics: objects drawn as one image)
+	ENDC
+	move.l	8(a2),d1			;(the oldest image used in this frame)
+	cmp.l	(rd_scmin).l,d1
+	bge.s	.o
+	move.l	d1,(rd_scmin).l
+.o	; placed: the first sprite's place and the image's offset from it
+	move.w	6(a5),d3
+	andi.w	#$1FF,d3
+	subi.w	#128,d3
+	add.w	24(a2),d3
+	move.w	d3,(rd_sx).l
+	move.w	(a5),d0
+	andi.w	#$3FF,d0
+	subi.w	#128,d0
+	add.w	26(a2),d0
+	move.w	d0,(rd_sy).l
+	move.w	28(a2),d1
+	move.w	d1,(rd_scw).l
+	move.w	30(a2),d2
+	move.w	d2,(rd_sch).l
+	move.w	4(a5),(rd_sat).l
+	cmpi.w	#SCRH,d0			;all off the screen: nothing to draw
+	bge	.yes
+	move.w	d2,d4
+	lsl.w	#3,d4
+	add.w	d0,d4
+	ble	.yes
+	cmp.w	(rd_w).l,d3
+	bge	.yes
+	move.w	d1,d4
+	lsl.w	#3,d4
+	add.w	d3,d4
+	ble	.yes
+	cmpi.w	#-SCRX*8,d3			;cut by the margin: sprite by sprite
+	blt	.no
+	move.l	a2,-(sp)
+	bsr	rd_spr_geom
+	movea.l	(sp)+,a2
+	move.l	16(a2),(rd_bl0).l		;its box
+	move.l	20(a2),(rd_bp0).l
+	movea.l	12(a2),a2			;the image
+	move.w	(rd_wb).l,d0
+	mulu.w	(rd_sch).l,d0
+	mulu.w	#6*8,d0
+	lea	(a2,d0.l),a3			;its mask
+	bsr	rd_spr_cut
+.yes	moveq	#0,d0				;(Z: drawn)
+	rts
+.no	moveq	#1,d0
+	rts
+
+;	The object's sprites (from a5, rd_on of them) into rd_opc: their tiles' source (native, in a
+;	row), flips, palette, size, place from the first. Z clear if one is not native or the
+;	priorities differ. Keeps a2, a4, a5.
+rd_obj_gather
+	move.w	4(a5),d0
+	andi.w	#$8000,d0
+	move.w	d0,(rd_opri).l
+	move.w	(a5),d0
+	andi.w	#$3FF,d0
+	move.w	d0,(rd_oy0).l
+	move.w	6(a5),d0
+	andi.w	#$1FF,d0
+	move.w	d0,(rd_ox0).l
+	lea	(rd_opc).l,a1
+	lea	(vdp_tsrc).l,a3
+	movea.l	a5,a0
+	move.w	(rd_on).l,d7
+	subq.w	#1,d7
+.pk	move.w	4(a0),d0			;attributes
+	move.w	d0,d1
+	andi.w	#$8000,d1
+	cmp.w	(rd_opri).l,d1
+	bne	.no
+	moveq	#0,d1
+	move.w	d0,d1
+	andi.w	#$7FF,d1			;its first tile
+	move.l	(a3,d1.l*4),d2
+	subi.l	#Spritetiles,d2
+	cmpi.l	#SPRTSIZE,d2
+	bhs	.no
+	move.l	d2,(a1)				;its source
+	andi.w	#$7800,d0
+	move.w	d0,4(a1)			;flips, palette
+	moveq	#0,d3
+	move.b	2(a0),d3
+	move.b	d3,6(a1)			;size
+	clr.b	7(a1)
+	move.w	d3,d4
+	andi.w	#3,d4
+	addq.w	#1,d4
+	lsr.w	#2,d3
+	andi.w	#3,d3
+	addq.w	#1,d3
+	mulu.w	d4,d3				;tiles
+	subq.w	#2,d3
+	bmi.s	.t1
+	addi.l	#Spritetiles,d2
+.tc	addq.w	#1,d1				;the others from the next sources
+	andi.w	#$7FF,d1
+	addi.l	#32,d2
+	cmp.l	(a3,d1.l*4),d2
+	bne.s	.no
+	dbf	d3,.tc
+.t1	move.w	6(a0),d0
+	andi.w	#$1FF,d0
+	sub.w	(rd_ox0).l,d0
+	move.w	d0,8(a1)			;x from the first
+	move.w	(a0),d0
+	andi.w	#$3FF,d0
+	sub.w	(rd_oy0).l,d0
+	move.w	d0,10(a1)			;y
+	lea	12(a1),a1
+	addq.l	#8,a0
+	dbf	d7,.pk
+	moveq	#0,d0
+	rts
+.no	moveq	#1,d0
+	rts
+
+;	The image of the object rd_opc (rd_on sprites; its key rd_okey) built into the sprite image
+;	ring and the entry a2 of rd_octab. Z clear if it is too big (over 8 x 8 cells).
+rd_obj_build
+	move.l	a2,(rd_oent).l
+	; its box, from the first sprite's place
+	lea	(rd_opc).l,a0
+	move.w	(rd_on).l,d7
+	subq.w	#1,d7
+	move.w	#$7FFF,d0			;least x
+	move.w	#$7FFF,d1			;least y
+	move.w	#-$8000,d2			;x past the right
+	move.w	#-$8000,d3			;y below
+.bx	moveq	#0,d4
+	move.b	6(a0),d4			;size
+	moveq	#3,d5
+	and.w	d4,d5
+	addq.w	#1,d5
+	lsl.w	#3,d5				;height
+	lsr.w	#2,d4
+	andi.w	#3,d4
+	addq.w	#1,d4
+	lsl.w	#3,d4				;width
+	move.w	8(a0),d6
+	cmp.w	d0,d6
+	bge.s	.b1
+	move.w	d6,d0
+.b1	add.w	d6,d4
+	cmp.w	d2,d4
+	ble.s	.b2
+	move.w	d4,d2
+.b2	move.w	10(a0),d6
+	cmp.w	d1,d6
+	bge.s	.b3
+	move.w	d6,d1
+.b3	add.w	d6,d5
+	cmp.w	d3,d5
+	ble.s	.b4
+	move.w	d5,d3
+.b4	lea	12(a0),a0
+	dbf	d7,.bx
+	move.w	d0,(rd_ominx).l
+	move.w	d1,(rd_ominy).l
+	sub.w	d0,d2				;width
+	sub.w	d1,d3				;height
+	addq.w	#7,d2
+	lsr.w	#3,d2				;cells across
+	addq.w	#7,d3
+	lsr.w	#3,d3				;cells down
+	cmpi.w	#8,d2
+	bhi	.big
+	cmpi.w	#8,d3
+	bhi	.big
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+88).l		;(statistics: object images built)
+	ENDC
+	move.w	d2,(rd_oscw).l
+	move.w	d3,(rd_osch).l
+	addq.w	#1,d2
+	lsr.w	#1,d2
+	add.w	d2,d2
+	move.w	d2,(rd_owb).l			;bytes a row (as rd_spr_geom has it)
+	lsl.w	#3,d3
+	move.w	d3,(rd_olines).l
+	; the scratch: lines of 7 rows of 8 bytes (planes 0-3, the palette planes 4, 5, the mask)
+	mulu.w	#56/4,d3
+	subq.w	#1,d3
+	lea	(rd_oscr).l,a0
+.cl	clr.l	(a0)+
+	dbf	d3,.cl
+	; the sprites, the last first (the first is in front)
+	move.w	(rd_on).l,d0
+	subq.w	#1,d0
+	mulu.w	#12,d0
+	lea	(rd_opc).l,a6
+	adda.w	d0,a6
+.pc	move.l	a6,-(sp)
+	bsr	rd_obj_piece
+	movea.l	(sp)+,a6
+	lea	-12(a6),a6
+	cmpa.l	#rd_opc,a6
+	bhs.s	.pc
+	; into the ring: per line the 6 plane rows, then (the mask) the mask row 6 times
+	move.w	(rd_owb).l,d1
+	mulu.w	(rd_olines).l,d1
+	mulu.w	#6*2,d1
+	bsr	rd_sc_alloc			;d2 = its place, a2 = it
+	movea.l	(rd_oent).l,a4
+	move.l	#$10000,d0			;(in use) and its key
+	move.w	(rd_okey).l,d0
+	move.l	d0,(a4)
+	clr.l	4(a4)
+	move.l	d2,8(a4)
+	move.l	a2,12(a4)
+	move.w	(rd_ominx).l,24(a4)
+	move.w	(rd_ominy).l,26(a4)
+	move.w	(rd_oscw).l,28(a4)
+	move.w	(rd_osch).l,30(a4)
+	bsr	rd_obj_copy
+	bsr	rd_obj_box
+	moveq	#0,d0
+	rts
+.big	moveq	#1,d0
+	rts
+
+;	One sprite of an object (a6: its rd_opc entry) into the scratch (rd_oscr) at its place
+;	from rd_ominx, rd_ominy. First its lines unpacked (rd_opbuf: per line the 4 planes and the
+;	mask, each a long, the sprite's bytes in its low end; the tiles are native: Spritetiles has
+;	a long a line, the 4 plane bytes; flipped: each byte's bits reversed, the columns and the
+;	lines from the last), then each line merged into the scratch under its mask: one bit field
+;	a plane.
+rd_obj_piece
+	moveq	#0,d0
+	move.b	6(a6),d0
+	moveq	#3,d1
+	and.w	d0,d1
+	addq.w	#1,d1				;tiles down
+	lsr.w	#2,d0
+	andi.w	#3,d0
+	addq.w	#1,d0				;across
+	move.w	d0,(rd_opw).l
+	move.w	d1,d6
+	lsl.w	#3,d6				;lines
+	move.w	d6,(rd_oplines).l
+	lsl.w	#5,d1				;bytes from one column's tiles to the next's
+	ext.l	d1
+	movea.l	d1,a4				;column step
+	move.w	4(a6),d5			;flips (bits 11, 12), palette (13, 14)
+	move.w	d5,(rd_opat).l
+	move.w	10(a6),d2
+	sub.w	(rd_ominy).l,d2
+	mulu.w	#56,d2
+	lea	(rd_oscr).l,a1
+	adda.l	d2,a1
+	move.l	a1,(rd_opline).l		;its first line in the scratch
+	moveq	#0,d2
+	move.w	8(a6),d2
+	sub.w	(rd_ominx).l,d2
+	move.l	d2,(rd_opx).l			;its first pixel
+	lea	(Spritetiles).l,a0
+	adda.l	(a6),a0				;its tiles
+	lea	(rd_rev8).l,a2
+	movea.w	#4,a5				;line step
+	btst	#11,d5
+	beq.s	.nh
+	move.w	(rd_opw).l,d0			;horizontal flip: from the last column back
+	subq.w	#1,d0
+	mulu.w	d1,d0
+	adda.l	d0,a0
+	move.l	a4,d0
+	neg.l	d0
+	movea.l	d0,a4
+.nh	subq.w	#1,d6
+	btst	#12,d5
+	beq.s	.nv
+	move.w	d6,d0				;vertical flip: from the last line up
+	lsl.w	#2,d0
+	adda.w	d0,a0
+	movea.w	#-4,a5
+.nv	; unpacked: the column c's bytes at 4 - across + c of each long
+	lea	(rd_opbuf+4).l,a1
+	suba.w	(rd_opw).l,a1
+	moveq	#0,d1
+.ul	movea.l	a0,a3
+	movea.l	a1,a6
+	move.w	(rd_opw).l,d7
+	subq.w	#1,d7
+.uc	move.l	(a3),d0
+	adda.l	a4,a3
+	btst	#11,d5
+	beq.s	.ur
+	rol.l	#8,d0				;(flipped: each plane byte's bits reversed)
+	move.b	d0,d1
+	move.b	(a2,d1.w),d4
+	rol.l	#8,d0
+	move.b	d0,d1
+	lsl.l	#8,d4
+	move.b	(a2,d1.w),d4
+	rol.l	#8,d0
+	move.b	d0,d1
+	lsl.l	#8,d4
+	move.b	(a2,d1.w),d4
+	rol.l	#8,d0
+	move.b	d0,d1
+	lsl.l	#8,d4
+	move.b	(a2,d1.w),d4
+	move.l	d4,d0
+.ur	move.b	d0,12(a6)			;plane 3
+	move.b	d0,d3
+	lsr.l	#8,d0
+	move.b	d0,8(a6)			;2
+	or.b	d0,d3
+	lsr.w	#8,d0
+	move.b	d0,4(a6)			;1
+	or.b	d0,d3
+	swap	d0
+	move.b	d0,(a6)				;0
+	or.b	d0,d3
+	move.b	d3,16(a6)			;the mask
+	addq.l	#1,a6
+	dbf	d7,.uc
+	adda.l	a5,a0
+	lea	20(a1),a1
+	dbf	d6,.ul
+	; merged: under each line's mask
+	lea	(rd_opbuf).l,a0
+	movea.l	(rd_opline).l,a1
+	move.l	(rd_opx).l,d2
+	moveq	#0,d3
+	move.w	(rd_opw).l,d3
+	lsl.w	#3,d3				;bits
+	move.w	(rd_opat).l,d6
+	move.w	(rd_oplines).l,d7
+	subq.w	#1,d7
+.ml	move.l	16(a0),d4			;the mask
+	beq	.mn
+	move.l	d4,d5
+	not.l	d5
+	bfextu	(a1){d2:d3},d0
+	and.l	d5,d0
+	or.l	(a0),d0
+	bfins	d0,(a1){d2:d3}
+	bfextu	8(a1){d2:d3},d0
+	and.l	d5,d0
+	or.l	4(a0),d0
+	bfins	d0,8(a1){d2:d3}
+	bfextu	16(a1){d2:d3},d0
+	and.l	d5,d0
+	or.l	8(a0),d0
+	bfins	d0,16(a1){d2:d3}
+	bfextu	24(a1){d2:d3},d0
+	and.l	d5,d0
+	or.l	12(a0),d0
+	bfins	d0,24(a1){d2:d3}
+	bfextu	32(a1){d2:d3},d0		;the palette planes: the mask, or nothing
+	and.l	d5,d0
+	btst	#13,d6
+	beq.s	.p4
+	or.l	d4,d0
+.p4	bfins	d0,32(a1){d2:d3}
+	bfextu	40(a1){d2:d3},d0
+	and.l	d5,d0
+	btst	#14,d6
+	beq.s	.p5
+	or.l	d4,d0
+.p5	bfins	d0,40(a1){d2:d3}
+	bfextu	48(a1){d2:d3},d0		;the mask
+	or.l	d4,d0
+	bfins	d0,48(a1){d2:d3}
+.mn	lea	20(a0),a0
+	lea	56(a1),a1
+	dbf	d7,.ml
+	rts
+
+;	The scratch (rd_oscr) into the ring at a2 in the blitter's layout: the image (per line
+;	planes 0-5, rows of rd_owb bytes), then the mask (per line its row 6 times).
+OBJCPR	MACRO					;one row: \1 bytes from \2(a0) to (a1)+
+	IFEQ	\1-2
+	move.w	\2(a0),(a1)+
+	ENDC
+	IFEQ	\1-4
+	move.l	\2(a0),(a1)+
+	ENDC
+	IFEQ	\1-6
+	move.l	\2(a0),(a1)+
+	move.w	\2+4(a0),(a1)+
+	ENDC
+	IFEQ	\1-8
+	move.l	\2(a0),(a1)+
+	move.l	\2+4(a0),(a1)+
+	ENDC
+	ENDM
+OBJCPM	MACRO					;the mask row of \1 bytes 6 times to (a3)+
+	move.l	48(a0),d0
+	move.l	52(a0),d1
+	REPT	6
+	IFEQ	\1-2
+	swap	d0
+	move.w	d0,(a3)+
+	swap	d0
+	ENDC
+	IFEQ	\1-4
+	move.l	d0,(a3)+
+	ENDC
+	IFEQ	\1-6
+	move.l	d0,(a3)+
+	swap	d1
+	move.w	d1,(a3)+
+	swap	d1
+	ENDC
+	IFEQ	\1-8
+	move.l	d0,(a3)+
+	move.l	d1,(a3)+
+	ENDC
+	ENDR
+	ENDM
+OBJCPL	MACRO					;all lines, rows of \1 bytes
+.l\1	OBJCPR	\1,0
+	OBJCPR	\1,8
+	OBJCPR	\1,16
+	OBJCPR	\1,24
+	OBJCPR	\1,32
+	OBJCPR	\1,40
+	OBJCPM	\1
+	lea	56(a0),a0
+	dbf	d7,.l\1
+	rts
+	ENDM
+rd_obj_copy
+	lea	(rd_oscr).l,a0
+	movea.l	a2,a1
+	move.w	(rd_owb).l,d0
+	mulu.w	(rd_olines).l,d0
+	mulu.w	#6,d0
+	lea	(a2,d0.l),a3			;the mask
+	move.w	(rd_olines).l,d7
+	subq.w	#1,d7
+	move.w	(rd_owb).l,d0
+	cmpi.w	#2,d0
+	beq.s	.l2
+	cmpi.w	#4,d0
+	beq	.l4
+	cmpi.w	#6,d0
+	beq	.l6
+	bra	.l8
+	OBJCPL	2
+	OBJCPL	4
+	OBJCPL	6
+	OBJCPL	8
+
+;	The box of the scratch's image into the entry a4 (as rd_sc_box: first line with a pixel,
+;	lines from there, first and last pixel across).
+rd_obj_box
+	lea	(rd_oscr+48).l,a0
+	moveq	#0,d4				;the masks ORed: pixels 0-31
+	moveq	#0,d5				;32-63
+	moveq	#-1,d1				;first line
+	moveq	#0,d2				;last
+	moveq	#0,d3				;line
+	move.w	(rd_olines).l,d6
+	subq.w	#1,d6
+.l	move.l	(a0),d0
+	move.l	4(a0),d7
+	or.l	d0,d4
+	or.l	d7,d5
+	or.l	d7,d0
+	beq.s	.n
+	tst.w	d1
+	bpl.s	.f
+	move.w	d3,d1
+.f	move.w	d3,d2
+.n	lea	56(a0),a0
+	addq.w	#1,d3
+	dbf	d6,.l
+	tst.w	d1
+	bpl.s	.some
+	clr.l	16(a4)
+	clr.l	20(a4)
+	rts
+.some	move.w	d1,16(a4)
+	sub.w	d1,d2
+	addq.w	#1,d2
+	move.w	d2,18(a4)
+	tst.l	d4				;first pixel
+	beq.s	.f2
+	bfffo	d4{0:0},d0
+	bra.s	.f3
+.f2	bfffo	d5{0:0},d0
+	addi.w	#32,d0
+.f3	move.w	d0,20(a4)
+	tst.l	d5				;last pixel
+	beq.s	.l2
+	move.l	d5,d0
+	neg.l	d0
+	and.l	d5,d0
+	bfffo	d0{0:0},d0
+	addi.w	#32,d0
+	bra.s	.l3
+.l2	move.l	d4,d0
+	neg.l	d0
+	and.l	d4,d0
+	bfffo	d0{0:0},d0
+.l3	move.w	d0,22(a4)
 	rts
 
 ;	The tiles of sprite rd_sat (rd_scw x rd_sch) converted, those waiting. Keeps everything.
@@ -5845,7 +6522,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	24			;(statistics: see nhlrun)
+rd_dbg_x	ds.l	26			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
@@ -5858,6 +6535,40 @@ rd_cellmk	ds.b	1			;rd_cellB: the cell has a mask
 rd_cellmw	ds.b	1			;and its masks are written
 	cnop	0,4
 rd_sbuild	ds.l	2*4*NPLANES*32/4		;a sprite image and mask being built (rd_spr_build)
+hal_obj_a6	ds.l	1			;addframe2: where its object's sprites begin
+rd_oent		ds.l	1			;its entry of rd_octab
+rd_opx		ds.l	1			;rd_obj_piece: the sprite's first pixel in the image
+rd_objbn	ds.w	1			;objects of the sprite table being made (hal_obj_end)
+rd_objpn	ds.w	1			;of the table sent (rd_obj_publish)
+rd_on		ds.w	1			;rd_obj_blit: the object's sprites
+rd_opri		ds.w	1			;their priority
+rd_ox0		ds.w	1			;the first's place
+rd_oy0		ds.w	1
+rd_ominx	ds.w	1			;the image's, from it
+rd_ominy	ds.w	1
+rd_oscw		ds.w	1			;cells across, down
+rd_osch		ds.w	1
+rd_owb		ds.w	1			;bytes a row
+rd_olines	ds.w	1
+rd_opw		ds.w	1			;rd_obj_piece: the sprite's tiles across
+rd_oplines	ds.w	1			;its lines
+rd_opat		ds.w	1			;its flips and palette
+rd_okey		ds.w	1			;rd_obj_blit: the object's key
+rd_opline	ds.l	1			;rd_obj_piece: its first line in the scratch
+rd_objb		ds.b	4*OBJMAX		;per object: its first sprite, sprites, key (word)
+rd_objp		ds.b	4*OBJMAX
+rd_sprgkey	ds.w	80			;per place of the sprite list: the key of the object whose
+						;last sprite is there
+rd_sprgend	ds.b	80			;and its sprites (0: none)
+rd_sprnsq	ds.b	1			;the list is not the table in order (no objects)
+	cnop	0,4
+rd_opc		ds.b	12*OBJPC		;per sprite: its tiles' source in Spritetiles (long),
+						;flips and palette (word), size (byte), 0, its place from
+						;the first's (x, y words)
+rd_oscr		ds.b	56*64			;the image being built: lines of 7 rows of 8 bytes
+rd_opbuf	ds.b	20*32			;a sprite's lines unpacked (rd_obj_piece)
+rd_octab	ds.l	8*OBJSLOTS		;object images: $10000 + key, 0, ring place, image, box (4
+						;words), offset from the first sprite (x, y), cells across, down
 rd_r0		ds.w	1
 rd_r1		ds.w	1
 		cnop	0,4

@@ -154,6 +154,10 @@ vdp_command
 ;	(hal_vdp_tsrc marks those whose source changed).
 hal_vdp_dma
 	bsr	hal_vdp_tsrc
+	cmpa.l	#Satt,a0			;the sprite table: its objects go with it (rd_obj_publish)
+	bne.s	.ns
+	jsr	(rd_obj_publish).l
+.ns
 	cmpa.l	#Spritetiles,a0
 	blo.s	.cp
 	cmpa.l	#Spritetiles+SPRTSIZE,a0
