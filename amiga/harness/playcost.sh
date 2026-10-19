@@ -13,7 +13,7 @@ P=""; for f in $(seq 700 120 1180); do P="$P$f:80,$((f+10)):0,"; done
 for PH in 0 1; do
   for F in $FROM $END; do
     NHL_PHASE=$PH NHL_FIXEDHV=1 NHL_PROF=$T/prof_${PH}_$F.txt amiga/harness/nhlrun -c 8000000 -f $F -p "${P%,}" \
-      -o $T output/amiga/nhl94.game 2>&1 | grep stopped | sed 's/.*, \([0-9]*\) frames drawn.*/\1/' > $T/fd_${PH}_$F.txt
+      -s $F -o $T output/amiga/nhl94.game 2>&1 | grep stopped | sed 's/.*, \([0-9]*\) frames drawn.*/\1/' > $T/fd_${PH}_$F.txt
   done
 done
 python3 - $T $FROM $END <<'PY'
@@ -40,4 +40,7 @@ print('frames %s-%s: the renderer %.1f k cycles a frame (even game frames drawn 
 for k, v in tot.most_common(40):
     if k.startswith('rd_') and v / frs >= 2: print('  %-22s %6.1f k' % (k, v / frs))
 PY
+# the game's state at the end (the reference renderer's picture): builds compare exactly only
+# when it is the same (the game's course can still depend on the renderer's timing)
+echo "game at frame $END: $(md5sum < $T/shot_$(printf %05d $END).png | cut -c1-12)"
 rm -rf $T
