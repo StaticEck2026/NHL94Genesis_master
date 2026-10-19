@@ -309,6 +309,8 @@ static void amiga_png(const char *name)
 {
     uint32_t bpl[8] = {0}, pal[256] = {0};
     int bank = 0, loct = 0, ddf = 0x38, ddfstop = 0xC8, delay = 0, nplanes = 0, mod = 0, ham = 0, killehb = 0, fmode = 0;
+    uint32_t spr[8] = {0};
+    int sprbank = 1, diwv = 0x2C;
     uint32_t pc = cop1lc;
     for (int i = 0; i < 400 && pc; i++) {
         uint32_t w1 = rd16(pc), w2 = rd16(pc + 2);
@@ -333,7 +335,12 @@ static void amiga_png(const char *name)
         else if (r == 0x100) { nplanes = (w2 >> 12) & 7; ham = (w2 >> 11) & 1; }
         else if (r == 0x104) killehb = (w2 >> 9) & 1;
         else if (r == 0x108) mod = w2;
-        else if (r == 0x1FC) fmode = w2 & 3;
+        else if (r == 0x1FC) fmode = w2 & 15;
+        else if (r == 0x10C) sprbank = w2 & 15;              /* BPLCON4 OSPRM (the HUD sets both) */
+        else if (r >= 0x120 && r < 0x140) {
+            int n = (r - 0x120) / 4;
+            if (r & 2) spr[n] = (spr[n] & 0xFFFF0000) | w2; else spr[n] = (spr[n] & 0xFFFF) | (w2 << 16);
+        }
     }
     int diwh = 0x81, diwstop = 0xC1;
     {
@@ -341,13 +348,13 @@ static void amiga_png(const char *name)
         for (int i = 0; i < 400 && q; i++, q += 4) {
             uint32_t r = rd16(q), v = rd16(q + 2);
             if (r == 0xFFFF) break;
-            if (r == 0x8E) diwh = v & 0xFF;
+            if (r == 0x8E) { diwh = v & 0xFF; diwv = v >> 8; }
             if (r == 0x90) diwstop = v & 0xFF;
         }
     }
     /* lores fetches of 16 / 32 / 64 pixels (FMODE 0 / 1 / 3) in 8 / 16 / 32 colour clocks;
        DDFSTRT $38 puts the first pixel fetched at the window position $81, BPLCON1 delays it */
-    int unit = fmode == 0 ? 8 : fmode == 3 ? 32 : 16;
+    int unit = (fmode & 3) == 0 ? 8 : (fmode & 3) == 3 ? 32 : 16;
     int fetch = ((ddfstop - ddf) / unit + 1) * unit / 4;
     int w = (diwstop | 0x100) - diwh, skip = diwh - 0x81 + (0x38 - ddf) * 2 - delay, h = 224, bpr = fetch + mod;
     static uint8_t rgb[320 * 240 * 3];
@@ -362,6 +369,34 @@ static void amiga_png(const char *name)
                 col = c >= 32 ? (pal[c - 32] >> 1) & 0x7F7F7F : pal[c];
             uint8_t *o = rgb + (y * w + x) * 3;
             o[0] = col >> 16; o[1] = col >> 8; o[2] = col;
+        }
+    /* hardware sprites: attached pairs of 64 pixel sprites (FMODE sprite bits 3), in front of
+       the playfield, sprite 0 on top; HSTART = window start - 1 is screen x 0 */
+    if (((fmode >> 2) & 3) == 3)
+        for (int pr = 3; pr >= 0; pr--) {
+            uint32_t ev = spr[2 * pr], od = spr[2 * pr + 1];
+            if (!ev || !od) continue;
+            uint32_t pos = rd16(ev), ctl = rd16(ev + 8), octl = rd16(od + 8);
+            if (!pos && !ctl) continue;
+            if (!(octl & 0x80)) continue;                  /* (only attached pairs are used) */
+            int vs = (pos >> 8) | ((ctl & 4) << 6), ve = (ctl >> 8) | ((ctl & 2) << 7);
+            int hs = ((pos & 0xFF) << 1) | (ctl & 1);
+            for (int ln = vs; ln < ve; ln++) {
+                int y = ln - diwv;
+                if (y < 0 || y >= h) continue;
+                uint32_t e = ev + 16 + (ln - vs) * 16, o2 = od + 16 + (ln - vs) * 16;
+                for (int px = 0; px < 64; px++) {
+                    int x = hs + px - (diwh - 1);
+                    if (x < 0 || x >= w) continue;
+                    int b = px >> 3, m = 0x80 >> (px & 7);
+                    int c = ((rd8(e + b) & m) ? 1 : 0) | ((rd8(e + 8 + b) & m) ? 2 : 0) |
+                            ((rd8(o2 + b) & m) ? 4 : 0) | ((rd8(o2 + 8 + b) & m) ? 8 : 0);
+                    if (!c) continue;
+                    uint32_t col = pal[sprbank * 16 + c];
+                    uint8_t *o = rgb + (y * w + x) * 3;
+                    o[0] = col >> 16; o[1] = col >> 8; o[2] = col;
+                }
+            }
         }
     png_write(name, rgb, w, h);
 }
@@ -704,7 +739,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
         fprintf(stderr, "renderer: plane B tile scans %u, cells %u, high lists %u; A rebuilds %u, overlay redraws %u, cell updates %u\n",
                 rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
-        fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u\n", rd32(k + 56));
+        fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u, HUD sprite builds %u\n",
+                rd32(k + 56), rd32(k + 60));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
     }

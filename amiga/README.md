@@ -135,7 +135,13 @@ The hardware layer:
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
   by 8 lines a bit). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
-  layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
+  layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
+  the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
+  sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
+  cell the game changes are made again (a clock digit), and a whole new set is built into the
+  second of two copies, so the frames queued go on showing the old one. If it does not fit
+  (wider, more than 4 groups of 8 columns, 64 lines or 15 colours) it is blitted as before.
+  Sprites are blits of images kept in a cache in chip RAM (built once from
   the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
   blitted back over what was drawn under them (found by moving the screen cells something low
   was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter

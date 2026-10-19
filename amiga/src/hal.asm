@@ -325,11 +325,23 @@ hal_display_init
 	lea	(hal_copempty).l,a0
 	move.l	#$01000200,(a0)			;BPLCON0: no planes, colour
 	move.l	#$01800000,4(a0)		;black
-	move.l	#$FFFFFFFE,8(a0)
+	lea	8(a0),a1
+	move.l	#rd_sprnull,d1			;the sprites: none
+	move.w	#$120,d2
+	moveq	#7,d0
+.sp	move.w	d2,(a1)+
+	swap	d1
+	move.w	d1,(a1)+
+	addq.w	#2,d2
+	move.w	d2,(a1)+
+	swap	d1
+	move.w	d1,(a1)+
+	addq.w	#2,d2
+	dbf	d0,.sp
+	move.l	#$FFFFFFFE,(a1)
 	move.l	a0,(CUSTOM+$080).l		;COP1LC
 	move.w	d0,(CUSTOM+$088).l		;COPJMP1
-	move.w	#$0020,(CUSTOM+DMACON).l	;no sprites
-	move.w	#$83C0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter
+	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
 	rts
 
 ;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the
@@ -455,7 +467,7 @@ rend_stack	ds.b	16384
 rend_stack_top
 
 	section	chip,bss_c
-hal_copempty	ds.l	4
+hal_copempty	ds.l	3+16
 	IFD	WATCHDOG
 hal_dbgcop	ds.l	20
 hal_dbgscr	ds.b	40*200

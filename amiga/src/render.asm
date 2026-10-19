@@ -27,6 +27,9 @@ BUFSIZE		equ	SROW*BUFH
 NBUF		equ	3			;screen buffers: one shown, one waiting to be, one drawn
 DROWS		equ	BUFH/8			;cell rows of the dirty maps
 SCRH		equ	224
+HUDH		equ	64			;HUD sprites: lines at most
+HUDSPR		equ	16+HUDH*16+16		;bytes of one (64 pixels wide: control, lines, end)
+HUDX		equ	$A0			;sprite horizontal position of screen x 0 (H32)
 OSBPR		equ	48			;the overlay: 32 pixel margin, 320, 32 margin
 OSROW		equ	OSBPR*6
 NPLANES		equ	6
@@ -113,6 +116,9 @@ rd_cop		ds.l	NBUF*256			;a copper list per buffer
 rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_fpsimg	ds.w	5*NPLANES*NBUF		;the frame rate digits (rd_fps), per buffer
+	cnop	0,8
+rd_hudsd	ds.b	2*8*HUDSPR			;the HUD sprites (rd_hud_build)
+rd_sprnull	ds.l	4			;a sprite that is not there
 rd_ovlmlo	ds.b	OSROW*SCRH		;its low priority mask, each row once per plane (so one blit
 rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low one)
 
@@ -458,6 +464,7 @@ rd_frame
 	bra	.shown
 .chunky	moveq	#-1,d0
 	sf	(rd_ntsync).l			;(name table writes are not followed meanwhile)
+	bsr	rd_hud_off
 	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches (all redrawn and
 						;restored on the way back)
 	move.w	#SCRX*8,(rd_xorg).l
@@ -515,13 +522,21 @@ rd_fast
 	tst.b	(rd_ovldirty).l
 	beq	.ovl
 	bsr	rd_ovl_redraw
-.ovl	clr.w	(rd_pass).l			;(all queued for the blitter; what the CPU draws
+.ovl	tst.b	(rd_hudchg).l
+	bne.s	.hb
+	move.w	(rd_w).l,d0
+	cmp.w	(rd_hudw).l,d0
+	beq.s	.hk
+.hb	bsr	rd_hud_build
+.hk	clr.w	(rd_pass).l			;(all queued for the blitter; what the CPU draws
 	bsr	rd_ovl_blit			;waits for it)
 	bsr	rd_sprites_planar
 	bsr	rd_fixups
 	move.w	#$8000,(rd_pass).l
+	tst.w	(rd_hudon).l
+	bne.s	.hs				;(the high priority overlay is the HUD sprites)
 	bsr	rd_ovl_blit
-	bsr	rd_sprites_planar
+.hs	bsr	rd_sprites_planar
 	IFD	VERIFY
 	bsr	rd_waitblit
 	bra	rd_verify
@@ -1644,11 +1659,356 @@ rd_cover_rect
 ;	the list is kept while their name tables, scroll, window registers and tiles stay the same.
 
 ;	------------------------------------------------------------------------------------------
+;	The HUD as hardware sprites. On the rink plane A's high priority cells are the score and
+;	clock boxes at the bottom; blitted each frame (and the plane under them restored after) they
+;	cost the blitter a lot. When the screen is 256 wide (H32: the display leaves the sprites' DMA
+;	slots free) and the high priority overlay fits, it is shown by up to 4 attached pairs of 64
+;	pixel wide sprites instead (at most 4 groups of 8 columns, HUDH lines, 15 colours) and not
+;	blitted. Built again (into the other of two copies) when the overlay is redrawn; a cell the
+;	game changes (a clock digit) only has its bytes made again (rd_hud_cell). rd_hudon: in use.
+rd_hud_off
+	clr.w	(rd_hudon).l
+	st	(rd_hudchg).l
+	movem.l	d0/a0,-(sp)
+	lea	(rd_hudspt).l,a0
+	moveq	#7,d0
+.n	move.l	#rd_sprnull,(a0)+
+	dbf	d0,.n
+	movem.l	(sp)+,d0/a0
+	rts
+
+;	All of it, into the set of sprite data not in use (the frames queued go on showing theirs).
+rd_hud_build
+	movem.l	d0-d7/a0-a6,-(sp)
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+44).l
+	ENDC
+	bsr	rd_hud_off
+	sf	(rd_hudchg).l
+	move.w	(rd_w).l,(rd_hudw).l
+	cmpi.w	#256,(rd_w).l
+	bne	.x
+	; lines and 8 pixel columns used (the mask's plane 0 copy)
+	lea	(rd_hudcols).l,a0
+	moveq	#12-1,d0
+.cc	clr.l	(a0)+
+	dbf	d0,.cc
+	lea	(rd_ovlmhi).l,a1
+	moveq	#-1,d6				;first line
+	moveq	#0,d7				;last
+	moveq	#0,d5				;line
+.ln	lea	(rd_hudcols).l,a0
+	moveq	#0,d1
+	moveq	#12-1,d0
+.lc	move.l	(a1)+,d2
+	or.l	d2,(a0)+
+	or.l	d2,d1
+	dbf	d0,.lc
+	lea	OSROW-OSBPR(a1),a1
+	tst.l	d1
+	beq.s	.le
+	tst.w	d6
+	bpl.s	.l1
+	move.w	d5,d6
+.l1	move.w	d5,d7
+.le	addq.w	#1,d5
+	cmpi.w	#SCRH,d5
+	blt.s	.ln
+	tst.w	d6
+	bmi	.x				;(none)
+	move.w	d7,d0
+	sub.w	d6,d0
+	addq.w	#1,d0
+	cmpi.w	#HUDH,d0
+	bhi	.x
+	move.w	d6,(rd_hudy).l
+	move.w	d0,(rd_hudn).l			;lines
+	; groups of 8 columns from each first used one (screen columns: bytes 4-35)
+	lea	(rd_hudcols).l,a0
+	lea	(rd_hudg).l,a1
+	moveq	#0,d5				;groups
+	moveq	#4,d0				;byte
+.gs	cmpi.w	#36,d0
+	bge.s	.ge
+	tst.b	(a0,d0.w)
+	bne.s	.g1
+	addq.w	#1,d0
+	bra.s	.gs
+.g1	cmpi.w	#4,d5
+	beq	.x				;(more than 4)
+	move.w	d0,(a1)+
+	addq.w	#1,d5
+	addq.w	#8,d0
+	bra.s	.gs
+.ge	; used columns off the screen: not shown this way
+	moveq	#0,d1
+	moveq	#3,d0
+.go	or.b	(a0,d0.w),d1
+	dbf	d0,.go
+	moveq	#36,d0
+.go2	or.b	(a0,d0.w),d1
+	addq.w	#1,d0
+	cmpi.w	#48,d0
+	blt.s	.go2
+	tst.b	d1
+	bne	.x
+	move.w	d5,(rd_hudgn).l
+	; colours: none yet
+	lea	(rd_hudcm).l,a0
+	moveq	#64/4-1,d0
+.cm	clr.l	(a0)+
+	dbf	d0,.cm
+	lea	(rd_hudmap).l,a0
+	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.w	(rd_hudnc).l
+	; the other set of sprite data: clear
+	eori.w	#1,(rd_hudset).l
+	lea	(rd_hudsd).l,a0
+	tst.w	(rd_hudset).l
+	beq.s	.s0
+	lea	8*HUDSPR(a0),a0
+.s0	move.l	a0,(rd_hudbase).l
+	move.w	#8*HUDSPR/4-1,d0
+.cs	clr.l	(a0)+
+	dbf	d0,.cs
+	; each group: an attached pair (sprites 2g, 2g+1)
+	moveq	#0,d5				;group
+.grp	movea.l	(rd_hudbase).l,a3
+	move.w	d5,d0
+	mulu.w	#2*HUDSPR,d0
+	adda.l	d0,a3				;even sprite
+	lea	HUDSPR(a3),a4			;odd
+	movem.l	a3-a4,-(sp)
+	lea	(rd_hudg).l,a0
+	move.w	(a0,d5.w*2),d4			;first byte of the overlay row
+	move.w	(rd_hudy).l,d6			;line
+	moveq	#0,d7				;line of the sprites
+.gl	move.w	d6,d0
+	mulu.w	#OSROW,d0
+	lea	(rd_ovl).l,a1
+	adda.l	d0,a1
+	adda.w	d4,a1				;the overlay's bytes (plane p at p * OSBPR)
+	lea	(rd_ovlmhi).l,a2
+	adda.l	d0,a2
+	adda.w	d4,a2				;the mask
+	movem.l	(sp),a3-a4
+	move.w	d7,d0
+	lsl.w	#4,d0
+	lea	16(a3,d0.w),a5			;even sprite: A (8 bytes), B (8 bytes)
+	lea	16(a4,d0.w),a6			;odd
+	moveq	#0,d3				;byte of the 8
+.gb	move.w	d4,d0
+	add.w	d3,d0
+	cmpi.w	#48,d0
+	bge.s	.nb
+	move.b	(a2,d3.w),d2			;mask byte
+	beq.s	.nb
+	lea	(a1,d3.w),a0
+	movem.l	d3-d7/a5-a6,-(sp)
+	adda.w	d3,a5
+	adda.w	d3,a6
+	bsr	rd_hud_byte
+	movem.l	(sp)+,d3-d7/a5-a6
+	bcs	.full
+.nb	addq.w	#1,d3
+	cmpi.w	#8,d3
+	blt.s	.gb
+	addq.w	#1,d6
+	addq.w	#1,d7
+	cmp.w	(rd_hudn).l,d7
+	blt	.gl
+	movem.l	(sp)+,a3-a4
+	; control words: vertical from the window's first line, horizontal from HUDX
+	moveq	#$3C,d0				;(DIWSTRT: PAL)
+	tst.b	(hal_pal).l
+	bne.s	.vp
+	moveq	#$1A,d0
+.vp	add.w	(rd_hudy).l,d0			;VSTART
+	move.w	d0,d1
+	add.w	(rd_hudn).l,d1			;VSTOP
+	move.w	d4,d2
+	lsl.w	#3,d2
+	subi.w	#32,d2				;screen x
+	addi.w	#HUDX,d2			;HSTART
+	move.w	d0,d3				;POS: VSTART 7-0, HSTART 8-1
+	lsl.w	#8,d3
+	move.w	d2,d6
+	lsr.w	#1,d6
+	move.b	d6,d3
+	move.w	d1,d6				;CTL: VSTOP 7-0, VSTART 8, VSTOP 8, HSTART 0
+	lsl.w	#8,d6
+	btst	#8,d0
+	beq.s	.v8
+	bset	#2,d6
+.v8	btst	#8,d1
+	beq.s	.e8
+	bset	#1,d6
+.e8	btst	#0,d2
+	beq.s	.h0
+	bset	#0,d6
+.h0	move.w	d3,(a3)				;(64 bit control words: POS, then CTL 8 bytes on)
+	move.w	d6,8(a3)
+	move.w	d3,(a4)
+	bset	#7,d6				;ATT: the odd one is attached
+	move.w	d6,8(a4)
+	addq.w	#1,d5
+	cmp.w	(rd_hudgn).l,d5
+	blt	.grp
+	; in use
+	movea.l	(rd_hudbase).l,a0
+	lea	(rd_hudspt).l,a1
+	move.w	(rd_hudgn).l,d0
+	add.w	d0,d0
+	subq.w	#1,d0
+.sp	move.l	a0,(a1)+
+	lea	HUDSPR(a0),a0
+	dbf	d0,.sp
+	move.w	#1,(rd_hudon).l
+	bra.s	.x
+.full	addq.l	#8,sp				;(more than 15 colours: blitted)
+	bsr	rd_hud_off
+	sf	(rd_hudchg).l
+.x	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
+;	A cell of the overlay changed (d1 x, d2 y on the screen, rd_ovl_setcell): its bytes of the
+;	HUD sprites in use made again; a full build if it is not in their columns and lines, or
+;	needs a 16th colour.
+rd_hud_cell
+	tst.w	(rd_hudon).l
+	bne.s	.on
+	st	(rd_hudchg).l			;(not in use: the full build looks again)
+	rts
+.on	movem.l	d0-d7/a0-a6,-(sp)
+	move.w	d1,d3
+	addi.w	#4*8,d3
+	lsr.w	#3,d3				;overlay byte
+	lea	(rd_hudg).l,a0
+	move.w	(rd_hudgn).l,d7
+	subq.w	#1,d7
+	moveq	#0,d5				;group
+.fg	move.w	d3,d4
+	sub.w	(a0)+,d4			;byte in the group
+	bmi.s	.ng
+	cmpi.w	#8,d4
+	blt.s	.fd
+.ng	addq.w	#1,d5
+	dbf	d7,.fg
+	bra	.full
+.fd	lea	(rd_hudspt).l,a0
+	movea.l	(a0,d5.w*8),a3			;even sprite
+	movea.l	4(a0,d5.w*8),a4			;odd
+	move.w	d2,d6				;line
+	moveq	#7,d7
+.ln	move.w	d6,d0
+	bmi.s	.nl
+	cmpi.w	#SCRH,d0
+	bge.s	.nl
+	mulu.w	#OSROW,d0
+	lea	(rd_ovl).l,a0
+	adda.l	d0,a0
+	adda.w	d3,a0				;its byte
+	lea	(rd_ovlmhi).l,a1
+	adda.l	d0,a1
+	move.b	(a1,d3.w),d2			;its mask
+	move.w	d6,d0
+	sub.w	(rd_hudy).l,d0			;line of the sprites
+	bmi.s	.out
+	cmp.w	(rd_hudn).l,d0
+	bge.s	.out
+	lsl.w	#4,d0
+	lea	16(a3,d0.w),a5
+	lea	16(a4,d0.w),a6
+	adda.w	d4,a5
+	adda.w	d4,a6
+	movem.l	d3-d7/a3-a4,-(sp)
+	bsr	rd_hud_byte
+	movem.l	(sp)+,d3-d7/a3-a4
+	bcs.s	.full
+	bra.s	.nl
+.out	tst.b	d2
+	bne.s	.full				;(something outside the sprites' lines)
+.nl	addq.w	#1,d6
+	dbf	d7,.ln
+	bra.s	.x
+.full	st	(rd_hudchg).l
+.x	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
+;	One byte (8 pixels) of the HUD sprites: a0 = the overlay's byte (plane p at p * OSBPR), d2 =
+;	its high priority mask, a5 / a6 = the even / odd sprite's byte (plane A; plane B 8 bytes
+;	on). New colours are given sprite colours (rd_hudcm, rd_hudmap). C set if a 16th would be
+;	needed. Uses d0-d1, d3-d7, a3-a4.
+rd_hud_byte
+	lea	(rd_hudcm).l,a3
+	lea	(rd_hudmap).l,a4
+	moveq	#0,d4				;even A
+	moveq	#0,d5				;even B
+	moveq	#0,d6				;odd A
+	moveq	#0,d7				;odd B
+	moveq	#7,d0				;pixel bit
+.px	btst	d0,d2
+	beq	.pn
+	moveq	#0,d1				;its colour
+	btst	d0,(a0)
+	beq.s	.c1
+	bset	#0,d1
+.c1	btst	d0,OSBPR(a0)
+	beq.s	.c2
+	bset	#1,d1
+.c2	btst	d0,2*OSBPR(a0)
+	beq.s	.c3
+	bset	#2,d1
+.c3	btst	d0,3*OSBPR(a0)
+	beq.s	.c4
+	bset	#3,d1
+.c4	btst	d0,4*OSBPR(a0)
+	beq.s	.c5
+	bset	#4,d1
+.c5	btst	d0,5*OSBPR(a0)
+	beq.s	.c6
+	bset	#5,d1
+.c6	move.b	(a3,d1.w),d3			;its sprite colour
+	bne.s	.cok
+	move.w	(rd_hudnc).l,d3
+	cmpi.w	#15,d3
+	beq.s	.full
+	addq.w	#1,d3
+	move.w	d3,(rd_hudnc).l
+	move.b	d3,(a3,d1.w)
+	move.b	d1,(a4,d3.w)
+.cok	btst	#0,d3
+	beq.s	.s1
+	bset	d0,d4
+.s1	btst	#1,d3
+	beq.s	.s2
+	bset	d0,d5
+.s2	btst	#2,d3
+	beq.s	.s3
+	bset	d0,d6
+.s3	btst	#3,d3
+	beq.s	.pn
+	bset	d0,d7
+.pn	dbf	d0,.px
+	move.b	d4,(a5)
+	move.b	d5,8(a5)
+	move.b	d6,(a6)
+	move.b	d7,8(a6)
+	andi	#$FE,ccr			;C clear
+	rts
+.full	ori	#1,ccr				;C set
+	rts
+
+;	------------------------------------------------------------------------------------------
 ;	The plane A / window overlay: the listed cells drawn into a screen sized bitmap with a mask
 ;	plane per priority, redrawn only when the list changes. Each frame the blitter cuts the
 ;	rows that have cells into the screen, low priority before the sprites, high after.
 
 rd_ovl_redraw
+	st	(rd_hudchg).l
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+16).l
 	ENDC
@@ -2098,7 +2458,9 @@ rd_ovl_setcell
 	tst.b	(a0,d3.w)
 	beq.s	.x
 	bsr	rd_ovl_cell
-.x	movem.l	(sp)+,d0-d7/a0-a6
+.x	movem.l	4(sp),d1-d2
+	bsr	rd_hud_cell			;(the HUD sprites)
+	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
 rd_buildA
@@ -4307,26 +4669,40 @@ rd_show
 	bne	.pal
 	move.w	#$1AA1,d1
 	move.w	#$FAA1,d2
-.pal	moveq	#96,d6				;the window's first pixel: fetched pixel 96 (H32) or 64
-	cmpi.w	#320,(rd_w).l			;(H40), less the delay
-	bne	.dw
+.pal	cmpi.w	#320,(rd_w).l
+	bne	.h32
 	move.b	#$81,d1				;H40: 320 pixels
 	move.b	#$C1,d2
-	moveq	#64,d6
+	moveq	#64,d6				;the window's first pixel: fetched pixel 64, less the
+	moveq	#63,d7				;delay (0-63)
+	move.w	#$0018,d3			;6 fetches of 64 pixels (384) from 64 before the window
+	move.w	#SROW-48,d5
+	move.w	#$000F,d4			;FMODE: 64 bit bitplane fetch, 64 pixel sprites
+	bra.s	.dw
+.h32	moveq	#32,d6				;H32: fetched pixel 32, less the delay (0-31): 9
+	moveq	#31,d7				;fetches of 32 pixels (288) from 32 before the window.
+	move.w	#$0038,d3			;Not from $18: those fetches would take the DMA slots
+	move.w	#SROW-36,d5			;of sprites 1-7 (the HUD, rd_hud_build)
+	move.w	#$000D,d4			;FMODE: 32 bit bitplane fetch, 64 pixel sprites
 .dw	move.w	#$08E,(a0)+
 	move.w	d1,(a0)+
 	move.w	#$090,(a0)+
 	move.w	d2,(a0)+
-	COPMOVE	$092,#$0018			;DDFSTRT, DDFSTOP: 6 fetches of 64 pixels (384), from 64
-	COPMOVE	$094,#$00B8			;pixels before the H40 window
-	COPMOVE	$108,#SROW-48			;BPL1MOD, BPL2MOD: interleaved
-	COPMOVE	$10A,#SROW-48
+	move.w	#$092,(a0)+			;DDFSTRT
+	move.w	d3,(a0)+
+	COPMOVE	$094,#$00B8			;DDFSTOP
+	move.w	#$108,(a0)+			;BPL1MOD, BPL2MOD: interleaved
+	move.w	d5,(a0)+
+	move.w	#$10A,(a0)+
+	move.w	d5,(a0)+
+	move.w	#$1FC,(a0)+			;FMODE (the fewer bitplane fetches the more of the bus is
+	move.w	d4,(a0)+			;left to the blitter and the CPU)
 	; the delay puts buffer bit rd_xorg at the window's first pixel; the bit fetched first is
-	; on a 64 bit boundary (it can be before the row: those pixels are not shown)
+	; on a fetch boundary (it can be before the row: those pixels are not shown)
 	move.w	(rd_xorg).l,d0
 	move.w	d6,d1
 	sub.w	d0,d1
-	andi.w	#63,d1				;delay
+	and.w	d7,d1				;delay
 	add.w	d1,d0
 	sub.w	d6,d0				;the bit fetched first
 	asr.w	#3,d0
@@ -4347,9 +4723,7 @@ rd_show
 	move.w	#$102,(a0)+			;BPLCON1
 	move.w	d2,(a0)+
 	COPMOVE	$104,#$0224			;BPLCON2: KILLEHB (6 planes would be Extra Half-Brite)
-	COPMOVE	$1FC,#$0003			;FMODE: 64 bit bitplane fetch (the bus is shared with the
-						;CPU and the blitter: the fewer fetches the better)
-	COPMOVE	$10C,#$0011			;BPLCON4
+	COPMOVE	$10C,#$0044			;BPLCON4: sprite colours 64-79
 	move.w	#$0E0,d1
 	moveq	#NPLANES-1,d2
 .bp	move.w	d1,(a0)+
@@ -4362,6 +4736,20 @@ rd_show
 	addq.w	#2,d1
 	addi.l	#SBPR,d0
 	dbf	d2,.bp
+	; the sprites: the HUD's (rd_hud_build) or none
+	lea	(rd_hudspt).l,a1
+	move.w	#$120,d1
+	moveq	#7,d2
+.sp	move.l	(a1)+,d0
+	move.w	d1,(a0)+
+	swap	d0
+	move.w	d0,(a0)+
+	addq.w	#2,d1
+	move.w	d1,(a0)+
+	swap	d0
+	move.w	d0,(a0)+
+	addq.w	#2,d1
+	dbf	d2,.sp
 	; the 64 colours: per bank of 32 the high nibbles, then (LOCT) the low nibbles
 	lea	(rd_colours).l,a1
 	lea	(rd_colourslo).l,a2
@@ -4390,6 +4778,32 @@ rd_show
 	addq.w	#1,d3
 	cmpi.w	#2,d3
 	bne	.bank
+	; the HUD sprites' colours (64-79): those of the overlay colours they stand for
+	tst.w	(rd_hudon).l
+	beq	.nohc
+	lea	(rd_hudmap).l,a1
+	lea	(rd_colours).l,a2
+	COPMOVE	$106,#$4C00			;BPLCON3: bank 2 (64-95)
+	move.w	#$180,d1
+	moveq	#15,d2
+.hc	moveq	#0,d0
+	move.b	(a1)+,d0
+	move.w	d1,(a0)+
+	move.w	(a2,d0.w*2),(a0)+
+	addq.w	#2,d1
+	dbf	d2,.hc
+	lea	(rd_hudmap).l,a1
+	lea	(rd_colourslo).l,a2
+	COPMOVE	$106,#$4E00			;(LOCT)
+	move.w	#$180,d1
+	moveq	#15,d2
+.hl	moveq	#0,d0
+	move.b	(a1)+,d0
+	move.w	d1,(a0)+
+	move.w	(a2,d0.w*2),(a0)+
+	addq.w	#2,d1
+	dbf	d2,.hl
+.nohc
 	move.l	#$FFFFFFFE,(a0)+
 	; it is shown once the blits queued for it are done: a marker in the blit queue has the
 	; level 3 interrupt set the copper list then (rd_bq_start); the CPU goes on
@@ -4424,6 +4838,20 @@ rd_show
 
 	section	bss,bss
 rd_tline	ds.w	1
+rd_hudspt	ds.l	8			;the sprites' data (rd_sprnull: none)
+rd_hudon	ds.w	1
+rd_hudchg	ds.w	1			;(the overlay changed: rd_hud_build)
+rd_hudw		ds.w	1			;(the screen width it was built for)
+rd_hudy		ds.w	1			;first line
+rd_hudn		ds.w	1			;lines
+rd_hudgn	ds.w	1			;groups
+rd_hudg		ds.w	4			;their first overlay row bytes
+rd_hudnc	ds.w	1			;colours used
+rd_hudset	ds.w	1			;the set of sprite data in use (of 2)
+rd_hudbase	ds.l	1			;its address
+rd_hudcols	ds.b	48			;(columns used)
+rd_hudcm	ds.b	64			;overlay colour -> sprite colour (0: none yet)
+rd_hudmap	ds.b	16			;sprite colour -> overlay colour
 rd_nchgA	ds.w	1
 rd_ntcur	ds.b	1			;the name table being compared was written (rd_ntwritten)
 rd_nttab	ds.b	1			;(VERIFY: which)
