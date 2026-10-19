@@ -145,7 +145,7 @@ hal_set_vectors
 	move.l	a1,$64(a0)			;level 1
 	move.l	a1,$68(a0)			;level 2
 	lea	rd_bq_int(pc),a2
-	move.l	a2,$6C(a0)			;level 3: the blit queue, the vertical blank count
+	move.l	a2,$6C(a0)			;level 3: the blit queue's shows, the vertical blank count
 	move.l	a1,$70(a0)			;level 4
 	move.l	a1,$74(a0)			;level 5
 	move.l	a1,$7C(a0)			;level 7
@@ -182,8 +182,8 @@ hal_start_timer
 	move.b	#$11,(CIAB_CRB).l
 	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
-	move.w	#$C000|$2000|$0020,(CUSTOM+INTENA).l	;master, EXTER (level 6), VERTB (level 3;
-							;BLIT while the blit queue runs)
+	move.w	#$C000|$2000|$0020|$0010,(CUSTOM+INTENA).l	;master, EXTER (level 6), VERTB and
+							;COPER (level 3: the blit queue's shows)
 	rts
 
 ;	Level 6. The CIA-B timer is the Genesis vertical blank: count it and run the game's handler
@@ -438,9 +438,10 @@ ctx_init
 ;	Display: copper and bitplane DMA on, an empty copper list until the first frame.
 hal_display_init
 	lea	(hal_copempty).l,a0
-	move.l	#$01000200,(a0)			;BPLCON0: no planes, colour
-	move.l	#$01800000,4(a0)		;black
-	lea	8(a0),a1
+	move.l	#$009C0006,(a0)			;INTREQ: SOFT, DSKBLK off (the blit queue, rd_bq_go)
+	move.l	#$01000200,4(a0)		;BPLCON0: no planes, colour
+	move.l	#$01800000,8(a0)		;black
+	lea	12(a0),a1
 	move.l	#rd_sprnull,d1			;the sprites: none
 	move.w	#$120,d2
 	moveq	#7,d0
@@ -453,7 +454,7 @@ hal_display_init
 	move.w	d1,(a1)+
 	addq.w	#2,d2
 	dbf	d0,.sp
-	move.l	#$FFFFFFFE,(a1)
+	move.l	#$008A0000,(a1)			;COPJMP2: the blit queue
 	move.l	a0,(CUSTOM+$080).l		;COP1LC
 	move.w	d0,(CUSTOM+$088).l		;COPJMP1
 	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
@@ -563,6 +564,7 @@ prof_mark	ds.l	5+8+16+4		;(+20: frames shown 1 ... 8+ vertical blanks; +52: vert
 					;+116: time in the game, the renderer, the game's vblank code)
 prof_last	ds.l	1
 prof_buf	ds.l	PROFMAX
+prof_intreq	ds.l	1
 prof_evpos	ds.l	1
 prof_evcount	ds.l	1
 prof_ev		ds.l	PEVMAX			;events: code (top byte), CIA-B TOD
@@ -589,7 +591,11 @@ rend_stack	ds.b	16384
 rend_stack_top
 
 	section	chip,bss_c
-hal_copempty	ds.l	3+16
+	IFD	MEMBENCH
+mb_chip		ds.b	2048
+mb_blt		ds.b	128*64
+	ENDC
+hal_copempty	ds.l	4+16
 	IFD	WATCHDOG
 hal_dbgcop	ds.l	20
 hal_dbgscr	ds.b	40*200

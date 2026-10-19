@@ -149,6 +149,7 @@ rd_screens	ds.b	BUFSIZE*NBUF
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 mkB6		ds.b	BMAX*48			;its high priority mask in each plane's place (blitter)
 rd_cop		ds.l	NBUF*256			;a copper list per buffer
+rd_cqbuf	ds.b	2*CQI			;the copper's blit ring (rd_cq_init)
 rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_fpsimg	ds.w	5*NPLANES*NBUF		;the frame rate digits (rd_fps), per buffer
@@ -300,6 +301,7 @@ rd_init
 .ro	move.l	d0,(a0)+
 	addi.l	#SROW,d0
 	dbf	d1,.ro
+	bsr	rd_cq_init
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
@@ -785,10 +787,16 @@ rd_spin_vs					;(the harness: the renderer waits here)
 	movem.l	(sp)+,d0-d1/a0
 	rts
 
+;	Wait until the blits given to the copper are done: it has started them all (it stopped at
+;	the ring's end, SOFT) and the blitter has finished. Keeps all.
 rd_waitblit
+	tst.b	(rd_cqidle).l			;nothing given to it since it stopped
+	bne.s	rd_wb_blt
 rd_spin_q
-.q	tst.b	(rd_bqbusy).l			;the queue first
-	bne	.q
+.q	btst	#2,(CUSTOM+$01F).l		;INTREQR SOFT
+	beq	.q
+	st	(rd_cqidle).l
+rd_wb_blt
 	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
 rd_spin_w
 .w	btst	#6,(CUSTOM+DMACONR).l
@@ -797,135 +805,340 @@ rd_spin_w
 rd_waitblit_end
 
 ;	------------------------------------------------------------------------------------------
-;	Blit queue: the blits are written into entries laid out like the blitter's registers
-;	$040-$075 and started one after the other by the blitter's interrupt, so the CPU goes on
-;	with its own work. rd_waitblit waits for the queue to empty. While the queue is empty and
-;	the blitter idle, a blit is written straight into the blitter's registers (and started by
-;	its BLTSIZH, the last written): no entry, no interrupt. The blitter's interrupt is on only
-;	while the queue runs (rd_bqint).
+;	Blit queue: the copper starts the blits. Each is written into a ring of copper code in chip
+;	memory (rd_cqring) as a block: a wait for the blitter to finish, moves to the blitter's
+;	registers (BLTSIZH last: the blit starts) and to COP2LCL (where a vertical blank's copper
+;	restart resumes: every display list ends by jumping to COP2LC). So the CPU goes on with its
+;	own work and takes no interrupt for a blit. A CPU write to chip memory waits long while
+;	the blitter runs, so a block moves only what the blit uses and the blitter does not hold
+;	already (rd_cqsh: what the blocks before it leave there; the pointers, BLTADAT and the size
+;	always).
+;	After the last block the copper stops (a wait that never comes), setting INTREQ's SOFT bit
+;	(no interrupt) first; the next block written there takes its place and, if SOFT says the
+;	copper stopped, the CPU starts it again (COPJMP2). At a show marker (rd_show), once the
+;	blits before it are done, the copper goes to the parking place, which stops it (DSKBLK)
+;	and calls the level 3 interrupt (COPER): that sets the copper list when due (rd_showdue)
+;	and starts the copper again after the marker. A vertical blank's restart while it waits
+;	there comes back to it (COP2LC) and calls again: a call while DSKBLK is off is one left
+;	over. The display lists clear SOFT and DSKBLK first: the CPU never takes a list's jump
+;	for the copper (rd_cq_safe).
+;	A block runs again if a vertical blank comes in the middle of it, which a blit allows (it
+;	reads the same and writes the same again).
 	IFND	RGAP
 RGAP	equ	2				;rd_restore: runs this many columns apart are one blit
 	ENDC
-BQN	equ	128				;entries (a power of 2)
-BQE	equ	$40				;bytes an entry ($38 used: a power of 2 to find)
-BQS	equ	6				;(log2 BQE)
+BQE	equ	$38				;the blit being written: laid out as the blitter's
+						;registers $040-$077
+CQSIZE	equ	16384				;the ring's bytes (a power of 2)
+CQMAXB	equ	88				;a block's bytes at most after its first two moves
+CQI	equ	CQSIZE+8			;the ring and the parking place
+CQ_HALT	equ	$FFFF7FFE			;a wait that never comes (beam position $FF,$FE)
+CQ_WBLT	equ	$00017FFE			;a wait for the blitter (and any beam position)
 
-;	a6 = the next entry, as if it were the custom chips' base (write $040(a6) ... $05E(a6),
-;	BLTSIZH last), or the custom chips if the queue and the blitter are idle. Waits while the
-;	queue is full.
+;	a6 = where to write a blit, as if it were the custom chips' base ($040(a6) ... $05E(a6),
+;	BLTSIZH 0: a show marker, rd_show). Keeps all else.
 rd_bq_alloc
-	tst.b	(rd_bqbusy).l
-	bne.s	.q
-	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
-	btst	#6,(CUSTOM+DMACONR).l
-	bne.s	.q
-	lea	(CUSTOM).l,a6			;idle: the blitter's own registers
-	move.w	#0,$074(a6)			;BLTADAT
-	rts
-.q
-;	An entry whatever the blitter does (a show marker).
 rd_bq_allocq
-	move.l	d0,-(sp)
-rd_spin_full
-.full	move.w	(rd_bqtail).l,d0
-	addq.w	#1,d0
-	andi.w	#BQN-1,d0
-	cmp.w	(rd_bqhead).l,d0
-	beq	.full
-	move.w	(rd_bqtail).l,d0
-	lsl.w	#BQS,d0
-	lea	(rd_bq-$040).l,a6
-	adda.w	d0,a6
+	lea	(rd_bqe-$040).l,a6
 	clr.w	$074(a6)			;BLTADAT: what a shift brings into the first word
-	move.l	(sp)+,d0
 	rts
 
-;	The entry from rd_bq_alloc is complete: queue it, and start it if the blitter is idle (a
-;	blit written straight into the blitter has started already).
+;	A move of register \1 (16 bits) unless the blitter holds the value already (rd_cqsh+\2).
+;	a0 the blit, a3 the block, a6 rd_cqsh. Uses d1.
+CQMOVE	MACRO
+	moveq	#0,d1
+	move.w	\1-$040(a0),d1
+	cmp.l	\2(a6),d1
+	beq.s	.n\@
+	move.l	d1,\2(a6)
+	ori.l	#\1<<16,d1
+	move.l	d1,(a3)+
+.n\@
+	ENDM
+;	The moves of pointer register \1 (high, low). Uses d1-d2.
+CQPTR	MACRO
+	move.l	\1-$040(a0),d1
+	move.l	d1,d2
+	clr.w	d2
+	swap	d2
+	ori.l	#\1<<16,d2
+	move.l	d2,(a3)+
+	swap	d1
+	move.w	#\1+2,d1
+	swap	d1
+	move.l	d1,(a3)+
+	ENDM
+
+;	The blit (or marker) from rd_bq_alloc goes to the copper. Keeps all.
 rd_bq_go
-	cmpa.l	#CUSTOM,a6
-	beq.s	.d
-	move	sr,-(sp)
-	ori	#$0700,sr
-	movem.l	d0/a0-a1,-(sp)
-	move.w	(rd_bqtail).l,d0
-	addq.w	#1,d0
-	andi.w	#BQN-1,d0
-	move.w	d0,(rd_bqtail).l
-	tst.b	(rd_bqbusy).l
-	bne	.x
-	; the queue was idle: a blit started directly may still run. Its end starts the queue
-	; (rd_bq_int), or it has ended and the queue starts now.
-	st	(rd_bqbusy).l
-	bsr	rd_bq_inton
-	btst	#6,(CUSTOM+DMACONR).l
-	bne	.x
-	bsr	rd_bq_start
-.x	movem.l	(sp)+,d0/a0-a1
-	move	(sp)+,sr
-.d	rts
-
-;	The blitter's interrupt on (the queue runs). Interrupts off.
-rd_bq_inton
-	tst.b	(rd_bqint).l
-	bne.s	.x
-	st	(rd_bqint).l
-	move.w	#$8040,(CUSTOM+INTENA).l
-.x	rts
-
-;	Start the next blit of the queue (interrupts off); show markers on the way (rd_show: BLTSIZH
-;	0) are carried out: the copper list set, its buffer's rd_shownvb noted. rd_bqbusy: a blit of
-;	the queue runs. Uses d0, a0, a1.
-rd_bq_start
-.next	move.w	(rd_bqhead).l,d0
-	cmp.w	(rd_bqtail).l,d0
-	beq	.idle
-	lea	(rd_bq).l,a0
-	lsl.w	#BQS,d0
-	adda.w	d0,a0
+	movem.l	d0-d3/a0-a4/a6,-(sp)
+	movea.l	(rd_cqring).l,a2
+	suba.l	a4,a4				;(no jump back to the ring's start)
+rd_spin_full					;room after the copper's stop for the largest block
+.full	moveq	#0,d0
+	move.w	(rd_cqw).l,d0			;(the stop: the block goes there)
+	move.w	(rd_cqd).l,d1			;(the copper has run what is before this)
+	sub.w	d0,d1
+	subq.w	#8,d1
+	andi.w	#CQSIZE-1,d1			;bytes free after the stop
+	move.w	#CQSIZE,d2
+	sub.w	d0,d2				;bytes from the stop to the ring's end
+	cmpi.w	#CQMAXB+8,d2
+	bhs.s	.nw
+	add.w	#CQMAXB,d2			;(not enough: from the ring's start)
+	cmp.w	d2,d1
+	blo.s	.wait
+	lea	(a2,d0.l),a4			;the stop becomes a jump to the start
+	moveq	#0,d0
+	bra.s	.room
+.nw	cmpi.w	#CQMAXB,d1
+	bhs.s	.room
+.wait	btst	#2,(CUSTOM+$01F).l		;SOFT: it stopped, all have run
+	beq.s	.full
+	move.w	(rd_cqw).l,(rd_cqd).l
+	bra.s	.full
+.room
+rd_bq_put
+	lea	(a2,d0.l),a1			;the block: its first two moves replace the stop
+	lea	8(a1),a3
+	lea	(rd_bqe).l,a0
+	move.w	(a0),d3				;BLTCON0
+	IFD	PROFILE
+	addq.l	#1,(prof_mark+80).l		;(statistics: blits)
+	ENDC
 	tst.w	$05E-$040(a0)
 	beq	.mark
-	move.w	(rd_bqhead).l,d0		;(on to the next)
-	addq.w	#1,d0
-	andi.w	#BQN-1,d0
-	move.w	d0,(rd_bqhead).l
-	st	(rd_bqbusy).l
-	tst.b	(rd_bqint).l
-	bne.s	.ion
-	bsr	rd_bq_inton
-.ion	lea	(CUSTOM+$040).l,a1
-	move.l	(a0)+,(a1)+			;BLTCON0, BLTCON1
-	move.l	(a0)+,(a1)+			;BLTAFWM, BLTALWM
-	move.l	(a0)+,(a1)+			;BLTCPT
-	move.l	(a0)+,(a1)+			;BLTBPT
-	move.l	(a0)+,(a1)+			;BLTAPT
-	move.l	(a0)+,(a1)+			;BLTDPT
-	move.l	$060-$058(a0),$060-$058(a1)	;BLTCMOD, BLTBMOD
-	move.l	$064-$058(a0),$064-$058(a1)	;BLTAMOD, BLTDMOD
-	move.w	$074-$058(a0),$074-$058(a1)	;BLTADAT
-	move.w	$05C-$058(a0),$05C-$058(a1)	;BLTSIZV
-	move.w	$05E-$058(a0),$05E-$058(a1)	;BLTSIZH: go
+	lea	(rd_cqsh).l,a6
+	CQMOVE	$040,0				;BLTCON0
+	CQMOVE	$042,4				;BLTCON1
+	CQMOVE	$044,8				;BLTAFWM
+	CQMOVE	$046,12				;BLTALWM
+	btst	#11,d3
+	beq.s	.na
+	CQPTR	$050				;BLTAPT
+	CQMOVE	$064,16				;BLTAMOD
+	move.l	#-1,32(a6)			;(BLTADAT: the last word A read)
+	cmpi.w	#$1000,d3
+	blo.s	.nd				;(no shift: BLTADAT not used)
+.na	move.l	#$00740000,d1			;BLTADAT
+	move.w	$074-$040(a0),d1
+	move.l	d1,(a3)+
+.nd	btst	#10,d3
+	beq.s	.nb
+	CQPTR	$04C				;BLTBPT
+	CQMOVE	$062,20				;BLTBMOD
+.nb	btst	#9,d3
+	beq.s	.nc
+	CQPTR	$048				;BLTCPT
+	CQMOVE	$060,24				;BLTCMOD
+.nc	btst	#8,d3
+	beq.s	.nn
+	CQPTR	$054				;BLTDPT
+	CQMOVE	$066,28				;BLTDMOD
+.nn	move.l	#$005C0000,d1			;BLTSIZV (always: the blitter may count it
+	move.w	$05C-$040(a0),d1		;down)
+	move.l	d1,(a3)+
+	move.l	#$005E0000,d1			;BLTSIZH: it starts
+	move.w	$05E-$040(a0),d1
+	move.l	d1,(a3)+
+	; COP2LCL: the next block's place (a vertical blank's restart resumes there), then the stop
+.end	move.l	a3,d1
+	addq.l	#4,d1
+	swap	d1
+	move.w	#$086,d1
+	swap	d1
+	move.l	d1,(a3)+
+	move.l	#$009C8004,(a3)+		;INTREQ: SOFT on,
+	move.l	#CQ_HALT,(a3)			;and stop
+	subq.l	#4,a3
+	; let it go: its wait for the blitter first, its first move (SOFT off) last
+	move.l	#CQ_WBLT,4(a1)
+	move.l	#$009C0004,(a1)
+.arm	move.l	a4,d1
+	beq.s	.nj
+	move.l	#$008A0000,4(a4)		;(the ring's start: COPJMP2 after
+	move.l	(rd_cqjmv).l,(a4)		;COP2LCL)
+	sub.l	a2,d1				;(the copper is at the old stop)
+	move.l	d1,d0
+.nj	suba.l	a2,a3
+	move.w	a3,(rd_cqw).l
+	sf	(rd_cqidle).l
+	btst	#2,(CUSTOM+$01F).l		;SOFT: the copper stopped there: start it
+	bne.s	.kick
+.x	movem.l	(sp)+,d0-d3/a0-a4/a6
 	rts
-.mark	PEV	'M'				;(statistics: the queue at a show)
-	tst.l	(rd_showcop).l			;the show before still waits for its vertical
-	bne	.hold				;blank: so does the queue (rd_bqhold)
-	bsr	.adv
-	move.l	$048-$040(a0),(rd_showcop).l
-	move.w	$04C-$040(a0),(rd_showbuf).l
+.kick	move	sr,-(sp)
+	ori	#$0700,sr
+	bsr	rd_cq_safe
+	btst	#2,(CUSTOM+$01F).l		;(again: a vertical blank may have come)
+	beq.s	.k1
+	move.w	#$0004,(CUSTOM+INTREQ).l	;SOFT off
+	move.w	d0,(CUSTOM+$08A).l		;COPJMP2: to the stop's place (COP2LC)
+	move.w	d0,(rd_cqd).l			;(what is before it has run)
+	IFD	PROFILE
+	addq.l	#1,(prof_mark+84).l		;(statistics: the copper started again)
+	ENDC
+.k1	move	(sp)+,sr
+	bra.s	.x
+	; a show marker: once the blits before it are done the copper goes to the parking place
+	; (COP2LCL first: a vertical blank's restart goes there too), which says it waits there
+	; (DSKBLK) and calls (COPER). The level 3 interrupt (rd_cq_mark) takes its list and buffer
+	; from rd_cqmq
+.mark	move.l	(rd_cqpmv).l,(a3)+		;COP2LCL: the parking place
+	move.l	#$008A0000,(a3)+		;COPJMP2
+	move.w	(rd_cqmt).l,d1
+	lea	(rd_cqmq).l,a6
+	lea	(a6,d1.w*8),a6
+	move.w	d0,(a6)+			;where it is
+	move.l	a3,d2
+	sub.l	a2,d2
+	move.w	d2,(a6)+			;where the copper goes on
+	move.l	$048-$040(a0),(a6)		;its copper list
+	move.b	$04D-$040(a0),(a6)		;(and buffer in the top byte)
+	addq.w	#1,d1
+	andi.w	#7,d1
+	move.w	d1,(rd_cqmt).l
+	move.l	#$009C8004,(a3)+		;the stop after it
+	move.l	#CQ_HALT,(a3)
+	subq.l	#4,a3
+	move.l	#CQ_WBLT,4(a1)
+	move.l	#$009C0004,(a1)
+	bra	.arm
+
+;	The blitter's registers are not what the copper left (a blit written straight into them):
+;	the next block moves all it uses. Keeps all.
+rd_cq_inval
+	move.l	a0,-(sp)
+	lea	(rd_cqsh).l,a0
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	move.l	#-1,(a0)+
+	movea.l	(sp)+,a0
+	rts
+
+;	Start the copper again after a show marker (COP2LCL says where to) if it waits at the
+;	marker or the parking place (DSKBLK). Not if it runs a display list: that ends by jumping to
+;	COP2LC itself (unless it has just jumped to the parking place: a second look). Uses d0.
+rd_cq_kickm
+	move	sr,-(sp)
+	ori	#$0700,sr
+	bsr	rd_cq_safe
+	btst	#1,(CUSTOM+$01F).l		;DSKBLK
+	bne.s	.k
+	moveq	#15,d0				;(a little later: 16 chip reads)
+.d	tst.w	(CUSTOM+$006).l
+	dbf	d0,.d
+	btst	#1,(CUSTOM+$01F).l
+	beq.s	.x
+.k	move.w	#$0002,(CUSTOM+INTREQ).l	;DSKBLK off
+	move.w	d0,(CUSTOM+$08A).l		;COPJMP2
+	IFD	PROFILE
+	addq.l	#1,(prof_mark+84).l		;(statistics: the copper started again)
+	ENDC
+.x	move	(sp)+,sr
+	rts
+
+;	Wait while a vertical blank's copper restart is near (the last line from H $A0, line 0 to
+;	H $10): a look at the copper's state and a jump are not to straddle one (its display list
+;	clears the state first). Interrupts off. Keeps all.
+rd_cq_safe
+	move.l	d0,-(sp)
+.w	move.l	(CUSTOM+$004).l,d0		;VPOSR, VHPOSR: V8, V7-0, H
+	andi.l	#$1FFFF,d0
+	cmpi.w	#$0010,d0			;(line 0 or 256: the high word tells)
+	bhs.s	.l
+	swap	d0
+	tst.w	d0
+	beq.s	.w
+	swap	d0
+.l	tst.b	(hal_pal).l
+	bne.s	.p
+	cmpi.l	#$105A0,d0			;NTSC: line 261
+	bhs.s	.w
+	bra.s	.x
+.p	cmpi.l	#$137A0,d0			;PAL: line 311
+	bhs.s	.w
+.x	move.l	(sp)+,d0
+	rts
+
+;	The copper stopped at the oldest show marker queued (or a vertical blank parked it): if
+;	the show before it has been set, this one is the show waiting (rd_showdue sets it when
+;	due) and the copper goes on after it; else it waits for that (rd_bqhold, the vertical
+;	blank). Interrupts at level 3 or more. Uses d0-d1, a0-a1.
+rd_cq_mark
+	tst.l	(rd_showcop).l			;the show before still waits for its vertical blank
+	bne.s	.hold
+	move.w	(rd_cqmh).l,d0
+	cmp.w	(rd_cqmt).l,d0
+	beq.s	.x				;(none)
+	lea	(rd_cqmq).l,a0
+	lea	(a0,d0.w*8),a0
+	addq.w	#1,d0
+	andi.w	#7,d0
+	move.w	d0,(rd_cqmh).l
+	move.w	(a0)+,(rd_cqd).l		;(what is before it has run)
+	move.w	(a0)+,d0			;where the copper goes on
+	moveq	#0,d1
+	move.b	(a0),d1
+	move.w	d1,(rd_showbuf).l
+	move.l	(a0),d1
+	andi.l	#$00FFFFFF,d1
+	move.l	d1,(rd_showcop).l
+	movea.l	(rd_cqring).l,a1
+	adda.w	d0,a1
+	move.w	a1,(CUSTOM+$086).l		;COP2LCL
 	bsr	rd_showdue
-	bra	.next
-.hold	st	(rd_bqbusy).l
-	st	(rd_bqhold).l
+	bra	rd_cq_kickm
+.hold	st	(rd_bqhold).l
 	PEV	'H'
-	rts
-.idle	sf	(rd_bqbusy).l
-	sf	(rd_bqint).l			;(blits started directly: no interrupt)
-	move.w	#$0040,(CUSTOM+INTENA).l
-	rts
-.adv	move.w	(rd_bqhead).l,d0
-	addq.w	#1,d0
-	andi.w	#BQN-1,d0
-	move.w	d0,(rd_bqhead).l
+.x	rts
+
+;	The ring (in rd_cqbuf, within a 64K page, so only COP2LCL changes), the copper stopped at
+;	its start. Uses d0-d1/a0.
+rd_cq_init
+	lea	(rd_cqbuf).l,a0
+	move.l	a0,d0
+	move.l	a0,d1
+	addi.l	#CQI-1,d1
+	swap	d0
+	swap	d1
+	cmp.w	d0,d1
+	beq.s	.pg
+	swap	d1				;(across a page: from the next page on)
+	clr.w	d1
+	movea.l	d1,a0
+.pg	move.l	a0,(rd_cqring).l
+	move.l	#$009C8004,(a0)			;INTREQ: SOFT on,
+	move.l	#CQ_HALT,4(a0)			;and stop
+	move.l	a0,d0				;a move of the start to COP2LCL
+	swap	d0
+	move.w	#$086,d0
+	swap	d0
+	move.l	d0,(rd_cqjmv).l
+	lea	CQSIZE(a0),a0			;the parking place
+	move.l	a0,d0
+	swap	d0
+	move.w	#$086,d0
+	swap	d0
+	move.l	d0,(rd_cqpmv).l			;(a move of it to COP2LCL)
+	move.l	#$009C8012,(a0)+		;DSKBLK, COPER on
+	move.l	#CQ_HALT,(a0)+
+	clr.w	(rd_cqw).l
+	clr.w	(rd_cqd).l
+	clr.w	(rd_cqmh).l
+	clr.w	(rd_cqmt).l
+	st	(rd_cqidle).l
+	bsr	rd_cq_inval
+	move.w	#$0002,(CUSTOM+$02E).l		;COPCON: CDANG (the copper may write the blitter)
+	move.l	(rd_cqring).l,(CUSTOM+$084).l	;COP2LC
+	move.w	#$0016,(CUSTOM+INTREQ).l	;(SOFT, DSKBLK, COPER off)
 	rts
 
 ;	The show waiting (rd_showcop), if it is due: each frame stays on the screen hal_pace
@@ -997,23 +1210,23 @@ rd_snaptime
 	movem.l	(sp)+,d0/a0
 	rts
 
-;	Level 3: the blitter has finished (the next entry, or the queue is idle), or a vertical
-;	blank (counted: rd_vsync).
+;	Level 3: the copper at a show marker (COPER: rd_cq_mark), or a vertical blank (counted:
+;	rd_vsync).
 rd_bq_int
-	movem.l	d0/a0-a1,-(sp)
+	movem.l	d0-d1/a0-a1,-(sp)
+	IFD	PROFILE
+	addq.l	#1,(prof_mark+88).l		;(statistics: level 3 interrupts)
+	ENDC
 	move.w	(CUSTOM+$01E).l,-(sp)		;INTREQR
-	btst	#6,1(sp)
-	beq.s	.nbl
-	move.w	#$0040,(CUSTOM+INTREQ).l
-	move.w	#$0040,(CUSTOM+INTREQ).l
-	tst.b	(rd_bqhold).l
-	bne.s	.nbl				;(held: no blit of ours ran)
-	tst.b	(rd_bqbusy).l
-	beq.s	.nbl
-	btst	#6,(CUSTOM+DMACONR).l		;(the end of a blit started directly, its request
-	bne.s	.nbl				;left over: ours still runs)
-	bsr	rd_bq_start
-.nbl	btst	#5,1(sp)
+	btst	#4,1(sp)
+	beq.s	.nm
+	move.w	#$0010,(CUSTOM+INTREQ).l
+	move.w	#$0010,(CUSTOM+INTREQ).l
+	btst	#1,(CUSTOM+$01F).l		;(DSKBLK: it waits there; else a call left over from
+	beq.s	.nm				;a vertical blank's restart: the copper went on)
+	PEV	'M'				;(statistics: the copper at a show)
+	bsr	rd_cq_mark
+.nm	btst	#5,1(sp)
 	beq.s	.x
 	move.w	#$0020,(CUSTOM+INTREQ).l
 	move.w	#$0020,(CUSTOM+INTREQ).l
@@ -1028,10 +1241,10 @@ rd_bq_int
 	beq.s	.x
 	tst.l	(rd_showcop).l
 	bne.s	.x
-	sf	(rd_bqhold).l			;the queue goes on with the next show
-	bsr	rd_bq_start
+	sf	(rd_bqhold).l			;the copper goes on with the next show
+	bsr	rd_cq_mark
 .x	addq.l	#2,sp
-	movem.l	(sp)+,d0/a0-a1
+	movem.l	(sp)+,d0-d1/a0-a1
 	tst.b	(hal_swpend).l			;a game tick came in a handler: switch now, unless
 	bne.s	.sw				;this one interrupted a handler too
 	rte
@@ -1045,7 +1258,6 @@ rd_bq_int
 	tst.b	(ctx_cur).l
 	bne	ctx_to_game
 .r	rte
-
 ;	------------------------------------------------------------------------------------------
 ;	Can the name table at VRAM d0 (32 byte aligned), d1 bytes long, have changed since it was
 ;	last compared with its copy? Only if a DMA, fill or copy changed its blocks (tc_chg) or a
@@ -2500,6 +2712,7 @@ rd_ovl_redraw
 	sf	(rd_ovldirty).l
 	; clear image and masks (blitter, D only)
 	bsr	rd_waitblit
+	bsr	rd_cq_inval			;(the blitter's registers written here)
 	lea	(CUSTOM).l,a6
 	move.w	#$0100,$040(a6)
 	move.w	#0,$042(a6)
@@ -6284,6 +6497,7 @@ rd_show
 	beq	.nofps
 	bsr	rd_fps
 .nofps	movea.l	(rd_backcop).l,a0
+	move.l	#$009C0006,(a0)+		;INTREQ: SOFT, DSKBLK off (the blit queue's copper state)
 	; the 224 lines: from line $3C on PAL, $1A on NTSC (262 lines a frame)
 	move.w	#$3CA1,d1			;DIWSTRT, H32 (256 pixels)
 	move.w	#$1CA1,d2			;DIWSTOP
@@ -6490,10 +6704,10 @@ rd_show
 	addq.w	#2,d1
 	dbf	d2,.hl
 .nohc
-	move.l	#$FFFFFFFE,(a0)+
+	move.l	#$008A0000,(a0)+		;COPJMP2: the blit queue (rd_bq_go)
 .cdone
 	; it is shown once the blits queued for it are done: a marker in the blit queue has the
-	; level 3 interrupt set the copper list then (rd_bq_start); the CPU goes on
+	; level 3 interrupt set the copper list then (rd_cq_mark); the CPU goes on
 	moveq	#0,d1				;(a long below)
 	move.w	(rd_bufi).l,d1
 	lea	(rd_shownvb).l,a1
@@ -6553,18 +6767,27 @@ rd_ntsync	ds.b	1			;0: compare all name tables with their copies
 	even
 rd_sbit		ds.w	1
 rd_ctiles	ds.w	4
-rd_bqhead	ds.w	1
-rd_bqtail	ds.w	1
-rd_bqbusy	ds.b	1
-rd_bqhold	ds.b	1			;the queue waits at a show for a vertical blank
-rd_bqint	ds.b	1			;the blitter's interrupt is on
+rd_cqw		ds.w	1			;the copper ring: where the copper stops (the next block),
+rd_cqd		ds.w	1			;what it has run all before (or more)
+rd_cqmh		ds.w	1			;show markers queued (rd_cqmq): the oldest,
+rd_cqmt		ds.w	1			;the next to queue
+rd_cqring	ds.l	1			;the ring (in rd_cqbuf)
+rd_cqjmv	ds.l	1			;a copper move of its start to COP2LCL
+rd_cqpmv	ds.l	1			;and of the parking place
+rd_cqsh		ds.l	10			;what the blocks leave in the blitter's BLTCON0, BLTCON1,
+						;BLTAFWM, BLTALWM, BLTAMOD, BLTBMOD, BLTCMOD, BLTDMOD
+						;(-1: not known; 2 spare)
+rd_cqmq		ds.b	8*8			;show markers: where, where the copper goes on, buffer
+						;(top byte) and copper list
+rd_bqe		ds.b	BQE			;the blit being written (rd_bq_alloc)
+rd_cqidle	ds.b	1			;nothing given to the copper since it stopped at the end
+rd_bqhold	ds.b	1			;the copper waits at a show for a vertical blank
 	even
 rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
 rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)
 rd_snapvb	ds.l	NBUF			;rd_vblanks when each buffer's game state was taken
 rd_showbuf	ds.w	1			;(its buffer)
 		even
-rd_bq		ds.b	BQN*BQE
 rd_c4m		ds.w	1			;$FFFF: 4 columns, $FF00: 3
 		cnop	0,4
 rd_spalm	ds.l	2

@@ -29,6 +29,8 @@ static int irq6_pending;
 static int det;                         /* NHL_DETERM (below) */
 static long long blit_busy_until;
 static int intena, blit_irq, blit_end_pending, vb_irq;
+static int intreq_lo;           /* INTREQ bits 0-4 (TBE, DSKBLK, SOFT, PORTS, COPER): set by the
+                                   copper (the blit queue's state) and the CPU */
 long long blitstat[4];   /* the blitter's level 3 interrupt */
 
 static void update_irq(void)
@@ -36,10 +38,12 @@ static void update_irq(void)
     int level = 0;
     if (blit_irq && (intena & 0x4040) == 0x4040) level = 3;
     if (vb_irq && (intena & 0x4020) == 0x4020) level = 3;   /* vertical blank, once a frame */
+    if ((intreq_lo & 0x10) && (intena & 0x4010) == 0x4010) level = 3;   /* COPER */
     if (irq6_pending && (intena & 0x6000) == 0x6000) level = 6;   /* EXTER (held while off) */
     m68k_set_irq(level);
 }
 static long long cycles_total;
+static long long vb_cycles;     /* cycles_total at the last vertical blank */
 static int red_screen;
 static uint32_t dbg;            /* debug block address */
 static int frame;
@@ -77,14 +81,13 @@ static uint32_t custom_read(uint32_t a, int size)
         h ^= h >> 13; h *= 2246822519u; h ^= h >> 16;
         return h & 0xFFFF;
     }
-    if (off == 0x006) {             /* VHPOSR */
-        long long c = cycles_total + m68k_cycles_run();
+    if (off == 0x006 || off == 0x004) {     /* VHPOSR, VPOSR (V8): lines from the last vertical blank */
+        long long c = cycles_total + m68k_cycles_run() - vb_cycles;
         uint32_t line = (c / 455) % 262, h = (c / 2) % 227;
-        return ((line & 0xFF) << 8) | (h & 0xFF);
+        return off == 0x004 ? (line >> 8) & 1 : ((line & 0xFF) << 8) | (h & 0xFF);
     }
-    if (off == 0x004) return 0;    /* VPOSR */
     if (off == 0x01C) return intena;
-    if (off == 0x01E) return (blit_irq ? 0x40 : 0) | (vb_irq ? 0x20 : 0);
+    if (off == 0x01E) return (blit_irq ? 0x40 : 0) | (vb_irq ? 0x20 : 0) | intreq_lo;
     if (off == 0x002) {             /* DMACONR: blitter busy while a blit runs */
         long long c = cycles_total + m68k_cycles_run();
         return c < blit_busy_until ? 0x4000 : 0;
@@ -95,6 +98,12 @@ static uint32_t custom_read(uint32_t a, int size)
 
 static uint32_t cop1lc;
 static uint16_t creg[0x100];
+static uint32_t cop2lc, cop_pc;
+static int cop_state;                   /* 0 stopped, 1 runs, 2 waits for the blitter */
+static long long cop_cyc;               /* (cycles of moves since its last wait) */
+static int in_copper;
+static int cop_warn;
+static long cop_restarts;
 static long long blit_words;
 static int blit_warn;
 
@@ -300,7 +309,8 @@ static void do_blit(int h, int w)
     pend_h = h;
     pend_w = w;
     pend_run = 1;
-    blit_busy_until = cycles_total + m68k_cycles_run() + 20 + (long long)h * w * (2 * n + 2);
+    blit_busy_until = cycles_total + m68k_cycles_run() + 20 + (long long)h * w * (2 * n + 2) +
+                      (in_copper ? cop_cyc : 0);
     blit_end_pending = 1;
     if (getenv("NHL_EARLYBLIT")) blit_exec();
     if (det && !det_blit) {             /* (done at once) */
@@ -450,6 +460,58 @@ static void aud_frame(void)
     }
 }
 
+/* ---- The copper: each vertical blank the display list (COP1LC), which ends by jumping to
+   COP2LC, the renderer's blit queue: blocks of moves to the blitter's registers, each after a
+   wait for the blitter. Moves take no time but on the blitter's start (8 cycles each since its
+   wait); a beam position wait is taken as reached, a wait for $FF,$FE (the queue's end) stops
+   it until a jump (COPJMP2 from the CPU) or the next vertical blank. ---- */
+static void custom_write(uint32_t a, uint32_t v);
+static void copper_run(void)
+{
+    static int stress = -1; static uint32_t rnd = 12345;
+    if (stress < 0) stress = getenv("NHL_COPSTRESS") ? atoi(getenv("NHL_COPSTRESS")) : 0;
+    in_copper = 1;
+    for (int n = 0; n < 1000000 && cop_state; n++) {
+        if (stress) {               /* NHL_COPSTRESS=N: a vertical blank's restart (the display
+                                       list, then its jump to COP2LC) at random instructions, one
+                                       in N on average: the blit queue must survive it anywhere */
+            rnd = rnd * 1103515245 + 12345;
+            if ((rnd >> 8) % stress == 0 && cop1lc) { cop_pc = cop1lc; cop_restarts++; }
+        }
+        uint32_t w1 = rd16(cop_pc), w2 = rd16(cop_pc + 2);
+        if (!(w1 & 1)) {                /* move */
+            uint32_t r = w1 & 0x1FE;
+            cop_pc += 4;
+            cop_cyc += 8;
+            if (r == 0x08A) { cop_pc = cop2lc; continue; }
+            if (r == 0x088) { cop_pc = cop1lc; continue; }
+            if (r < 0x040 || (r < 0x080 && !(creg[0x2E / 2] & 2))) {
+                fprintf(stderr, "frame %d: copper move to %03x refused (COPCON)\n", frame, r);
+                cop_state = 0;
+                break;
+            }
+            if (!(r >= 0x040 && r <= 0x074) && !(r >= 0x08E && r <= 0x094) && r != 0x09C && r != 0x084 &&
+                r != 0x086 && !(r >= 0x100 && r <= 0x10C) && !(r >= 0x120 && r < 0x140) &&
+                !(r >= 0x180 && r < 0x1C0) && r != 0x1FC && r != 0x0E0 && !(r >= 0x0E0 && r < 0x100) && cop_warn < 20) {
+                cop_warn++;
+                fprintf(stderr, "frame %d: copper move to %03x = %04x at %06x (lost?)\n", frame, r, w2, cop_pc - 4);
+            }
+            custom_write(0xDFF000 + r, w2);
+            continue;
+        }
+        if (w2 & 1) { fprintf(stderr, "frame %d: copper skip not emulated\n", frame); cop_state = 0; break; }
+        if ((w1 & 0xFF00) == 0xFF00 && (w1 & 0xFE) == 0xFE) { cop_state = 0; break; }   /* never */
+        if ((w1 != 0x0001 || w2 != 0x7FFE) && cop_warn < 20) {
+            cop_warn++;
+            fprintf(stderr, "frame %d: copper wait %04x %04x at %06x (lost?)\n", frame, w1, w2, cop_pc);
+        }
+        if (!(w2 & 0x8000) && cycles_total + m68k_cycles_run() < blit_busy_until) { cop_state = 2; break; }
+        cop_pc += 4;
+        cop_cyc = 0;
+    }
+    in_copper = 0;
+}
+
 static void custom_write(uint32_t a, uint32_t v)
 {
     uint32_t off = a & 0xFFE;
@@ -469,6 +531,11 @@ static void custom_write(uint32_t a, uint32_t v)
     if (off == 0x09C && (v & 0x40)) { blit_irq = (v & 0x8000) != 0; update_irq(); }
     if (off == 0x09C && (v & 0x20)) { vb_irq = (v & 0x8000) != 0; update_irq(); }
     if (off == 0x09C && (v & 0xA000) == 0xA000) { irq6_pending = 1; update_irq(); }   /* EXTER set: level 6 */
+    if (off == 0x09C && (v & 0x1F)) { if (v & 0x8000) intreq_lo |= v & 0x1F; else intreq_lo &= ~v & 0x1F; update_irq(); }
+    if (off == 0x084) cop2lc = (cop2lc & 0xFFFF) | (v << 16);
+    if (off == 0x086) cop2lc = (cop2lc & 0xFFFF0000) | (v & 0xFFFF);
+    if (off == 0x08A && !in_copper) { cop_pc = cop2lc; cop_state = 1; copper_run(); }
+    if (off == 0x088 && !in_copper) { cop_pc = cop1lc; cop_state = 1; copper_run(); }
     if (off == 0x058) do_blit((v >> 6) ? (v >> 6) : 1024, (v & 63) ? (v & 63) : 64);
     if (off == 0x05E) do_blit(creg[0x5C / 2] & 0x7FFF ? creg[0x5C / 2] & 0x7FFF : 0x8000, (v & 0x7FF) ? (v & 0x7FF) : 0x800);
     if (off == 0x180 && v == 0xF00) red_screen = 1;
@@ -488,6 +555,7 @@ static void amiga_png(const char *name)
         uint32_t w1 = rd16(pc), w2 = rd16(pc + 2);
         pc += 4;
         if (w1 == 0xFFFF && w2 == 0xFFFE) break;
+        if (w1 == 0x08A || w1 == 0x088) break;
         if (w1 & 1) continue;
         uint32_t r = w1 & 0x1FE;
         if (r >= 0xE0 && r < 0x100) {
@@ -519,7 +587,7 @@ static void amiga_png(const char *name)
         uint32_t q = cop1lc;
         for (int i = 0; i < 400 && q; i++, q += 4) {
             uint32_t r = rd16(q), v = rd16(q + 2);
-            if (r == 0xFFFF) break;
+            if (r == 0xFFFF || r == 0x8A || r == 0x88) break;
             if (r == 0x8E) { diwh = v & 0xFF; diwv = v >> 8; }
             if (r == 0x90) diwstop = v & 0xFF;
         }
@@ -633,6 +701,7 @@ static int run_cycles(int n)
             blit_irq = 1;
             update_irq();
         }
+        if (cop_state == 2 && cycles_total >= blit_busy_until) { cop_state = 1; copper_run(); }
     }
     return done;
 }
@@ -898,6 +967,8 @@ int main(int argc, char **argv)
         irq6_pending = 1;
         vb_irq = 1;
         update_irq();
+        vb_cycles = cycles_total;
+        if (cop1lc) { cop_pc = cop1lc; cop_state = 1; copper_run(); }
         int shot = every && frame % every == 0;
         for (int k = 0; k < nshots; k++) if (shots[k] == frame) shot = 1;
         if (shot) {
@@ -955,6 +1026,7 @@ int main(int argc, char **argv)
                 vdpref_stats(frame, mem + (vdpregs & 0xFFFFFF), mem + (vram & 0xFFFFFF), mem + (vsram & 0xFFFFFF));
         }
     }
+    if (cop_restarts) fprintf(stderr, "copper restarts (NHL_COPSTRESS): %ld\n", cop_restarts);
     if (wavf) { wav_header(); fclose(wavf); }
     if (getenv("NHL_DETLOG")) fprintf(stderr, "det: hook calls %lld, free cycles %lld\n", det_calls, det_free);
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn, %u game ticks\n", frame,

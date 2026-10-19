@@ -227,6 +227,12 @@ bench_wait
 	bsr	prof_f9
 .nm
 	ENDC
+	IFD	MEMBENCH
+	cmpi.l	#BENCHSTART+1,d0
+	bne.s	.nb
+	bsr	prof_memb
+.nb
+	ENDC
 	cmpi.l	#BENCHEND,d0
 	blo.s	.x
 	IFD	PROFILE
@@ -243,6 +249,105 @@ bench_wait
 .q	st	(hal_quit).l
 .x	movem.l	(sp)+,d0-d1/a0
 	rts
+	IFD	MEMBENCH
+;	(statistics) Colour clocks for 1024 word writes to chip memory, fast memory, a custom
+;	register (NO-OP), 1024 chip reads, and 256 chip writes while the blitter runs a blit
+;	with all four channels: prof_mark+92 ... +108.
+prof_memb
+	movem.l	d0-d7/a0-a2/a6,-(sp)
+	jsr	(rd_waitblit).l
+	move	sr,-(sp)
+	ori	#$0700,sr
+	lea	(mb_chip).l,a0
+	bsr	mb_now
+	move.l	d0,d6
+	moveq	#127,d1
+.c	REPT	8
+	move.w	d0,(a0)+
+	ENDR
+	dbf	d1,.c
+	bsr	mb_now
+	sub.l	d6,d0
+	move.l	d0,(prof_mark+92).l
+	lea	(prof_buf).l,a0
+	bsr	mb_now
+	move.l	d0,d6
+	moveq	#127,d1
+.f	REPT	8
+	move.w	d0,(a0)+
+	ENDR
+	dbf	d1,.f
+	bsr	mb_now
+	sub.l	d6,d0
+	move.l	d0,(prof_mark+96).l
+	lea	(CUSTOM+$1FE).l,a0
+	bsr	mb_now
+	move.l	d0,d6
+	moveq	#127,d1
+.r	REPT	8
+	move.w	d0,(a0)
+	ENDR
+	dbf	d1,.r
+	bsr	mb_now
+	sub.l	d6,d0
+	move.l	d0,(prof_mark+100).l
+	lea	(mb_chip).l,a0
+	bsr	mb_now
+	move.l	d0,d6
+	moveq	#127,d1
+.rd	REPT	8
+	move.w	(a0)+,d2
+	ENDR
+	dbf	d1,.rd
+	bsr	mb_now
+	sub.l	d6,d0
+	move.l	d0,(prof_mark+104).l
+	; a blit (A, B, C, D) over mb_blt, 64 words by 64 rows, and chip writes meanwhile
+	lea	(CUSTOM).l,a6
+	jsr	(rd_cq_inval).l
+	move.l	#$0FCA0000,$040(a6)
+	move.l	#-1,$044(a6)
+	lea	(mb_blt).l,a1
+	move.l	a1,$048(a6)
+	move.l	a1,$04C(a6)
+	move.l	a1,$050(a6)
+	move.l	a1,$054(a6)
+	clr.l	$060(a6)
+	clr.l	$064(a6)
+	move.w	#64,$05C(a6)
+	move.w	#64,$05E(a6)
+	lea	(mb_chip).l,a0
+	bsr	mb_now
+	move.l	d0,d6
+	moveq	#31,d1
+.b	REPT	8
+	move.w	d0,(a0)+
+	ENDR
+	dbf	d1,.b
+	bsr	mb_now
+	sub.l	d6,d0
+	btst	#6,(CUSTOM+DMACONR).l		;(the blit still runs: bit 31)
+	beq.s	.bd
+	bset	#31,d0
+.bd	move.l	d0,(prof_mark+108).l
+	move	(sp)+,sr
+	jsr	(rd_waitblit).l
+	movem.l	(sp)+,d0-d7/a0-a2/a6
+	rts
+;	The beam's place in colour clocks from the frame's start (d0). Uses d0.
+mb_now
+	move.l	d1,-(sp)
+	move.l	(CUSTOM+$004).l,d0
+	andi.l	#$1FFFF,d0
+	move.l	d0,d1
+	lsr.l	#8,d1
+	mulu.w	#227,d1
+	andi.w	#$FF,d0
+	ext.l	d0
+	add.l	d1,d0
+	move.l	(sp)+,d1
+	rts
+	ENDC
 bench_lastf	dc.l	-1
 bench_n		dc.l	0
 bench_start	dc.b	0

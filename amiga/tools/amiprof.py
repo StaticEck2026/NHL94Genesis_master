@@ -46,5 +46,16 @@ if len(d) >= 8 + 4 * n + 132 and t1 > t0:
     print('      game %.2f ms a game frame (%.2f of it the vblank code), renderer %.2f ms a frame drawn'
           % (1000 * (g + v) / lines / (t1 - t0), 1000 * v / lines / (t1 - t0),
              1000 * r / lines / max(1, c1 - c0)))
+if len(d) >= 8 + 4 * n + 116 and t1 > t0 and c1 > c0:
+    h = struct.unpack('>16I', d[60 + 4 * n:124 + 4 * n])
+    if h[7] or h[8]:
+        print('blits a frame drawn: %.1f; the copper started again %.1f times; level 3 interrupts %.1f'
+              % (h[7] / (c1 - c0), h[8] / (c1 - c0), h[9] / (c1 - c0)))
+if len(d) >= 8 + 4 * n + 116:
+    h = struct.unpack('>16I', d[60 + 4 * n:124 + 4 * n])
+    if h[10] or h[11]:
+        print('colour clocks for 1024 word writes: chip %d, fast %d, a register %d; 1024 chip reads %d; '
+              '256 chip writes during a blit %d%s' % (h[10], h[11], h[12], h[13], h[14] & 0x7FFFFFFF,
+              '' if h[14] & 0x80000000 else ' (the blit ended first)'))
 for k, v in c.most_common(int(sys.argv[3]) if len(sys.argv) > 3 else 30):
     print('%6.2f%%  %s' % (100.0 * v / n, k))

@@ -109,9 +109,12 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   Start is pressed at the test harness' counts (into a game from the attract mode), and with
   `-DPROFILE=1` the frame rate count starts at 2000 (as `F9`) and the game quits at 6000
   (`BENCHSTART`, `BENCHEND`); the renderer does not take the game's time when it runs long.
-  Delete `NHL94.sav` before each run: the game reads it. The game can still drift when one of
-  its frames runs over (a sum of its RAM at the end is in the profile to tell): runs of one build
-  differ by about 2%, so compare the mean of a few.
+  Delete `NHL94.sav` before each run: the game reads it. Runs of one build give the same
+  result when FS-UAE has the host to itself (several at once on a loaded host do not), but a
+  change to the renderer's timing can change the game's course a little (a sum of its RAM at
+  the end is in the profile to tell). With `-DMEMBENCH=1` the profile also has the colour
+  clocks of 1024 writes to chip memory, fast memory and a custom register, 1024 chip reads and
+  256 chip writes while a blit runs (measured at count 2001).
 - `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
   waiting for a buffer, the show queued, the queue at it or held, the copper list set, vertical
   blanks, game ticks), written after the profile (`prof_ev`).
@@ -167,7 +170,7 @@ The hardware layer:
   the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
   by 8 lines a bit; `-DDLS=n` makes it 2^n lines, 1 or 2: finer rows restore fewer words
-  but take more blits, and each blit costs the CPU its queueing and its interrupt). Other
+  but take more blits, and each blit costs the CPU its copper block). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
@@ -197,8 +200,8 @@ The hardware layer:
   the VDP registers, scroll and sprite list taken when it starts, with the changed tiles
   converted in the same game frame (the game runs several of its frames meanwhile; without it,
   players could be from a later game frame than the rink). A frame's copper list is handed
-  over by a marker queued after its blits (the level 3 interrupt takes it when the queue gets
-  there) and set at the first vertical blank that keeps the frame before on the screen for 2,
+  over by a marker queued after its blits (the copper stops there and calls the level 3
+  interrupt) and set at the first vertical blank that keeps the frame before on the screen for 2,
   so the CPU goes on to the next frame while the blitter finishes. A new frame is begun every
   2 game frames at most. A buffer is drawn into again only once the frame after it has been
   on the screen for a vertical blank (counted by the same interrupt). When the game runs at the
@@ -235,10 +238,23 @@ The hardware layer:
   decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
   it has AmigaDOS load `NHL94.game`.
 
-The renderer queues its blits; the blitter's interrupt starts each next one, so the CPU goes on
-building the next layer meanwhile. A blit that finds the queue empty and the blitter idle is
-written straight into the blitter's registers instead (no entry, no interrupt: the blitter's
-interrupt is on only while the queue runs).
+The copper starts the blits. The renderer writes each blit into a ring of copper code in chip
+memory (`rd_bq_go`): a wait for the blitter, then moves to the blitter's registers (BLTSIZH
+last starts it) and to COP2LCL. Each display list ends by jumping to COP2LC, so after a
+vertical blank the copper goes on where it was (a block cut short runs again, which a blit
+allows). So the CPU takes no interrupt for a blit and the blitter does not wait for one. A
+CPU write to chip memory takes about 0.7 us, twice that while a blit runs (FS-UAE), so a block
+moves only the registers its blit uses and only those the blitter does not hold already from
+the blocks before (the pointers and the size always: the blitter counts BLTSIZV down). After
+the last block the copper stops, setting INTREQ's SOFT bit (no interrupt) first; the next block
+written there takes its place, and the CPU starts the copper again (COPJMP2) if SOFT says it
+stopped. A show marker sends the copper to a parking place that sets DSKBLK and calls the level
+3 interrupt (COPER), which sets the copper list when due and starts the copper again after the
+marker; a vertical blank while it waits there calls again, which is told apart by DSKBLK.
+The CPU never starts the copper near a vertical blank (the end of the last line to the start
+of line 0), so it never cuts a display list short. The test harness runs the copper too:
+`NHL_COPSTRESS=n` restarts it at one in n of its instructions on average, as a vertical
+blank could, to check the ring survives that anywhere.
 
 ## Testing without an Amiga
 

@@ -231,9 +231,13 @@ os_super
 hal_exit
 	move	#$2700,sr
 	lea	(CUSTOM).l,a0
+	IFD	PROFILE
+	move.w	$01E(a0),(prof_intreq+2).l	;(statistics: the blit queue's copper state)
+	ENDC
 	move.w	#$7FFF,INTENA(a0)
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
+	move.w	#0,$02E(a0)			;COPCON: the copper off the blitter again
 	move.w	#$000F,DMACON(a0)		;sound off
 	move.b	#$7F,(CIAB_ICR).l		;CIA-B: our timer off, the OS's interrupts back
 	move.b	(os_ciabcra).l,(CIAB_CRA).l
@@ -346,6 +350,19 @@ os_save_prof
 	move.l	d4,d1
 	move.l	#prof_ev,d2
 	move.l	#PEVMAX*4,d3
+	jsr	DOS_Write(a6)
+	; then the blit queue's copper ring: INTREQR at the exit, rd_cqw .. rd_cqmq, the ring
+	move.l	d4,d1
+	move.l	#prof_intreq,d2
+	moveq	#4,d3
+	jsr	DOS_Write(a6)
+	move.l	d4,d1
+	move.l	#rd_cqw,d2
+	moveq	#8+12+40+64,d3
+	jsr	DOS_Write(a6)
+	move.l	d4,d1
+	move.l	(rd_cqring).l,d2
+	move.l	#CQI,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)
