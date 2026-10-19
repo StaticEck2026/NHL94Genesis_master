@@ -4059,6 +4059,8 @@ rd_fixups
 	ENDC
 	; the cells, row by row
 	sf	(rd_fixchk).l
+	tst.w	(rd_scroll).l
+	bne	rd_fix_runs
 	moveq	#0,d5				;row
 .fr	movem.l	(a0),d0-d1
 	addq.l	#8,a0
@@ -4292,6 +4294,130 @@ rd_fix_blit
 	bsr	rd_bq_go
 	movem.l	(sp)+,d0-d1/a0-a2/a6
 	rts
+
+;	Scroll mode, 64 cells across (the screen's columns do not wrap there): each plane row's
+;	cells of rd_fixmap (a0) as words (2 cells each) on the screen, and each run of them one
+;	blit: the bitmap through its mask over the buffer (as rd_fix_blit).
+rd_fix_runs
+	; the words on the screen: those of plane x bx0 to bx0 + width - 1
+	move.w	(rd_bx0).l,d6
+	move.w	d6,d7
+	add.w	(rd_w).l,d7
+	subq.w	#1,d7
+	lsr.w	#4,d6
+	lsr.w	#4,d7
+	sub.w	d6,d7
+	addq.w	#1,d7
+	moveq	#0,d3
+	bfset	d3{d6:d7}
+	lea	(rd_pairtab).l,a1
+	moveq	#0,d5				;row
+.r	movem.l	(a0)+,d0-d1			;its cells
+	move.l	d0,d2
+	or.l	d1,d2
+	beq	.nr
+	moveq	#0,d2				;its words
+	moveq	#3,d7
+.p0	rol.l	#8,d0
+	moveq	#0,d6
+	move.b	d0,d6
+	lsl.l	#4,d2
+	or.b	(a1,d6.w),d2
+	dbf	d7,.p0
+	moveq	#3,d7
+.p1	rol.l	#8,d1
+	moveq	#0,d6
+	move.b	d1,d6
+	lsl.l	#4,d2
+	or.b	(a1,d6.w),d2
+	dbf	d7,.p1
+	and.l	d3,d2
+	beq	.nr
+	; the row's screen line (wrapping), if on the screen
+	move.w	d5,d4
+	lsl.w	#3,d4
+	sub.w	(rd_by0).l,d4
+	andi.w	#255,d4				;(the plane is 256 lines)
+	cmpi.w	#SCRH,d4
+	blt.s	.on
+	subi.w	#256,d4
+	cmpi.w	#-8,d4
+	ble	.nr
+.on	; the runs of words
+.run	bfffo	d2{0:0},d0			;first
+	move.l	d2,d1
+	not.l	d1
+	bfffo	d1{d0:0},d1			;(first after it not to draw, 32 or more: none)
+	cmpi.w	#32,d1
+	bls.s	.e
+	moveq	#32,d1
+.e	sub.w	d0,d1				;words
+	bfclr	d2{d0:d1}
+	bsr.s	.blit
+	tst.l	d2
+	bne.s	.run
+.nr	addq.w	#1,d5
+	cmpi.w	#32,d5
+	blo	.r
+	rts
+	; words d0 (first), d1 (how many) of plane row d5, at screen line d4
+.blit	movem.l	d0-d2/a0-a2/a6,-(sp)
+	add.w	d0,d0				;its byte
+	move.w	d5,d2
+	mulu.w	#8*64*NPLANES,d2		;the bitmap's row (64 cells across)
+	lea	(bmB).l,a0
+	adda.l	d2,a0
+	adda.w	d0,a0
+	lea	(mkB6).l,a1
+	adda.l	d2,a1
+	adda.w	d0,a1
+	move.w	(rd_brow0).l,d2
+	add.w	d4,d2
+	mulu.w	#SROW,d2
+	movea.l	(rd_buf).l,a2
+	adda.l	d2,a2
+	lea	SCRX(a2,d0.w),a2
+	bsr	rd_bq_alloc
+	move.l	#$0FCA0000,$040(a6)		;A mask, B bitmap, C, D: AB + /AC
+	move.l	#-1,$044(a6)
+	move.l	a1,$050(a6)			;BLTAPT
+	move.l	a0,$04C(a6)			;BLTBPT
+	move.l	a2,$048(a6)			;BLTCPT
+	move.l	a2,$054(a6)			;BLTDPT
+	move.w	d1,d2
+	add.w	d2,d2				;bytes
+	moveq	#64,d0
+	sub.w	d2,d0
+	move.w	d0,$064(a6)			;BLTAMOD
+	move.w	d0,$062(a6)			;BLTBMOD
+	moveq	#SBPR,d0
+	sub.w	d2,d0
+	move.w	d0,$060(a6)			;BLTCMOD
+	move.w	d0,$066(a6)			;BLTDMOD
+	move.w	#8*NPLANES,$05C(a6)
+	move.w	d1,$05E(a6)
+	bsr	rd_bq_go
+	movem.l	(sp)+,d0-d2/a0-a2/a6
+	rts
+
+;	(rd_fix_runs) A byte of 8 cells (bit 7 the first) to 4 words of 2 cells (bit 3 the first).
+rd_pairtab
+	dc.b	0,1,1,1,2,3,3,3,2,3,3,3,2,3,3,3
+	dc.b	4,5,5,5,6,7,7,7,6,7,7,7,6,7,7,7
+	dc.b	4,5,5,5,6,7,7,7,6,7,7,7,6,7,7,7
+	dc.b	4,5,5,5,6,7,7,7,6,7,7,7,6,7,7,7
+	dc.b	8,9,9,9,10,11,11,11,10,11,11,11,10,11,11,11
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	8,9,9,9,10,11,11,11,10,11,11,11,10,11,11,11
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	8,9,9,9,10,11,11,11,10,11,11,11,10,11,11,11
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
+	dc.b	12,13,13,13,14,15,15,15,14,15,15,15,14,15,15,15
 
 ;	Z clear if a screen cell under the 8x8 box at (d0, d2) is marked in rd_cover. Keeps d0-d5.
 rd_iscovered
