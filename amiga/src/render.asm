@@ -348,26 +348,21 @@ rd_dirty_all
 	movem.l	(sp)+,d0/a0
 	rts
 
-;	Convert every dirty tile; tc_chg = the tiles converted. d0 = 0 if none.
+;	Convert every dirty tile; tc_chg = the tiles converted. d0 = 0 if none. (rd_frame holds
+;	the game's tick meanwhile: the game, which sets the bits, cannot run.)
 rd_decode_dirty
 	lea	(tc_dirty).l,a4
 	lea	(tc_chg).l,a3
-	moveq	#0,d7
+	moveq	#0,d7				;the tile of the long's bit 31
 	moveq	#0,d3				;any
-.long	move	sr,-(sp)
-	ori	#$0700,sr			;(the game sets the bits)
-	move.l	(a4),d6
+.long	move.l	(a4),d6
 	clr.l	(a4)
-	move	(sp)+,sr
 	move.l	d6,(a3)+
 	beq	.next
 	moveq	#1,d3
-	moveq	#31,d5
-.bit	btst	d5,d6
-	beq	.nb
-	move.l	d7,d0
-	addi.l	#31,d0
-	sub.l	d5,d0
+.bit	bfffo	d6{0:0},d0
+	bfclr	d6{d0:1}
+	add.l	d7,d0				;a tile
 	; a tile of plane A, B or the window: converted now; another (a sprite's): when a sprite
 	; image of it is made (rd_tiles_need), which the image cache mostly spares
 	bftst	(rd_bused).l{d0:1}
@@ -382,7 +377,8 @@ rd_decode_dirty
 	movem.l	d3/a3,-(sp)
 	bsr	rd_decode_tile
 	movem.l	(sp)+,d3/a3
-.nb	dbf	d5,.bit
+.nb	tst.l	d6
+	bne.s	.bit
 .next	addq.l	#4,a4
 	addi.l	#32,d7
 	cmpi.l	#2048,d7
@@ -1460,68 +1456,56 @@ rd_cellB
 	beq	.p1
 	move.b	#$FF,d7
 .p1	moveq	#7,d3
+	move.w	d1,d2
+	mulu.w	#6,d2				;bytes from one pixel row to the next
+	movem.l	a5-a6,-(sp)
+	move.w	d1,d0
+	add.w	d1,d0
+	add.w	d1,d0				;3 plane rows on
+	lea	(a1,d0.w),a5			;planes 3-5 (a1: 0-2)
 	tst.b	(rd_cellmw).l
 	beq	.rown
-.row	move.l	(a0),d0
-	adda.w	d5,a0
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	move.b	d6,(a1)
-	adda.w	d1,a1
-	move.b	d7,(a1)
-	adda.w	d1,a1				;next pixel row (6 planes)
-	; high priority mask
-	move.b	(a2),d0
-	adda.w	d4,a2
+	lea	(a4,d0.w),a6			;the mask's 3-5 (a4: 0-2)
 	tst.w	(rd_cellpri).l
-	bmi	.hi
-	moveq	#0,d0
-.hi	move.b	d0,(a3)
+	bmi.s	.row
+	lea	(rd_zero8).l,a2			;(low priority: no mask)
+	moveq	#0,d4
+.row	move.b	(a0),(a1)			;(the cache's row: the plane bytes p0 p1 p2 p3)
+	move.b	1(a0),(a1,d1.w)
+	move.b	2(a0),(a1,d1.w*2)
+	move.b	3(a0),(a5)
+	move.b	d6,(a5,d1.w)
+	move.b	d7,(a5,d1.w*2)
+	adda.w	d5,a0
+	adda.w	d2,a1
+	adda.w	d2,a5
+	move.b	(a2),d0				;the high priority mask: for the CPU, and in each plane's
+	adda.w	d4,a2				;place for the blitter
+	move.b	d0,(a3)
 	adda.w	d1,a3
-	move.b	d0,(a4)				;(each plane's place)
-	adda.w	d1,a4
 	move.b	d0,(a4)
-	adda.w	d1,a4
-	move.b	d0,(a4)
-	adda.w	d1,a4
-	move.b	d0,(a4)
-	adda.w	d1,a4
-	move.b	d0,(a4)
-	adda.w	d1,a4
-	move.b	d0,(a4)
-	adda.w	d1,a4
+	move.b	d0,(a4,d1.w)
+	move.b	d0,(a4,d1.w*2)
+	move.b	d0,(a6)
+	move.b	d0,(a6,d1.w)
+	move.b	d0,(a6,d1.w*2)
+	adda.w	d2,a4
+	adda.w	d2,a6
 	dbf	d3,.row
+	movem.l	(sp)+,a5-a6
 	movea.l	(sp)+,a4
 	rts
-.rown	move.l	(a0),d0				;(no masks to write)
+.rown	move.b	(a0),(a1)			;(no masks to write)
+	move.b	1(a0),(a1,d1.w)
+	move.b	2(a0),(a1,d1.w*2)
+	move.b	3(a0),(a5)
+	move.b	d6,(a5,d1.w)
+	move.b	d7,(a5,d1.w*2)
 	adda.w	d5,a0
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	rol.l	#8,d0
-	move.b	d0,(a1)
-	adda.w	d1,a1
-	move.b	d6,(a1)
-	adda.w	d1,a1
-	move.b	d7,(a1)
-	adda.w	d1,a1
+	adda.w	d2,a1
+	adda.w	d2,a5
 	dbf	d3,.rown
+	movem.l	(sp)+,a5-a6
 	movea.l	(sp)+,a4
 	rts
 
@@ -6533,6 +6517,8 @@ rd_wb		ds.w	1
 rd_mkset	ds.l	BMAX/32			;plane B cells whose masks (mkB, mkB6) are not all 0
 rd_cellmk	ds.b	1			;rd_cellB: the cell has a mask
 rd_cellmw	ds.b	1			;and its masks are written
+	cnop	0,4
+rd_zero8	ds.b	8			;(0: a low priority cell's mask rows)
 	cnop	0,4
 rd_sbuild	ds.l	2*4*NPLANES*32/4		;a sprite image and mask being built (rd_spr_build)
 hal_obj_a6	ds.l	1			;addframe2: where its object's sprites begin
