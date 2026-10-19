@@ -441,6 +441,7 @@ rd_frame
 	dbne	d0,.blk
 	bne.s	.draw
 	bsr	rd_vsync
+	bsr	rd_snaptime
 	bsr	rd_show
 	addq.l	#1,(rd_count).l
 	bra	.skip
@@ -451,6 +452,7 @@ rd_frame
 	ori	#$0700,sr			;tick in between
 	bsr	rd_snapshot
 	bsr	rd_decode_dirty
+	bsr	rd_snaptime
 	move	(sp)+,sr
 	lea	(rd_regs).l,a5
 	move.w	#256,d0
@@ -722,11 +724,11 @@ rd_bq_start
 ;	noted. Interrupts off. Uses d0, a1.
 rd_showdue
 	tst.l	(rd_showcop).l
-	beq.s	.x
+	beq	.x
 	move.l	(rd_vblanks).l,d0
 	sub.l	(rd_lastset).l,d0
 	sub.l	(hal_pace).l,d0
-	bmi.s	.x
+	bmi	.x
 	IFD	PROFILE
 	add.l	(hal_pace).l,d0			;(statistics: vertical blanks the frame before was
 	subq.l	#1,d0				;shown for)
@@ -743,7 +745,47 @@ rd_showdue
 	lsl.w	#2,d0
 	lea	(rd_shownvb).l,a1
 	move.l	(rd_vblanks).l,(a1,d0.w)
+	; its delay: vertical blanks from its game state (rd_snaptime) to its showing (from the
+	; next frame on). The sound waits as long (snd_delay: the mean, to within 3/4 frame)
+	move.l	d1,-(sp)
+	lea	(rd_snapvb).l,a1
+	move.l	(rd_vblanks).l,d1
+	sub.l	(a1,d0.w),d1
+	addq.l	#1,d1
+	cmpi.l	#6,d1
+	bls.s	.l6
+	moveq	#6,d1
+.l6
+	IFD	PROFILE
+	lea	(prof_mark+52).l,a1		;(statistics)
+	addq.l	#1,(a1,d1.w*4)
+	ENDC
+	lsl.w	#8,d1
+	sub.w	(snd_latf).l,d1
+	asr.w	#3,d1
+	add.w	d1,(snd_latf).l
+	move.w	(snd_delay).l,d1
+	lsl.w	#8,d1
+	sub.w	(snd_latf).l,d1
+	bpl.s	.lp
+	neg.w	d1
+.lp	cmpi.w	#192,d1
+	blo.s	.lk
+	move.w	(snd_latf).l,d1
+	addi.w	#128,d1
+	lsr.w	#8,d1
+	move.w	d1,(snd_delay).l
+.lk	move.l	(sp)+,d1
 .x	rts
+
+;	The back buffer's game state is taken now (rd_showdue: the picture's delay). Keeps all.
+rd_snaptime
+	movem.l	d0/a0,-(sp)
+	move.w	(rd_bufi).l,d0
+	lea	(rd_snapvb).l,a0
+	move.l	(rd_vblanks).l,(a0,d0.w*4)
+	movem.l	(sp)+,d0/a0
+	rts
 
 ;	Level 3: the blitter has finished (the next entry, or the queue is idle), or a vertical
 ;	blank (counted: rd_vsync).
@@ -4996,6 +5038,7 @@ rd_bqhold	ds.b	1			;the queue waits at a show for a vertical blank
 	even
 rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
 rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)
+rd_snapvb	ds.l	NBUF			;rd_vblanks when each buffer's game state was taken
 rd_showbuf	ds.w	1			;(its buffer)
 		even
 rd_bq		ds.b	BQN*BQE

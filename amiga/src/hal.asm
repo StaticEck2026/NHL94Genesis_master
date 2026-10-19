@@ -445,7 +445,8 @@ hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1
-prof_mark	ds.l	5+8			;(+20: frames shown 1 ... 8+ vertical blanks)
+prof_mark	ds.l	5+8+16			;(+20: frames shown 1 ... 8+ vertical blanks; +52: vertical
+					;blanks from a frame's game state to its showing, 0 ... 6+)
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high

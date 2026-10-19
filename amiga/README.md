@@ -88,8 +88,9 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
 - `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
   exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
-  blitter is put on the caller), the frame rate since `F9` was pressed, and how many frames were
-  on the screen for 1, 2, 3 ... vertical blanks.
+  blitter is put on the caller), the frame rate since `F9` was pressed, how many frames were
+  on the screen for 1, 2, 3 ... vertical blanks, how many vertical blanks passed from each
+  frame's game state to its showing, and the sound's delay at the end.
 - `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
@@ -180,7 +181,12 @@ The hardware layer:
   (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`:
   most already play at 11 kHz or less and are kept as they are; the two the game plays faster
   (the glass at 29 kHz, a hit at 12 kHz) are resampled to 11025 Hz and played at a period that
-  keeps their pitch.
+  keeps their pitch. A frame's picture reaches the screen a few vertical blanks after the game
+  made it (drawn, then queued behind the frames before it: 3 with the 25 fps cap, 2 to 3
+  without), so the sound would come before what it goes with. Each game frame's sound commands,
+  with the Z80 RAM bytes they use, go into a delay line and are carried out that much later;
+  the renderer measures the picture's delay at every frame shown and keeps the sound's delay
+  at its mean, changing it only when it is off by 3/4 of a frame.
 - `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
   file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
   decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise

@@ -99,7 +99,7 @@ hal_int2
 	move.l	(rd_count).l,(prof_mark).l
 	move.l	(hal_frames).l,(prof_mark+4).l
 	lea	(prof_mark+20).l,a0
-	moveq	#7,d1
+	moveq	#8+16-1,d1
 .ch	clr.l	(a0)+
 	dbf	d1,.ch
 	moveq	#$58,d1
