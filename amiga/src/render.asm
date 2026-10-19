@@ -86,6 +86,8 @@ rd_Bkey		ds.l	2			;base, size of the plane in bmB (invalid: redraw all)
 rd_cover	ds.l	2*32			;screen cells something low was drawn on (fixups): a bit
 						;each, 64 a row
 rd_sprites	ds.l	2*80
+rd_scmemo	ds.l	8*80			;per sprite of the list: the image it had (rd_sc_get)
+rd_skey		ds.l	1			;(rd_sc_get: the key by tiles)
 rd_spn		ds.w	1
 rd_w		ds.w	1			;screen width 256 / 320
 rd_cells	ds.w	1			;tiles across +1
@@ -108,6 +110,7 @@ rd_regs		ds.b	32			;the VDP registers (rd_snapshot)
 rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	8*SCSLOTS		;sprite image cache (rd_sc_get)
+rd_sslot	ds.w	1			;rd_sc_get: the sprite's place in the list
 rd_bl0		ds.w	1			;rd_sc_get: the image's first line with something in it,
 rd_bnl		ds.w	1			;lines from there (0: none),
 rd_bp0		ds.w	1			;first pixel and last pixel across
@@ -691,7 +694,7 @@ rd_waitblit_end
 ;	Blit queue: the blits are written into entries laid out like the blitter's registers
 ;	$040-$075 and started one after the other by the blitter's interrupt, so the CPU goes on
 ;	with its own work. rd_waitblit waits for the queue to empty.
-BQN	equ	64				;entries (a power of 2)
+BQN	equ	128				;entries (a power of 2)
 BQE	equ	$40				;bytes an entry ($38 used: a power of 2 to find)
 BQS	equ	6				;(log2 BQE)
 
@@ -3172,7 +3175,11 @@ rd_sprite_blit
 	bne	rd_spr_cpu
 	bsr	rd_cover_rect
 	bra	rd_spr_cpu
-.cache	bsr	rd_sc_get			;a2 = image, a3 = mask, rd_bl0 .. rd_bp1 its box
+.cache	move.l	a4,d0
+	subi.l	#rd_sprites,d0
+	lsr.w	#3,d0
+	move.w	d0,(rd_sslot).l			;(its place in the list)
+	bsr	rd_sc_get			;a2 = image, a3 = mask, rd_bl0 .. rd_bp1 its box
 	; its lines with pixels, on the screen
 	move.w	(rd_bl0).l,d6
 	move.w	d6,d5
@@ -3282,7 +3289,9 @@ rd_sprite_blit
 ;	(rd_scarena), found through a hash table by its tiles, size, flips and palette. An image is
 ;	used while none of its tiles was converted again (rd_tchg: the frame each tile last was)
 ;	after it was built and the ring has not come round to it again. The players use the same
-;	few frames over and over: most sprites are found.
+;	few frames over and over: most sprites are found. Each place of the sprite list keeps the
+;	image it had (rd_scmemo): the same sprite there in the next frame, none of its tiles
+;	changed and the image still in the ring, takes it without the table.
 
 ;	a2 = the image, a3 = the mask of the sprite rd_sat, rd_scw, rd_sch (rd_wb set).
 rd_sc_get
@@ -3298,6 +3307,46 @@ rd_sc_get
 	swap	d1
 	clr.w	d1
 	or.l	d1,d0				;key: size << 16 | attributes
+	move.l	d0,(rd_skey).l
+	; the same sprite in its place of the list in the frame before, none of its tiles
+	; changed since (tc_chg) and its image still in the ring: that image
+	move.w	(rd_sslot).l,d1
+	lsl.w	#5,d1
+	lea	(rd_scmemo).l,a1
+	adda.w	d1,a1
+	cmp.l	(a1),d0
+	bne	.nomemo
+	move.l	(rd_count).l,d1
+	subq.l	#1,d1
+	cmp.l	4(a1),d1
+	bne	.nomemo
+	moveq	#0,d1
+	move.w	d0,d1
+	andi.w	#$7FF,d1			;first tile
+	move.w	(rd_scw).l,d2
+	mulu.w	(rd_sch).l,d2			;tiles
+	move.w	d1,d3
+	add.w	d2,d3
+	cmpi.w	#2048,d3
+	bhi	.nomemo				;((wrapping round: not here)
+	bftst	(tc_chg).l{d1:d2}
+	bne	.nomemo
+	move.l	(rd_scpos).l,d1
+	sub.l	12(a1),d1
+	cmpi.l	#SCARENA,d1
+	bhi	.nomemo
+	movea.l	8(a1),a2
+	move.l	24(a1),d7
+	lea	(a2,d7.l),a3
+	move.l	16(a1),(rd_bl0).l
+	move.l	20(a1),(rd_bp0).l
+	move.l	(rd_count).l,4(a1)
+	move.l	12(a1),d1			;(the oldest image used in this frame)
+	cmp.l	(rd_scmin).l,d1
+	bge	.x
+	move.l	d1,(rd_scmin).l
+	bra	.x
+.nomemo
 	; its tiles hold data a DMA sent from consecutive addresses of the program (vdp_tsrc):
 	; then the key is that address (and size, flips, palette: d5), so a frame of animation
 	; sent again, or the same frame on another player, is found whatever its tiles
@@ -3424,6 +3473,18 @@ rd_sc_get
 .mask	lea	(a2,d7.l),a3
 	move.l	16(a4),(rd_bl0).l		;its box
 	move.l	20(a4),(rd_bp0).l
+	; (for this place of the list in the next frame)
+	move.w	(rd_sslot).l,d1
+	lsl.w	#5,d1
+	lea	(rd_scmemo).l,a1
+	adda.w	d1,a1
+	move.l	(rd_skey).l,(a1)
+	move.l	(rd_count).l,4(a1)
+	move.l	a2,8(a1)
+	move.l	4(a4),12(a1)
+	move.l	16(a4),16(a1)
+	move.l	20(a4),20(a1)
+	move.l	d7,24(a1)
 	move.l	4(a4),d1			;(the oldest image used in this frame)
 	cmp.l	(rd_scmin).l,d1
 	bge.s	.x
