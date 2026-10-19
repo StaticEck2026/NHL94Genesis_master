@@ -35,6 +35,16 @@ PACCT	macro
 	move.l	(sp)+,d1
 	endm
 	ENDC
+;	(statistics, PROFILE builds) An event of the frame pipeline into prof_ev, with the time.
+;	Keeps everything but the flags.
+PEV	macro
+	IFD	PROFILE
+	move.w	#\1,-(sp)
+	jsr	(prof_event).l
+	addq.l	#2,sp
+	ENDC
+	endm
+PEVMAX		equ	16384
 PROFMAX		equ	65536
 
 CIA_CLOCK	equ	709379			;PAL E clock
@@ -242,6 +252,7 @@ hal_int6
 	jsr	(hal_watchdog).l
 .nowd
 	ENDIF
+	PEV	'T'				;(statistics: a game tick)
 	jsr	(snd_z80_poll).l
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
 	pea	(.post).l
@@ -302,6 +313,7 @@ hal_idle
 	beq	.no
 	move.l	(sp)+,d0
 	clr.w	(hal_starve).l
+	PEV	'R'				;(statistics: the renderer gets the CPU)
 	trap	#0
 	rts
 .no
@@ -356,6 +368,35 @@ prof_acct
 	rts
 	ENDC
 
+	IFD	PROFILE
+;	(statistics) An event (the code: the word pushed before the call) into the ring prof_ev:
+;	the code in the top byte, the time (CIA-B TOD, lines) below. Keeps everything.
+prof_event
+	move	sr,-(sp)
+	ori	#$0700,sr
+	movem.l	d0-d1/a0,-(sp)
+	moveq	#0,d0
+	move.b	(CIAB_TODHI).l,d0		;(reading it latches the others)
+	lsl.w	#8,d0
+	move.b	(CIAB_TODMID).l,d0
+	lsl.l	#8,d0
+	move.b	(CIAB_TODLO).l,d0
+	moveq	#0,d1
+	move.b	12+2+4+1(sp),d1			;the code
+	ror.l	#8,d1
+	or.l	d1,d0
+	move.l	(prof_evpos).l,d1
+	lea	(prof_ev).l,a0
+	move.l	d0,(a0,d1.l*4)
+	addq.l	#1,d1
+	andi.l	#PEVMAX-1,d1
+	move.l	d1,(prof_evpos).l
+	addq.l	#1,(prof_evcount).l
+	movem.l	(sp)+,d0-d1/a0
+	move	(sp)+,sr
+	rts
+	ENDC
+
 ;	The renderer's loop: draw each new frame, then give the CPU back.
 rend_main
 	move.l	(hal_frames).l,d0
@@ -364,7 +405,9 @@ rend_main
 	blo	.yield
 	move.l	(hal_frames).l,(rd_lastframe).l
 	st	(rd_busy).l
+	PEV	'S'				;(statistics: a frame begun, ended)
 	jsr	(rd_frame).l
+	PEV	'E'
 	sf	(rd_busy).l
 .yield	trap	#1
 	bra	rend_main
@@ -511,6 +554,9 @@ prof_mark	ds.l	5+8+16+4		;(+20: frames shown 1 ... 8+ vertical blanks; +52: vert
 					;+116: time in the game, the renderer, the game's vblank code)
 prof_last	ds.l	1
 prof_buf	ds.l	PROFMAX
+prof_evpos	ds.l	1
+prof_evcount	ds.l	1
+prof_ev		ds.l	PEVMAX			;events: code (top byte), CIA-B TOD
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
 hal_hv		ds.w	1			;(BENCH builds: the game's HVcount)

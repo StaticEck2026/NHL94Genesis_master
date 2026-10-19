@@ -36,7 +36,7 @@ static void update_irq(void)
     int level = 0;
     if (blit_irq && (intena & 0x4040) == 0x4040) level = 3;
     if (vb_irq && (intena & 0x4020) == 0x4020) level = 3;   /* vertical blank, once a frame */
-    if (irq6_pending) level = 6;
+    if (irq6_pending && (intena & 0x6000) == 0x6000) level = 6;   /* EXTER (held while off) */
     m68k_set_irq(level);
 }
 static long long cycles_total;
@@ -936,7 +936,8 @@ int main(int argc, char **argv)
                 rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
         fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u, HUD sprite builds %u\n",
                 rd32(k + 56), rd32(k + 60));
-        fprintf(stderr, "renderer: plane B restored: %u words, %u blits\n", rd32(k + 68), rd32(k + 64));
+        fprintf(stderr, "renderer: plane B restored: %u words, %u blits, %u groups of rows; HUD cells made again %u\n",
+                rd32(k + 68), rd32(k + 64), rd32(k + 84), rd32(k + 88));
         fprintf(stderr, "renderer: sprite images built: not in the table %u, the ring came round %u, a tile converted %u\n",
                 rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",

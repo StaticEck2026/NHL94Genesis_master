@@ -217,7 +217,18 @@ bench_tick
 	ENDC
 	cmpi.l	#BENCHEND,d0
 	blo.s	.x
-	st	(hal_quit).l
+	IFD	PROFILE
+	tst.b	(hal_quit).l
+	bne.s	.q
+	lea	(RAMBASE).l,a0			;(statistics: the game's RAM summed, to see that the
+	move.w	#($10000-$400)/4-1,d1		;runs played the same game; not the stacks at the top)
+	moveq	#0,d0
+.sum	add.l	(a0)+,d0
+	rol.l	#1,d0
+	dbf	d1,.sum
+	move.l	d0,(prof_mark+128).l
+	ENDC
+.q	st	(hal_quit).l
 .x	rts
 	ENDC
 

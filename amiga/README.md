@@ -105,7 +105,12 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   game's random numbers (its reads of the beam position) come from the game frame, Start is
   pressed at the test harness' frames (into a game from the attract mode), and with `-DPROFILE=1`
   the frame rate count starts at game frame 2000 (as `F9`) and the game quits at 6000
-  (`BENCHSTART`, `BENCHEND`). Delete `NHL94.sav` before each run: the game reads it.
+  (`BENCHSTART`, `BENCHEND`). Delete `NHL94.sav` before each run: the game reads it. The game
+  can still take another course when it runs long during the menus (a sum of its RAM at the end
+  is in the profile to tell), so compare the mean of a few runs.
+- `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
+  waiting for a buffer, the show queued, the queue at it or held, the copper list set, vertical
+  blanks, game ticks), written after the profile (`prof_ev`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
   of the 37 sprites a frame in play, about 9% of the renderer's time).

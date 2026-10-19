@@ -520,12 +520,11 @@ rd_frame
 .draw	bsr	rd_vsync			;(the state is taken once there is a buffer for it)
 	move.l	(rd_scmin).l,(rd_scmin+4).l	;(the frame before that has been shown: its blits
 	move.l	#$7FFFFFFF,(rd_scmin).l		;are done)
-	move	sr,-(sp)			;the sprite list and the tiles of one game tick: no
-	ori	#$0700,sr			;tick in between
-	bsr	rd_snapshot
-	bsr	rd_decode_dirty
+	move.w	#$2000,(CUSTOM+INTENA).l	;the sprite list and the tiles of one game tick: no
+	bsr	rd_snapshot			;tick in between (level 6 held; the blit queue and the
+	bsr	rd_decode_dirty			;vertical blank go on)
 	bsr	rd_snaptime
-	move	(sp)+,sr
+	move.w	#$A000,(CUSTOM+INTENA).l
 	lea	(rd_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1
@@ -686,10 +685,12 @@ rd_vsync
 	moveq	#0,d1
 .n	lsl.w	#2,d1
 	lea	(rd_shownvb).l,a0
+	PEV	'v'				;(statistics: waiting for a buffer, got it)
 rd_spin_vs					;(the harness: the renderer waits here)
 .w	move.l	(rd_vblanks).l,d0
 	cmp.l	(a0,d1.w),d0
 	ble.s	.w				;(signed: $7FFFFFFF is not yet)
+	PEV	'V'
 	movem.l	(sp)+,d0-d1/a0
 	rts
 
@@ -711,6 +712,9 @@ rd_waitblit_end
 ;	the blitter idle, a blit is written straight into the blitter's registers (and started by
 ;	its BLTSIZH, the last written): no entry, no interrupt. The blitter's interrupt is on only
 ;	while the queue runs (rd_bqint).
+	IFND	RGAP
+RGAP	equ	2				;rd_restore: runs this many columns apart are one blit
+	ENDC
 BQN	equ	128				;entries (a power of 2)
 BQE	equ	$40				;bytes an entry ($38 used: a power of 2 to find)
 BQS	equ	6				;(log2 BQE)
@@ -811,7 +815,8 @@ rd_bq_start
 	move.w	$05C-$058(a0),$05C-$058(a1)	;BLTSIZV
 	move.w	$05E-$058(a0),$05E-$058(a1)	;BLTSIZH: go
 	rts
-.mark	tst.l	(rd_showcop).l			;the show before still waits for its vertical
+.mark	PEV	'M'				;(statistics: the queue at a show)
+	tst.l	(rd_showcop).l			;the show before still waits for its vertical
 	bne	.hold				;blank: so does the queue (rd_bqhold)
 	bsr	.adv
 	move.l	$048-$040(a0),(rd_showcop).l
@@ -820,6 +825,7 @@ rd_bq_start
 	bra	.next
 .hold	st	(rd_bqbusy).l
 	st	(rd_bqhold).l
+	PEV	'H'
 	rts
 .idle	sf	(rd_bqbusy).l
 	sf	(rd_bqint).l			;(blits started directly: no interrupt)
@@ -851,6 +857,7 @@ rd_showdue
 	addq.l	#1,(a1,d0.l*4)
 	ENDC
 	move.l	(rd_vblanks).l,(rd_lastset).l
+	PEV	'C'				;(statistics: a copper list set)
 	move.l	(rd_showcop).l,(CUSTOM+$080).l	;COP1LC
 	clr.l	(rd_showcop).l
 	move.w	(rd_showbuf).l,d0
@@ -919,6 +926,7 @@ rd_bq_int
 	beq.s	.x
 	move.w	#$0020,(CUSTOM+INTREQ).l
 	move.w	#$0020,(CUSTOM+INTREQ).l
+	PEV	'B'				;(statistics: a vertical blank)
 	addq.l	#1,(rd_vblanks).l
 	tst.b	(hal_vbtick).l
 	beq.s	.nt
@@ -1491,13 +1499,35 @@ rd_restore
 	cmp.l	(a2,d7.w*4),d6
 	beq.s	.same
 .grp	; rows d5 .. d7-1, the columns of d6: the runs
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+68).l		;(statistics: groups of rows)
+	ENDC
 .run	bfffo	d6{0:0},d1			;first column
 	move.l	d6,d2
 	lsl.l	d1,d2
 	not.l	d2
 	bfffo	d2{0:0},d3			;columns
 	bfclr	d6{d1:d3}
-	bsr	rd_bq_alloc
+.ext	; the next run, if at most RGAP columns on: the same blit (the columns between are the
+	; bitmap's already; a blit costs more than the words)
+	tst.l	d6
+	beq.s	.blit
+	bfffo	d6{0:0},d0			;its first column
+	move.w	d0,d2
+	sub.w	d1,d2
+	sub.w	d3,d2				;columns between
+	cmpi.w	#RGAP,d2
+	bhi.s	.blit
+	move.l	d6,d2
+	lsl.l	d0,d2
+	not.l	d2
+	bfffo	d2{0:0},d4			;its columns
+	bfclr	d6{d0:d4}
+	add.w	d0,d4
+	sub.w	d1,d4
+	move.w	d4,d3				;to its last
+	bra.s	.ext
+.blit	bsr	rd_bq_alloc
 	move.l	#$09F00000,$040(a6)		;A to D
 	move.l	#$FFFFFFFF,$044(a6)
 	move.w	d5,d0
@@ -2165,6 +2195,10 @@ rd_hud_build
 	dbf	d0,.sp
 	move.w	#1,(rd_hudon).l
 	addq.l	#1,(rd_hudgen).l
+	lea	(rd_hudbd).l,a0			;(each buffer's copy: all of it)
+	moveq	#NBUF-1,d0
+.ba	move.l	#-1,(a0)+
+	dbf	d0,.ba
 	bra.s	.x
 .full	addq.l	#8,sp				;(more than 15 colours: blitted)
 	bsr	rd_hud_off
@@ -2197,6 +2231,38 @@ rd_hud_cell
 	dbf	d7,.fg
 	bra	.full
 .fd	addq.l	#1,(rd_hudgen).l
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+72).l		;(statistics: HUD cells made again)
+	ENDC
+	; the bands of 8 lines it is in, of its group: each buffer's copy takes them (rd_show)
+	moveq	#0,d0
+	move.w	d2,d0
+	sub.w	(rd_hudy).l,d0			;its first line in the sprites
+	bpl.s	.b0
+	moveq	#0,d0
+.b0	moveq	#0,d1
+	move.w	d2,d1
+	addq.w	#7,d1
+	sub.w	(rd_hudy).l,d1			;its last
+	bmi.s	.bx
+	cmpi.w	#HUDH-1,d1
+	ble.s	.b1
+	move.w	#HUDH-1,d1
+.b1	cmp.w	d1,d0
+	bgt.s	.bx
+	lsr.w	#3,d0
+	lsr.w	#3,d1
+	move.w	d5,d6
+	lsl.w	#3,d6
+	add.w	d6,d0				;group * 8 + band
+	add.w	d6,d1
+	lea	(rd_hudbd).l,a0
+	moveq	#NBUF-1,d6
+.bb	bfset	(a0){d0:1}
+	bfset	(a0){d1:1}
+	addq.l	#4,a0
+	dbf	d6,.bb
+.bx
 	lea	(rd_hudspt).l,a0
 	movea.l	(a0,d5.w*8),a3			;even sprite
 	movea.l	4(a0,d5.w*8),a4			;odd
@@ -5429,26 +5495,50 @@ rd_show
 	; brought up to date from rd_hudm now: the frames queued before it keep the HUD of their
 	; moment (a clock digit changes with the rest of the picture)
 	tst.w	(rd_hudon).l
-	beq.s	.hs0
-	movem.l	d3/a2-a3,-(sp)
+	beq	.hs0
+	movem.l	d3-d5/a0/a2-a3,-(sp)
 	move.w	(rd_bufi).l,d0
 	move.w	d0,d3
 	mulu.w	#8*HUDSPR,d3
 	add.l	#rd_hudsd,d3
 	move.l	d3,(rd_hudcopy).l
-	lea	(rd_hudbgen).l,a1
-	move.l	(rd_hudgen).l,d2
-	cmp.l	(a1,d0.w*4),d2
+	lea	(rd_hudbd).l,a1			;the bands of 8 lines changed since its copy
+	move.l	(a1,d0.w*4),d2
 	beq.s	.hk
-	move.l	d2,(a1,d0.w*4)
+	clr.l	(a1,d0.w*4)
 	lea	(rd_hudm).l,a2			;the sprites in use
 	movea.l	d3,a3
-	move.w	(rd_hudgn).l,d2
+	cmpi.l	#-1,d2
+	bne.s	.hb
+	move.w	(rd_hudgn).l,d2			;all
 	mulu.w	#2*HUDSPR/4,d2
 	subq.w	#1,d2
 .hcp	move.l	(a2)+,(a3)+
 	dbf	d2,.hcp
-.hk	movem.l	(sp)+,d3/a2-a3
+	bra.s	.hk
+.hb	bfffo	d2{0:0},d4			;group * 8 + band
+	bfclr	d2{d4:1}
+	moveq	#0,d5
+	move.w	d4,d5
+	lsr.w	#3,d5
+	mulu.w	#2*HUDSPR,d5			;the group's even sprite
+	andi.w	#7,d4
+	lsl.w	#7,d4				;(8 lines of 16 bytes)
+	add.w	d4,d5
+	addi.w	#16,d5				;(after the control words)
+	lea	(a2,d5.l),a0
+	lea	(a3,d5.l),a1
+	moveq	#128/4-1,d4
+.hbe	move.l	(a0)+,(a1)+
+	dbf	d4,.hbe
+	lea	HUDSPR-128(a0),a0		;the odd one
+	lea	HUDSPR-128(a1),a1
+	moveq	#128/4-1,d4
+.hbo	move.l	(a0)+,(a1)+
+	dbf	d4,.hbo
+	tst.l	d2
+	bne.s	.hb
+.hk	movem.l	(sp)+,d3-d5/a0/a2-a3
 .hs0	lea	(rd_hudspt).l,a1
 	move.w	#$120,d1
 	moveq	#7,d2
@@ -5541,6 +5631,7 @@ rd_show
 	move.w	(rd_bufi).l,d1
 	lea	(rd_shownvb).l,a1
 	move.l	#$7FFFFFFF,(a1,d1.w*4)		;(not on the screen yet)
+	PEV	'D'				;(statistics: drawn, the show queued)
 	bsr	rd_bq_allocq
 	move.l	(rd_backcop).l,$048(a6)		;the copper list
 	move.w	d1,$04C(a6)			;the buffer
@@ -5571,7 +5662,8 @@ rd_show
 rd_tline	ds.w	1
 rd_hudspt	ds.l	8			;the sprites' data in rd_hudm (rd_sprnull: none)
 rd_hudgen	ds.l	1			;(changed when it changes)
-rd_hudbgen	ds.l	NBUF			;rd_hudgen when each buffer's copy was made
+rd_hudbd	ds.l	NBUF			;per buffer: its copy's bands of 8 lines to make again
+						;(bit group * 8 + band from the top; -1: all)
 rd_hudcopy	ds.l	1			;(rd_show: the back buffer's copy)
 rd_hudon	ds.w	1
 rd_hudchg	ds.w	1			;(the overlay changed: rd_hud_build)

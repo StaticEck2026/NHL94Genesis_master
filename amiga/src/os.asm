@@ -338,6 +338,15 @@ os_save_prof
 	move.l	#prof_mark,d2
 	move.l	#52+64+16,d3
 	jsr	DOS_Write(a6)
+	; then the events (prof_ev): count, position, the ring
+	move.l	d4,d1
+	move.l	#prof_evpos,d2
+	moveq	#8,d3
+	jsr	DOS_Write(a6)
+	move.l	d4,d1
+	move.l	#prof_ev,d2
+	move.l	#PEVMAX*4,d3
+	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)
 .x	movem.l	(sp)+,d1-d4/a0-a1/a6
