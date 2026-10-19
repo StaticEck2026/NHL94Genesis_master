@@ -614,6 +614,7 @@ rd_vsync
 	moveq	#0,d1
 .n	lsl.w	#2,d1
 	lea	(rd_shownvb).l,a0
+rd_spin_vs					;(the harness: the renderer waits here)
 .w	move.l	(rd_vblanks).l,d0
 	cmp.l	(a0,d1.w),d0
 	ble.s	.w				;(signed: $7FFFFFFF is not yet)
@@ -621,9 +622,11 @@ rd_vsync
 	rts
 
 rd_waitblit
+rd_spin_q
 .q	tst.b	(rd_bqbusy).l			;the queue first
 	bne	.q
 	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
+rd_spin_w
 .w	btst	#6,(CUSTOM+DMACONR).l
 	bne	.w
 	rts
@@ -640,6 +643,7 @@ BQE	equ	$38				;bytes an entry
 ;	Waits while the queue is full.
 rd_bq_alloc
 	move.l	d0,-(sp)
+rd_spin_full
 .full	move.w	(rd_bqtail).l,d0
 	addq.w	#1,d0
 	andi.w	#BQN-1,d0

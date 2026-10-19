@@ -217,11 +217,18 @@ lag one VDP update behind when the game changes it mid frame (text being printed
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
 `NHL_FIXEDHV=1` gives the game's reads of the beam position (which it uses as random numbers)
-values that depend only on the frame and the read's number in it, so every build plays the
-same game (with the real beam position the renderer's speed changes the game's course).
+values that depend only on the frame and the read's number in it. `NHL_DETERM=1` does that and
+more, so that every build plays exactly the same game: the renderer's own work takes none of
+the game's time (a frame ends once the game and its tick have run their cycles; the
+renderer's and the blit queue interrupt's do not count), a frame also ends whenever the CPU
+would only wait (the renderer for a vertical blank, the blitter or room in its queue, or
+giving way; the game waiting with nothing to draw), so each of the game's wait loops goes round
+once a frame however long the renderer took, blits are done at once, and no vertical blank is
+lost or given to the renderer. The CPU core is built with its instruction hook for it.
 `amiga/harness/playcost.sh [from] [end]` uses it: Start is pressed only until the game
 begins, then the renderer's harness cycles per frame drawn are counted over uninterrupted
-play, by routine, to compare builds. The renderer draws every second game frame, the odd or
+play, by routine, to compare builds; it prints a fingerprint of the game at the end, which is
+the same for two builds that played the same game. The renderer draws every second game frame, the odd or
 the even ones depending on its timing earlier on, and the work can differ between the two:
 `NHL_PHASE=0` or `1` sets which (from frame 2000), and playcost.sh measures both. `NHL_RAMDUMP=file:from:to` writes the Genesis RAM every
 frame. `NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip

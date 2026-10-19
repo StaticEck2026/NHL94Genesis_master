@@ -87,6 +87,10 @@ hal_debug
 	dc.l	RAMBASE				;+108: the Genesis RAM window
 	dc.l	game_code			;+112: the converted game's code
 	dc.l	rd_lastframe,rd_busy		;+116: the renderer's pacing
+	dc.l	hal_starve			;+124
+	dc.l	ctx_cur				;+128
+	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full ;+132: the renderer's wait loops
+	dc.l	ctx_to_game,hal_idle_no		;+148: the renderer gives way, the game idles
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -300,7 +304,9 @@ hal_idle
 	clr.w	(hal_starve).l
 	trap	#0
 	rts
-.no	clr.w	(hal_starve).l
+.no
+hal_idle_no					;(the harness: the game waits, nothing to draw)
+	clr.w	(hal_starve).l
 	move.l	(sp)+,d0
 	rts
 
