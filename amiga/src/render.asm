@@ -73,6 +73,10 @@ rd_revtab	ds.w	256			;the same, swapped
 rd_attr		ds.l	8			;chunky fallback: pixel OR value by entry bits 15-13
 chunky		ds.b	CHPITCH*SCRH
 shB		ds.w	BMAX			;plane B name table as drawn in bmB
+rd_tlhead	ds.w	2048			;per tile: the first cell of plane B with it + 1 (0: none)
+rd_tlnext	ds.w	BMAX			;per cell: the next with its tile + 1
+rd_tlprev	ds.w	BMAX			;and the one before + 1 (0: it is the first)
+rd_tltile	ds.w	BMAX			;the tile whose list it is in + 1 (0: none)
 rd_hiB		ds.l	BMAX			;plane B high priority cells: column, row (words)
 rd_hibits	ds.l	BMAX/32			;the same as bits (row * plane width + column)
 rd_fixmap	ds.l	2*32			;rd_fixups: the cells to draw again (64 a row)
@@ -981,6 +985,14 @@ rd_updateB
 	moveq	#63,d3
 .cu	clr.l	(a1)+
 	dbf	d3,.cu
+	lea	(rd_tlhead).l,a1		;(and the tiles' lists of cells)
+	move.w	#2048/2-1,d3
+.ch	clr.l	(a1)+
+	dbf	d3,.ch
+	lea	(rd_tltile).l,a1
+	move.w	#BMAX/2-1,d3
+.ct	clr.l	(a1)+
+	dbf	d3,.ct
 .same	; were any tiles of plane B converted again?
 	lea	(tc_chg).l,a1
 	lea	(rd_bused).l,a2
@@ -1007,10 +1019,8 @@ rd_updateB
 	move.w	#-1,(rd_hiBok).l		;unchanged unless a cell is redrawn
 	tst.w	d6
 	bne	.cell
-	tst.l	(rd_btchg).l
-	bne	.cell
-	; only entries can have changed, and only if the name table was written to: find the
-	; changed longs quickly
+	; changed entries, if the name table was written to: found quickly as changed longs; then
+	; the cells of the tiles converted again (rd_btiles)
 	IFND	VERIFY
 	tst.b	(rd_ntcur).l
 	beq	.fdone
@@ -1058,7 +1068,10 @@ rd_updateB
 	dbf	d3,.fc
 	movem.l	(sp)+,d7/a0-a1
 	dbf	d7,.f
-.fdone	tst.w	(rd_hiBok).l
+.fdone	tst.l	(rd_btchg).l
+	beq.s	.fd2
+	bsr	rd_btiles
+.fd2	tst.w	(rd_hiBok).l
 	bne	.x
 	cmpi.w	#64,(rd_cw).l
 	beq	.x				;(rd_cellB keeps rd_hibits; the list is not used)
@@ -1092,6 +1105,46 @@ rd_updateB
 	beq	.x
 	bsr	rd_list_hiB
 .x	rts
+
+;	The cells of plane B whose tile was converted again (tc_chg and rd_bused) drawn again,
+;	found through the tile's list of cells (rd_tlhead, kept by rd_cellB). Keeps everything.
+rd_btiles
+	movem.l	d0-d7/a0-a6,-(sp)
+	lea	(tc_chg).l,a3
+	lea	(rd_bused).l,a4
+	moveq	#0,d7				;the tile of the long's bit 31
+.l	move.l	(a3)+,d6
+	and.l	(a4)+,d6
+	beq.s	.nl
+.b	bfffo	d6{0:0},d1
+	bfclr	d6{d1:1}
+	add.w	d7,d1				;a tile
+	lea	(rd_tlhead).l,a0
+	move.w	(a0,d1.w*2),d2			;its first cell + 1
+.c	subq.w	#1,d2
+	bmi.s	.nt
+	lea	(rd_tlnext).l,a0
+	move.w	(a0,d2.w*2),d3			;(the next + 1)
+	lea	(shB).l,a0
+	move.w	(a0,d2.w*2),d0			;its entry
+	moveq	#0,d4
+	move.w	d2,d4
+	divu.w	(rd_cw).l,d4
+	move.l	d4,d5
+	swap	d4				;column
+	movem.l	d3/d6-d7/a3-a4,-(sp)
+	bsr	rd_cellB
+	movem.l	(sp)+,d3/d6-d7/a3-a4
+	move.w	d3,d2
+	bra.s	.c
+.nt	tst.l	d6
+	bne.s	.b
+.nl	addi.w	#32,d7
+	cmpi.w	#2048,d7
+	blo.s	.l
+	clr.w	(rd_hiBok).l
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
 
 ;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap. The blits of the frame
 ;	before may still read the bitmap: they are let finish first.
@@ -1149,7 +1202,48 @@ rd_cellB
 	beq.s	.lo
 	lea	(rd_hibits).l,a1
 	bfset	(a1){d1:1}
-.lo	movem.l	(sp)+,d1-d2
+.lo	; the cell in its tile's list (rd_btiles)
+	movem.l	d0/d3/a0,-(sp)
+	andi.w	#$7FF,d0
+	addq.w	#1,d0				;its tile + 1
+	lea	(rd_tltile).l,a0
+	move.w	(a0,d1.w*2),d2
+	cmp.w	d2,d0
+	beq.s	.tk				;(there already)
+	move.w	d0,(a0,d1.w*2)
+	tst.w	d2
+	beq.s	.ti
+	; out of the old tile's list
+	lea	(rd_tlprev).l,a0
+	move.w	(a0,d1.w*2),d3			;the one before + 1
+	lea	(rd_tlnext).l,a1
+	move.w	(a1,d1.w*2),d0			;the next + 1
+	tst.w	d3
+	beq.s	.th
+	move.w	d0,-2(a1,d3.w*2)		;(next of the one before)
+	bra.s	.tp
+.th	lea	(rd_tlhead).l,a1
+	move.w	d0,-2(a1,d2.w*2)		;(the old tile's first)
+.tp	tst.w	d0
+	beq.s	.tn
+	move.w	d3,-2(a0,d0.w*2)		;(the one before of the next)
+.tn	lea	(rd_tltile).l,a0
+	move.w	(a0,d1.w*2),d0			;(the tile + 1 again)
+.ti	; at the front of the new tile's list
+	lea	(rd_tlhead).l,a0
+	move.w	-2(a0,d0.w*2),d3		;its first + 1
+	move.w	d1,d2
+	addq.w	#1,d2				;this cell + 1
+	move.w	d2,-2(a0,d0.w*2)
+	lea	(rd_tlnext).l,a0
+	move.w	d3,(a0,d1.w*2)
+	lea	(rd_tlprev).l,a0
+	clr.w	(a0,d1.w*2)
+	tst.w	d3
+	beq.s	.tk
+	move.w	d2,-2(a0,d3.w*2)
+.tk	movem.l	(sp)+,d0/d3/a0
+	movem.l	(sp)+,d1-d2
 	move.w	(rd_cw).l,d1			;bytes per plane row
 	move.w	d1,d2
 	mulu.w	#6,d2				;bytes per pixel row
