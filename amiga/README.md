@@ -141,7 +141,8 @@ The hardware layer:
   BPLCON1 delay. The planes are fetched 64 bits at a time (FMODE 3), which leaves the most of
   the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
-  by 4 lines a bit; `-DDLS=n` makes it 2^n lines). Other
+  by 8 lines a bit; `-DDLS=n` makes it 2^n lines, 1 or 2: finer rows restore fewer words
+  but take more blits, and each blit costs the CPU its queueing and its interrupt). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware

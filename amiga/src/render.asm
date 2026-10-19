@@ -9,7 +9,7 @@
 ;	  * scroll mode (a 64 x 32 cell plane B, the rink): each screen buffer holds all of plane B
 ;	    and the display hardware scrolls it (bitplane pointers, BPLCON1). What was drawn over
 ;	    it (only each sprite image's box of pixels is drawn) and the cells that changed are
-;	    restored from the bitmap by the blitter (rd_dirty: 16 pixels by 4 lines a bit);
+;	    restored from the bitmap by the blitter (rd_dirty: 16 pixels by 8 lines a bit);
 ;	    otherwise plane B is copied to the screen by the blitter at the scroll position;
 ;	  * plane A, the window and the sprites are drawn on top by the CPU, in Genesis priority
 ;	    order: B, A low, sprites low, B high (redrawn where something low covered it), A high,
@@ -27,7 +27,7 @@ BUFH		equ	480			;rows: plane B's 256, then its first 224 again (vertical wrap)
 BUFSIZE		equ	SROW*BUFH
 NBUF		equ	3			;screen buffers: one shown, one waiting to be, one drawn
 	IFND	DLS
-DLS		equ	2			;dirty maps: a row is 1 << DLS lines
+DLS		equ	3			;dirty maps: a row is 1 << DLS lines
 	ENDC
 DLH		equ	1<<DLS
 DROWS		equ	BUFH>>DLS		;rows of the dirty maps
@@ -692,7 +692,8 @@ rd_waitblit_end
 ;	$040-$075 and started one after the other by the blitter's interrupt, so the CPU goes on
 ;	with its own work. rd_waitblit waits for the queue to empty.
 BQN	equ	64				;entries (a power of 2)
-BQE	equ	$38				;bytes an entry
+BQE	equ	$40				;bytes an entry ($38 used: a power of 2 to find)
+BQS	equ	6				;(log2 BQE)
 
 ;	a6 = the next entry, as if it were the custom chips' base (write $040(a6) ... $05E(a6)).
 ;	Waits while the queue is full.
@@ -705,9 +706,9 @@ rd_spin_full
 	cmp.w	(rd_bqhead).l,d0
 	beq	.full
 	move.w	(rd_bqtail).l,d0
-	mulu.w	#BQE,d0
+	lsl.w	#BQS,d0
 	lea	(rd_bq-$040).l,a6
-	adda.l	d0,a6
+	adda.w	d0,a6
 	clr.w	$074(a6)			;BLTADAT: what a shift brings into the first word
 	move.l	(sp)+,d0
 	rts
@@ -741,11 +742,14 @@ rd_bq_start
 	cmp.w	(rd_bqtail).l,d0
 	beq	.idle
 	lea	(rd_bq).l,a0
-	mulu.w	#BQE,d0
-	adda.l	d0,a0
+	lsl.w	#BQS,d0
+	adda.w	d0,a0
 	tst.w	$05E-$040(a0)
 	beq	.mark
-	bsr	.adv
+	move.w	(rd_bqhead).l,d0		;(on to the next)
+	addq.w	#1,d0
+	andi.w	#BQN-1,d0
+	move.w	d0,(rd_bqhead).l
 	st	(rd_bqbusy).l
 	lea	(CUSTOM+$040).l,a1
 	move.l	(a0)+,(a1)+			;BLTCON0, BLTCON1
