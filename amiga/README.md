@@ -201,6 +201,9 @@ reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ
 lag one VDP update behind when the game changes it mid frame (text being printed, a mode
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
+`NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
+buffers each blit reads and writes (plane B restores, sprites, overlay, clears), and compares
+the sprite blits with the box their masks actually cover.
 
 `amiga/tools/uaerun.sh` runs the build in FS-UAE (A1200, AROS ROM by default) on a virtual X
 display, presses keys at given times and takes screenshots. Add `fast_memory = 8192` with

@@ -134,6 +134,50 @@ static void watch_hit(uint32_t a, uint32_t v)
 static int pend_run;
 static void blit_exec(void);
 
+/* NHL_BLITKINDS: the blitter's time from frame 1700 by kind, the kind being which of the
+   renderer's chip buffers (the debug block from +80) each channel starts in */
+static struct { char key[48]; long long time, words, n; } bk[64];
+static int bkn;
+static unsigned bk_frames0;
+long long trim_full, trim_box;
+static char bk_region(uint32_t a)
+{
+    static const char names[] = "SBMcCOFhLH";     /* in their order in the chip section */
+    uint32_t st[10];
+    if (!a) return '-';
+    st[0] = rd32(dbg + 80); st[1] = rd32(dbg + 36); st[2] = rd32(dbg + 84); st[3] = rd32(dbg + 100);
+    st[4] = rd32(dbg + 88); st[5] = rd32(dbg + 60); st[6] = rd32(dbg + 92); st[7] = rd32(dbg + 104);
+    st[8] = rd32(dbg + 64); st[9] = rd32(dbg + 96);
+    for (int i = 9; i >= 0; i--)
+        if (a >= st[i] && (i < 9 || a < st[9] + 288 * 224)) return names[i];
+    return '?';
+}
+static void blitkind_add(uint16_t con0, uint32_t a, uint32_t b, uint32_t c, uint32_t d, long long words,
+                         long long t)
+{
+    char key[48];
+    snprintf(key, sizeof key, "A%c B%c C%c D%c %04x", bk_region(a), bk_region(b), bk_region(c), bk_region(d),
+             con0 & 0x0FFF);
+    int i;
+    for (i = 0; i < bkn; i++) if (!strcmp(bk[i].key, key)) break;
+    if (i == bkn) { if (bkn == 64) return; strcpy(bk[bkn++].key, key); }
+    bk[i].time += t; bk[i].words += words; bk[i].n++;
+}
+static void blitkind_print(unsigned frames)
+{
+    long long tot = 0;
+    for (int i = 0; i < bkn; i++) tot += bk[i].time;
+    for (int i = 0; i < bkn; i++)       /* largest first */
+        for (int j = i + 1; j < bkn; j++)
+            if (bk[j].time > bk[i].time) { __typeof__(bk[0]) x = bk[i]; bk[i] = bk[j]; bk[j] = x; }
+    fprintf(stderr, "blitter by kind (S screen B plane B bitmap M its mask c copper C sprite cache O overlay"
+            " F fps H/L overlay masks), from frame 1700, %u frames drawn:\n", frames);
+    for (int i = 0; i < bkn; i++)
+        fprintf(stderr, "  %-22s %5.1f%%  %7.0f cycles a frame drawn, %6.1f blits, %7.0f words\n", bk[i].key,
+                100.0 * bk[i].time / tot, (double)bk[i].time / frames, (double)bk[i].n / frames,
+                (double)bk[i].words / frames);
+}
+
 static void do_blit(int h, int w)
 {
     uint16_t con0 = creg[0x40 / 2];
@@ -165,6 +209,7 @@ static void blit_exec(void)
     /* the shifters take the bits shifted in from the data registers' last words, as the
        hardware does: what the previous blit (or a write to BLTxDAT) left there */
     uint32_t aold = r[0x74 / 2], bold = r[0x72 / 2];
+    uint32_t a0 = apt, b0 = bpt, c0 = cpt, d0 = dpt;
     if (con1 & 1) { fprintf(stderr, "blitter line mode not emulated\n"); return; }
     in_blit = 1;
     for (int y = 0; y < h; y++) {
@@ -205,6 +250,24 @@ static void blit_exec(void)
         if (useD) dpt += desc ? -dmod : dmod;
     }
     in_blit = 0;
+    if (frame >= 1700 && getenv("NHL_BLITKINDS") && (con0 & 0x0FFF) == 0x0FCA && useA && bk_region(a0) == 'C') {
+        /* sprite blits (cookie cut from the cache): the box of their mask's set bits, lines (6
+           plane rows each) by words, against the blit */
+        int lines = h / 6, l0 = lines, l1 = -1, w0 = w, w1 = -1;
+        for (int y = 0; y < lines; y++)
+            for (int x = 0; x < w; x++) {
+                uint32_t ad = a0 + (uint32_t)(y * 6) * (w * 2 + amod) + x * 2;
+                uint16_t m = rd16(ad);
+                if (x == 0) m &= afwm;
+                if (x == w - 1) m &= alwm;
+                if (m) { if (y < l0) l0 = y; if (y > l1) l1 = y; if (x < w0) w0 = x; if (x > w1) w1 = x; }
+            }
+        extern long long trim_full, trim_box;
+        trim_full += (long long)lines * w * 6;
+        if (l1 >= 0) trim_box += (long long)(l1 - l0 + 1) * (w1 - w0 + 1) * 6;
+    }
+    if (frame >= 1700 && getenv("NHL_BLITKINDS"))   /* by the buffers it reads and writes */
+        blitkind_add(con0, useA ? a0 : 0, useB ? b0 : 0, useC ? c0 : 0, useD ? d0 : 0, h * w, blit_time);
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
         extern long long blitstat[4];
         int kind = (con0 & 0x0FFF) == 0x0FCA ? (alwm ? 2 : 1) : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 3;
@@ -625,6 +688,7 @@ int main(int argc, char **argv)
         if (sscanf(getenv("NHL_VWLOG"), "%x:%x", &lo, &hi) == 2) { vw_lo = (vram & 0xFFFFFF) + lo; vw_hi = (vram & 0xFFFFFF) + hi; }
     }
     for (frame = 1; frame <= frames; frame++) {
+        if (frame == 1700) bk_frames0 = rd32(rd32(dbg + 28));
         wr16(padstate, pad_at(frame));
         if (getenv("NHL_PROF") && frame >= (getenv("NHL_PROF_FROM") ? atoi(getenv("NHL_PROF_FROM")) : 0)) {
             static FILE *pf;
@@ -731,6 +795,8 @@ int main(int argc, char **argv)
     if (wavf) { wav_header(); fclose(wavf); }
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn, %u game ticks\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)), rd32(rd32(dbg + 20)));
+    if (getenv("NHL_BLITKINDS")) blitkind_print(rd32(rd32(dbg + 28)) - bk_frames0);
+    if (getenv("NHL_BLITKINDS")) fprintf(stderr, "sprite blits: %lld words, their masks' boxes %lld\n", trim_full, trim_box);
     if (getenv("NHL_STATS"))
         fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, sprites %.1f M, other %.1f M\n",
                 blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6, blitstat[3] / 1e6);
