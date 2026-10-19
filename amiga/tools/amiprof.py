@@ -30,5 +30,11 @@ if len(d) >= 8 + 4 * n + 52:
     if sum(h):
         print('frames shown for 1 .. 8+ vertical blanks: ' + ' '.join('%d' % x for x in h) +
               ' (%s)' % ' '.join('%.0f%%' % (100.0 * x / sum(h)) for x in h))
+if len(d) >= 8 + 4 * n + 116:
+    h = struct.unpack('>16I', d[60 + 4 * n:124 + 4 * n])
+    if sum(h[:7]):
+        print('vertical blanks from a frame\'s game state to its showing, 0 .. 6+: ' +
+              ' '.join('%d' % x for x in h[:7]) + ' (mean %.2f); the sound\'s delay at the end: %d'
+              % (sum(i * x for i, x in enumerate(h[:7])) / sum(h[:7]), h[15]))
 for k, v in c.most_common(int(sys.argv[3]) if len(sys.argv) > 3 else 30):
     print('%6.2f%%  %s' % (100.0 * v / n, k))

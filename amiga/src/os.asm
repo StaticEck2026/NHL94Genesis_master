@@ -300,7 +300,7 @@ os_save_prof
 	move.l	#1006,d2
 	jsr	DOS_Open(a6)
 	move.l	d0,d4
-	beq.s	.x
+	beq	.x
 	lea	hal_header(pc),a0
 	move.l	a0,(os_iobuf).l
 	move.l	#PROFMAX,d0
@@ -323,9 +323,11 @@ os_save_prof
 	moveq	#0,d0
 	move.w	(hal_hz).l,d0
 	move.l	d0,(prof_mark+16).l
+	move.w	(snd_delay).l,d0		;(and the sound's delay now: the last slot)
+	move.l	d0,(prof_mark+52+60).l
 	move.l	d4,d1
 	move.l	#prof_mark,d2
-	moveq	#52,d3
+	moveq	#52+64,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	jsr	DOS_Close(a6)

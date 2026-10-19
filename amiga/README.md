@@ -88,12 +88,13 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
 - `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
   exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
-  blitter is put on the caller), the frame rate since `F9` was pressed, and how many frames were
-  on the screen for 1, 2, 3 ... vertical blanks.
+  blitter is put on the caller), the frame rate since `F9` was pressed, how many frames were
+  on the screen for 1, 2, 3 ... vertical blanks, how many vertical blanks passed from each
+  frame's game state to its showing, and the sound's delay at the end.
 - `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
-- `-DNOCROWD=1` leaves out the animated crowd sprites in the stands (about 4 of the 37 sprites a
-  frame in play, about 9% of the renderer's time).
+- `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
+  of the 37 sprites a frame in play, about 9% of the renderer's time).
 - `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
   for now: they do not sound right yet.
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
@@ -133,10 +134,18 @@ The hardware layer:
   BPLCON1 delay. The planes are fetched 64 bits at a time (FMODE 3), which leaves the most of
   the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
-  by 8 lines a bit). Other
+  by 4 lines a bit; `-DDLS=n` makes it 2^n lines). Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
-  layer with masks. Sprites are blits of images kept in a cache in chip RAM (built once from
-  the tiles, used again until a tile of theirs changes), and plane B's high priority cells are
+  layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
+  the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
+  sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
+  cell the game changes are made again (a clock digit), and a whole new set is built into the
+  second of two copies, so the frames queued go on showing the old one. If it does not fit
+  (wider, more than 4 groups of 8 columns, 64 lines or 15 colours) it is blitted as before.
+  Sprites are blits of images kept in a cache in chip RAM (built once from
+  the tiles, used again until a tile of theirs changes); only the box of an image's pixels is
+  blitted and marked for the restore (found when it is built: a fifth of the words of the
+  whole sprites, and of what is restored), and plane B's high priority cells are
   blitted back over what was drawn under them (found by moving the screen cells something low
   was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
   without waiting. A chunky renderer with
@@ -172,7 +181,12 @@ The hardware layer:
   (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`:
   most already play at 11 kHz or less and are kept as they are; the two the game plays faster
   (the glass at 29 kHz, a hit at 12 kHz) are resampled to 11025 Hz and played at a period that
-  keeps their pitch.
+  keeps their pitch. A frame's picture reaches the screen a few vertical blanks after the game
+  made it (drawn, then queued behind the frames before it: 3 with the 25 fps cap, 2 to 3
+  without), so the sound would come before what it goes with. Each game frame's sound commands,
+  with the Z80 RAM bytes they use, go into a delay line and are carried out that much later;
+  the renderer measures the picture's delay at every frame shown and keeps the sound's delay
+  at its mean, changing it only when it is off by 3/4 of a frame.
 - `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
   file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
   decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
@@ -195,6 +209,14 @@ reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ
 lag one VDP update behind when the game changes it mid frame (text being printed, a mode
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles, which `amiga/harness/rdcost.py` sums.
+`NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
+buffers each blit reads and writes (plane B restores, sprites, overlay, clears). The harness'
+Start presses pause and resume the game every 120 frames, and each resume restores whole
+screens, so these are not the steady figures of play. For those, a build with `-DSPRLOG=1`
+logs every sprite blit (`NHL_DBGPORT=1`), and `amiga/harness/rstsim.py log` replays the log:
+the words a frame for the sprites and for restoring under them, whole boxes or trimmed, and
+dirty maps of 8 to 1 lines, all on the same frames (builds that differ play differently: the
+game's random numbers depend on its timing).
 
 `amiga/tools/uaerun.sh` runs the build in FS-UAE (A1200, AROS ROM by default) on a virtual X
 display, presses keys at given times and takes screenshots. Add `fast_memory = 8192` with

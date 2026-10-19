@@ -166,6 +166,17 @@ P('video94.asm', """	move.l	#0,(a0)					;playfield 1/2
 	jsr	(hal_vdp_dirty_all).l		;all of VRAM was cleared
 	move.w	(sp)+,(disflags).w""")
 
-# Build option NOCROWD: no animated crowd sprites in the stands (a few sprites a frame, about a
-# tenth of the renderer's time in play).
-P('display94.asm', 'showcrowd\t\t\t\t\t\t\t;draw crowd sprites', 'showcrowd\n\tIFD\tNOCROWD\n\trts\n\tENDC\n\t\t\t\t\t\t\t;draw crowd sprites')
+# The animated crowd in the stands (two sprite frames, showcrowd) is left out: in play it is
+# about a tenth of the renderer's time. The penalty box players are still drawn. CROWD=1 keeps it.
+P('display94.asm', """	move.b	(Crowdframe).w,d0
+	bsr.w	.sc
+	move.b	(Crowdframe+1).w,d0
+	bra.w	.sc
+""", """	IFND	CROWD
+	rts						;(Amiga: no animated crowd)
+	ENDC
+	move.b	(Crowdframe).w,d0
+	bsr.w	.sc
+	move.b	(Crowdframe+1).w,d0
+	bra.w	.sc
+""")

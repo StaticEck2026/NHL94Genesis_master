@@ -113,18 +113,69 @@ static void vw_hit(uint32_t a, uint32_t v)
     if (a > vw[i].hi) vw[i].hi = a;
 }
 
+static uint16_t pend_reg[0x38 / 2];
+static int pend_h, pend_w;
 static void watch_hit(uint32_t a, uint32_t v)
 {
     fprintf(stderr, "frame %d: %06x = %02x (was %02x) %s pc=%06x\n", frame, a, v & 0xFF, mem[a],
             in_blit ? "blitter" : "cpu", m68k_get_reg(NULL, M68K_REG_PPC));
+    if (in_blit) {
+        uint16_t *r = pend_reg - 0x40 / 2;
+        fprintf(stderr, "  blit con0 %04x con1 %04x A %06x B %06x C %06x D %06x mods A %d B %d C %d D %d, %d rows of %d words\n",
+                r[0x40 / 2], r[0x42 / 2], (r[0x50 / 2] << 16) | r[0x52 / 2], (r[0x4C / 2] << 16) | r[0x4E / 2],
+                (r[0x48 / 2] << 16) | r[0x4A / 2], (r[0x54 / 2] << 16) | r[0x56 / 2], (int16_t)r[0x64 / 2],
+                (int16_t)r[0x62 / 2], (int16_t)r[0x60 / 2], (int16_t)r[0x66 / 2], pend_h, pend_w);
+    }
 }
 
 /* The blitter, area mode, ascending and descending (no line mode). A blit's memory accesses are
    made when its time is up (the hardware makes them over that time), so a CPU write to what a
    pending blit reads or writes shows; NHL_EARLYBLIT=1 makes them at the start instead. */
-static uint16_t pend_reg[0x38 / 2];
-static int pend_h, pend_w, pend_run;
+static int pend_run;
 static void blit_exec(void);
+
+/* NHL_BLITKINDS: the blitter's time from frame 1700 by kind, the kind being which of the
+   renderer's chip buffers (the debug block from +80) each channel starts in */
+static struct { char key[48]; long long time, words, n; } bk[64];
+static int bkn;
+static unsigned bk_frames0;
+static char bk_region(uint32_t a)
+{
+    static const char names[] = "SBMcCOFhLH";     /* in their order in the chip section */
+    uint32_t st[10];
+    if (!a) return '-';
+    st[0] = rd32(dbg + 80); st[1] = rd32(dbg + 36); st[2] = rd32(dbg + 84); st[3] = rd32(dbg + 100);
+    st[4] = rd32(dbg + 88); st[5] = rd32(dbg + 60); st[6] = rd32(dbg + 92); st[7] = rd32(dbg + 104);
+    st[8] = rd32(dbg + 64); st[9] = rd32(dbg + 96);
+    for (int i = 9; i >= 0; i--)
+        if (a >= st[i] && (i < 9 || a < st[9] + 288 * 224)) return names[i];
+    return '?';
+}
+static void blitkind_add(uint16_t con0, uint32_t a, uint32_t b, uint32_t c, uint32_t d, long long words,
+                         long long t)
+{
+    char key[48];
+    snprintf(key, sizeof key, "A%c B%c C%c D%c %04x", bk_region(a), bk_region(b), bk_region(c), bk_region(d),
+             con0 & 0x0FFF);
+    int i;
+    for (i = 0; i < bkn; i++) if (!strcmp(bk[i].key, key)) break;
+    if (i == bkn) { if (bkn == 64) return; strcpy(bk[bkn++].key, key); }
+    bk[i].time += t; bk[i].words += words; bk[i].n++;
+}
+static void blitkind_print(unsigned frames)
+{
+    long long tot = 0;
+    for (int i = 0; i < bkn; i++) tot += bk[i].time;
+    for (int i = 0; i < bkn; i++)       /* largest first */
+        for (int j = i + 1; j < bkn; j++)
+            if (bk[j].time > bk[i].time) { __typeof__(bk[0]) x = bk[i]; bk[i] = bk[j]; bk[j] = x; }
+    fprintf(stderr, "blitter by kind (S screen B plane B bitmap M its mask c copper C sprite cache O overlay"
+            " F fps H/L overlay masks), from frame 1700, %u frames drawn:\n", frames);
+    for (int i = 0; i < bkn; i++)
+        fprintf(stderr, "  %-22s %5.1f%%  %7.0f cycles a frame drawn, %6.1f blits, %7.0f words\n", bk[i].key,
+                100.0 * bk[i].time / tot, (double)bk[i].time / frames, (double)bk[i].n / frames,
+                (double)bk[i].words / frames);
+}
 
 static void do_blit(int h, int w)
 {
@@ -157,6 +208,7 @@ static void blit_exec(void)
     /* the shifters take the bits shifted in from the data registers' last words, as the
        hardware does: what the previous blit (or a write to BLTxDAT) left there */
     uint32_t aold = r[0x74 / 2], bold = r[0x72 / 2];
+    uint32_t a0 = apt, b0 = bpt, c0 = cpt, d0 = dpt;
     if (con1 & 1) { fprintf(stderr, "blitter line mode not emulated\n"); return; }
     in_blit = 1;
     for (int y = 0; y < h; y++) {
@@ -197,6 +249,8 @@ static void blit_exec(void)
         if (useD) dpt += desc ? -dmod : dmod;
     }
     in_blit = 0;
+    if (frame >= 1700 && getenv("NHL_BLITKINDS"))   /* by the buffers it reads and writes */
+        blitkind_add(con0, useA ? a0 : 0, useB ? b0 : 0, useC ? c0 : 0, useD ? d0 : 0, h * w, blit_time);
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
         extern long long blitstat[4];
         int kind = (con0 & 0x0FFF) == 0x0FCA ? (alwm ? 2 : 1) : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 3;
@@ -284,6 +338,11 @@ static void custom_write(uint32_t a, uint32_t v)
         fprintf(stderr, "frame %d: blitter register %03x written while busy, pc=%06x\n", frame, off,
                 m68k_get_reg(NULL, M68K_REG_PPC));
     }
+    if (off == 0x1F0 && getenv("NHL_DBGPORT")) {      /* a renderer debug log (SPRLOG builds) */
+        if (v == 0x8000) fprintf(stderr, "\ndbg %d", frame);
+        else fprintf(stderr, " %d", (int16_t)v);
+        return;
+    }
     creg[off / 2] = v;
     if (off == 0x09A) { if (v & 0x8000) intena |= v & 0x7FFF; else intena &= ~v; update_irq(); }
     if (off == 0x09C && (v & 0x40)) { blit_irq = (v & 0x8000) != 0; update_irq(); }
@@ -301,6 +360,8 @@ static void amiga_png(const char *name)
 {
     uint32_t bpl[8] = {0}, pal[256] = {0};
     int bank = 0, loct = 0, ddf = 0x38, ddfstop = 0xC8, delay = 0, nplanes = 0, mod = 0, ham = 0, killehb = 0, fmode = 0;
+    uint32_t spr[8] = {0};
+    int sprbank = 1, diwv = 0x2C;
     uint32_t pc = cop1lc;
     for (int i = 0; i < 400 && pc; i++) {
         uint32_t w1 = rd16(pc), w2 = rd16(pc + 2);
@@ -325,7 +386,12 @@ static void amiga_png(const char *name)
         else if (r == 0x100) { nplanes = (w2 >> 12) & 7; ham = (w2 >> 11) & 1; }
         else if (r == 0x104) killehb = (w2 >> 9) & 1;
         else if (r == 0x108) mod = w2;
-        else if (r == 0x1FC) fmode = w2 & 3;
+        else if (r == 0x1FC) fmode = w2 & 15;
+        else if (r == 0x10C) sprbank = w2 & 15;              /* BPLCON4 OSPRM (the HUD sets both) */
+        else if (r >= 0x120 && r < 0x140) {
+            int n = (r - 0x120) / 4;
+            if (r & 2) spr[n] = (spr[n] & 0xFFFF0000) | w2; else spr[n] = (spr[n] & 0xFFFF) | (w2 << 16);
+        }
     }
     int diwh = 0x81, diwstop = 0xC1;
     {
@@ -333,13 +399,13 @@ static void amiga_png(const char *name)
         for (int i = 0; i < 400 && q; i++, q += 4) {
             uint32_t r = rd16(q), v = rd16(q + 2);
             if (r == 0xFFFF) break;
-            if (r == 0x8E) diwh = v & 0xFF;
+            if (r == 0x8E) { diwh = v & 0xFF; diwv = v >> 8; }
             if (r == 0x90) diwstop = v & 0xFF;
         }
     }
     /* lores fetches of 16 / 32 / 64 pixels (FMODE 0 / 1 / 3) in 8 / 16 / 32 colour clocks;
        DDFSTRT $38 puts the first pixel fetched at the window position $81, BPLCON1 delays it */
-    int unit = fmode == 0 ? 8 : fmode == 3 ? 32 : 16;
+    int unit = (fmode & 3) == 0 ? 8 : (fmode & 3) == 3 ? 32 : 16;
     int fetch = ((ddfstop - ddf) / unit + 1) * unit / 4;
     int w = (diwstop | 0x100) - diwh, skip = diwh - 0x81 + (0x38 - ddf) * 2 - delay, h = 224, bpr = fetch + mod;
     static uint8_t rgb[320 * 240 * 3];
@@ -354,6 +420,34 @@ static void amiga_png(const char *name)
                 col = c >= 32 ? (pal[c - 32] >> 1) & 0x7F7F7F : pal[c];
             uint8_t *o = rgb + (y * w + x) * 3;
             o[0] = col >> 16; o[1] = col >> 8; o[2] = col;
+        }
+    /* hardware sprites: attached pairs of 64 pixel sprites (FMODE sprite bits 3), in front of
+       the playfield, sprite 0 on top; HSTART = window start - 1 is screen x 0 */
+    if (((fmode >> 2) & 3) == 3)
+        for (int pr = 3; pr >= 0; pr--) {
+            uint32_t ev = spr[2 * pr], od = spr[2 * pr + 1];
+            if (!ev || !od) continue;
+            uint32_t pos = rd16(ev), ctl = rd16(ev + 8), octl = rd16(od + 8);
+            if (!pos && !ctl) continue;
+            if (!(octl & 0x80)) continue;                  /* (only attached pairs are used) */
+            int vs = (pos >> 8) | ((ctl & 4) << 6), ve = (ctl >> 8) | ((ctl & 2) << 7);
+            int hs = ((pos & 0xFF) << 1) | (ctl & 1);
+            for (int ln = vs; ln < ve; ln++) {
+                int y = ln - diwv;
+                if (y < 0 || y >= h) continue;
+                uint32_t e = ev + 16 + (ln - vs) * 16, o2 = od + 16 + (ln - vs) * 16;
+                for (int px = 0; px < 64; px++) {
+                    int x = hs + px - (diwh - 1);
+                    if (x < 0 || x >= w) continue;
+                    int b = px >> 3, m = 0x80 >> (px & 7);
+                    int c = ((rd8(e + b) & m) ? 1 : 0) | ((rd8(e + 8 + b) & m) ? 2 : 0) |
+                            ((rd8(o2 + b) & m) ? 4 : 0) | ((rd8(o2 + 8 + b) & m) ? 8 : 0);
+                    if (!c) continue;
+                    uint32_t col = pal[sprbank * 16 + c];
+                    uint8_t *o = rgb + (y * w + x) * 3;
+                    o[0] = col >> 16; o[1] = col >> 8; o[2] = col;
+                }
+            }
         }
     png_write(name, rgb, w, h);
 }
@@ -582,6 +676,7 @@ int main(int argc, char **argv)
         if (sscanf(getenv("NHL_VWLOG"), "%x:%x", &lo, &hi) == 2) { vw_lo = (vram & 0xFFFFFF) + lo; vw_hi = (vram & 0xFFFFFF) + hi; }
     }
     for (frame = 1; frame <= frames; frame++) {
+        if (frame == 1700) bk_frames0 = rd32(rd32(dbg + 28));
         wr16(padstate, pad_at(frame));
         if (getenv("NHL_PROF") && frame >= (getenv("NHL_PROF_FROM") ? atoi(getenv("NHL_PROF_FROM")) : 0)) {
             static FILE *pf;
@@ -688,6 +783,7 @@ int main(int argc, char **argv)
     if (wavf) { wav_header(); fclose(wavf); }
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn, %u game ticks\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)), rd32(rd32(dbg + 20)));
+    if (getenv("NHL_BLITKINDS")) blitkind_print(rd32(rd32(dbg + 28)) - bk_frames0);
     if (getenv("NHL_STATS"))
         fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, sprites %.1f M, other %.1f M\n",
                 blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6, blitstat[3] / 1e6);
@@ -696,13 +792,15 @@ int main(int argc, char **argv)
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
         fprintf(stderr, "renderer: plane B tile scans %u, cells %u, high lists %u; A rebuilds %u, overlay redraws %u, cell updates %u\n",
                 rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
-        fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u\n", rd32(k + 56));
+        fprintf(stderr, "renderer: sprite cache waits (an image in use written over) %u, HUD sprite builds %u\n",
+                rd32(k + 56), rd32(k + 60));
+        fprintf(stderr, "renderer: plane B restored: %u words, %u blits\n", rd32(k + 68), rd32(k + 64));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
     }
     {                                   /* VERIFY builds: the scroll buffers' self-check */
         uint32_t v = rd32(rd32(dbg + 76));
-        if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, cell row %u, column %u\n",
+        if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, map row %u, column %u\n",
                        v >> 16, (v >> 8) & 255, v & 255);
     }
     if (getenv("NHL_PEEK")) {           /* NHL_PEEK=address: a word there at the end */

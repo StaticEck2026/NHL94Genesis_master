@@ -61,6 +61,7 @@ hal_set_rate
 ;	Debug block, read by the test harness:
 ;	+0  vdp_regs  +4 vdp_vram  +8 vdp_cram  +12 vdp_vsram  +16 exception info (16 longs)
 ;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
+;	+80 chip buffers (the harness' blitter statistics by kind)
 hal_debug
 	dc.l	vdp_regs,vdp_vram,vdp_cram,vdp_vsram,hal_exc_info,hal_frames,hal_padstate
 	dc.l	rd_count,chunky
@@ -68,6 +69,7 @@ hal_debug
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
 	dc.l	rd_dbg_key,rd_vfail
+	dc.l	rd_screens,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -325,11 +327,23 @@ hal_display_init
 	lea	(hal_copempty).l,a0
 	move.l	#$01000200,(a0)			;BPLCON0: no planes, colour
 	move.l	#$01800000,4(a0)		;black
-	move.l	#$FFFFFFFE,8(a0)
+	lea	8(a0),a1
+	move.l	#rd_sprnull,d1			;the sprites: none
+	move.w	#$120,d2
+	moveq	#7,d0
+.sp	move.w	d2,(a1)+
+	swap	d1
+	move.w	d1,(a1)+
+	addq.w	#2,d2
+	move.w	d2,(a1)+
+	swap	d1
+	move.w	d1,(a1)+
+	addq.w	#2,d2
+	dbf	d0,.sp
+	move.l	#$FFFFFFFE,(a1)
 	move.l	a0,(CUSTOM+$080).l		;COP1LC
 	move.w	d0,(CUSTOM+$088).l		;COPJMP1
-	move.w	#$0020,(CUSTOM+DMACON).l	;no sprites
-	move.w	#$83C0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter
+	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
 	rts
 
 ;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the
@@ -431,7 +445,8 @@ hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1
-prof_mark	ds.l	5+8			;(+20: frames shown 1 ... 8+ vertical blanks)
+prof_mark	ds.l	5+8+16			;(+20: frames shown 1 ... 8+ vertical blanks; +52: vertical
+					;blanks from a frame's game state to its showing, 0 ... 6+)
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
@@ -455,7 +470,7 @@ rend_stack	ds.b	16384
 rend_stack_top
 
 	section	chip,bss_c
-hal_copempty	ds.l	4
+hal_copempty	ds.l	3+16
 	IFD	WATCHDOG
 hal_dbgcop	ds.l	20
 hal_dbgscr	ds.b	40*200

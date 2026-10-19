@@ -21,6 +21,12 @@
 ;	its command); snd_z80_poll, from the game frame interrupt (50 or 60 Hz, hal_hz), does the
 ;	work on Paula. The envelope speeds are made for 60 Hz and scaled to the frame rate, so the
 ;	sounds keep their length at 50 Hz (the YM2612's envelopes do not depend on it).
+;
+;	The picture of a game frame is on the screen some frames after the game made it (drawn,
+;	then queued behind the frames before it). So that a shot is heard when it is seen, each
+;	game frame's commands (with the Z80 RAM bytes they use) go into a delay line and are
+;	carried out snd_delay game frames later: the renderer keeps that near the picture's mean
+;	delay (rd_showdue).
 
 AUD0LC		equ	$0A0			;voice n at + n * $10: LC, LEN, PER, VOL
 PCMHZ		equ	30594			;the Z80 PCM loop: 117 T states at 3.58 MHz
@@ -48,6 +54,10 @@ ST_PCM		equ	5
 
 PCM_OWNER	equ	7
 
+SDMAX		equ	8			;the delay line: game frames (a power of 2)
+SDREC		equ	40			;bytes a frame: the pending commands, $83, $8E, the PCM
+						;address, Z80 RAM $07-$22
+
 	include	"fm_patches.i"		;the FM patch samples and tables (fmrender.py)
 	include	"pcm.i"			;the PCM samples and their table (pcmrender.py)
 
@@ -66,6 +76,11 @@ snd_init
 	moveq	#7,d0
 .c	move.b	#-1,(a0)+
 	dbf	d0,.c
+	clr.l	(snd_pend_off).l		;(and snd_pcm_start)
+	sf	(snd_pcm_start).l
+	clr.l	(snd_dlyw).l			;(and snd_dlyr)
+	move.w	#3,(snd_delay).l
+	move.w	#3<<8,(snd_latf).l
 	move.w	#$000F,(CUSTOM+DMACON).l
 	lea	(CUSTOM+AUD0LC).l,a0
 	moveq	#3,d0
@@ -125,12 +140,17 @@ snd_z80_cmd
 	move	(sp)+,sr
 	rts
 
-;	Each game frame: carry out the driver's commands on Paula and step the envelopes.
+;	Each game frame: carry out the driver's commands of snd_delay frames ago on Paula (more
+;	than one frame's when the delay has just got shorter, none when longer) and step the
+;	envelopes.
 snd_z80_poll
 	movem.l	d0-d7/a0-a6,-(sp)
-	lea	(hal_z80ram).l,a5
+	bsr	snd_dly_push
+	lea	(snd_z80d).l,a5			;(the Z80 RAM as it was then)
 	lea	(CUSTOM).l,a6
 	moveq	#0,d7				;voices to start
+.rec	bsr	snd_dly_pop
+	beq	.due
 	; key off (not of a channel keyed on again: that plays again on its voice)
 	move.b	(snd_pend_off).l,d0
 	clr.b	(snd_pend_off).l
@@ -184,7 +204,8 @@ snd_z80_poll
 	bne	.on
 	; PCM
 	bsr	snd_pcm
-	; start the new sounds: their DMA off, then the sample, then on again
+	bra	.rec
+.due	; start the new sounds: their DMA off, then the sample, then on again
 	tst.b	d7
 	beq	.nost
 	move.w	d7,DMACON(a6)
@@ -231,6 +252,58 @@ snd_z80_poll
 	bne	.rp
 .nost	bsr	snd_envelopes
 	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
+;	This game frame's commands (snd_z80_cmd) and the Z80 RAM bytes they use into the delay line.
+snd_dly_push
+	move.w	(snd_dlyw).l,d0
+	andi.w	#SDMAX-1,d0
+	mulu.w	#SDREC,d0
+	lea	(snd_dly).l,a0
+	adda.w	d0,a0
+	move.l	(snd_pend_off).l,(a0)+		;off, on, attenuation, frequency
+	move.b	(snd_pcm_start).l,(a0)+
+	clr.l	(snd_pend_off).l
+	sf	(snd_pcm_start).l
+	lea	(hal_z80ram).l,a1
+	move.b	$83(a1),(a0)+			;PCM volume
+	move.b	$8E(a1),(a0)+			;and rate
+	addq.l	#1,a0
+	move.l	(snd_pcm_addr).l,(a0)+
+	addq.l	#7,a1
+	moveq	#$22-7,d0			;attenuations, frequencies, patches
+.c	move.b	(a1)+,(a0)+
+	dbf	d0,.c
+	addq.w	#1,(snd_dlyw).l
+	rts
+
+;	The next game frame's commands of the delay line, if due: into the pending bytes and
+;	snd_z80d. Z set if none. Uses d0, a0, a1.
+snd_dly_pop
+	move.w	(snd_dlyw).l,d0
+	sub.w	(snd_dlyr).l,d0
+	cmp.w	(snd_delay).l,d0
+	bls	.none
+	move.w	(snd_dlyr).l,d0
+	addq.w	#1,(snd_dlyr).l
+	andi.w	#SDMAX-1,d0
+	mulu.w	#SDREC,d0
+	lea	(snd_dly).l,a0
+	adda.w	d0,a0
+	move.l	(a0)+,(snd_pend_off).l
+	move.b	(a0)+,(snd_pcm_start).l
+	lea	(snd_z80d).l,a1
+	move.b	(a0)+,$83(a1)
+	move.b	(a0)+,$8E(a1)
+	addq.l	#1,a0
+	move.l	(a0)+,(snd_pcm_addrd).l
+	addq.l	#7,a1
+	moveq	#$22-7,d0
+.c	move.b	(a0)+,(a1)+
+	dbf	d0,.c
+	moveq	#1,d0				;(Z clear)
+	rts
+.none	moveq	#0,d0
 	rts
 
 ;	Wait while Paula notices a DMA change: 4 lines.
@@ -471,7 +544,7 @@ snd_pcm
 	tst.w	d1
 	beq	.x
 	; which sound: its pcm_sample_table entry
-	move.l	(snd_pcm_addr).l,d0
+	move.l	(snd_pcm_addrd).l,d0
 	lea	pcm_sample_table,a0
 	moveq	#0,d2
 .find	cmp.l	(a0,d2.w*8),d0
@@ -664,12 +737,20 @@ snd_pcm_addr	ds.l	1
 snd_age		ds.w	1
 snd_pcm_k	ds.w	1			;the PCM sound's period factor (8.8)
 snd_chvoice	ds.b	8			;voice of each FM channel, -1 = none
-snd_pend_off	ds.b	1
+		cnop	0,4
+snd_pend_off	ds.b	1			;(these 4 in this order, a long)
 snd_pend_on	ds.b	1
 snd_pend_att	ds.b	1
 snd_pend_frq	ds.b	1
 snd_pcm_start	ds.b	1
 snd_ledsave	ds.b	1
 		even
+snd_dlyw	ds.w	1			;the delay line: game frames written,
+snd_dlyr	ds.w	1			;carried out
+snd_delay	ds.w	1			;game frames the commands wait (rd_showdue)
+snd_latf	ds.w	1			;the picture's mean delay (8.8, rd_showdue)
+snd_pcm_addrd	ds.l	1			;the delayed snd_pcm_addr
+snd_dly		ds.b	SDMAX*SDREC
+snd_z80d	ds.b	$90			;the delayed Z80 RAM bytes (at their offsets)
 
 	section	game,code
