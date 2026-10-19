@@ -65,6 +65,7 @@ _start
 	movea.l	(os_gfx).l,a0
 	btst	#2,$CE+1(a0)			;DisplayFlags: PAL
 	sne	(hal_pal).l
+	sne	(hal_palclk).l
 	; the Genesis RAM window: 64K aligned in a 128K block, fast memory if there is some
 	movea.l	(os_exec).l,a6
 	move.l	#$20000,d0
@@ -137,6 +138,14 @@ _start
 	jsr	EXEC_Supervisor(a6)
 	; back from the game: user mode, interrupts still disabled by Disable()
 	lea	(CUSTOM).l,a0
+	tst.b	(hal_beam).l			;the display's own rate again
+	beq.s	.beam
+	moveq	#0,d0
+	tst.b	(hal_palclk).l
+	beq.s	.bn
+	moveq	#$20,d0
+.bn	move.w	d0,$1DC(a0)			;BEAMCON0
+.beam
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
 	move.w	(os_adkcon).l,d0
@@ -359,7 +368,9 @@ os_ciabcra	ds.b	1
 os_ciaamask	ds.b	1
 os_sramok	ds.b	1
 hal_amiga	ds.b	1			;set when started from AmigaDOS (not the test harness)
-hal_pal		ds.b	1			;PAL display
+hal_pal		ds.b	1			;PAL display (50 Hz; F8 switches it)
+hal_palclk	ds.b	1			;PAL machine (its clocks)
+hal_beam	ds.b	1			;the display's rate was switched (BEAMCON0)
 		even
 os_iobuf	ds.b	$2000
 

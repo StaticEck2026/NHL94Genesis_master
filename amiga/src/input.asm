@@ -87,21 +87,25 @@ hal_int2
 	bne	.nf6
 	eori.l	#1^2,(hal_pace).l
 	bra	.hs
-.nf6	cmpi.b	#$57,d1				;F8: 50 / 60 game frames a second
+.nf6	cmpi.b	#$57,d1				;F8: a 50 / 60 Hz display, the game at its rate
 	bne	.nf8
-	eori.w	#50^60,(hal_hz).l
+	not.b	(hal_pal).l
+	st	(hal_beam).l
+	moveq	#0,d0				;BEAMCON0: NTSC
+	move.w	#60,(hal_hz).l
+	tst.b	(hal_pal).l
+	beq.s	.f8n
+	moveq	#$20,d0				;PAL
+	move.w	#50,(hal_hz).l
+.f8n	move.w	d0,(CUSTOM+$1DC).l
 	jsr	(hal_set_rate).l
+	st	(rd_hudchg).l			;(the HUD sprites' lines are the display's)
 	bra	.hs
 .nf8
 	IFD	PROFILE
 	cmpi.b	#$58,d1				;F9: mark the start of the frame rate count
 	bne	.hs
-	move.l	(rd_count).l,(prof_mark).l
-	move.l	(hal_frames).l,(prof_mark+4).l
-	lea	(prof_mark+20).l,a0
-	moveq	#8+16+4-1,d1
-.ch	clr.l	(a0)+
-	dbf	d1,.ch
+	bsr	prof_f9
 	moveq	#$58,d1
 	lea	(hal_keys).l,a0
 	ENDIF
@@ -151,6 +155,9 @@ hal_readpads
 	bsr	keys_pad
 	or.b	d0,d4
 	move.b	d4,(hal_padstate).l
+	IFD	BENCH
+	bsr	bench_tick
+	ENDC
 	movem.l	(sp)+,d2-d4/a0-a1
 	tst.b	(hal_quit).l
 	beq	.harness
@@ -161,6 +168,58 @@ hal_readpads
 	move.w	d0,d1
 	lsr.w	#8,d1
 	rts
+
+	IFD	PROFILE
+;	Mark the start of the frame rate count (F9). Uses d1, a0.
+prof_f9
+	move.l	(rd_count).l,(prof_mark).l
+	move.l	(hal_frames).l,(prof_mark+4).l
+	lea	(prof_mark+20).l,a0
+	moveq	#8+16+4-1,d1
+.ch	clr.l	(a0)+
+	dbf	d1,.ch
+	rts
+	ENDC
+
+	IFD	BENCH
+;	Benchmark builds (-DBENCH=1, for FS-UAE): the same game every run and every build. The
+;	game's random numbers (HVcount) come from the game frame, Start is pressed at the test
+;	harness' frames (from the attract mode into a game), the frame rate count starts at game
+;	frame BENCHSTART (as F9, PROFILE builds) and the game quits at BENCHEND. Uses d0, d1, a0.
+	IFND	BENCHSTART
+BENCHSTART	equ	2000
+	ENDC
+	IFND	BENCHEND
+BENCHEND	equ	6000
+	ENDC
+bench_tick
+	move.l	(hal_frames).l,d0
+	move.l	d0,d1
+	mulu.l	#$9E3779B1,d1
+	swap	d1
+	move.w	d1,(hal_hv).l
+	cmpi.l	#700,d0				;Start at 700, 820 .. 1180, for 10 frames
+	blo.s	.np
+	cmpi.l	#1190,d0
+	bhs.s	.np
+	subi.l	#700,d0
+	divu.w	#120,d0
+	swap	d0
+	cmpi.w	#10,d0
+	bhs.s	.np
+	bset	#7,(hal_padstate+1).l
+.np	move.l	(hal_frames).l,d0
+	IFD	PROFILE
+	cmpi.l	#BENCHSTART,d0
+	bne.s	.nm
+	bsr	prof_f9
+.nm
+	ENDC
+	cmpi.l	#BENCHEND,d0
+	blo.s	.x
+	st	(hal_quit).l
+.x	rts
+	ENDC
 
 ;	d0 = JOYxDAT -> d0 = direction bits
 joy_dirs

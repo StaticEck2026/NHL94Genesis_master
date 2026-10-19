@@ -91,7 +91,8 @@ P(j('stubinc', 'ports.inc'), 'IO_CT2_DATA equ $A10004', 'IO_CT2_DATA equ hal_pad
 P(j('stubinc', 'ports.inc'), 'IO_Z80BUS equ $A11100', 'IO_Z80BUS equ hal_z80bus')
 P(j('stubinc', 'ports.inc'), 'IO_Z80RES equ $A11200', 'IO_Z80RES equ hal_z80res')
 P(j('stubinc', 'ports.inc'), 'Asound equ $C00011', 'Asound equ hal_psg')
-P(j('stubinc', 'ports.inc'), 'HVcount equ $C00008', 'HVcount equ $DFF006\t\t\t\t;Amiga VHPOSR: beam position')
+P(j('stubinc', 'ports.inc'), 'HVcount equ $C00008', '\tIFD\tBENCH\nHVcount equ hal_hv\t\t\t\t;(benchmark builds: a number per game frame)\n'
+  '\tELSE\nHVcount equ $DFF006\t\t\t\t;Amiga VHPOSR: beam position\n\tENDC')
 P(j('stubinc', 'ram_addrs.inc'), 'Z80_RAM equ $A00000', 'Z80_RAM equ hal_z80ram')
 
 # The Z80 program is never run; its two bytes that hold a bank address cannot be relocated.

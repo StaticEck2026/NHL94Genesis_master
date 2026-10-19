@@ -55,7 +55,7 @@ hal_header
 hal_set_rate
 	move.l	d1,-(sp)
 	move.l	#CIA_CLOCK,d0
-	tst.b	(hal_pal).l
+	tst.b	(hal_palclk).l
 	bne.s	.p
 	move.l	#CIA_CLOCK_NTSC,d0
 .p	move.w	(hal_hz).l,d1
@@ -513,6 +513,7 @@ prof_last	ds.l	1
 prof_buf	ds.l	PROFMAX
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
+hal_hv		ds.w	1			;(BENCH builds: the game's HVcount)
 hal_padports	ds.w	8
 hal_z80bus	ds.w	1			;written by the bus requests
 hal_zero	ds.w	1			;read by the bus polls: 0 = bus granted

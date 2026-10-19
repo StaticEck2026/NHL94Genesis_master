@@ -14,7 +14,8 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
-  Genesis), 60 on NTSC. `F8` switches between the two.
+  Genesis), 60 on NTSC. `F8` switches the display between 50 and 60 Hz (AGA shows either on any
+  Amiga, if the monitor takes it), and the game's rate with it.
 
 Speed: on a stock 14 MHz A1200 with fast RAM, gameplay is shown at a steady 25 frames a second
 on PAL most of the time (each frame on the screen for 2 vertical blanks; heavy moments drop to
@@ -66,8 +67,9 @@ you quit, and is read when it starts.
 
 `Esc` quits to the Workbench and writes the save file. `F6` switches between a steady 25 frames
 a second and as many as there is time for. `F7` switches the Amiga's audio low-pass filter (on
-at start, like the output filter of a model 1 Genesis). `F8` switches the game between 50 and
-60 frames a second.
+at start, like the output filter of a model 1 Genesis). `F8` switches the display between 50 and
+60 Hz and the game between 50 and 60 frames a second with it (the cap is then 25 or 30 frames a
+second).
 
 ### Screen
 
@@ -99,6 +101,11 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   game, its vblank code and the renderer (counted on the CIA-B clock at every switch, so time
   with interrupts off, which the PC samples cannot see into, is counted too).
 - `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
+- `-DBENCH=1` makes a benchmark build that plays the same game every run and every build: the
+  game's random numbers (its reads of the beam position) come from the game frame, Start is
+  pressed at the test harness' frames (into a game from the attract mode), and with `-DPROFILE=1`
+  the frame rate count starts at game frame 2000 (as `F9`) and the game quits at 6000
+  (`BENCHSTART`, `BENCHEND`). Delete `NHL94.sav` before each run: the game reads it.
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
   of the 37 sprites a frame in play, about 9% of the renderer's time).
