@@ -243,9 +243,11 @@ memory (`rd_bq_go`): a wait for the blitter, then moves to the blitter's registe
 last starts it) and to COP2LCL. Each display list ends by jumping to COP2LC, so after a
 vertical blank the copper goes on where it was (a block cut short runs again, which a blit
 allows). So the CPU takes no interrupt for a blit and the blitter does not wait for one. A
-CPU write to chip memory takes about 0.7 us, twice that while a blit runs (FS-UAE), so a block
-moves only the registers its blit uses and only those the blitter does not hold already from
-the blocks before (the pointers and the size always: the blitter counts BLTSIZV down). After
+CPU write to chip memory takes about 0.7 us, twice that while a blit runs (FS-UAE), and the
+68020 runs some 7 cycles an instruction from fast memory, so a block moves only the registers
+its blit uses (BLTSIZV always: the blitter counts it down), and the two kinds of blit there are
+most of (the sprites' cuts, the restores) write their blocks themselves with constants where
+they can (a run of restores sets BLTCON0 to BLTALWM once). After
 the last block the copper stops, setting INTREQ's SOFT bit (no interrupt) first; the next block
 written there takes its place, and the CPU starts the copper again (COPJMP2) if SOFT says it
 stopped. A show marker sends the copper to a parking place that sets DSKBLK and calls the level

@@ -351,14 +351,14 @@ os_save_prof
 	move.l	#prof_ev,d2
 	move.l	#PEVMAX*4,d3
 	jsr	DOS_Write(a6)
-	; then the blit queue's copper ring: INTREQR at the exit, rd_cqw .. rd_cqmq, the ring
+	; then the blit queue's copper ring: INTREQR at the exit, rd_cqwp .. rd_cqmq, the ring
 	move.l	d4,d1
 	move.l	#prof_intreq,d2
 	moveq	#4,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
-	move.l	#rd_cqw,d2
-	moveq	#8+12+40+64,d3
+	move.l	#rd_cqwp,d2
+	move.l	#32+128,d3
 	jsr	DOS_Write(a6)
 	move.l	d4,d1
 	move.l	(rd_cqring).l,d2
