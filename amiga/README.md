@@ -26,8 +26,8 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
 `-DBENCH=1` build), the screen is updated as often as there is time for, up to every vertical
 blank: at 50 Hz about 48.5 frames a second (99% of them on the screen for one vertical blank),
-at 60 Hz 47 to 59 a second depending on the run (89 to 99% for one); the others are heavy
-moments (many new animation frames at once, the rink scrolling a long way). The game itself
+at 60 Hz 56 to 58 a second depending on the run (95 to 99% for one); the others are heavy
+moments (many new animation frames at once, a scene change). The game itself
 always runs at full speed. `F6` caps the screen at a steady 25 or 30 frames a second instead
 (98 to 99% of them on the screen for exactly 2 vertical blanks).
 
@@ -125,7 +125,7 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   count measures a lot (a goal, a replay), so compare builds with the test harness'
   `NHL_CHIPWAIT` (below) and use FS-UAE to confirm. The profile has a sum of the game's RAM at
   each tick (`bench_tlog`, `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs
-  part. The renderer is linked after the game's code, so a change to it does not move the
+  part (`-DBENCHFULL=1`: all of it but the stack's last 256 bytes, not every 64th long). The renderer is linked after the game's code, so a change to it does not move the
   game's code (or the code pointers in its RAM). With `-DMEMBENCH=1` the profile also has the colour
   clocks of 1024 writes to chip memory, fast memory and a custom register, 1024 chip reads and
   256 chip writes while a blit runs (measured at count 2001).
@@ -255,7 +255,12 @@ The hardware layer:
   2 game frames at most. A buffer is drawn into again only once the frame after it has been
   on the screen for a vertical blank (counted by the same interrupt). When the game runs at the
   display's rate (50 Hz PAL, 60 Hz NTSC) its frames are timed by the vertical blank too, so
-  they cannot drift against the frames shown; otherwise by a CIA timer. The game's own
+  they cannot drift against the frames shown; otherwise by a CIA timer. At the full frame rate,
+  when the game waits for its next frame and the renderer has drawn the last one, that next
+  game frame is run at once rather than at the vertical blank (at most one ahead: that
+  vertical blank then runs none), so the game's work goes into time the CPU would spend idle
+  and a frame that takes long to draw does not make the next one late. Its sound commands go
+  into the sound's delay line then and are played from vertical blanks as ever. The game's own
   interrupt masks (5, 3: the Genesis line interrupt) are lowered to 0 in conversion, so the
   blit queue is fed while the game's code runs. The renderer only reads which name tables the
   game may have written (DMA, fills and copies mark the blocks they change, data port writes
@@ -331,7 +336,9 @@ C and D pointers (0: not used), words, lines and its time. `NHL_HAZARD=n` report
 blits that read a word the CPU wrote after the blit was queued (after it wrote the copper's
 move that starts it), with the pc of that write and of the queueing: what a queued blit reads
 has to stay as it was until it has run, a vertical blank's restart included. (A cookie cut's
-last word of a row, whose mask is 0, is not reported: what it reads is never used.)
+last word of a row, whose mask is 0, is not reported: what it reads is never used.) Game ticks
+are run before their vertical blank (hal_tick_early) only with `NHL_EARLY=1`: the reference
+picture is the VDP at the frame's end, which could then be part way into the next game frame.
 
 ## Testing without an Amiga
 

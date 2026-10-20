@@ -663,7 +663,8 @@ rd_frame
 	bsr	rd_snapshot			;tick in between (level 6 held; the blit queue and the
 	bsr	rd_decode_dirty			;vertical blank go on)
 	bsr	rd_snaptime
-	move.w	#$A000,(CUSTOM+INTENA).l
+	bsr	rd_palette			;(the colours of the same tick: a tick may have come
+	move.w	#$A000,(CUSTOM+INTENA).l	;since they were looked at above)
 	lea	(rd_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1

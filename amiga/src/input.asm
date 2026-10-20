@@ -203,11 +203,18 @@ bench_wait
 	movem.l	d2/a1,-(sp)			;(statistics: a sum of every 64th long of the game's RAM
 	lea	(RAMBASE).l,a0			;at each tick, to find where two runs part)
 	moveq	#0,d0
+	IFD	BENCHFULL
+	move.w	#($10000-$100)/4-1,d1		;(BENCHFULL: every long, not the stack's last 256
+.ts	add.l	(a0)+,d0			;bytes)
+	rol.l	#1,d0
+	dbf	d1,.ts
+	ELSE
 	move.w	#$10000/256-1,d1
 .ts	add.l	(a0),d0
 	rol.l	#1,d0
 	lea	256(a0),a0
 	dbf	d1,.ts
+	ENDC
 	move.l	(bench_n).l,d1
 	andi.l	#BTLOG-1,d1
 	lea	(bench_tlog).l,a1

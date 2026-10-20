@@ -146,6 +146,25 @@ snd_z80_cmd
 snd_z80_poll
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr	snd_dly_push
+	bsr.s	snd_play_do
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+;	A vertical blank whose game tick was run early (hal_tick_early, which put its commands into
+;	the delay line): the Paula side alone, as each vertical blank. The commands the driver has
+;	given since that tick (snd_pend_*, snd_pcm_start: where the delay line's come out too) wait
+;	for the next one.
+snd_play
+	movem.l	d0-d7/a0-a6,-(sp)
+	move.l	(snd_pend_off).l,-(sp)
+	move.b	(snd_pcm_start).l,-(sp)
+	clr.l	(snd_pend_off).l
+	sf	(snd_pcm_start).l
+	bsr.s	snd_play_do
+	move.b	(sp)+,(snd_pcm_start).l
+	move.l	(sp)+,(snd_pend_off).l
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+snd_play_do
 	lea	(snd_z80d).l,a5			;(the Z80 RAM as it was then)
 	lea	(CUSTOM).l,a6
 	moveq	#0,d7				;voices to start
@@ -250,9 +269,7 @@ snd_z80_poll
 	addq.w	#1,d1
 	cmpi.w	#4,d1
 	bne	.rp
-.nost	bsr	snd_envelopes
-	movem.l	(sp)+,d0-d7/a0-a6
-	rts
+.nost	bra	snd_envelopes
 
 ;	This game frame's commands (snd_z80_cmd) and the Z80 RAM bytes they use into the delay line.
 snd_dly_push

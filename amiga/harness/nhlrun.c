@@ -952,6 +952,11 @@ int main(int argc, char **argv)
     if (rd32(code + 4) != 0x4E483934) { fprintf(stderr, "no NH94 header\n"); return 1; }
     uint32_t entry = rd32(code + 8);
     dbg = rd32(code + 12);
+    /* 'ERL1': game ticks run before their vertical blank when the game waits and the renderer
+       is done (hal_tick_early) only with NHL_EARLY=1: the reference picture is the VDP at the
+       frame's end, which is then part way through the next game frame at times */
+    if (rd32(dbg + 180) == 0x45524C31 && !(getenv("NHL_EARLY") && atoi(getenv("NHL_EARLY"))))
+        wr8(rd32(dbg + 184), 0);
     if (rd32(dbg + 172) == 0x53435831) {  /* 'SCX1': the sprite image ring's second part, as the
                                              launcher takes it from the chip memory left
                                              (NHL_SCX=bytes, default 256K; 0: none) */

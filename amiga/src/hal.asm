@@ -109,6 +109,8 @@ hal_debug
 	dc.l	game_code_end			;+168: the converted game's code ends
 	dc.b	'SCX1'				;+172: the sprite image ring's second part: its
 	dc.l	rd_scx				;address, then bytes (the harness may give one)
+	dc.b	'ERL1'				;+180: hal_tick_early's switch (the harness turns
+	dc.l	hal_early			;it off unless asked: NHL_EARLY=1)
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -247,6 +249,12 @@ hal_int6
 	bra.s	.tick
 .vb	sf	(hal_vbreq).l
 .tick	move.l	(sp)+,d0
+	tst.b	(hal_ahead).l
+	beq.s	.nah
+	sf	(hal_ahead).l			;its tick was run early (hal_tick_early): the sound only
+	jsr	(snd_play).l
+	rte
+.nah
 	IFD	BENCH
 	; benchmark builds: a tick that comes while the game runs (not waiting since the last
 	; one) waits for the game's next wait (hal_idle), so the game's course does not depend on
@@ -360,7 +368,7 @@ hal_idle
 	move.l	(hal_frames).l,d0
 	sub.l	(rd_lastframe).l,d0
 	cmp.l	(hal_pace).l,d0
-	blo	.no				;too soon for the next frame
+	blo	.early				;too soon for the next frame
 .go	tst.b	(ctx_ready).l
 	beq	.no
 	move.l	(sp)+,d0
@@ -368,6 +376,7 @@ hal_idle
 	PEV	'R'				;(statistics: the renderer gets the CPU)
 	trap	#0
 	rts
+.early	bsr	hal_tick_early			;(the renderer has drawn the last state)
 .no
 hal_idle_no					;(the harness: the game waits, nothing to draw)
 	clr.w	(hal_starve).l
@@ -391,6 +400,52 @@ hal_yield
 	sf	(hal_yielding).l
 	ENDC
 .x	rts
+
+;	The game waits for a tick and the renderer has drawn its last state: the next vertical
+;	blank's tick is run now, if this one's has run and none is ahead (hal_ahead: that vertical
+;	blank then runs none, only the sound's side, snd_play). The game's work for the next frame
+;	goes into time the CPU would spend idle, and its picture is ready a little sooner, so a
+;	frame that takes long does not make the next one late. At the full frame rate only
+;	(hal_pace 1), the ticks given by the vertical blank. Keeps all.
+hal_tick_early
+	move	sr,-(sp)
+	ori	#$0700,sr
+	tst.b	(hal_early).l
+	beq	.x
+	tst.b	(hal_ahead).l
+	bne	.x
+	tst.b	(hal_vbtick).l
+	beq	.x
+	cmpi.l	#1,(hal_pace).l
+	bne	.x
+	move.l	d0,-(sp)
+	move.l	(hal_tickvb).l,d0
+	cmp.l	(rd_vblanks).l,d0
+	move.l	(sp)+,d0
+	bne	.x				;(this vertical blank's tick not run yet)
+	st	(hal_ahead).l
+	IFD	BENCH
+	sf	(hal_idled).l
+	jsr	(bench_wait).l
+	ENDC
+	addq.l	#1,(hal_frames).l
+	PEV	'T'
+	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the next)
+	addq.l	#1,(hal_tickvb).l
+	movem.l	d0-d7/a0-a6,-(sp)
+	jsr	(snd_dly_push).l		;(its sound commands: played from the next vertical
+	movem.l	(sp)+,d0-d7/a0-a6		;blank on, as ever)
+	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
+	pea	(.r).l
+	move.w	4+2(sp),-(sp)			;(the sr from before)
+	andi	#$FEFF,sr			;level 6 (as the interrupt)
+	move.l	(VBint).l,-(sp)
+	rts
+.r
+.x	move	(sp)+,sr
+	rts
+hal_early	dc.b	1			;(hal_tick_early on)
+	even
 
 	IFD	BENCH
 ;	A game tick put off while the game ran (hal_int6), now that it waits: as the interrupt
@@ -661,6 +716,8 @@ hal_exc_info	ds.l	4
 hal_exc_regs	ds.l	16
 hal_frames	ds.l	1
 hal_tickvb	ds.l	1			;rd_vblanks at the last game tick
+hal_ahead	ds.b	1			;the next vertical blank's tick has run (hal_tick_early)
+	even
 hal_pcring	ds.l	17
 hal_idled	ds.b	1			;(BENCH: the game waited since the last tick)
 hal_yielding	ds.b	1			;(BENCH: the game in hal_yield)
