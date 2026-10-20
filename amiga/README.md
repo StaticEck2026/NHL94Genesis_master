@@ -25,9 +25,9 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 
 Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
 `-DBENCH=1` build), the screen is updated as often as there is time for, up to every vertical
-blank: at 50 Hz about 48.5 frames a second (99% of them on the screen for one vertical blank),
-at 60 Hz 57.1 a second (98% for one); the others are heavy moments (many new animation
-frames at once, a scene change). The game itself
+blank: at 50 Hz 49.3 frames a second (all of them on the screen for one vertical blank: the
+rest are frames with nothing new to draw), at 60 Hz 57.4 a second (98% for one); the others
+are heavy moments (many new animation frames at once, a scene change). The game itself
 always runs at full speed. `F6` caps the screen at a steady 25 or 30 frames a second instead
 (98 to 99% of them on the screen for exactly 2 vertical blanks).
 
@@ -122,11 +122,13 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   at most `BENCHTP` ticks): the game never sees two ticks pass at once (it would move its
   players two frames' worth), so its course does not depend on the renderer's timing, and
   runs of one build give the same frame rate to a hundredth (FS-UAE, several at once too), so
-  one run tells two builds apart. The profile has a sum of the game's RAM at each tick
-  (`bench_tlog`, `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs part
-  (`-DBENCHFULL=1`: all of it but the stacks' last 1 KB, not every 64th long); FS-UAE can load
-  the game at another address each run, which changes the code pointers in its RAM (and so
-  the sums) but not the game. The renderer is linked after the game's code, so a change to
+  one run tells two builds apart. The profile has a sum at each tick of the places and speeds
+  of the players and the puck (`bench_tlog`: no pointers in it, so it compares across builds
+  and load addresses; `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs part
+  (`-DBENCHFULL=1`: a sum of all of the game's RAM but the stacks' last 1 KB instead; FS-UAE
+  can load the game at another address each run, which changes the code pointers in its RAM,
+  and so that sum, but not the game). Builds can still play different games (the course can
+  change before play starts), so compare their sums before their frame rates. The renderer is linked after the game's code, so a change to
   it does not move the game's code (or the code pointers in its RAM). With `-DMEMBENCH=1` the profile also has the colour
   clocks of 1024 writes to chip memory, fast memory and a custom register, 1024 chip reads and
   256 chip writes while a blit runs (measured at count 2001).

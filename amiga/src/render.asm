@@ -2096,6 +2096,10 @@ rd_bpend_run
 	addi.w	#96,d1
 	lea	(rd_bpcp).l,a0
 	bsr	.cols
+	move.w	(rd_bx0).l,d0			;(those on it: rd_rowB_defer)
+	move.w	(rd_w).l,d1
+	lea	(rd_bpcv).l,a0
+	bsr	.cols
 	moveq	#BPBUDGET,d6
 	lea	(rd_bpset).l,a2
 	move.l	(rd_bpcp).l,d2
@@ -2223,9 +2227,14 @@ rd_rowB
 	bsr	.pairs
 	move.l	(rd_rsel+4).l,d0
 	bsr	.pairs
-	; a blit queued that reads them in the bitmap (rd_bmrc): let them all finish first
+	; a blit queued that reads them in the bitmap (rd_bmrc): those cells off the screen wait
+	; on (the margin's: a sprite at the edge is restored from there each frame); for the
+	; others let them all finish first
 	bsr	rd_bmrc_row
 	and.l	d2,d0
+	beq.s	.nw
+	bsr	rd_rowB_defer
+	tst.l	d0
 	beq.s	.nw
 	IFD	PROFMARK
 	PEV	'W'
@@ -2381,6 +2390,7 @@ RBO	set	RBO+64
 	movem.l	(sp)+,a4-a5
 	rts
 .pairs	; d2 shifted on by the 16 pixel columns of the 32 cells d0 (pairs of bits)
+rd_rowB_pairs
 	moveq	#15,d3
 .pr	add.l	d2,d2
 	move.l	d0,d1
@@ -2390,6 +2400,65 @@ RBO	set	RBO+64
 .pz	lsl.l	#2,d0
 	dbf	d3,.pr
 	rts
+
+;	(rd_rowB) The cells of rd_rsel (row d5) in the 16 pixel columns d0 that queued blits read
+;	and that are off the screen (rd_bpcv) go back to waiting (rd_bpset). d2 = the columns of
+;	those left, d0 = those of them read. Uses d1, d3, a0-a1.
+rd_rowB_defer
+	movem.l	d4/d6-d7/a2,-(sp)
+	move.l	d0,d7				;(the columns read)
+	lea	(rd_bpset).l,a1
+	lea	(a1,d5.w*8),a1
+	lea	(rd_bpcv).l,a2			;(the row on the screen: its cells there)
+	move.w	d5,d1
+	lsl.w	#3,d1
+	sub.w	(rd_by0).l,d1
+	move.w	(rd_ch).l,d3
+	lsl.w	#3,d3
+	subq.w	#1,d3
+	and.w	d3,d1				;its lines below the screen's top
+	cmpi.w	#SCRH,d1
+	blo.s	.vr
+	subq.w	#7,d3
+	cmp.w	d3,d1
+	bhi.s	.vr
+	lea	(.none,pc),a2			;(off the screen: none)
+.vr	moveq	#0,d6				;half
+.h	lea	(rd_rsel).l,a0
+	move.l	(a0,d6.w*4),d4
+.c	tst.l	d4
+	beq.s	.hn
+	bfffo	d4{0:0},d3
+	bfclr	d4{d3:1}
+	move.w	d6,d1
+	lsl.w	#5,d1
+	add.w	d3,d1				;the cell
+	lsr.w	#1,d1
+	bftst	d7{d1:1}
+	beq.s	.c				;(not read)
+	move.w	d6,d1
+	lsl.w	#5,d1
+	add.w	d3,d1
+	bftst	(a2){d1:1}
+	bne.s	.c				;(on the screen: drawn now)
+	lea	(rd_rsel).l,a0
+	bfclr	(a0){d1:1}
+	bfset	(a1){d1:1}
+	addq.w	#1,(rd_bpn).l
+	bra.s	.c
+.hn	addq.w	#1,d6
+	cmpi.w	#2,d6
+	blo.s	.h
+	moveq	#0,d2				;the columns left
+	move.l	(rd_rsel).l,d0
+	bsr	rd_rowB_pairs
+	move.l	(rd_rsel+4).l,d0
+	bsr	rd_rowB_pairs
+	move.l	d7,d0
+	and.l	d2,d0
+	movem.l	(sp)+,d4/d6-d7/a2
+	rts
+.none	dc.l	0,0
 
 ;	(rd_updateB, rd_btiles) The rink's cell d0.w to wait for rd_bpend_run: Z set. Keeps all.
 rd_bp_add
@@ -8883,6 +8952,7 @@ rd_ophn		ds.w	OPMAX
 rd_bpn		ds.w	1				;the rink's cells waiting (rd_bpend_run)
 rd_bpset	ds.l	BMAX/32
 rd_bpcn		ds.l	2				;(rd_bpend_run)
+rd_bpcv		ds.l	2
 rd_bpcp		ds.l	2
 rd_bptmp	ds.l	4
 rd_omemo	ds.b	80*128				;(rd_obj_blit)

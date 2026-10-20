@@ -200,19 +200,26 @@ BENCHEND	equ	6000
 bench_wait
 	movem.l	d0-d1/a0,-(sp)
 	IFD	PROFILE
-	movem.l	d2/a1,-(sp)			;(statistics: a sum of every 64th long of the game's RAM
-	lea	(RAMBASE).l,a0			;at each tick, to find where two runs part)
-	moveq	#0,d0
-	IFD	BENCHFULL
-	move.w	#($10000-$400)/4-1,d1		;(BENCHFULL: every long, not the stacks at the top)
+	movem.l	d2/a1,-(sp)			;(statistics: at each tick a sum of the places and
+	moveq	#0,d0				;speeds of the players and the puck, to find where two
+	IFD	BENCHFULL			;runs part: no pointers in it, so it is the same for
+	lea	(RAMBASE).l,a0			;another build or load address; BENCHFULL: of every
+	move.w	#($10000-$400)/4-1,d1		;long of the game's RAM, not the stacks at the top)
 .ts	add.l	(a0)+,d0
 	rol.l	#1,d0
 	dbf	d1,.ts
 	ELSE
-	move.w	#$10000/256-1,d1
-.ts	add.l	(a0),d0
+	lea	(SortCords).l,a0
+	moveq	#16-1,d1
+.ts	add.l	(a0),d0				;Xpos
 	rol.l	#1,d0
-	lea	256(a0),a0
+	add.l	Ypos(a0),d0
+	rol.l	#1,d0
+	add.l	Zpos(a0),d0
+	rol.l	#1,d0
+	add.l	Xvel(a0),d0			;Xvel, Yvel
+	rol.l	#1,d0
+	lea	1<<scsize(a0),a0
 	dbf	d1,.ts
 	ENDC
 	move.l	(bench_n).l,d1
