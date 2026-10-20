@@ -2697,6 +2697,10 @@ rd_hud_build
 	clr.l	(a0)+
 	clr.l	(a0)+
 	clr.w	(rd_hudnc).l
+	lea	(rd_hudmo).l,a0			;(and the bytes made with them: rd_hud_byte)
+	move.w	#HUDMO*16/4-1,d0
+.cmo	clr.l	(a0)+
+	dbf	d0,.cmo
 	; the sprite data: clear
 	lea	(rd_hudm).l,a0
 	move.l	a0,(rd_hudbase).l
@@ -2908,9 +2912,60 @@ rd_hud_cell
 ;	One byte (8 pixels) of the HUD sprites: a0 = the overlay's byte (plane p at p * OSBPR), d2 =
 ;	its high priority mask, a5 / a6 = the even / odd sprite's byte (plane A; plane B 8 bytes
 ;	on). New colours are given sprite colours (rd_hudcm, rd_hudmap). C set if a 16th would be
-;	needed. Uses d0-d1, d3-d7, a3-a4.
+;	needed. The same 6 bytes and mask as one made before (rd_hudmo, while the colours stay:
+;	a clock's digits): the same sprite bytes. Uses d0-d1, d3-d7, a3-a4.
+HUDMO	equ	64				;bytes noted (a power of 2)
 rd_hud_byte
-	lea	(rd_hudcm).l,a3
+	moveq	#0,d0				;the key: planes 0-3,
+	move.b	(a0),d0
+	lsl.w	#8,d0
+	move.b	OSBPR(a0),d0
+	swap	d0
+	move.b	2*OSBPR(a0),d0
+	lsl.w	#8,d0
+	move.b	3*OSBPR(a0),d0
+	moveq	#1,d1				;(1: in use) planes 4-5, the mask
+	lsl.w	#8,d1
+	move.b	4*OSBPR(a0),d1
+	lsl.l	#8,d1
+	move.b	5*OSBPR(a0),d1
+	lsl.l	#8,d1
+	move.b	d2,d1
+	move.l	d0,d3
+	eor.l	d1,d3
+	move.l	d3,d4
+	swap	d4
+	eor.w	d4,d3
+	move.w	d3,d4
+	lsr.w	#6,d4
+	eor.w	d4,d3
+	andi.w	#HUDMO-1,d3
+	lsl.w	#4,d3
+	lea	(rd_hudmo).l,a3
+	adda.w	d3,a3
+	cmp.l	(a3),d0
+	bne.s	.mm
+	cmp.l	4(a3),d1
+	bne.s	.mm
+	move.b	8(a3),(a5)
+	move.b	9(a3),8(a5)
+	move.b	10(a3),(a6)
+	move.b	11(a3),8(a6)
+	andi	#$FE,ccr			;C clear
+	rts
+.mm	movem.l	d0-d1/a3,-(sp)
+	bsr.s	.make
+	movem.l	(sp)+,d0-d1/a3
+	bcs.s	.mx				;(a 16th colour: not noted)
+	move.l	d0,(a3)
+	move.l	d1,4(a3)
+	move.b	d4,8(a3)
+	move.b	d5,9(a3)
+	move.b	d6,10(a3)
+	move.b	d7,11(a3)
+	andi	#$FE,ccr
+.mx	rts
+.make	lea	(rd_hudcm).l,a3
 	lea	(rd_hudmap).l,a4
 	moveq	#0,d4				;even A
 	moveq	#0,d5				;even B
@@ -5039,6 +5094,9 @@ rd_obj_blit
 	sub.l	8(a2),d1
 	cmpi.l	#SCARENA,d1
 	bls.s	.hit
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+108).l		;(statistics: object images built again: the ring
+	ENDC					;came round)
 .miss	bsr	rd_obj_gather
 	bne	.no
 	movem.l	a2/a4-a5,-(sp)
@@ -7749,6 +7807,8 @@ rd_hudbase	ds.l	1			;(rd_hudm)
 rd_hudm		ds.b	8*HUDSPR		;the HUD sprites (rd_hud_build, rd_hud_cell)
 rd_hudcols	ds.b	48			;(columns used)
 rd_hudcm	ds.b	64			;overlay colour -> sprite colour (0: none yet)
+	cnop	0,4
+rd_hudmo	ds.b	HUDMO*16		;bytes made (rd_hud_byte): the key (8), sprite bytes (4)
 rd_hudmap	ds.b	16			;sprite colour -> overlay colour
 rd_nchgA	ds.w	1
 rd_ntcur	ds.b	1			;the name table being compared was written (rd_ntwritten)
@@ -7800,7 +7860,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	28			;(statistics: see nhlrun)
+rd_dbg_x	ds.l	30			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
