@@ -4161,28 +4161,140 @@ rd_sc_box
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	Native player objects. The game's addframe2 writes each player's frame as a few sprites in
-;	a row of the sprite table (Satt): it notes where they begin (hal_obj_a6), hal_obj_end the
-;	range and the object's key (its frame, flips, palette). The ranges go with the table when
-;	it is sent (rd_obj_publish), and the renderer draws each object as one image
-;	(rd_obj_blit): built once from the native tiles (Spritetiles), kept in the sprite image
-;	ring and found by its key; one blit instead of one a sprite.
+;	Native player objects. The game's addframe2 (hal_addframe2 in its place) writes each player's
+;	frame as a few sprites in a row of the sprite table (Satt) and notes the range and the
+;	object's key (its frame, flips, palette). The ranges go with the table when it is sent
+;	(rd_obj_publish), and the renderer draws each object as one image (rd_obj_blit): built once
+;	from the native tiles (Spritetiles), kept in the sprite image ring and found by its key; one
+;	blit instead of one a sprite.
 OBJMAX		equ	32			;objects in a table
 OBJPC		equ	8			;sprites an object at most
 OBJSLOTS	equ	2048			;object images in the table (a power of 2)
 
-;	addframe2 (a3 = the object) has written its sprites from hal_obj_a6 to a6. Keeps all.
-hal_obj_end
-	move	sr,-(sp)
-	movem.l	d0-d4/a0,-(sp)
+;	The game's addframe2 (patches.py), the same work in fewer steps: d0/d1 = the object's place
+;	on the screen, a3 = the object, a5 = the DMA list, a6 = the sprite table, d6 = the link
+;	counter. Its frame's sprites written at a6 (a6, d6 on past them); if the frame is not the
+;	one the object had last, its tiles queued (a5 on; a sprite whose tiles are within the one
+;	before's shares them) and each sprite's first tile noted (VRoffs). The flips and palette
+;	are the frame's XORed with the object's (the game XORs them into the object for a while).
+;	A frame has 8 sprites at most (so VRoffs never reaches VRchar). Then the object noted
+;	(rd_objb). Keeps the rest; the flags as the game leaves them (its attribute).
+hal_addframe2
+	movem.l	d0-d5/d7/a0-a2/a4,-(sp)
+	movea.l	a6,a1				;(its first sprite)
+	move.w	frame(a3),d4
+	ble	.x
+	move.w	attribute(a3),d7
+	move.w	d4,d2
+	andi.w	#$F800,d2
+	eor.w	d2,d7				;the flips, palette
+	andi.w	#$7FF,d4
+	movea.l	#Sprites,a2
+	adda.l	4(a2),a2
+	add.w	d4,d4
+	cmp.w	2(a2),d4
+	bge	.x
+	move.w	2(a2,d4.w),d5
+	sub.w	(a2,d4.w),d5
+	lsr.w	#3,d5
+	subq.w	#1,d5				;its sprites - 1
+	adda.w	(a2,d4.w),a2			;the first
+	lsr.w	#1,d4
+	cmp.w	oldframe(a3),d4
+	beq	.sat
+	move.w	d4,oldframe(a3)
+	; its tiles: d3 = the sprite's first (after VRchar), d1 its tiles, d2 their place in
+	; Spritetiles; d4, d6 the sprite before's (the first sprite's never within: d4 = 0)
+	movem.l	d0-d1/d5-d6,-(sp)
+	movea.l	a2,a0
+	lea	(sizetab).l,a4
+	moveq	#0,d3
+	moveq	#0,d4
+.t	move.w	4(a0),d2			;their place
+	moveq	#0,d1
+	move.b	7(a0),d1
+	move.b	(a4,d1.w),d1			;tiles
+	cmp.w	d4,d1
+	bgt.s	.q
+	cmp.w	d6,d2
+	blt.s	.q
+	move.w	d6,d0
+	add.w	d4,d0
+	sub.w	d2,d0
+	sub.w	d1,d0
+	bpl.s	.n				;(within the sprite before's: d3 stays)
+.q	add.w	d4,d3				;after the sprite before's
+	move.w	d2,d0
+	ext.l	d0
+	lsl.l	#5,d0
+	addi.l	#Spritetiles,d0
+	move.l	d0,(a5)+			;source
+	move.w	d1,d0
+	lsl.w	#4,d0
+	move.w	d0,(a5)+			;words
+	move.w	d3,d0
+	add.w	VRchar(a3),d0
+	lsl.w	#5,d0
+	move.w	d0,(a5)+			;VRAM
+.n	move.b	d3,VRoffs(a3,d5.w)
+	move.w	d2,d6
+	move.w	d1,d4
+	addq.l	#8,a0
+	dbf	d5,.t
+	movem.l	(sp)+,d0-d1/d5-d6
+	; its sprites
+.sat	move.w	VRchar(a3),d4
+.s	move.w	2(a2),d2			;y
+	btst	#12,d7
+	beq.s	.ny
+	moveq	#3,d3				;(flipped: from the bottom)
+	and.b	7(a2),d3
+	addq.w	#1,d3
+	lsl.w	#3,d3
+	neg.w	d3
+	sub.w	d2,d3
+	move.w	d3,d2
+.ny	add.w	d1,d2
+	move.w	d2,(a6)
+	move.w	(a2),d2				;x
+	btst	#11,d7
+	beq.s	.nx
+	moveq	#$C,d3				;(flipped: from the right)
+	and.b	7(a2),d3
+	addq.w	#4,d3
+	add.w	d3,d3
+	neg.w	d3
+	sub.w	d2,d3
+	move.w	d3,d2
+.nx	add.w	d0,d2
+	move.w	d2,6(a6)
+	move.b	7(a2),2(a6)			;size
+	move.b	d6,3(a6)			;link
+	move.w	6(a2),d2
+	eor.w	d7,d2
+	andi.w	#$F800,d2			;priority, palette, flips
+	btst	#0,d7
+	beq.s	.np
+	btst	#14,d2				;(the second team's colours)
+	beq.s	.np
+	bset	#13,d2
+.np	or.b	VRoffs(a3,d5.w),d2
+	add.w	d4,d2
+	move.w	d2,4(a6)			;tile
+	addq.w	#1,d6
+	addq.l	#8,a6
+	addq.l	#8,a2
+	dbf	d5,.s
+	; the object: its first sprite, sprites, key (its frame, the flips and palette its sprites
+	; have them by, the second team's colour switch); one sprite is drawn as it is
 	move.l	a6,d0
-	sub.l	(hal_obj_a6).l,d0
-	lsr.l	#3,d0				;its sprites
+	sub.l	a1,d0
+	lsr.l	#3,d0				;sprites
 	cmpi.l	#2,d0
-	blo.s	.x				;(one: drawn as it is)
+	blo.s	.x
 	cmpi.l	#OBJPC,d0
 	bhi.s	.x
-	move.l	(hal_obj_a6).l,d1
+	move.l	a1,d1
 	subi.l	#Satt,d1
 	bmi.s	.x
 	lsr.l	#3,d1				;the first
@@ -4192,14 +4304,9 @@ hal_obj_end
 	cmpi.w	#OBJMAX,d2
 	bhs.s	.x
 	addq.w	#1,(rd_objbn).l
-	; its key: the frame, the flips and palette its sprites have them by, the second team's
-	; colour switch (addframe2)
-	move.w	frame(a3),d3
-	andi.w	#$F800,d3
-	move.w	attribute(a3),d4
-	eor.w	d4,d3
+	move.w	d7,d3
 	andi.w	#$7800,d3
-	btst	#0,attribute+1(a3)
+	btst	#0,d7
 	beq.s	.k
 	bset	#15,d3
 .k	move.w	frame(a3),d4
@@ -4210,8 +4317,9 @@ hal_obj_end
 	move.b	d1,(a0,d2.w)
 	move.b	d0,1(a0,d2.w)
 	move.w	d4,2(a0,d2.w)
-.x	movem.l	(sp)+,d0-d4/a0
-	rtr
+.x	movem.l	(sp)+,d0-d5/d7/a0-a2/a4
+	tst.w	attribute(a3)			;(the flags the game's leaves)
+	rts
 
 ;	The sprite table is sent to VRAM (hal_vdp_dma): its objects with it; the next table's from
 ;	none. Keeps everything.
@@ -6972,10 +7080,9 @@ rd_cellmw	ds.b	1			;and its masks are written
 rd_zero8	ds.b	8			;(0: a low priority cell's mask rows)
 	cnop	0,4
 rd_sbuild	ds.l	2*4*NPLANES*32/4		;a sprite image and mask being built (rd_spr_build)
-hal_obj_a6	ds.l	1			;addframe2: where its object's sprites begin
 rd_oent		ds.l	1			;its entry of rd_octab
 rd_opx		ds.l	1			;rd_obj_piece: the sprite's first pixel in the image
-rd_objbn	ds.w	1			;objects of the sprite table being made (hal_obj_end)
+rd_objbn	ds.w	1			;objects of the sprite table being made (hal_addframe2)
 rd_objpn	ds.w	1			;of the table sent (rd_obj_publish)
 rd_on		ds.w	1			;rd_obj_blit: the object's sprites
 rd_opri		ds.w	1			;their priority
