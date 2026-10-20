@@ -688,6 +688,7 @@ rd_planesize
 rd_fast
 	bsr	rd_updateB
 	bsr	rd_scrollpos
+	bsr	rd_bpend_run
 	bsr	rd_vsync			;(from here on the back buffer is written)
 	tst.w	(rd_scroll).l
 	beq.s	.copy
@@ -1434,6 +1435,11 @@ rd_updateB
 	beq	.same
 	move.l	d2,(rd_Bkey).l
 	moveq	#1,d6				;redraw everything
+	clr.w	(rd_bpn).l			;(none waits: rd_bpend_run)
+	lea	(rd_bpset).l,a1
+	moveq	#BMAX/32-1,d3
+.cq	clr.l	(a1)+
+	dbf	d3,.cq
 	lea	(rd_bused).l,a1
 	moveq	#63,d3
 .cu	clr.l	(a1)+
@@ -1518,7 +1524,11 @@ rd_updateB
 	divu.w	(rd_cw).l,d4
 	move.l	d4,d5
 	swap	d4				;column
-	move.w	d1,d0
+	cmpi.w	#64,(rd_cw).l			;(the rink: converted when near the screen, the rows
+	bne.s	.now				;written ahead over a few frames: rd_bpend_run)
+	bsr	rd_bp_add
+	beq.s	.fn
+.now	move.w	d1,d0
 	bsr	rd_cellB
 .fn	movem.l	(sp)+,d0/d3
 	addq.l	#1,d0
@@ -1584,7 +1594,13 @@ rd_btiles
 	move.w	(a0,d2.w*2),d3			;(the next + 1)
 	lea	(shB).l,a0
 	move.w	(a0,d2.w*2),d0			;its entry
-	moveq	#0,d4
+	cmpi.w	#64,(rd_cw).l			;(the rink: when near the screen, rd_bpend_run)
+	bne.s	.now
+	exg	d0,d2
+	bsr	rd_bp_add
+	exg	d0,d2
+	beq.s	.q
+.now	moveq	#0,d4
 	move.w	d2,d4
 	divu.w	(rd_cw).l,d4
 	move.l	d4,d5
@@ -1592,7 +1608,7 @@ rd_btiles
 	movem.l	d3/d6-d7/a3-a4,-(sp)
 	bsr	rd_cellB
 	movem.l	(sp)+,d3/d6-d7/a3-a4
-	move.w	d3,d2
+.q	move.w	d3,d2
 	bra.s	.c
 .nt	tst.l	d6
 	bne.s	.b
@@ -1806,6 +1822,152 @@ rd_cellB
 	dbf	d3,.rown
 	movem.l	(sp)+,a5-a6
 	movea.l	(sp)+,a4
+	rts
+
+;	The rink's cells (64 across, rd_bpset: 2 longs a row) whose entries or tiles changed wait
+;	(rd_bp_add) and are converted here, once the frame's scroll is known: those within 8 lines
+;	and 16 pixels of the screen now, those within 48 pixels BPBUDGET a frame, the others when
+;	they come that near (the game writes a row 2 rows ahead of the screen, and animates a tile
+;	at the plane's right edge: over a few frames, or not until seen). Uses d0-d7, a0-a3.
+BPBUDGET	equ	6
+rd_bpend_run
+	tst.w	(rd_bpn).l
+	beq	.x
+	; the columns within 16 and 48 pixels of the screen (rd_bpcn, rd_bpcp)
+	move.w	(rd_bx0).l,d0
+	subi.w	#16,d0
+	move.w	(rd_w).l,d1
+	addi.w	#32,d1
+	lea	(rd_bpcn).l,a0
+	bsr	.cols
+	move.w	(rd_bx0).l,d0
+	subi.w	#48,d0
+	move.w	(rd_w).l,d1
+	addi.w	#96,d1
+	lea	(rd_bpcp).l,a0
+	bsr	.cols
+	moveq	#BPBUDGET,d6
+	lea	(rd_bpset).l,a2
+	move.l	(rd_bpcp).l,d2
+	move.l	(rd_bpcp+4).l,d3
+	moveq	#0,d5				;row
+.r	move.l	(a2)+,d0			;(any waiting within 48 pixels?)
+	and.l	d2,d0
+	move.l	(a2)+,d1
+	and.l	d3,d1
+	or.l	d1,d0
+	beq	.rn
+	movem.l	d2-d3/a2,-(sp)
+	move.w	d5,d1				;(within 8 lines of the screen: d7)
+	lsl.w	#3,d1
+	sub.w	(rd_by0).l,d1
+	move.w	(rd_ch).l,d2
+	lsl.w	#3,d2
+	subq.w	#1,d2
+	and.w	d2,d1				;its lines below the screen's top
+	st	d7
+	cmpi.w	#SCRH+8,d1
+	blo.s	.v
+	subi.w	#15,d2
+	cmp.w	d2,d1
+	bhi.s	.v
+	sf	d7
+.v	moveq	#0,d4				;half of the row (columns 0-31, 32-63)
+.hh	lea	(rd_bpset).l,a0
+	lea	(a0,d5.w*8),a0
+	move.l	(a0,d4.w*4),d0			;waiting
+	lea	(rd_bpcp).l,a1
+	and.l	(a1,d4.w*4),d0			;within 48 pixels
+	beq	.hn
+	moveq	#0,d1
+	tst.b	d7
+	beq.s	.cb
+	move.l	d0,d1
+	lea	(rd_bpcn).l,a1
+	and.l	(a1,d4.w*4),d1			;within 16 too: now
+.cb	tst.l	d0
+	beq	.hn
+	bfffo	d0{0:0},d2
+	bfclr	d0{d2:1}
+	bftst	d1{d2:1}
+	bne.s	.do
+	tst.w	d6
+	beq.s	.cb				;(no more this frame)
+	subq.w	#1,d6
+.do	lea	(rd_bpset).l,a0
+	lea	(a0,d5.w*8),a0
+	lea	(a0,d4.w*4),a0
+	bfclr	(a0){d2:1}
+	subq.w	#1,(rd_bpn).l
+	movem.l	d0-d1/d4-d7,-(sp)
+	move.w	d4,d3
+	lsl.w	#5,d3
+	add.w	d2,d3
+	move.w	d3,d4				;column
+	move.w	d5,d0
+	lsl.w	#6,d0
+	add.w	d4,d0
+	lea	(shB).l,a1
+	move.w	(a1,d0.w*2),d0			;its entry
+	clr.w	(rd_hiBok).l
+	bsr	rd_cellB
+	movem.l	(sp)+,d0-d1/d4-d7
+	bra.s	.cb
+.hn	addq.w	#1,d4
+	cmpi.w	#2,d4
+	blo	.hh
+	movem.l	(sp)+,d2-d3/a2
+.rn	addq.w	#1,d5
+	cmp.w	(rd_ch).l,d5
+	blo	.r
+.x	rts
+.cols	; (a0): 64 bits, the columns pixels d0 (plane x, can be below 0) .. d0 + d1 - 1 are in
+	lea	(rd_bptmp).l,a1
+	clr.l	(a1)
+	clr.l	4(a1)
+	clr.l	8(a1)
+	clr.l	12(a1)
+	add.w	d0,d1
+	subq.w	#1,d1
+	asr.w	#3,d0				;first column
+	asr.w	#3,d1				;last
+	sub.w	d0,d1
+	addq.w	#1,d1				;columns
+	cmpi.w	#64,d1
+	blo.s	.c1
+	moveq	#-1,d0
+	move.l	d0,(a0)
+	move.l	d0,4(a0)
+	rts
+.c1	andi.l	#63,d0
+	ext.l	d1
+.c2	moveq	#32,d2
+	cmp.l	d2,d1
+	bhs.s	.c3
+	move.l	d1,d2
+.c3	bfset	(a1){d0:d2}
+	add.l	d2,d0
+	sub.l	d2,d1
+	bne.s	.c2
+	move.l	(a1),d0
+	or.l	8(a1),d0
+	move.l	d0,(a0)
+	move.l	4(a1),d0
+	or.l	12(a1),d0
+	move.l	d0,4(a0)
+	rts
+
+;	(rd_updateB, rd_btiles) The rink's cell d0.w to wait for rd_bpend_run: Z set. Keeps all.
+rd_bp_add
+	movem.l	d1/a0,-(sp)
+	moveq	#0,d1
+	move.w	d0,d1
+	lea	(rd_bpset).l,a0
+	bfset	(a0){d1:1}
+	bne.s	.in				;(waiting already)
+	addq.w	#1,(rd_bpn).l
+.in	moveq	#0,d1				;(Z)
+	movem.l	(sp)+,d1/a0
 	rts
 
 ;	List the high priority cells of plane B (for the fixups).
@@ -7665,6 +7827,11 @@ rd_vmap		ds.l	DROWS				;(rd_verify: the list's boxes)
 rd_opkeep	ds.b	OPMAX				;per blit: the same as in the last list
 rd_ophb		ds.w	OPHASH				;rd_op_end: the last list's blits by C/D
 rd_ophn		ds.w	OPMAX
+rd_bpn		ds.w	1				;the rink's cells waiting (rd_bpend_run)
+rd_bpset	ds.l	BMAX/32
+rd_bpcn		ds.l	2				;(rd_bpend_run)
+rd_bpcp		ds.l	2
+rd_bptmp	ds.l	4
 rd_omemo	ds.b	80*128				;(rd_obj_blit)
 rd_omcap	ds.l	1				;the memo being noted, until its blit
 rd_oplk		ds.w	1				;the blits up to the last one matched
