@@ -27,7 +27,6 @@ RAMBASE		ds.l	1			;the Genesis RAM window: moved at start (ram_relocate)
 	include	"os.asm"
 	include	"input.asm"
 	include	"vdp.asm"
-	include	"render.asm"
 
 game_code						;(the converted game from here: the harness tells
 						;its beam position reads from ours)
@@ -62,6 +61,9 @@ game_code						;(the converted game from here: the harness tells
 	include	"goalie94.asm"
 	include	"title94.asm"
 
+game_code_end					;(the renderer after the game: a change to it does not
+	include	"render.asm"			;move the game's code, so the game's RAM, its code
+						;pointers too, can be compared between builds)
 	include	"sound.asm"			;Paula sound (after sound94.asm: it copies its samples)
 ;checksum94.asm: not used (cartridge ROM check)
 

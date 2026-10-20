@@ -185,12 +185,12 @@ prof_f9
 	ENDC
 
 	IFD	BENCH
-;	Benchmark builds (-DBENCH=1, for FS-UAE): the same game every run and every build. All is
-;	counted in the game's waits for a frame (the first in each game frame), not in game frames,
-;	so it does not matter when the frames come while the game runs long (the menus): the game's
-;	random numbers (HVcount) come from that count, Start is pressed at the test harness' counts
-;	(from the attract mode into a game), the frame rate count starts at BENCHSTART (as F9,
-;	PROFILE builds) and the game quits at BENCHEND. Keeps all.
+;	Benchmark builds (-DBENCH=1, for FS-UAE): the same game every run and every build. Called
+;	at each game tick, before the game's vblank code; a tick never comes while the game runs
+;	(hal_int6 puts it off to the game's next wait, hal_idle), so the count is the game's own:
+;	the game's random numbers (HVcount) come from it, Start is pressed at the test harness'
+;	counts (from the attract mode into a game), the frame rate count starts at BENCHSTART (as
+;	F9, PROFILE builds) and the game quits at BENCHEND. Keeps all.
 	IFND	BENCHSTART
 BENCHSTART	equ	2000
 	ENDC
@@ -199,10 +199,31 @@ BENCHEND	equ	6000
 	ENDC
 bench_wait
 	movem.l	d0-d1/a0,-(sp)
-	move.l	(hal_frames).l,d0
-	cmp.l	(bench_lastf).l,d0
-	beq	.x				;(this frame's wait counted)
-	move.l	d0,(bench_lastf).l
+	IFD	PROFILE
+	movem.l	d2/a1,-(sp)			;(statistics: a sum of every 64th long of the game's RAM
+	lea	(RAMBASE).l,a0			;at each tick, to find where two runs part)
+	moveq	#0,d0
+	move.w	#$10000/256-1,d1
+.ts	add.l	(a0),d0
+	rol.l	#1,d0
+	lea	256(a0),a0
+	dbf	d1,.ts
+	move.l	(bench_n).l,d1
+	andi.l	#BTLOG-1,d1
+	lea	(bench_tlog).l,a1
+	move.l	d0,(a1,d1.l*4)
+	IFD	BENCHDUMP
+	cmpi.l	#BENCHDUMP,(bench_n).l		;(the game's RAM at that tick, for the exit's dump)
+	bne.s	.nd
+	lea	(RAMBASE).l,a0
+	lea	(bench_ram).l,a1
+	move.w	#$10000/4-1,d1
+.dc	move.l	(a0)+,(a1)+
+	dbf	d1,.dc
+.nd
+	ENDC
+	movem.l	(sp)+,d2/a1
+	ENDC
 	addq.l	#1,(bench_n).l
 	move.l	(bench_n).l,d0
 	move.l	d0,d1
@@ -348,8 +369,10 @@ mb_now
 	move.l	(sp)+,d1
 	rts
 	ENDC
-bench_lastf	dc.l	-1
 bench_n		dc.l	0
+	IFD	PROFILE
+BTLOG		equ	8192
+	ENDC
 bench_start	dc.b	0
 	even
 	ENDC

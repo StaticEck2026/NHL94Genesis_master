@@ -110,9 +110,16 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   `-DPROFILE=1` the frame rate count starts at 2000 (as `F9`) and the game quits at 6000
   (`BENCHSTART`, `BENCHEND`); the renderer does not take the game's time when it runs long.
   Delete `NHL94.sav` before each run: the game reads it. Runs of one build give the same
-  result when FS-UAE has the host to itself (several at once on a loaded host do not), but a
-  change to the renderer's timing can change the game's course a little (a sum of its RAM at
-  the end is in the profile to tell). With `-DMEMBENCH=1` the profile also has the colour
+  result when FS-UAE has the host to itself (several at once on a loaded host do not). A game
+  tick that comes while the game runs (not waiting since the last one) waits for its next
+  wait (`hal_idle`, at most `BENCHTP` ticks), and the count, the random numbers and the
+  presses go by the ticks, so the game's own course depends less on the renderer's timing;
+  it still can differ between builds (from the attract mode on), which changes what the
+  count measures a lot (a goal, a replay), so compare builds with the test harness'
+  `NHL_CHIPWAIT` (below) and use FS-UAE to confirm. The profile has a sum of the game's RAM at
+  each tick (`bench_tlog`, `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs
+  part. The renderer is linked after the game's code, so a change to it does not move the
+  game's code (or the code pointers in its RAM). With `-DMEMBENCH=1` the profile also has the colour
   clocks of 1024 writes to chip memory, fast memory and a custom register, 1024 chip reads and
   256 chip writes while a blit runs (measured at count 2001).
 - `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
@@ -256,7 +263,9 @@ marker; a vertical blank while it waits there calls again, which is told apart b
 The CPU never starts the copper near a vertical blank (the end of the last line to the start
 of line 0), so it never cuts a display list short. The test harness runs the copper too:
 `NHL_COPSTRESS=n` restarts it at one in n of its instructions on average, as a vertical
-blank could, to check the ring survives that anywhere.
+blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges n more cycles for each
+CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
+the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does.
 
 ## Testing without an Amiga
 

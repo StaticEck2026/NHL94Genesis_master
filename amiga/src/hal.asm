@@ -52,6 +52,9 @@ CIA_CLOCK_NTSC	equ	715909
 	IFND	RDPACE
 RDPACE		equ	2			;hal_pace at the start
 	ENDC
+	IFND	BENCHTP
+BENCHTP		equ	60			;(BENCH: ticks put off at most, hal_int6)
+	ENDC
 
 	section	game,code
 hal_header
@@ -103,6 +106,7 @@ hal_debug
 	dc.l	ctx_to_game,hal_idle_no		;+148: the renderer gives way, the game idles
 	dc.l	Spritetiles,SPRTSIZE		;+156: the players' sprite tiles (planar, not in VRAM)
 	dc.l	vdp_tsrc			;+164: each VRAM tile's DMA source
+	dc.l	game_code_end			;+168: the converted game's code ends
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -219,7 +223,10 @@ hal_int6
 	bhs.s	.pc
 	move.l	24(sp),d2
 	bset	#31,d2
-.pc	move.l	(prof_pos).l,d1
+.pc	btst	#6,(CUSTOM+DMACONR).l		;(the blitter busy: bit 30)
+	beq.s	.pb
+	bset	#30,d2
+.pb	move.l	(prof_pos).l,d1
 	lea	(prof_buf).l,a0
 	move.l	d2,(a0,d1.l*4)
 	addq.l	#1,d1
@@ -238,6 +245,33 @@ hal_int6
 	bra.s	.tick
 .vb	sf	(hal_vbreq).l
 .tick	move.l	(sp)+,d0
+	IFD	BENCH
+	; benchmark builds: a tick that comes while the game runs (not waiting since the last
+	; one) waits for the game's next wait (hal_idle), so the game's course does not depend on
+	; the renderer's timing; BENCHTP ticks on, it runs anyway (a wait loop without hal_idle)
+	tst.b	(ctx_cur).l
+	bne.s	.tw
+	tst.b	(hal_idled).l
+	bne.s	.tw
+	addq.b	#1,(hal_tickpend).l
+	cmpi.b	#BENCHTP,(hal_tickpend).l
+	bhs.s	.tf
+	IFD	PROFILE
+	IFND	MEMBENCH
+	addq.l	#1,(prof_mark+92).l		;(statistics: ticks put off)
+	ENDC
+	ENDC
+	rte
+.tf
+	IFD	PROFILE
+	IFND	MEMBENCH
+	addq.l	#1,(prof_mark+96).l		;(statistics: ticks run all the same)
+	ENDC
+	ENDC
+.tw	sf	(hal_idled).l
+	sf	(hal_tickpend).l
+	jsr	(bench_wait).l
+	ENDC
 	addq.l	#1,(hal_frames).l
 	IFD	PROFILE
 	tst.b	(ctx_cur).l			;(statistics: the context interrupted until now)
@@ -310,7 +344,11 @@ hal_idle
 	cmpi.w	#$0600,d0
 	bhs	.no				;called from interrupt code: never switch there
 	IFD	BENCH
-	jsr	(bench_wait).l
+	st	(hal_idled).l			;(the game waits)
+	tst.b	(hal_tickpend).l
+	beq.s	.nt
+	bsr	hal_tick_late
+.nt
 	ENDC
 	tst.b	(rd_busy).l
 	bne.s	.go				;a frame half drawn: on with it
@@ -330,6 +368,30 @@ hal_idle_no					;(the harness: the game waits, nothing to draw)
 	clr.w	(hal_starve).l
 	move.l	(sp)+,d0
 	rts
+
+	IFD	BENCH
+;	A game tick put off while the game ran (hal_int6), now that it waits: as the interrupt
+;	would have run it, at level 6. Keeps all.
+hal_tick_late
+	move	sr,-(sp)
+	ori	#$0700,sr
+	sf	(hal_tickpend).l
+	sf	(hal_idled).l
+	jsr	(bench_wait).l
+	addq.l	#1,(hal_frames).l
+	PEV	'T'
+	movem.l	d0-d7/a0-a6,-(sp)
+	jsr	(snd_z80_poll).l
+	movem.l	(sp)+,d0-d7/a0-a6
+	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
+	pea	(.r).l
+	move.w	4+2(sp),-(sp)			;(the sr from before)
+	andi	#$FEFF,sr			;level 6 (as the interrupt)
+	move.l	(VBint).l,-(sp)
+	rts
+.r	move	(sp)+,sr
+	rts
+	ENDC
 
 ;	trap #0: game -> renderer
 ctx_to_render
@@ -553,6 +615,9 @@ hal_exc_info	ds.l	4
 hal_exc_regs	ds.l	16
 hal_frames	ds.l	1
 hal_pcring	ds.l	17
+hal_idled	ds.b	1			;(BENCH: the game waited since the last tick)
+hal_tickpend	ds.b	1			;(BENCH: ticks put off)
+	even
 hal_pcpos	ds.w	1
 hal_wd		ds.w	1
 hal_starve	ds.w	1
@@ -565,6 +630,12 @@ prof_mark	ds.l	5+8+16+4		;(+20: frames shown 1 ... 8+ vertical blanks; +52: vert
 prof_last	ds.l	1
 prof_buf	ds.l	PROFMAX
 prof_intreq	ds.l	1
+	IFD	BENCH
+bench_tlog	ds.l	8192			;(the game RAM's sum at each tick: bench_wait)
+	IFD	BENCHDUMP
+bench_ram	ds.b	$10000			;(the game RAM at tick BENCHDUMP)
+	ENDC
+	ENDC
 prof_evpos	ds.l	1
 prof_evcount	ds.l	1
 prof_ev		ds.l	PEVMAX			;events: code (top byte), CIA-B TOD

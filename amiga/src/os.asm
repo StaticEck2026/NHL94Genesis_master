@@ -364,6 +364,18 @@ os_save_prof
 	move.l	(rd_cqring).l,d2
 	move.l	#CQI,d3
 	jsr	DOS_Write(a6)
+	IFD	BENCH
+	move.l	d4,d1				;then the game RAM's sums at each tick (BENCH)
+	move.l	#bench_tlog,d2
+	move.l	#8192*4,d3
+	jsr	DOS_Write(a6)
+	IFD	BENCHDUMP
+	move.l	d4,d1
+	move.l	#bench_ram,d2
+	move.l	#$10000,d3
+	jsr	DOS_Write(a6)
+	ENDC
+	ENDC
 	move.l	d4,d1
 	jsr	DOS_Close(a6)
 .x	movem.l	(sp)+,d1-d4/a0-a1/a6

@@ -8,17 +8,19 @@ keys = [s[0] for s in syms]
 d = open(sys.argv[2], 'rb').read()
 base, n = struct.unpack('>II', d[:8])
 c = collections.Counter()
+busy = 0
 for i in range(n):
     pc, = struct.unpack('>I', d[8 + 4 * i:12 + 4 * i])
     wait = pc >> 31                     # a sample in rd_waitblit: its caller
-    pc &= 0x7FFFFFFF
+    busy += (pc >> 30) & 1              # the blitter busy then
+    pc &= 0x3FFFFFFF
     v = pc - base
     if 0 <= v < 0x200000:
         j = bisect.bisect_right(keys, v) - 1
         c[('rd_waitblit <- ' if wait else '') + syms[j][1]] += 1
     else:
         c['(outside code %06x)' % (pc & 0xFFFF00)] += 1
-print('%d samples' % n)
+print('%d samples, the blitter busy in %.1f%%' % (n, 100.0 * busy / max(1, n)))
 if len(d) >= 8 + 4 * n + 16:
     c0, t0, c1, t1 = struct.unpack('>IIII', d[8 + 4 * n:24 + 4 * n])
     hz = struct.unpack('>I', d[24 + 4 * n:28 + 4 * n])[0] if len(d) >= 28 + 4 * n else 60
@@ -53,7 +55,9 @@ if len(d) >= 8 + 4 * n + 116 and t1 > t0 and c1 > c0:
               % (h[7] / (c1 - c0), h[8] / (c1 - c0), h[9] / (c1 - c0)))
 if len(d) >= 8 + 4 * n + 116:
     h = struct.unpack('>16I', d[60 + 4 * n:124 + 4 * n])
-    if h[10] or h[11]:
+    if h[10] and h[11] < 100000:
+        print('game ticks put off while the game ran (BENCH): %d, run all the same %d' % (h[10], h[11]))
+    if h[10] and h[11] >= 100000:
         print('colour clocks for 1024 word writes: chip %d, fast %d, a register %d; 1024 chip reads %d; '
               '256 chip writes during a blit %d%s' % (h[10], h[11], h[12], h[13], h[14] & 0x7FFFFFFF,
               '' if h[14] & 0x80000000 else ' (the blit ended first)'))

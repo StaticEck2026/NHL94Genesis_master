@@ -71,7 +71,8 @@ static inline void wr32(uint32_t a, uint32_t v) { wr16(a, v >> 16); wr16(a + 2, 
 static uint32_t custom_read(uint32_t a, int size)
 {
     uint32_t off = a & 0xFFE;
-    if (off == 0x006 && (det || getenv("NHL_FIXEDHV")) && dbg && m68k_get_reg(NULL, M68K_REG_PPC) >= rd32(dbg + 112)) {
+    if (off == 0x006 && (det || getenv("NHL_FIXEDHV")) && dbg && m68k_get_reg(NULL, M68K_REG_PPC) >= rd32(dbg + 112) &&
+        m68k_get_reg(NULL, M68K_REG_PPC) < rd32(dbg + 168)) {
         /* the game's reads (its "random" numbers): the same every run and every build, from
            the frame and the read's number in it (our own timing loops read the beam) */
         static uint32_t reads; static int rframe;
@@ -655,8 +656,24 @@ static uint32_t io_read(uint32_t a, int size)
 
 static int is_io(uint32_t a) { a &= 0xFFFFFF; return (a >= 0xBF0000 && a < 0xC00000) || (a >= 0xDFF000 && a < 0xE00000); }
 
+/* NHL_CHIPWAIT=n: n more cycles for each CPU access to a chip memory hunk or a custom register
+   (the chip bus is slow, slower still while the blitter runs: so a change that writes less to
+   chip memory shows in the renderer's cycles as on the Amiga) */
+extern int m68ki_remaining_cycles;
+static uint32_t chip_lo[8], chip_hi[8]; static int nchip, chipwait = -1;
+static inline void chip_access(uint32_t a)
+{
+    if (chipwait < 0) chipwait = getenv("NHL_CHIPWAIT") ? atoi(getenv("NHL_CHIPWAIT")) : 0;
+    if (!chipwait || in_copper || in_blit) return;
+    a &= 0xFFFFFF;
+    int c = a >= 0xDFF000 && a < 0xE00000;
+    for (int i = 0; i < nchip && !c; i++) c = a >= chip_lo[i] && a < chip_hi[i];
+    if (c) m68ki_remaining_cycles -= chipwait;   /* (as the core's own USE_CYCLES) */
+}
+
 unsigned int m68k_read_memory_8(unsigned int a)
 {
+    chip_access(a);
     if (is_io(a)) {
         uint32_t aa = a & 0xFFFFFF;
         if (aa >= 0xDFF000) { uint32_t v = io_read(aa & ~1, 2); return (aa & 1) ? v & 0xFF : (v >> 8) & 0xFF; }
@@ -664,14 +681,14 @@ unsigned int m68k_read_memory_8(unsigned int a)
     }
     return rd8(a);
 }
-unsigned int m68k_read_memory_16(unsigned int a) { if (is_io(a)) return io_read(a & 0xFFFFFF, 2) & 0xFFFF; return rd16(a); }
-unsigned int m68k_read_memory_32(unsigned int a) { if (is_io(a)) return (io_read(a & 0xFFFFFF, 2) << 16) | io_read((a + 2) & 0xFFFFFF, 2); return rd32(a); }
+unsigned int m68k_read_memory_16(unsigned int a) { chip_access(a); if (is_io(a)) return io_read(a & 0xFFFFFF, 2) & 0xFFFF; return rd16(a); }
+unsigned int m68k_read_memory_32(unsigned int a) { chip_access(a); if (is_io(a)) return (io_read(a & 0xFFFFFF, 2) << 16) | io_read((a + 2) & 0xFFFFFF, 2); return rd32(a); }
 unsigned int m68k_read_disassembler_8(unsigned int a) { return rd8(a); }
 unsigned int m68k_read_disassembler_16(unsigned int a) { return rd16(a); }
 unsigned int m68k_read_disassembler_32(unsigned int a) { return rd32(a); }
-void m68k_write_memory_8(unsigned int a, unsigned int v) { if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); }
-void m68k_write_memory_16(unsigned int a, unsigned int v) { if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); }
-void m68k_write_memory_32(unsigned int a, unsigned int v) { if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); }
+void m68k_write_memory_8(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); }
+void m68k_write_memory_16(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); }
+void m68k_write_memory_32(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); }
 
 /* Run n cycles in slices, raising the blitter interrupt when a blit's time is up. */
 static int run_cycles(int n)
@@ -732,6 +749,9 @@ static uint32_t load_hunks(const char *path)
     for (int i = 0; i < nh; i++) {
         uint32_t sz = (be32(p) & 0x3FFFFFFF) * 4;
         base[i] = addr;
+        if ((be32(p) & 0xC0000000) == 0x40000000 && nchip < 8) {     /* MEMF_CHIP */
+            chip_lo[nchip] = addr; chip_hi[nchip] = addr + sz; nchip++;
+        }
         if (getenv("NHL_AUDLOG")) fprintf(stderr, "hunk %d at %06x\n", i, addr);
         addr = (addr + sz + 0x1000) & ~0xFFF;
         p += 4;
