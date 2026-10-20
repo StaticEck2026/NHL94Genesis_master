@@ -107,6 +107,8 @@ hal_debug
 	dc.l	Spritetiles,SPRTSIZE		;+156: the players' sprite tiles (planar, not in VRAM)
 	dc.l	vdp_tsrc			;+164: each VRAM tile's DMA source
 	dc.l	game_code_end			;+168: the converted game's code ends
+	dc.b	'SCX1'				;+172: the sprite image ring's second part: its
+	dc.l	rd_scx				;address, then bytes (the harness may give one)
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
 ;	the game frame timer and jumps to the cartridge's cold start.

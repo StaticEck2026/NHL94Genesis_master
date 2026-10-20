@@ -42,8 +42,10 @@ NPLANES		equ	6
 CHPITCH		equ	384			;chunky fallback: bytes per line
 CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
-SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
-SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
+SCARENA		equ	$40000			;sprite image cache: bytes of images (the ring's first part;
+						;a second, rd_scx, in the chip memory left at the start)
+SCXMAX		equ	$40000			;(the second part at most)
+SCSLOTS		equ	1024			;its table entries (a power of 2, in pairs): key, ring position,
 						;frame built, image, its box (rd_sc_box), the key's
 						;second long (a data address key: rd_sc_get), 32 bytes
 
@@ -119,6 +121,10 @@ rd_bnl		ds.w	1			;lines from there (0: none),
 rd_bp0		ds.w	1			;first pixel and last pixel across
 rd_bp1		ds.w	1
 rd_scpos	ds.l	1			;bytes written to its ring so far
+rd_scoff	ds.l	1			;the ring's place there (rd_scpos less its laps)
+rd_scsize	ds.l	1			;its bytes: SCARENA + rd_scxsz
+rd_scx		ds.l	1			;its second part (set before rd_init: os.asm, the harness)
+rd_scxsz	ds.l	1			;and its bytes (0: none)
 rd_scmin	ds.l	2			;its oldest image used in this frame, in the one before
 rd_tchg		ds.l	2048			;frame each tile was last converted in
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
@@ -280,6 +286,9 @@ rd_init
 	tst.b	(rd_sprnat).l
 	bne.s	.sn
 	st	(rd_sprnat).l
+	move.l	(rd_scxsz).l,d0			;(the sprite image ring's size: once)
+	addi.l	#SCARENA,d0
+	move.l	d0,(rd_scsize).l
 	lea	(Spritetiles).l,a0
 	move.l	#SPRTSIZE/4,d7
 	lea	(rd_ptab).l,a5
@@ -4637,7 +4646,7 @@ rd_sc_get
 	bne	.nomemo
 	move.l	(rd_scpos).l,d1
 	sub.l	12(a1),d1
-	cmpi.l	#SCARENA,d1
+	cmp.l	(rd_scsize).l,d1
 	bhi	.nomemo
 	movea.l	8(a1),a2
 	move.l	24(a1),d7
@@ -4683,18 +4692,32 @@ rd_sc_get
 	andi.l	#SCSLOTS-1,d2
 	lsl.l	#5,d2
 	lea	(rd_sctab).l,a4
-	adda.l	d2,a4
 	; the image size, image and mask
 	move.w	(rd_wb).l,d7
 	mulu.w	(rd_sch).l,d7
 	mulu.w	#NPLANES*8,d7			;bytes of the image (and of the mask)
-	cmp.l	(a4),d0
-	bne.s	.bkey
-	cmp.l	24(a4),d5
-	bne.s	.bkey
+	; its entry or the other of its pair; in neither: the one of the two built longer ago
+	; is written over
+	cmp.l	(a4,d2.l),d0
+	bne.s	.w2
+	cmp.l	24(a4,d2.l),d5
+	beq.s	.kf
+.w2	eori.w	#32,d2
+	cmp.l	(a4,d2.l),d0
+	bne.s	.wv
+	cmp.l	24(a4,d2.l),d5
+	beq.s	.kf
+.wv	move.l	4(a4,d2.l),d1
+	eori.w	#32,d2
+	cmp.l	4(a4,d2.l),d1
+	bhs.s	.wo
+	eori.w	#32,d2
+.wo	adda.l	d2,a4
+	bra.s	.bkey
+.kf	adda.l	d2,a4
 	move.l	(rd_scpos).l,d1
 	sub.l	4(a4),d1			;ring written since
-	cmpi.l	#SCARENA,d1
+	cmp.l	(rd_scsize).l,d1
 	bhi.s	.bring
 	tst.l	d5
 	bne.s	.found				;(its data cannot have changed)
@@ -4769,22 +4792,35 @@ rd_sc_get
 .x	movem.l	(sp)+,d4-d6/a0/a4
 	rts
 
-;	Room in the sprite image ring (rd_scarena) for d1 bytes: d2 = its place (the bytes written
-;	to the ring before it), a2 = its address. A blit queued in this frame or the one before may
-;	still read an image of the ring this writes over (from the lap before): if one was used
-;	there, they are let finish. Uses d3, d4.
+;	Room in the sprite image ring for d1 bytes: d2 = its place (the bytes written to the ring
+;	before it), a2 = its address. The ring is rd_scarena, then rd_scx if there is one; an image
+;	is not split between them (what is left of a part is passed over). A blit queued in this
+;	frame or the one before may still read an image of the ring this writes over (from the lap
+;	before): if one was used there, they are let finish. Uses d3, d4.
 rd_sc_alloc
 	move.l	(rd_scpos).l,d2
-	move.l	d2,d3
-	andi.l	#SCARENA-1,d3
-	add.l	d1,d3
+	move.l	(rd_scoff).l,d3
+	move.l	d3,d4
+	add.l	d1,d4				;(its end)
 	cmpi.l	#SCARENA,d3
+	bhs.s	.p2
+	cmpi.l	#SCARENA,d4
 	bls.s	.fit
-	andi.l	#-SCARENA,d2			;(the rest of this lap is left)
-	addi.l	#SCARENA,d2
-.fit	move.l	d2,d3
+	move.l	#SCARENA,d4			;(the rest of the first part is left)
+	bra.s	.skip
+.p2	cmp.l	(rd_scsize).l,d4
+	bls.s	.fit
+	move.l	(rd_scsize).l,d4		;(the rest of the second part is left)
+.skip	sub.l	d3,d4
+	add.l	d4,d2
+	add.l	d4,d3
+	cmp.l	(rd_scsize).l,d3
+	blo.s	.fit
+	moveq	#0,d3				;(a lap)
+.fit	move.l	d3,-(sp)
+	move.l	d2,d3
 	add.l	d1,d3
-	subi.l	#SCARENA,d3			;the ring below here is written over
+	sub.l	(rd_scsize).l,d3		;the ring below here is written over
 	move.l	(rd_scmin).l,d4
 	cmp.l	(rd_scmin+4).l,d4
 	ble.s	.m
@@ -4800,10 +4836,17 @@ rd_sc_alloc
 .nl	bsr	rd_waitblit
 	move.l	#$7FFFFFFF,(rd_scmin).l
 	move.l	#$7FFFFFFF,(rd_scmin+4).l
-.free	move.l	d2,d3
-	andi.l	#SCARENA-1,d3
+.free	move.l	(sp)+,d3			;its address
+	cmpi.l	#SCARENA,d3
+	bhs.s	.a2
 	lea	(rd_scarena).l,a2
 	adda.l	d3,a2
+	bra.s	.a
+.a2	movea.l	(rd_scx).l,a2
+	suba.l	#SCARENA,a2
+	adda.l	d3,a2
+.a	add.l	d1,d3
+	move.l	d3,(rd_scoff).l
 	move.l	d2,d3
 	add.l	d1,d3
 	move.l	d3,(rd_scpos).l
@@ -5085,14 +5128,24 @@ rd_obj_blit
 	andi.l	#OBJSLOTS-1,d0
 	lsl.l	#5,d0
 	lea	(rd_octab).l,a2
-	adda.l	d0,a2
-	move.l	#$10000,d0			;(an entry in use)
-	move.w	d2,d0
-	cmp.l	(a2),d0
-	bne.s	.miss
+	move.l	#$10000,d1			;(an entry in use)
+	move.w	d2,d1
+	cmp.l	(a2,d0.l),d1			;its entry or the other of its pair
+	beq.s	.k
+	eori.w	#32,d0
+	cmp.l	(a2,d0.l),d1
+	beq.s	.k
+	move.l	8(a2,d0.l),d1			;in neither: the one of the two built longer ago is
+	eori.w	#32,d0				;written over
+	cmp.l	8(a2,d0.l),d1
+	bhs.s	.v
+	eori.w	#32,d0
+.v	adda.l	d0,a2
+	bra.s	.miss
+.k	adda.l	d0,a2
 	move.l	(rd_scpos).l,d1
 	sub.l	8(a2),d1
-	cmpi.l	#SCARENA,d1
+	cmp.l	(rd_scsize).l,d1
 	bls.s	.hit
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+108).l		;(statistics: object images built again: the ring

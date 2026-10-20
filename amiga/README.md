@@ -11,7 +11,8 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - A 68020 or better. The renderer uses 68020 instructions.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.8 MB of any memory (fast
   RAM where there is some: its code, its data and the Genesis RAM window) and about 1.5 MB of
-  chip RAM, so it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
+  chip RAM (and up to 256 KB more for sprite images if it is free: fewer are built again), so
+  it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
   (each part's compressed bytes, then the next), so that is about the most it takes. Kickstart
   leaves nearly all of 2 MB of fast RAM free, so it should fit there (not tested: the tests here
   use the AROS ROM, which keeps some 0.7 MB of the fast RAM for itself, so with it the game needs
@@ -220,7 +221,12 @@ The hardware layer:
   whose tiles a DMA sent from consecutive addresses of the program (the players' animation
   frames: the VDP layer notes each tile's source address) is found by that address, size,
   flips and palette, so a frame sent again, or the same frame on another player of the team,
-  is not built again; other images are used until a tile of theirs changes. Changed tiles are
+  is not built again; other images are used until a tile of theirs changes. The images go
+  round a ring of chip RAM: 256 KB in the program, and a second part of up to 256 KB more
+  taken at the start from the chip memory left (32 KB is left over); an image is built again
+  once the ring has come round to it. The table of the images, and the objects' (below),
+  keep a key in either entry of a pair (the one built longer ago is written over), so two
+  keys of the same place both stay. Changed tiles are
   converted to planar form at once only if plane A, B or the window uses them; the others
   (sprites' tiles) when an image of them is built, which the cache mostly spares. Only the box
   of an image's pixels is
@@ -293,7 +299,9 @@ of line 0), so it never cuts a display list short. The test harness runs the cop
 `NHL_COPSTRESS=n` restarts it at one in n of its instructions on average, as a vertical
 blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges n more cycles for each
 CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
-the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does. `NHL_BLITFRAMES=file` writes a line for each frame shown: the game frame and the
+the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does. The
+harness gives the sprite image ring a second part as the launcher would, 256 KB
+(`NHL_SCX=bytes`, 0 for none). `NHL_BLITFRAMES=file` writes a line for each frame shown: the game frame and the
 blitter's cycles and blits since the frame before by kind (copies A to D, cookie cuts, D only,
 other), with NHL_DETERM the same game every build. `NHL_BLITLOG=file` writes every blit: the
 frames shown so far, the game frame, BLTCON0, BLTCON1, the first and last word masks, the A, B,

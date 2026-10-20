@@ -236,11 +236,13 @@ static int det_int_ack(int level)
 static struct { char key[48]; long long time, words, n; } bk[64];
 static int bkn;
 static unsigned bk_frames0;
+static uint32_t scx_lo, scx_hi;          /* the ring's second part (NHL_SCX) */
 static char bk_region(uint32_t a)
 {
     static const char names[] = "SBMcCOFhLH";     /* in their order in the chip section */
     uint32_t st[10];
     if (!a) return '-';
+    if (a >= scx_lo && a < scx_hi) return 'c';
     st[0] = rd32(dbg + 80); st[1] = rd32(dbg + 36); st[2] = rd32(dbg + 84); st[3] = rd32(dbg + 100);
     st[4] = rd32(dbg + 88); st[5] = rd32(dbg + 60); st[6] = rd32(dbg + 92); st[7] = rd32(dbg + 104);
     st[8] = rd32(dbg + 64); st[9] = rd32(dbg + 96);
@@ -907,6 +909,17 @@ int main(int argc, char **argv)
     if (rd32(code + 4) != 0x4E483934) { fprintf(stderr, "no NH94 header\n"); return 1; }
     uint32_t entry = rd32(code + 8);
     dbg = rd32(code + 12);
+    if (rd32(dbg + 172) == 0x53435831) {  /* 'SCX1': the sprite image ring's second part, as the
+                                             launcher takes it from the chip memory left
+                                             (NHL_SCX=bytes, default 256K; 0: none) */
+        uint32_t sz = getenv("NHL_SCX") ? strtoul(getenv("NHL_SCX"), NULL, 0) : 0x40000;
+        if (sz && nchip < 8) {
+            scx_lo = 0xE00000; scx_hi = scx_lo + sz;
+            chip_lo[nchip] = scx_lo; chip_hi[nchip] = scx_hi; nchip++;
+            wr32(rd32(dbg + 176), scx_lo);
+            wr32(rd32(dbg + 176) + 4, sz);
+        }
+    }
     if (getenv("NHL_DETERM")) {
         det = 1;
         det_blit = getenv("NHL_DETBLIT") != NULL;

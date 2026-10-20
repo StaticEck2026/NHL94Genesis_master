@@ -11,6 +11,7 @@ EXEC_Enable		equ	-126
 EXEC_AllocMem		equ	-198
 EXEC_FreeMem		equ	-210
 EXEC_AllocAbs		equ	-204
+EXEC_AvailMem		equ	-216
 EXEC_OpenLibrary	equ	-552
 EXEC_CloseLibrary	equ	-414
 EXEC_Supervisor		equ	-30
@@ -29,7 +30,9 @@ DOS_Write		equ	-48
 DOS_Output		equ	-60
 CIA_AbleICR		equ	-18
 MEMF_PUBLIC		equ	1
+MEMF_CHIP		equ	2
 MEMF_FAST		equ	4
+MEMF_LARGEST		equ	$20000
 CACRF_EnableD		equ	$100
 
 	section	game,code
@@ -114,7 +117,25 @@ _start
 	bsr	ram_relocate
 	jsr	EXEC_CacheClearU(a6)		;the code has changed
 	bsr	os_load_sram
-	; ciab.resource: which CIA-B interrupts the OS has on
+	; the sprite image ring's second part (rd_sc_alloc): in the chip memory left, up to
+	; SCXMAX, 32K left over (none if under 32K would be)
+	move.l	#MEMF_CHIP|MEMF_LARGEST,d1
+	jsr	EXEC_AvailMem(a6)
+	subi.l	#$8000,d0
+	cmpi.l	#SCXMAX,d0
+	ble.s	.xs
+	move.l	#SCXMAX,d0
+.xs	andi.l	#-$4000,d0
+	cmpi.l	#$8000,d0
+	blt.s	.nx
+	move.l	d0,d2
+	moveq	#MEMF_CHIP,d1
+	jsr	EXEC_AllocMem(a6)
+	tst.l	d0
+	beq.s	.nx
+	move.l	d0,(rd_scx).l
+	move.l	d2,(rd_scxsz).l
+.nx	; ciab.resource: which CIA-B interrupts the OS has on
 	lea	(.cianame,pc),a1
 	jsr	EXEC_OpenResource(a6)
 	move.l	d0,(os_ciab).l
@@ -204,7 +225,11 @@ _start
 	movea.l	(os_backup).l,a1
 	move.l	(os_backsz).l,d0
 	jsr	EXEC_FreeMem(a6)
-	moveq	#0,d7
+	move.l	(rd_scxsz).l,d0
+	beq.s	.nxf
+	movea.l	(rd_scx).l,a1
+	jsr	EXEC_FreeMem(a6)
+.nxf	moveq	#0,d7
 	bra	.close
 .error	bsr	ezrequest
 .fail	moveq	#20,d7
