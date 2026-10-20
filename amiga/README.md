@@ -74,6 +74,10 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
+In a game of one player (Players: One - Home or One - Away) a pad in either port plays, so a
+lone pad also works in the mouse port; a mouse there is left out (its buttons too). The menus
+take either pad as ever.
+
 `Esc` quits to the Workbench and writes the save file. `F6` switches between as many frames a
 second as there is time for (up to the display's 50 or 60, the start) and a steady 25 or 30.
 `F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model

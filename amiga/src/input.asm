@@ -1,6 +1,7 @@
 ;	Controls: Amiga joysticks, CD32 pads and the keyboard, read as two Genesis 3 button pads.
 ;
-;	Player 1: joystick port 2. Player 2: joystick port 1 (the mouse port).
+;	Player 1: joystick port 2. Player 2: joystick port 1 (the mouse port). In a game of one
+;	player a pad in port 1 plays for player 1 too (the game reads only pad 1 then).
 ;	  fire / CD32 red      C    (shoot, check)
 ;	  2nd fire / CD32 blue B    (pass, switch player)
 ;	  CD32 green / yellow  A
@@ -143,11 +144,19 @@ hal_readpads
 	bsr	keys_pad
 	or.b	d0,d4
 	move.b	d4,(hal_padstate+1).l
-	; player 2: port 1
+	; player 2: port 1 (a mouse there gives no directions: its counters take any value, a
+	; joystick's only bits 0, 1, 8 and 9)
+	moveq	#0,d4
 	move.w	(CUSTOM+JOY0DAT).l,d0
-	bsr	joy_dirs
+	sf	(hal_p1mouse).l
+	move.w	d0,d1
+	andi.w	#$FCFC,d1
+	beq.s	.p1j
+	st	(hal_p1mouse).l
+	bra.s	.p1b
+.p1j	bsr	joy_dirs
 	move.b	d0,d4
-	moveq	#6,d2
+.p1b	moveq	#6,d2
 	moveq	#10,d3
 	bsr	joy_buttons
 	or.b	d0,d4
@@ -155,6 +164,14 @@ hal_readpads
 	bsr	keys_pad
 	or.b	d0,d4
 	move.b	d4,(hal_padstate).l
+	; while the game gives pad 2 no team (a game of one player) port 1's pad is player 1's too,
+	; so a lone pad works in either port (not a mouse's buttons)
+	tst.w	(cont2team).l
+	bne.s	.two
+	tst.b	(hal_p1mouse).l
+	bne.s	.two
+	or.b	d4,(hal_padstate+1).l
+.two
 	IFD	BENCH
 	tst.b	(bench_start).l
 	beq.s	.nbs
@@ -448,10 +465,11 @@ joy_buttons
 	bclr	d2,$200(a0)			;fire pin input again
 	move.w	#$FF00,POTGO-POTGOR(a1)		;both second buttons as inputs, pulled up
 	moveq	#0,d0
-	; a CD32 pad shifts out 1 then 0 as its last bits (bits 1, 0 here: 0 1 read as low)
+	; after its 7 buttons a CD32 pad shifts out a 1 then a 0 (a bit is set here when the line
+	; reads low: bit 1 clear, bit 0 set); a joystick's pin 9 gives all 0 or all 1
 	move.b	d6,d1
 	andi.b	#3,d1
-	cmpi.b	#2,d1
+	cmpi.b	#1,d1
 	bne	.joy
 	btst	#8,d6				;blue
 	beq	.c1
@@ -502,6 +520,8 @@ keys_p2	dc.b	0,0,0,0,$51,$52,$50,$53		;F2, F3, F1, F4
 
 	section	bss,bss
 hal_keys	ds.b	128
+hal_p1mouse	ds.b	1			;port 1 has a mouse (hal_readpads)
+	even
 
 hal_quit	ds.b	1
 hal_fpsshow	ds.b	1
