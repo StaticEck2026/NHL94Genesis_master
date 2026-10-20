@@ -156,7 +156,10 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   sprite table, notes the range and the frame (with its flips and palette); the notes go with
   the table when it is sent, and the renderer draws each such object as one image, built once
   from the native tiles (its sprites in their order, at any pixel offsets), kept in the sprite
-  image ring and found by its frame: one blit an object instead of one a sprite.
+  image ring and found by its frame: one blit an object instead of one a sprite. An object
+  drawn the same in the frame before (the same frame, place, scroll and image in its place of
+  the sprite list) takes that blit, its box and its cover again instead of being placed and cut
+  anew (about half of them in play).
 - Z80 bus polling, pad port reads and wait loops are rewritten. A wait loop calls `hal_idle`,
   which runs the renderer while the game waits for its next frame.
 - vasm syntax: macros, local labels, `incbin` paths and other small differences.
@@ -191,7 +194,8 @@ The hardware layer:
   ends the listing for that frame: all is restored and drawn as it comes. Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
-  of 8 lines, a run the same in the bands below one rectangle; made again when it changes). On
+  of 8 lines, a run the same in the bands below one rectangle; made again when a cell adds a
+  column). On
   the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a

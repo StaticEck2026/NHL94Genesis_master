@@ -2033,20 +2033,19 @@ rd_mark_u
 	moveq	#DROWS-1,d3
 .4	sub.w	d1,d3
 	bmi	.x
+	move.b	d1,(rd_opbox).l			;(the blit's box: rd_cut_emit)
+	move.b	d3,(rd_opbox+1).l
+	move.b	d0,(rd_opbox+2).l
+	move.b	d2,(rd_opbox+3).l
 	tst.b	(rd_stage).l
-	bne.s	.st
+	bne.s	.st				;(listing: marked with the list)
 	ext.l	d0				;(a bit field offset is a long)
 	movea.l	(rd_dmap).l,a0
 	lea	(a0,d1.w*4),a0
 .r	bfset	(a0){d0:d2}
 	addq.l	#4,a0
 	dbf	d3,.r
-	rts
-.st	move.b	d1,(rd_opbox).l			;(listing: the blit's box, rd_cut_emit)
-	move.b	d3,(rd_opbox+1).l
-	move.b	d0,(rd_opbox+2).l
-	move.b	d2,(rd_opbox+3).l
-	rts
+.st	rts
 .x	move.b	#$FF,(rd_opbox).l		;(none)
 	rts
 
@@ -2863,7 +2862,6 @@ rd_ovl_redraw
 
 ;	Cell d0 at (d1, d2) into the overlay.
 rd_ovl_cell
-	st	(rd_ovlrst).l			;(its rectangles to be made again)
 	addq.l	#1,(rd_ovlgen).l		;(the blits of it before are not the same)
 	; rows table: this cell's 8 lines extend its rows' extents
 	lea	(rd_ovlrows).l,a5
@@ -2890,7 +2888,10 @@ rd_ovl_cell
 	cmpi.w	#47,d6
 	bhi.s	.f1
 	add.w	d5,d6
+	tst.b	(a6,d6.w)
+	bne.s	.f1
 	st	(a6,d6.w)
+	st	(rd_ovlrst).l			;(a new column: the rectangles made again)
 .f1	move.w	d1,d6
 	addi.w	#15,d6
 	asr.w	#3,d6
@@ -2898,7 +2899,10 @@ rd_ovl_cell
 	cmpi.w	#47,d6
 	bhi.s	.f2
 	add.w	d5,d6
+	tst.b	(a6,d6.w)
+	bne.s	.f2
 	st	(a6,d6.w)
+	st	(rd_ovlrst).l
 .f2
 	cmp.w	(a5,d3.w*4),d1
 	bge	.nmin
@@ -3426,20 +3430,12 @@ rd_buildA
 	adda.l	(rd_abase).l,a0
 	lea	(rd_shA).l,a1
 	lea	(rd_chgA).l,a2
-	move.w	d6,d0
-	mulu.w	d7,d0
-	lsr.w	#1,d0
-	subq.w	#1,d0				;longs - 1
-	moveq	#0,d2				;long index
+	move.w	d6,d4
+	mulu.w	d7,d4
+	lsr.w	#1,d4
+	subq.w	#1,d4				;longs - 1
 	moveq	#0,d3				;listed
-.ca	move.l	(a0)+,d1
-	cmp.l	(a1),d1
-	beq	.ca1
-	move.l	d1,(a1)
-	bsr	.note
-.ca1	addq.l	#4,a1
-	addq.w	#1,d2
-	dbf	d0,.ca
+	bsr	.cmp
 	move.w	d3,(rd_nchgA).l
 .caw	movem.l	d2-d4,-(sp)
 	move.l	(rd_wbase).l,d0
@@ -3457,19 +3453,11 @@ rd_buildA
 	adda.l	(rd_wbase).l,a0
 	lea	(rd_shW).l,a1
 	lea	(rd_chgW).l,a2
-	move.w	(rd_wwidth).l,d0
-	lsl.w	#4,d0				;* 32 rows / 2
-	subq.w	#1,d0
-	moveq	#0,d2
+	move.w	(rd_wwidth).l,d4
+	lsl.w	#4,d4				;* 32 rows / 2
+	subq.w	#1,d4
 	moveq	#0,d3
-.cw	move.l	(a0)+,d1
-	cmp.l	(a1),d1
-	beq	.cw1
-	move.l	d1,(a1)
-	bsr	.note
-.cw1	addq.l	#4,a1
-	addq.w	#1,d2
-	dbf	d0,.cw
+	bsr	.cmp
 	move.w	d3,(rd_nchgW).l
 .cww	st	(rd_ntsync).l			;(the copies are in step from here on)
 	; tiles of these cells converted again?
@@ -3492,6 +3480,20 @@ rd_buildA
 	bne	.full
 	bsr	rd_ovl_cells_changed
 	bra	.keep
+.cmp	; the name table a0 against its copy a1, d4 + 1 longs: changed longs listed (.note) and
+	; copied. Uses d0-d1, d4, a0-a1.
+	move.l	a0,(rd_tmp+16).l
+.cs	cmpm.l	(a0)+,(a1)+
+	dbne	d4,.cs
+	beq.s	.cx
+	move.l	-4(a0),-4(a1)
+	move.l	a0,d2
+	sub.l	(rd_tmp+16).l,d2
+	lsr.l	#2,d2
+	subq.w	#1,d2				;(the long's index)
+	bsr.s	.note
+	dbf	d4,.cs
+.cx	rts
 .note	; long d2 of a name table changed: list it (d3 = count), or ask for a full redraw
 	IFD	VERIFY
 	tst.b	(rd_ntcur).l
@@ -3850,7 +3852,12 @@ rd_spr_cut
 	move.w	d5,d3
 	tst.w	(rd_pass).l
 	bne.s	.mk
-	movem.l	d0-d3,-(sp)
+	tst.l	(rd_omcap).l
+	beq.s	.cv
+	movea.l	(rd_omcap).l,a0			;(an object's memo: its cover too)
+	movem.w	d0-d3,OMCOV(a0)
+	bset	#1,OMFLG+1(a0)
+.cv	movem.l	d0-d3,-(sp)
 	bsr	rd_cover_u
 	movem.l	(sp)+,d0-d3
 .mk	bsr	rd_mark_u
@@ -4015,7 +4022,28 @@ rd_box_set
 ;	overlay's generation). To the copper (rd_cut_blit), or to the frame's list with its box
 ;	(rd_opbox). Uses d0-d7, a0-a2, a5-a6.
 rd_cut_emit
-	tst.b	(rd_stage).l
+	tst.l	(rd_omcap).l
+	beq.s	.nc
+	move.l	a6,-(sp)			;(an object's memo: the blit, C/D from rd_back)
+	movea.l	(rd_omcap).l,a6
+	clr.l	(rd_omcap).l
+	bset	#0,OMFLG+1(a6)
+	lea	OMREC(a6),a6
+	move.l	a0,d7
+	sub.l	(rd_back).l,d7
+	move.l	d7,(a6)+
+	move.l	a1,(a6)+
+	move.l	a2,(a6)+
+	move.w	d0,(a6)+
+	move.w	d1,(a6)+
+	move.w	d2,(a6)+
+	move.w	d3,(a6)+
+	move.w	d4,(a6)+
+	move.w	d5,(a6)+
+	move.l	d6,(a6)+
+	move.l	(rd_opbox).l,(a6)
+	movea.l	(sp)+,a6
+.nc	tst.b	(rd_stage).l
 	beq	rd_cut_blit
 	move.w	(rd_opn).l,d7
 	cmpi.w	#OPMAX,d7
@@ -4142,11 +4170,14 @@ rd_op_end
 	tst.w	d6
 	ble	.r
 	; the last list's blits by their C/D pointer: the first in each bucket, then the next
-	lea	(rd_ophb).l,a0
-	moveq	#OPHASH/2-1,d0
-.hc	move.l	#-1,(a0)+
-	dbf	d0,.hc
-	lea	(rd_ophb).l,a0
+	lea	(rd_ophb+OPHASH*2).l,a0
+	moveq	#-1,d0
+	moveq	#-1,d1
+	moveq	#-1,d2
+	moveq	#-1,d3
+	moveq	#OPHASH/8-1,d5
+.hc	movem.l	d0-d3,-(a0)
+	dbf	d5,.hc
 	lea	(rd_ophn).l,a1
 	move.w	d6,d5
 	subq.w	#1,d5				;(from the last: the buckets in order)
@@ -4164,13 +4195,13 @@ rd_op_end
 	lea	(rd_opkeep).l,a6
 	movea.l	a4,a5
 	move.w	d7,d3
-	bra.s	.me
+	bra	.me
 .m	sf	(a6)
 	OPHASHF	a5,d0,d1
 	move.w	(a0,d0.w*2),d1
 	bra.s	.mf
 .mx	move.w	(a1,d1.w*2),d1			;(the next in the bucket)
-.mf	bmi.s	.mn
+.mf	bmi	.mn
 	cmp.w	d5,d1
 	blt.s	.mx
 	move.w	d1,d0
@@ -4199,6 +4230,8 @@ rd_op_end
 	bne.s	.mx
 	st	(a6)
 	addq.w	#1,d4
+	move.w	d7,(rd_oplk).l			;(the last: d7 - d3 - 1)
+	sub.w	d3,(rd_oplk).l
 	move.b	#$FF,OPREC-4(a2)		;(not restored)
 	move.w	d1,d5
 	addq.w	#1,d5
@@ -4242,9 +4275,11 @@ rd_op_end
 	movem.l	(sp)+,d7/a4
 	lea	OPREC(a4),a4
 .ae	dbf	d7,.a
-	bra.s	.done
+	bra	.done
 	; the blits: new, over what was restored or drawn before them
 .w	lea	(rd_opkeep).l,a3
+	sub.w	(rd_oplk).l,d7			;(after the last one matched: all drawn, .ae)
+	move.w	(rd_oplk).l,d6
 	bra.s	.ee
 .e	moveq	#0,d1
 	move.b	OPREC-4(a4),d1			;its box: row (none: $FF),
@@ -4276,12 +4311,13 @@ rd_op_end
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+100).l
 	ENDC
-	movem.l	d7/a3-a4,-(sp)
+	movem.l	d6-d7/a3-a4,-(sp)
 	movea.l	a4,a1
 	bsr	rd_op_blit
-	movem.l	(sp)+,d7/a3-a4
+	movem.l	(sp)+,d6-d7/a3-a4
 .en	lea	OPREC(a4),a4
-.ee	dbf	d7,.e
+.ee	dbf	d6,.e
+	bra	.ae
 .done	bsr	rd_cq_flush
 	IFD	VERIFY
 	lea	(rd_vmap).l,a0			;(rd_verify: the list's boxes)
@@ -4614,6 +4650,15 @@ rd_sc_box
 OBJMAX		equ	32			;objects in a table
 OBJPC		equ	8			;sprites an object at most
 OBJSLOTS	equ	2048			;object images in the table (a power of 2)
+;	rd_omemo: per place of the sprite list (an object's last sprite), 128 bytes: the frame it was
+;	drawn in, then what it was drawn from and the blit it was (rd_obj_blit)
+OMKEY		equ	4			;key, sprites (words)
+OMSPR		equ	8			;the first sprite's 8 bytes
+OMORG		equ	16			;rd_xorg, rd_brow0, rd_w
+OMPOS		equ	24			;the image (its place in the ring's history)
+OMFLG		equ	28			;bit 0: a blit, bit 1: a cover rectangle
+OMCOV		equ	30			;the cover rectangle (x, y, width, height)
+OMREC		equ	40			;the blit (as listed, C/D from rd_back)
 
 ;	The game's addframe2 (patches.py), the same work in fewer steps: d0/d1 = the object's place
 ;	on the screen, a3 = the object, a5 = the DMA list, a6 = the sprite table, d6 = the link
@@ -4845,8 +4890,78 @@ rd_obj_blit
 	move.l	8(a2),d1			;(the oldest image used in this frame)
 	move.l	d1,(rd_imgpos).l		;(which image: rd_cut_emit)
 	cmp.l	(rd_scmin).l,d1
-	bge.s	.o
+	bge.s	.mo
 	move.l	d1,(rd_scmin).l
+.mo	; drawn the same in the frame before (its place in the list: the same key, sprites, first
+	; sprite, image, scroll and width): that blit again (rd_omemo)
+	move.l	a4,d0
+	subi.l	#rd_sprites,d0
+	lsl.l	#4,d0				;(* 128 / 8)
+	lea	(rd_omemo).l,a0
+	adda.l	d0,a0
+	move.l	(rd_count).l,d0
+	subq.l	#1,d0
+	cmp.l	(a0),d0
+	bne	.mf
+	move.w	(rd_okey).l,d0
+	cmp.w	OMKEY(a0),d0
+	bne	.mf
+	move.w	(rd_on).l,d0
+	cmp.w	OMKEY+2(a0),d0
+	bne	.mf
+	move.l	(a5),d0
+	cmp.l	OMSPR(a0),d0
+	bne	.mf
+	move.l	4(a5),d0
+	cmp.l	OMSPR+4(a0),d0
+	bne	.mf
+	move.l	(rd_xorg).l,d0			;(rd_xorg, rd_brow0)
+	cmp.l	OMORG(a0),d0
+	bne	.mf
+	move.w	(rd_w).l,d0
+	cmp.w	OMORG+4(a0),d0
+	bne	.mf
+	cmp.l	OMPOS(a0),d1
+	bne	.mf
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+104).l		;(statistics: objects as in the frame before)
+	ENDC
+	move.l	(rd_count).l,(a0)
+	btst	#0,OMFLG+1(a0)
+	beq	.yes				;(nothing on the screen)
+	btst	#1,OMFLG+1(a0)
+	beq.s	.mc
+	movem.l	a0,-(sp)
+	movem.w	OMCOV(a0),d0-d3
+	bsr	rd_cover_u
+	movem.l	(sp)+,a0
+.mc	lea	OMREC(a0),a1
+	move.l	OPREC-4(a1),(rd_opbox).l
+	tst.b	(rd_stage).l
+	bne.s	.ml
+	movem.l	a1,-(sp)
+	lea	OPREC-4(a1),a1			;(not listing: its box marked)
+	movea.l	(rd_dmap).l,a2
+	bsr	rd_box_set
+	movem.l	(sp)+,a1
+.ml	movem.w	12(a1),d0-d5
+	move.l	24(a1),d6
+	movea.l	(a1),a0
+	adda.l	(rd_back).l,a0
+	movea.l	8(a1),a2
+	movea.l	4(a1),a1
+	bsr	rd_cut_emit
+	bra	.yes
+.mf	move.l	(rd_count).l,(a0)		;(noted as it is drawn)
+	move.w	(rd_okey).l,OMKEY(a0)
+	move.w	(rd_on).l,OMKEY+2(a0)
+	move.l	(a5),OMSPR(a0)
+	move.l	4(a5),OMSPR+4(a0)
+	move.l	(rd_xorg).l,OMORG(a0)
+	move.w	(rd_w).l,OMORG+4(a0)
+	move.l	d1,OMPOS(a0)
+	clr.w	OMFLG(a0)
+	move.l	a0,(rd_omcap).l
 .o	; placed: the first sprite's place and the image's offset from it
 	move.w	6(a5),d3
 	andi.w	#$1FF,d3
@@ -4888,9 +5003,15 @@ rd_obj_blit
 	mulu.w	#6*8,d0
 	lea	(a2,d0.l),a3			;its mask
 	bsr	rd_spr_cut
-.yes	moveq	#0,d0				;(Z: drawn)
+.yes	clr.l	(rd_omcap).l
+	moveq	#0,d0				;(Z: drawn)
 	rts
-.no	moveq	#1,d0
+.no	move.l	(rd_omcap).l,d0			;(not noted)
+	beq.s	.nn
+	movea.l	d0,a0
+	clr.l	(a0)
+	clr.l	(rd_omcap).l
+.nn	moveq	#1,d0
 	rts
 
 ;	The object's sprites (from a5, rd_on of them) into rd_opc: their tiles' source (native, in a
@@ -7517,7 +7638,7 @@ rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
 rd_dbg_ntw	ds.l	1
 rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	26			;(statistics: see nhlrun)
+rd_dbg_x	ds.l	28			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
@@ -7544,6 +7665,9 @@ rd_vmap		ds.l	DROWS				;(rd_verify: the list's boxes)
 rd_opkeep	ds.b	OPMAX				;per blit: the same as in the last list
 rd_ophb		ds.w	OPHASH				;rd_op_end: the last list's blits by C/D
 rd_ophn		ds.w	OPMAX
+rd_omemo	ds.b	80*128				;(rd_obj_blit)
+rd_omcap	ds.l	1				;the memo being noted, until its blit
+rd_oplk		ds.w	1				;the blits up to the last one matched
 rd_stage	ds.b	1				;listing the frame's blits (rd_op_begin)
 	even
 rd_c0		ds.w	1

@@ -1092,8 +1092,8 @@ int main(int argc, char **argv)
                 rd32(k + 68), rd32(k + 64), rd32(k + 84), rd32(k + 88));
         fprintf(stderr, "renderer: DMA words %u, of them sprite tiles %u\n", rd32(k + 92), rd32(k + 96));
         fprintf(stderr, "renderer: objects drawn as one image %u, their images built %u\n", rd32(k + 100), rd32(k + 104));
-        fprintf(stderr, "renderer: blits listed %u, drawn %u; listings ended half way %u\n", rd32(k + 112), rd32(k + 116),
-                rd32(k + 108));
+        fprintf(stderr, "renderer: blits listed %u, drawn %u; listings ended half way %u; objects as in the frame before %u\n",
+                rd32(k + 112), rd32(k + 116), rd32(k + 108), rd32(k + 120));
         fprintf(stderr, "renderer: sprite images built: not in the table %u, the ring came round %u, a tile converted %u\n",
                 rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
