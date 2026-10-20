@@ -204,8 +204,8 @@ bench_wait
 	lea	(RAMBASE).l,a0			;at each tick, to find where two runs part)
 	moveq	#0,d0
 	IFD	BENCHFULL
-	move.w	#($10000-$100)/4-1,d1		;(BENCHFULL: every long, not the stack's last 256
-.ts	add.l	(a0)+,d0			;bytes)
+	move.w	#($10000-$400)/4-1,d1		;(BENCHFULL: every long, not the stacks at the top)
+.ts	add.l	(a0)+,d0
 	rol.l	#1,d0
 	dbf	d1,.ts
 	ELSE

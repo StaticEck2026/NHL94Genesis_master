@@ -257,12 +257,12 @@ hal_int6
 .nah
 	IFD	BENCH
 	; benchmark builds: a tick that comes while the game runs (not waiting since the last
-	; one) waits for the game's next wait (hal_idle), so the game's course does not depend on
-	; the renderer's timing; BENCHTP ticks on, it runs anyway (a wait loop without hal_idle)
+	; one: a frame that took the renderer more than a vertical blank too) waits for the game's
+	; next wait (hal_idle), so the game's course does not depend on the renderer's timing (the
+	; game never sees two ticks pass at once); BENCHTP ticks on, it runs anyway (a wait loop
+	; without hal_idle)
 	tst.b	(hal_yielding).l		;(the renderer on for the game, which does not wait
 	bne.s	.tp				;for a tick: hal_yield)
-	tst.b	(ctx_cur).l
-	bne.s	.tw
 	tst.b	(hal_idled).l
 	bne.s	.tw
 .tp	addq.b	#1,(hal_tickpend).l
@@ -615,11 +615,7 @@ hal_display_init
 	move.l	#$008A0000,(a1)			;COPJMP2: the blit queue
 	move.l	a0,(CUSTOM+$080).l		;COP1LC
 	move.w	d0,(CUSTOM+$088).l		;COPJMP1
-	IFD	NASTY
-	move.w	#$87E0,(CUSTOM+DMACON).l	;(the blitter before the CPU: a test)
-	ELSE
 	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
-	ENDC
 	rts
 
 ;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the

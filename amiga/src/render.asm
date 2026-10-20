@@ -150,6 +150,8 @@ rd_copgen	ds.l	2*NBUF			;per buffer: rd_colgen, rd_hudgen its copper list's
 						;colours are of
 rd_colours	ds.w	64			;high nibbles of the 24 bit colours ($0RGB)
 rd_colourslo	ds.w	64			;and the low nibbles
+rd_pall		ds.l	256			;a CRAM word's low byte (green, red), its high (blue):
+rd_palh		ds.l	16			;their part of rd_colours (high word), rd_colourslo (low)
 rd_mode		ds.w	1
 rd_clipx0	ds.w	1
 rd_clipx1	ds.w	1
@@ -181,6 +183,25 @@ rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low
 rd_init
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	#rd_bmrc,(rd_bmrp).l		;(rd_bmrd_age)
+	; the colour tables (rd_palette): a byte's part, the others' 0 (level 0: nibbles 0)
+	lea	(rd_pall).l,a0
+	moveq	#0,d1
+.pl	bsr	rd_gen2amiga
+	swap	d2
+	move.w	d4,d2
+	move.l	d2,(a0)+
+	addq.w	#1,d1
+	cmpi.w	#256,d1
+	blo.s	.pl
+	lea	(rd_palh).l,a0
+	moveq	#0,d1
+.ph	bsr	rd_gen2amiga
+	swap	d2
+	move.w	d4,d2
+	move.l	d2,(a0)+
+	addi.w	#$100,d1
+	cmpi.w	#$1000,d1
+	blo.s	.ph
 	; plane tables: pixel pair b (left pixel in the high nibble), bit p of each pixel goes to
 	; plane byte p (p0 is the high byte of the long); left pixel bit 1, right pixel bit 0
 	lea	(rd_ptab).l,a0
@@ -2101,6 +2122,8 @@ rd_bpend_run
 	cmp.w	d2,d1
 	bhi.s	.v
 	sf	d7
+	tst.w	d6
+	beq	.rd				;(none now, and no more this frame)
 .v	clr.l	(rd_rsel).l			;(the row's cells drawn now: rd_rowB)
 	clr.l	(rd_rsel+4).l
 	moveq	#0,d4				;half of the row (columns 0-31, 32-63)
@@ -2117,14 +2140,15 @@ rd_bpend_run
 	move.l	d0,d1
 	lea	(rd_bpcn).l,a1
 	and.l	(a1,d4.w*4),d1			;within 16 too: now
-.cb	tst.l	d0
+.cb	tst.w	d6
+	bne.s	.cc
+	and.l	d1,d0				;(no more this frame: those now only)
+.cc	tst.l	d0
 	beq	.hs
 	bfffo	d0{0:0},d2
 	bfclr	d0{d2:1}
 	bftst	d1{d2:1}
 	bne.s	.do
-	tst.w	d6
-	beq.s	.cb				;(no more this frame)
 	subq.w	#1,d6
 .do	bfset	d3{d2:1}
 	subq.w	#1,(rd_bpn).l
@@ -2996,23 +3020,37 @@ rd_cover_u
 	asr.w	#3,d3
 	sub.w	d0,d2
 	addq.w	#1,d2				;cells across (at most 40)
-	ext.l	d0				;(a bit field offset is a long)
 	lea	(rd_cover).l,a0
 	lea	(a0,d1.w*8),a0			;first row
 	sub.w	d1,d3				;rows - 1
-.r	cmpi.w	#32,d2
-	bgt.s	.wide
-	bfset	(a0){d0:d2}			;(a width of 32 is coded as 0)
-	bra.s	.n
-.wide	bfset	(a0){d0:0}
-	moveq	#32,d1
-	add.l	d1,d0
-	sub.w	d1,d2
-	bfset	(a0){d0:d2}
-	sub.l	d1,d0
-	add.w	d1,d2
-.n	addq.l	#8,a0
-	dbf	d3,.r
+	; the row's bits as masks of its two longs, ORed into each row (a bit field in a register:
+	; its offset taken mod 32, a width of 32 coded as 0)
+	move.w	d0,d1
+	add.w	d2,d1				;the end (exclusive)
+	cmpi.w	#32,d1
+	bhi.s	.r2
+	moveq	#0,d1
+	bfset	d1{d0:d2}			;all in the first long
+.r1	or.l	d1,(a0)
+	addq.l	#8,a0
+	dbf	d3,.r1
+	rts
+.r2	cmpi.w	#32,d0
+	blo.s	.both
+	addq.l	#4,a0				;all in the second
+	moveq	#0,d1
+	bfset	d1{d0:d2}
+	bra.s	.r1
+.both	moveq	#-32,d2
+	add.w	d1,d2				;bits in the second long
+	moveq	#0,d1
+	bfset	d1{0:d2}
+	move.l	d1,d2
+	moveq	#-1,d1
+	lsr.l	d0,d1				;the first long's from the first bit
+.rb	or.l	d1,(a0)+
+	or.l	d2,(a0)+
+	dbf	d3,.rb
 .x	rts
 
 ;	------------------------------------------------------------------------------------------
@@ -8284,15 +8322,24 @@ rd_palette
 .new	move.l	d0,(rd_palgen).l
 	addq.l	#1,(rd_colgen).l
 	move.l	d1,(rd_palkey).l
+	movem.l	a3-a4,-(sp)
 	lea	(vdp_cram).l,a0
 	lea	(rd_colours).l,a1
 	lea	(rd_colourslo).l,a2
+	lea	(rd_palh).l,a3
+	lea	(rd_pall).l,a4
 	moveq	#63,d0
-.c	move.w	(a0)+,d1
-	bsr	rd_gen2amiga
-	move.w	d2,(a1)+
-	move.w	d4,(a2)+
+	moveq	#0,d1
+.c	move.b	(a0)+,d1			;blue
+	andi.b	#$0E,d1
+	move.l	(a3,d1.w*4),d2
+	move.b	(a0)+,d1			;green, red
+	or.l	(a4,d1.w*4),d2
+	move.w	d2,(a2)+			;the low nibbles
+	swap	d2
+	move.w	d2,(a1)+			;the high
 	dbf	d0,.c
+	movem.l	(sp)+,a3-a4
 	; colour 0 of each palette line is the backdrop colour
 	moveq	#0,d0
 	move.b	(vdp_regs+7).l,d0
@@ -8649,20 +8696,20 @@ rd_show
 	lsl.w	#5,d0
 	ori.w	#$0C00,d0
 	move.w	d0,(a0)+
-	move.w	#$180,d1
+	move.l	#$01800000,d1			;(a move as a long: one write to chip RAM)
 	moveq	#31,d2
-.col	move.w	d1,(a0)+
-	move.w	(a1)+,(a0)+
-	addq.w	#2,d1
+.col	move.w	(a1)+,d1
+	move.l	d1,(a0)+
+	addi.l	#$20000,d1
 	dbf	d2,.col
 	move.w	#$106,(a0)+			;BPLCON3: the same bank, LOCT
 	ori.w	#$0200,d0
 	move.w	d0,(a0)+
-	move.w	#$180,d1
+	move.l	#$01800000,d1
 	moveq	#31,d2
-.lo	move.w	d1,(a0)+
-	move.w	(a2)+,(a0)+
-	addq.w	#2,d1
+.lo	move.w	(a2)+,d1
+	move.l	d1,(a0)+
+	addi.l	#$20000,d1
 	dbf	d2,.lo
 	addq.w	#1,d3
 	cmpi.w	#2,d3
@@ -8673,24 +8720,24 @@ rd_show
 	lea	(rd_hudmap).l,a1
 	lea	(rd_colours).l,a2
 	COPMOVE	$106,#$4C00			;BPLCON3: bank 2 (64-95)
-	move.w	#$180,d1
+	move.l	#$01800000,d1
 	moveq	#15,d2
-.hc	moveq	#0,d0
-	move.b	(a1)+,d0
-	move.w	d1,(a0)+
-	move.w	(a2,d0.w*2),(a0)+
-	addq.w	#2,d1
+	moveq	#0,d0
+.hc	move.b	(a1)+,d0
+	move.w	(a2,d0.w*2),d1
+	move.l	d1,(a0)+
+	addi.l	#$20000,d1
 	dbf	d2,.hc
 	lea	(rd_hudmap).l,a1
 	lea	(rd_colourslo).l,a2
 	COPMOVE	$106,#$4E00			;(LOCT)
-	move.w	#$180,d1
+	move.l	#$01800000,d1
 	moveq	#15,d2
-.hl	moveq	#0,d0
-	move.b	(a1)+,d0
-	move.w	d1,(a0)+
-	move.w	(a2,d0.w*2),(a0)+
-	addq.w	#2,d1
+	moveq	#0,d0
+.hl	move.b	(a1)+,d0
+	move.w	(a2,d0.w*2),d1
+	move.l	d1,(a0)+
+	addi.l	#$20000,d1
 	dbf	d2,.hl
 .nohc
 	move.l	#$008A0000,(a0)+		;COPJMP2: the blit queue (rd_bq_go)

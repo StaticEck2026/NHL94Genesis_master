@@ -26,8 +26,8 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
 `-DBENCH=1` build), the screen is updated as often as there is time for, up to every vertical
 blank: at 50 Hz about 48.5 frames a second (99% of them on the screen for one vertical blank),
-at 60 Hz 56 to 58 a second depending on the run (95 to 99% for one); the others are heavy
-moments (many new animation frames at once, a scene change). The game itself
+at 60 Hz 57.1 a second (98% for one); the others are heavy moments (many new animation
+frames at once, a scene change). The game itself
 always runs at full speed. `F6` caps the screen at a steady 25 or 30 frames a second instead
 (98 to 99% of them on the screen for exactly 2 vertical blanks).
 
@@ -110,23 +110,24 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   game, its vblank code and the renderer (counted on the CIA-B clock at every switch, so time
   with interrupts off, which the PC samples cannot see into, is counted too).
 - `-DRDPACE=2` starts with the frame rate capped at 25 or 30 a second (as `F6`).
-- `-DBENCH=1` makes a benchmark build that plays nearly the same game every run and every
-  build: everything is counted in the game's waits for a frame (one a game frame, however late
-  the frames come): its random numbers (its reads of the beam position) come from that count,
+- `-DBENCH=1` makes a benchmark build that plays the same game every run and every build:
+  everything is counted in the game's waits for a frame (one a game frame, however late the
+  frames come): its random numbers (its reads of the beam position) come from that count,
   Start is pressed at the test harness' counts (into a game from the attract mode), and with
   `-DPROFILE=1` the frame rate count starts at 2000 (as `F9`) and the game quits at 6000
   (`BENCHSTART`, `BENCHEND`); the renderer does not take the game's time when it runs long.
-  Delete `NHL94.sav` before each run: the game reads it. Runs of one build give the same
-  result when FS-UAE has the host to itself (several at once on a loaded host do not). A game
-  tick that comes while the game runs (not waiting since the last one) waits for its next
-  wait (`hal_idle`, at most `BENCHTP` ticks), and the count, the random numbers and the
-  presses go by the ticks, so the game's own course depends less on the renderer's timing;
-  it still can differ between builds (from the attract mode on), which changes what the
-  count measures a lot (a goal, a replay), so compare builds with the test harness'
-  `NHL_CHIPWAIT` (below) and use FS-UAE to confirm. The profile has a sum of the game's RAM at
-  each tick (`bench_tlog`, `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs
-  part (`-DBENCHFULL=1`: all of it but the stack's last 256 bytes, not every 64th long). The renderer is linked after the game's code, so a change to it does not move the
-  game's code (or the code pointers in its RAM). With `-DMEMBENCH=1` the profile also has the colour
+  Delete `NHL94.sav` before each run: the game reads it. A game tick that comes while the
+  game runs, or while the renderer has the CPU after the game already had a tick in this wait
+  (a frame drawn over more than a vertical blank), waits for the game's next wait (`hal_idle`,
+  at most `BENCHTP` ticks): the game never sees two ticks pass at once (it would move its
+  players two frames' worth), so its course does not depend on the renderer's timing, and
+  runs of one build give the same frame rate to a hundredth (FS-UAE, several at once too), so
+  one run tells two builds apart. The profile has a sum of the game's RAM at each tick
+  (`bench_tlog`, `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs part
+  (`-DBENCHFULL=1`: all of it but the stacks' last 1 KB, not every 64th long); FS-UAE can load
+  the game at another address each run, which changes the code pointers in its RAM (and so
+  the sums) but not the game. The renderer is linked after the game's code, so a change to
+  it does not move the game's code (or the code pointers in its RAM). With `-DMEMBENCH=1` the profile also has the colour
   clocks of 1024 writes to chip memory, fast memory and a custom register, 1024 chip reads and
   256 chip writes while a blit runs (measured at count 2001).
 - `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
@@ -136,7 +137,6 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   PC samples, so `amiga/tools/amilate.py LISTING nhl94.prof` can tell what the frames shown
   late (2 or more vertical blanks after the one before) spent their time on, against the frames
   on time, and list each late frame's busiest renderer routines.
-- `-DNASTY=1` gives the blitter priority over the CPU on the chip bus (a test).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
   of the 37 sprites a frame in play, about 9% of the renderer's time).
@@ -185,8 +185,9 @@ The hardware layer:
 
 - `hal.asm`: start-up, interrupt vectors, the 50 / 60 Hz CIA timer that stands in for the Genesis
   vertical blank, and the two contexts (the game, and the renderer it runs while the game waits).
-- `os.asm`: takes the machine from the OS and gives it back; keeps the OS's memory in the
-  `RAMBASE` window; loads and saves `NHL94.sav`.
+- `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
+  on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
+  loads and saves `NHL94.sav`.
 - `render.asm`: draws the emulated VDP state in 64 colours on 6 interleaved bitplanes. Tiles are
   cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the
   whole of plane B (512 x 256, its top 224 lines twice for the vertical wrap) and the display

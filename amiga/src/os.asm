@@ -33,6 +33,7 @@ MEMF_PUBLIC		equ	1
 MEMF_CHIP		equ	2
 MEMF_FAST		equ	4
 MEMF_LARGEST		equ	$20000
+CACRF_EnableI		equ	$1
 CACRF_EnableD		equ	$100
 
 	section	game,code
@@ -153,10 +154,10 @@ _start
 	moveq	#0,d0
 	jsr	CIA_AbleICR(a6)
 	move.b	d0,(os_ciaamask).l
-.nocia2	; data cache off (the blitter and the CPU share the screens)
+.nocia2	; data cache off (the blitter and the CPU share the screens), instruction cache on
 	movea.l	(os_exec).l,a6
-	moveq	#0,d0
-	move.l	#CACRF_EnableD,d1
+	moveq	#CACRF_EnableI,d0
+	move.l	#CACRF_EnableI|CACRF_EnableD,d1
 	jsr	EXEC_CacheControl(a6)
 	move.l	d0,(os_cacr).l
 	; take the display and the blitter
@@ -216,7 +217,7 @@ _start
 	jsr	GFX_DisownBlitter(a6)
 	movea.l	(os_exec).l,a6
 	move.l	(os_cacr).l,d0
-	move.l	#CACRF_EnableD,d1
+	move.l	#CACRF_EnableI|CACRF_EnableD,d1
 	jsr	EXEC_CacheControl(a6)
 	bsr	os_save_sram
 	IFD	PROFILE
