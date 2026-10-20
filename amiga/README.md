@@ -265,7 +265,9 @@ of line 0), so it never cuts a display list short. The test harness runs the cop
 `NHL_COPSTRESS=n` restarts it at one in n of its instructions on average, as a vertical
 blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges n more cycles for each
 CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
-the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does.
+the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does. `NHL_BLITFRAMES=file` writes a line for each frame shown: the game frame and the
+blitter's cycles and blits since the frame before by kind (copies A to D, cookie cuts, D only,
+other), with NHL_DETERM the same game every build.
 
 ## Testing without an Amiga
 

@@ -383,6 +383,11 @@ static void blit_exec(void)
     in_blit = 0;
     if (frame >= 1700 && getenv("NHL_BLITKINDS"))   /* by the buffers it reads and writes */
         blitkind_add(con0, useA ? a0 : 0, useB ? b0 : 0, useC ? c0 : 0, useD ? d0 : 0, h * w, blit_time);
+    if (getenv("NHL_BLITFRAMES")) {     /* this frame's blitter time by kind (written at its show) */
+        extern long long bf_t[4], bf_n[4];
+        int k = (con0 & 0x0FFF) == 0x09F0 ? 0 : (con0 & 0x0FFF) == 0x0FCA ? 1 : (con0 & 0x0F00) == 0x0100 ? 2 : 3;
+        bf_t[k] += blit_time; bf_n[k]++;
+    }
     if (frame >= 1700) {                /* blitter time by kind (NHL_STATS) */
         extern long long blitstat[4];
         int kind = (con0 & 0x0FFF) == 0x0FCA ? (alwm ? 2 : 1) : (con0 == 0x07CA || con0 == 0x05C0 || con0 == 0x09F0) ? 0 : 3;
@@ -513,6 +518,17 @@ static void copper_run(void)
     in_copper = 0;
 }
 
+long long bf_t[4], bf_n[4];
+static void blitframe_shown(void)
+{                                       /* NHL_BLITFRAMES=file: a line a frame shown: the game
+                                           frame, the blitter's cycles and blits by kind (copy A
+                                           to D, cookie cut, D only, other) */
+    static FILE *bff;
+    if (!bff) bff = fopen(getenv("NHL_BLITFRAMES"), "w");
+    fprintf(bff, "%d %lld %lld %lld %lld %lld %lld %lld %lld\n", frame, bf_t[0], bf_n[0], bf_t[1], bf_n[1],
+            bf_t[2], bf_n[2], bf_t[3], bf_n[3]);
+    memset(bf_t, 0, sizeof bf_t); memset(bf_n, 0, sizeof bf_n);
+}
 static void custom_write(uint32_t a, uint32_t v)
 {
     uint32_t off = a & 0xFFE;
@@ -540,6 +556,7 @@ static void custom_write(uint32_t a, uint32_t v)
     if (off == 0x058) do_blit((v >> 6) ? (v >> 6) : 1024, (v & 63) ? (v & 63) : 64);
     if (off == 0x05E) do_blit(creg[0x5C / 2] & 0x7FFF ? creg[0x5C / 2] & 0x7FFF : 0x8000, (v & 0x7FF) ? (v & 0x7FF) : 0x800);
     if (off == 0x180 && v == 0xF00) red_screen = 1;
+    if (off == 0x082 && getenv("NHL_BLITFRAMES")) blitframe_shown();
     if (off == 0x080) cop1lc = (cop1lc & 0xFFFF) | (v << 16);
     if (off == 0x082) cop1lc = (cop1lc & 0xFFFF0000) | (v & 0xFFFF);
 }
