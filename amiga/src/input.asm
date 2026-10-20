@@ -2,9 +2,9 @@
 ;
 ;	Player 1: joystick port 2. Player 2: joystick port 1 (the mouse port). In a game of one
 ;	player a pad in port 1 plays for player 1 too (the game reads only pad 1 then).
-;	  fire / CD32 red      C    (shoot, check)
-;	  2nd fire / CD32 blue B    (pass, switch player)
-;	  CD32 green / yellow  A
+;	  CD32 green (yellow)  A
+;	  fire / CD32 red      B    (pass, switch player)
+;	  2nd fire / CD32 blue C    (shoot, check)
 ;	  CD32 play            Start
 ;	Keyboard, player 1: cursor keys, Z = A, X = B, C = C, Return = Start
 ;	          player 2: F1 = A, F2 = B, F3 = C, F4 = Start
@@ -471,30 +471,30 @@ joy_buttons
 	andi.b	#3,d1
 	cmpi.b	#1,d1
 	bne	.joy
-	btst	#8,d6				;blue
+	btst	#8,d6				;blue: C
 	beq	.c1
-	bset	#PB_B,d0
-.c1	btst	#7,d6				;red
-	beq	.c2
 	bset	#PB_C,d0
-.c2	btst	#6,d6				;yellow
+.c1	btst	#7,d6				;red: B
+	beq	.c2
+	bset	#PB_B,d0
+.c2	btst	#6,d6				;yellow: A too
 	beq	.c3
 	bset	#PB_A,d0
-.c3	btst	#5,d6				;green
+.c3	btst	#5,d6				;green: A
 	beq	.c4
 	bset	#PB_A,d0
 .c4	btst	#2,d6				;play
 	beq	.x
 	bset	#PB_START,d0
 	bra	.x
-.joy	; ordinary joystick: fire (active low) and the second button
+.joy	; ordinary joystick: fire (active low; the CD32 red line) and the second button (blue)
 	btst	d2,(a0)
 	bne	.j1
-	bset	#PB_C,d0
+	bset	#PB_B,d0
 .j1	move.w	(a1),d4
 	btst	d3,d4
 	bne	.x
-	bset	#PB_B,d0
+	bset	#PB_C,d0
 .x	movem.l	(sp)+,d1-d6/a0-a1
 	rts
 

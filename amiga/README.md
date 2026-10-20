@@ -69,9 +69,9 @@ you quit, and is read when it starts.
 | | Player 1 (joystick port 2) | Player 2 (joystick port 1) |
 |---|---|---|
 | Move | joystick / cursor keys | joystick |
-| C (shoot, check) | fire / CD32 red / `C` | fire / CD32 red / `F3` |
-| B (pass, switch player) | 2nd button / CD32 blue / `X` | 2nd button / CD32 blue / `F2` |
-| A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
+| A | CD32 green (or yellow) / `Z` | CD32 green (or yellow) / `F1` |
+| B (pass, switch player) | fire / CD32 red / `X` | fire / CD32 red / `F2` |
+| C (shoot, check) | 2nd button / CD32 blue / `C` | 2nd button / CD32 blue / `F3` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
 In a game of one player (Players: One - Home or One - Away) a pad in either port plays, so a
