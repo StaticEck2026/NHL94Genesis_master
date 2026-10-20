@@ -67,6 +67,13 @@ static inline void wr8(uint32_t a, uint32_t v)
 }
 static inline void wr16(uint32_t a, uint32_t v) { wr8(a, v >> 8); wr8(a + 1, v); }
 static inline void wr32(uint32_t a, uint32_t v) { wr16(a, v >> 16); wr16(a + 2, v); }
+/* NHL_HAZARD=n: report (up to n) blits that read a word the CPU wrote after the blit was queued
+   (the copper's move that started it written): what a blit reads must stay as it was until it
+   has run, a vertical blank's restart of the queue included */
+static int hazard = -1, hazard_n;
+static uint32_t *wtime, *wpc;           /* per word: the CPU's last write (cycles / 16), its pc */
+static uint32_t cop_insn;               /* the copper's move being done */
+static uint32_t pend_qtime, pend_qpc;   /* the blit's queue time, the pc that queued it */
 
 static uint32_t custom_read(uint32_t a, int size)
 {
@@ -309,6 +316,12 @@ static void do_blit(int h, int w)
     int n = !!(con0 & 0x800) + !!(con0 & 0x400) + !!(con0 & 0x200) + !!(con0 & 0x100);
     if (pend_run) blit_exec();             /* (a blit started while one runs: the old one first) */
     memcpy(pend_reg, &creg[0x40 / 2], sizeof pend_reg);
+    if (hazard > 0)
+    {
+        pend_qtime = in_copper ? wtime[((cop_insn + 2) >> 1) & (MEMSIZE / 2 - 1)]
+                               : (uint32_t)((cycles_total + m68k_cycles_run()) >> 4) + 1;
+        pend_qpc = in_copper ? wpc[((cop_insn + 2) >> 1) & (MEMSIZE / 2 - 1)] : m68k_get_reg(NULL, M68K_REG_PPC);
+    }
     pend_h = h;
     pend_w = w;
     pend_run = 1;
@@ -345,11 +358,28 @@ static void blit_exec(void)
     uint32_t a0 = apt, b0 = bpt, c0 = cpt, d0 = dpt;
     if (con1 & 1) { fprintf(stderr, "blitter line mode not emulated\n"); return; }
     in_blit = 1;
+    int hz_blit = 0;
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             uint32_t a = useA ? rd16(apt) : r[0x74 / 2];
             uint32_t b = useB ? rd16(bpt) : r[0x72 / 2];
             uint32_t c = useC ? rd16(cpt) : r[0x70 / 2];
+            if (hazard > 0 && hazard_n < hazard && pend_qtime && !hz_blit) {
+                uint32_t src[3] = { useA ? apt : 0, useB ? bpt : 0, useC ? cpt : 0 };
+                for (int k = 0; k < 3; k++) {
+                    if (!src[k]) continue;
+                    if (x == w - 1 && w > 1 && !alwm && useA && (con0 & 0xFF) == 0xCA && k < 2)
+                        continue;       /* (a cut's shift word: its mask 0, what it reads unused) */
+                    uint32_t wt = wtime[((src[k] & 0xFFFFFF) >> 1) & (MEMSIZE / 2 - 1)];
+                    if (wt > pend_qtime) {
+                        hazard_n++;
+                        hz_blit = 1;
+                        fprintf(stderr, "frame %d: hazard: blit con0 %04x (copper %06x) reads %c %06x, written %u cycles after it was queued (by pc %06x; queued by pc %06x)\n",
+                                frame, con0, cop_insn, 'A' + k, src[k] & 0xFFFFFF, 16 * (wt - pend_qtime), wpc[((src[k] & 0xFFFFFF) >> 1) & (MEMSIZE / 2 - 1)], pend_qpc);
+                        break;
+                    }
+                }
+            }
             if (useA) apt += step;
             if (useB) bpt += step;
             if (useC) cpt += step;
@@ -511,6 +541,7 @@ static void copper_run(void)
                 cop_warn++;
                 fprintf(stderr, "frame %d: copper move to %03x = %04x at %06x (lost?)\n", frame, r, w2, cop_pc - 4);
             }
+            cop_insn = cop_pc - 4;
             custom_write(0xDFF000 + r, w2);
             continue;
         }
@@ -714,9 +745,21 @@ unsigned int m68k_read_memory_32(unsigned int a) { chip_access(a); if (is_io(a))
 unsigned int m68k_read_disassembler_8(unsigned int a) { return rd8(a); }
 unsigned int m68k_read_disassembler_16(unsigned int a) { return rd16(a); }
 unsigned int m68k_read_disassembler_32(unsigned int a) { return rd32(a); }
-void m68k_write_memory_8(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); }
-void m68k_write_memory_16(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); }
-void m68k_write_memory_32(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); }
+static void hz_mark(uint32_t a, int words)
+{
+    if (hazard < 0) {
+        hazard = getenv("NHL_HAZARD") ? atoi(getenv("NHL_HAZARD")) : 0;
+        if (hazard) { wtime = calloc(MEMSIZE / 2, sizeof *wtime); wpc = calloc(MEMSIZE / 2, sizeof *wpc); }
+    }
+    if (!hazard) return;
+    uint32_t t = (uint32_t)((cycles_total + m68k_cycles_run()) >> 4) + 1;   /* (0: never) */
+    a &= 0xFFFFFE;
+    uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
+    for (int i = 0; i < words; i++) { wtime[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = t; wpc[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = pc; }
+}
+void m68k_write_memory_8(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
+void m68k_write_memory_16(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); hz_mark(a, 1); }
+void m68k_write_memory_32(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); hz_mark(a, (a & 1) ? 3 : 2); }
 
 /* Run n cycles in slices, raising the blitter interrupt when a blit's time is up. */
 static int run_cycles(int n)

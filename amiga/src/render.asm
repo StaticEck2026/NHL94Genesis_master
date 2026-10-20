@@ -65,6 +65,7 @@ TNEED	macro					;tile \1 (0-2047, a long) converted if it waits
 tp_pl		ds.l	4096*8			;tile cache planes: (tile | hflip<<11), 8 rows of p0p1p2p3
 tp_mk		ds.b	4096*8			;mask per row (bit set = pixel not transparent)
 tp_cls		ds.b	4096			;0 empty, 1 opaque, 2 mixed
+rd_rstage	ds.l	8*6*64/4		;rd_rowB: a row of the plane B bitmap staged (fast memory)
 tc_dirty	ds.l	64			;one bit per tile: convert before use
 tc_pend		ds.l	64			;one bit per tile: changed, converted when a sprite needs it
 tc_chg		ds.l	64			;tiles converted this frame
@@ -179,6 +180,7 @@ rd_ovlmhi	ds.b	OSROW*SCRH		;does all 6); the high priority mask (follows the low
 ;	------------------------------------------------------------------------------------------
 rd_init
 	movem.l	d0-d7/a0-a6,-(sp)
+	move.l	#rd_bmrc,(rd_bmrp).l		;(rd_bmrd_age)
 	; plane tables: pixel pair b (left pixel in the high nibble), bit p of each pixel goes to
 	; plane byte p (p0 is the high byte of the long); left pixel bit 1, right pixel bit 0
 	lea	(rd_ptab).l,a0
@@ -1332,12 +1334,52 @@ rd_showdue
 .lk	move.l	(sp)+,d1
 .x	rts
 
-;	A frame begins: the bitmap's rows read by its blits from none (rd_bmrd, rd_cellB), the
-;	frames before's a frame older. Keeps all.
+;	A frame begins: what of the plane B bitmap its blits read from none (rd_bmrc, rd_cellB),
+;	the 3rd frame before's forgotten (its blits are done once it has a buffer). Keeps all.
 rd_bmrd_age
-	move.l	(rd_bmrd+4).l,(rd_bmrd+8).l
-	move.l	(rd_bmrd).l,(rd_bmrd+4).l
-	clr.l	(rd_bmrd).l
+	move.l	(rd_ovrd+4).l,(rd_ovrd+8).l	;(the overlay's bands, rd_ovrd, likewise)
+	move.l	(rd_ovrd).l,(rd_ovrd+4).l
+	clr.l	(rd_ovrd).l
+	movem.l	d0/a0,-(sp)
+	movea.l	(rd_bmrp).l,a0
+	lea	32*4(a0),a0
+	cmpa.l	#rd_bmrc+3*32*4,a0
+	blo.s	.k
+	lea	(rd_bmrc).l,a0
+.k	move.l	a0,(rd_bmrp).l
+	moveq	#32/4-1,d0
+.c	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	dbf	d0,.c
+	movem.l	(sp)+,d0/a0
+	rts
+
+;	The blits queued have all been let finish (rd_waitblit): none reads the bitmap now. Keeps
+;	all.
+rd_bmrc_clr
+	movem.l	d0/a0,-(sp)
+	lea	(rd_bmrc).l,a0
+	moveq	#3*32/4-1,d0
+.c	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	dbf	d0,.c
+	movem.l	(sp)+,d0/a0
+	rts
+
+;	d0 = the 16 pixel columns of bitmap row d5 that blits queued in the last 3 frames read
+;	(column 0 the top bit). Uses a1.
+rd_bmrc_row
+	moveq	#31,d0
+	and.w	d5,d0
+	lea	(rd_bmrc).l,a1
+	lea	(a1,d0.w*4),a1
+	move.l	(a1),d0
+	or.l	32*4(a1),d0
+	or.l	64*4(a1),d0
 	rts
 
 ;	The back buffer's game state is taken now (rd_showdue: the picture's delay). Keeps all.
@@ -1790,17 +1832,22 @@ rd_cellB
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+4).l
 	ENDC
-	; a blit queued that reads its row of the bitmap (rd_bmrd): let them all finish first
+	IFD	PROFMARK
+	PEV	'c'
+	ENDC
+	; a blit queued that reads it in the bitmap (rd_bmrc): let them all finish first
 	move.l	d0,-(sp)
-	move.l	(rd_bmrd).l,d0
-	or.l	(rd_bmrd+4).l,d0
-	or.l	(rd_bmrd+8).l,d0
-	btst	d5,d0
+	bsr	rd_bmrc_row
+	moveq	#0,d1
+	move.w	d4,d1
+	lsr.w	#1,d1				;(its 16 pixel column)
+	bftst	d0{d1:1}
 	beq.s	.nw
+	IFD	PROFMARK
+	PEV	'w'
+	ENDC
 	bsr	rd_waitblit
-	clr.l	(rd_bmrd).l			;(none waits now)
-	clr.l	(rd_bmrd+4).l
-	clr.l	(rd_bmrd+8).l
+	bsr	rd_bmrc_clr
 .nw	move.l	(sp)+,d0
 	; all buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
 	moveq	#0,d1				;(bit field offsets are longs)
@@ -1862,47 +1909,7 @@ rd_cellB
 	bra.s	.m1
 .m0	bfclr	(a1){d1:1}
 	sne	(rd_cellmw).l
-.m1	; the cell in its tile's list (rd_btiles)
-	movem.l	d0/d3/a0,-(sp)
-	andi.w	#$7FF,d0
-	addq.w	#1,d0				;its tile + 1
-	lea	(rd_tltile).l,a0
-	move.w	(a0,d1.w*2),d2
-	cmp.w	d2,d0
-	beq.s	.tk				;(there already)
-	move.w	d0,(a0,d1.w*2)
-	tst.w	d2
-	beq.s	.ti
-	; out of the old tile's list
-	lea	(rd_tlprev).l,a0
-	move.w	(a0,d1.w*2),d3			;the one before + 1
-	lea	(rd_tlnext).l,a1
-	move.w	(a1,d1.w*2),d0			;the next + 1
-	tst.w	d3
-	beq.s	.th
-	move.w	d0,-2(a1,d3.w*2)		;(next of the one before)
-	bra.s	.tp
-.th	lea	(rd_tlhead).l,a1
-	move.w	d0,-2(a1,d2.w*2)		;(the old tile's first)
-.tp	tst.w	d0
-	beq.s	.tn
-	move.w	d3,-2(a0,d0.w*2)		;(the one before of the next)
-.tn	lea	(rd_tltile).l,a0
-	move.w	(a0,d1.w*2),d0			;(the tile + 1 again)
-.ti	; at the front of the new tile's list
-	lea	(rd_tlhead).l,a0
-	move.w	-2(a0,d0.w*2),d3		;its first + 1
-	move.w	d1,d2
-	addq.w	#1,d2				;this cell + 1
-	move.w	d2,-2(a0,d0.w*2)
-	lea	(rd_tlnext).l,a0
-	move.w	d3,(a0,d1.w*2)
-	lea	(rd_tlprev).l,a0
-	clr.w	(a0,d1.w*2)
-	tst.w	d3
-	beq.s	.tk
-	move.w	d2,-2(a0,d3.w*2)
-.tk	movem.l	(sp)+,d0/d3/a0
+.m1	bsr	rd_tl_set			;the cell in its tile's list (rd_btiles)
 	movem.l	(sp)+,d1-d2
 	move.w	(rd_cw).l,d1			;bytes per plane row
 	move.w	d1,d2
@@ -2000,6 +2007,51 @@ rd_cellB
 	movea.l	(sp)+,a4
 	rts
 
+;	Cell d1 (row * plane width + column) of plane B into the list of the cells with entry d0's
+;	tile (rd_btiles), out of the one it was in. Uses d2, a1.
+rd_tl_set
+	movem.l	d0/d3/a0,-(sp)
+	andi.w	#$7FF,d0
+	addq.w	#1,d0				;its tile + 1
+	lea	(rd_tltile).l,a0
+	move.w	(a0,d1.w*2),d2
+	cmp.w	d2,d0
+	beq.s	.tk				;(there already)
+	move.w	d0,(a0,d1.w*2)
+	tst.w	d2
+	beq.s	.ti
+	; out of the old tile's list
+	lea	(rd_tlprev).l,a0
+	move.w	(a0,d1.w*2),d3			;the one before + 1
+	lea	(rd_tlnext).l,a1
+	move.w	(a1,d1.w*2),d0			;the next + 1
+	tst.w	d3
+	beq.s	.th
+	move.w	d0,-2(a1,d3.w*2)		;(next of the one before)
+	bra.s	.tp
+.th	lea	(rd_tlhead).l,a1
+	move.w	d0,-2(a1,d2.w*2)		;(the old tile's first)
+.tp	tst.w	d0
+	beq.s	.tn
+	move.w	d3,-2(a0,d0.w*2)		;(the one before of the next)
+.tn	lea	(rd_tltile).l,a0
+	move.w	(a0,d1.w*2),d0			;(the tile + 1 again)
+.ti	; at the front of the new tile's list
+	lea	(rd_tlhead).l,a0
+	move.w	-2(a0,d0.w*2),d3		;its first + 1
+	move.w	d1,d2
+	addq.w	#1,d2				;this cell + 1
+	move.w	d2,-2(a0,d0.w*2)
+	lea	(rd_tlnext).l,a0
+	move.w	d3,(a0,d1.w*2)
+	lea	(rd_tlprev).l,a0
+	clr.w	(a0,d1.w*2)
+	tst.w	d3
+	beq.s	.tk
+	move.w	d2,-2(a0,d3.w*2)
+.tk	movem.l	(sp)+,d0/d3/a0
+	rts
+
 ;	The rink's cells (64 across, rd_bpset: 2 longs a row) whose entries or tiles changed wait
 ;	(rd_bp_add) and are converted here, once the frame's scroll is known: those within 8 lines
 ;	and 16 pixels of the screen now, those within 48 pixels BPBUDGET a frame, the others when
@@ -2048,13 +2100,16 @@ rd_bpend_run
 	cmp.w	d2,d1
 	bhi.s	.v
 	sf	d7
-.v	moveq	#0,d4				;half of the row (columns 0-31, 32-63)
+.v	clr.l	(rd_rsel).l			;(the row's cells drawn now: rd_rowB)
+	clr.l	(rd_rsel+4).l
+	moveq	#0,d4				;half of the row (columns 0-31, 32-63)
 .hh	lea	(rd_bpset).l,a0
 	lea	(a0,d5.w*8),a0
 	move.l	(a0,d4.w*4),d0			;waiting
 	lea	(rd_bpcp).l,a1
 	and.l	(a1,d4.w*4),d0			;within 48 pixels
 	beq	.hn
+	moveq	#0,d3				;(the half's cells drawn now)
 	moveq	#0,d1
 	tst.b	d7
 	beq.s	.cb
@@ -2062,7 +2117,7 @@ rd_bpend_run
 	lea	(rd_bpcn).l,a1
 	and.l	(a1,d4.w*4),d1			;within 16 too: now
 .cb	tst.l	d0
-	beq	.hn
+	beq	.hs
 	bfffo	d0{0:0},d2
 	bfclr	d0{d2:1}
 	bftst	d1{d2:1}
@@ -2070,29 +2125,25 @@ rd_bpend_run
 	tst.w	d6
 	beq.s	.cb				;(no more this frame)
 	subq.w	#1,d6
-.do	lea	(rd_bpset).l,a0
-	lea	(a0,d5.w*8),a0
-	lea	(a0,d4.w*4),a0
-	bfclr	(a0){d2:1}
+.do	bfset	d3{d2:1}
 	subq.w	#1,(rd_bpn).l
-	movem.l	d0-d1/d4-d7,-(sp)
-	move.w	d4,d3
-	lsl.w	#5,d3
-	add.w	d2,d3
-	move.w	d3,d4				;column
-	move.w	d5,d0
-	lsl.w	#6,d0
-	add.w	d4,d0
-	lea	(shB).l,a1
-	move.w	(a1,d0.w*2),d0			;its entry
-	clr.w	(rd_hiBok).l
-	bsr	rd_cellB
-	movem.l	(sp)+,d0-d1/d4-d7
 	bra.s	.cb
+.hs	lea	(rd_rsel).l,a1			;(no longer waiting)
+	move.l	d3,(a1,d4.w*4)
+	not.l	d3
+	lea	(rd_bpset).l,a0
+	lea	(a0,d5.w*8),a0
+	and.l	d3,(a0,d4.w*4)
 .hn	addq.w	#1,d4
 	cmpi.w	#2,d4
 	blo	.hh
-	movem.l	(sp)+,d2-d3/a2
+	move.l	(rd_rsel).l,d0
+	or.l	(rd_rsel+4).l,d0
+	beq.s	.rd
+	movem.l	d5-d6,-(sp)
+	bsr	rd_rowB
+	movem.l	(sp)+,d5-d6
+.rd	movem.l	(sp)+,d2-d3/a2
 .rn	addq.w	#1,d5
 	cmp.w	(rd_ch).l,d5
 	blo	.r
@@ -2131,6 +2182,188 @@ rd_bpend_run
 	move.l	4(a1),d0
 	or.l	12(a1),d0
 	move.l	d0,4(a0)
+	rts
+
+;	The cells of rink row d5 that rd_rsel names (64 bits: column 0 the first long's top bit)
+;	into the plane B bitmap: those with a mask, or one before (high priority), by rd_cellB; the
+;	others staged in fast memory (rd_rstage, laid out as a row of the bitmap) and copied in
+;	longs, 4 cells where all 4 are, else a byte each (the CPU's writes to chip memory are what a
+;	cell costs). Uses d0-d7, a0-a3.
+rd_rowB
+	movem.l	a4-a5,-(sp)
+	clr.w	(rd_hiBok).l
+	; the cells' 16 pixel columns
+	moveq	#0,d2				;(column 0 the top bit)
+	move.l	(rd_rsel).l,d0
+	bsr	.pairs
+	move.l	(rd_rsel+4).l,d0
+	bsr	.pairs
+	; a blit queued that reads them in the bitmap (rd_bmrc): let them all finish first
+	bsr	rd_bmrc_row
+	and.l	d2,d0
+	beq.s	.nw
+	IFD	PROFMARK
+	PEV	'W'
+	ENDC
+	bsr	rd_waitblit
+	bsr	rd_bmrc_clr
+.nw	; all buffers are to be mended there (as rd_cellB)
+	moveq	#31,d1
+	and.w	d5,d1
+	IFNE	3-DLS
+	lsl.w	#3-DLS,d1			;(its first map row)
+	ENDC
+	lea	(rd_dirty).l,a1
+	lea	(a1,d1.w*4),a1
+	moveq	#(8>>DLS)-1,d3
+.mr	or.l	d2,(a1)
+	or.l	d2,DROWS*4(a1)
+	or.l	d2,2*DROWS*4(a1)
+	cmpi.w	#DROWS-DWRAP,d1
+	bhs.s	.once
+	or.l	d2,DWRAP*4(a1)
+	or.l	d2,(DROWS+DWRAP)*4(a1)
+	or.l	d2,(2*DROWS+DWRAP)*4(a1)
+.once	addq.l	#4,a1
+	addq.w	#1,d1
+	dbf	d3,.mr
+	; the cells
+	clr.l	(rd_rstg).l			;(those staged)
+	clr.l	(rd_rstg+4).l
+	move.w	d5,d0
+	lsl.w	#6,d0
+	movea.w	d0,a5				;the row's first cell
+	moveq	#0,d6				;half
+.h	lea	(rd_rsel).l,a0
+	move.l	(a0,d6.w*4),d4
+.c	tst.l	d4
+	beq	.hn
+	bfffo	d4{0:0},d3
+	bfclr	d4{d3:1}
+	moveq	#0,d1
+	move.w	d6,d1
+	lsl.w	#5,d1
+	add.w	d3,d1
+	movea.l	d1,a3				;column
+	add.w	a5,d1				;the cell
+	lea	(shB).l,a1
+	move.w	(a1,d1.w*2),d0			;its entry
+	IFD	PROFMARK
+	PEV	'c'
+	ENDC
+	moveq	#0,d2				;its tile used, converted if it waits (before its class
+	move.w	d0,d2				;is looked at)
+	andi.w	#$7FF,d2
+	lea	(rd_bused).l,a1
+	bfset	(a1){d2:1}
+	TNEED	d2
+	lea	(rd_mkset).l,a1			;a mask written before,
+	bftst	(a1){d1:1}
+	bne.s	.slow
+	tst.w	d0				;or one now: rd_cellB
+	bpl.s	.fast
+	move.w	d0,d2
+	andi.w	#$FFF,d2
+	lea	(tp_cls).l,a1
+	tst.b	(a1,d2.w)
+	beq.s	.fast
+.slow	movem.l	d4-d6/a5,-(sp)
+	move.l	a3,d4				;column
+	bsr	rd_cellB
+	movem.l	(sp)+,d4-d6/a5
+	bra	.c
+.fast
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+4).l
+	ENDC
+	lea	(rd_hibits).l,a1		;(low priority, or an empty tile: no bit, no mask)
+	bfclr	(a1){d1:1}
+	bsr	rd_tl_set
+	move.l	a3,d2
+	lea	(rd_rstg).l,a1
+	bfset	(a1){d2:1}
+	; its 8 rows staged: line l, plane p at l * 6 * 64 + p * 64 + its column
+	lea	(rd_rstage).l,a1
+	adda.l	a3,a1
+	move.w	d0,d2
+	andi.l	#$FFF,d2
+	lsl.l	#5,d2
+	lea	(tp_pl).l,a2
+	adda.l	d2,a2				;its planes
+	moveq	#4,d3				;row step
+	btst	#12,d0
+	beq.s	.nv
+	lea	28(a2),a2			;vertical flip: last row first
+	moveq	#-4,d3
+.nv	btst	#13,d0				;palette planes
+	sne	d1
+	btst	#14,d0
+	sne	d0
+	moveq	#7,d2
+.ln	move.l	(a2),d7				;p0 p1 p2 p3
+	adda.w	d3,a2
+	move.b	d7,3*64(a1)
+	lsr.l	#8,d7
+	move.b	d7,2*64(a1)
+	lsr.w	#8,d7
+	move.b	d7,64(a1)
+	swap	d7
+	move.b	d7,(a1)
+	move.b	d1,4*64(a1)
+	move.b	d0,5*64(a1)
+	lea	6*64(a1),a1
+	dbf	d2,.ln
+	bra	.c
+.hn	addq.w	#1,d6
+	cmpi.w	#2,d6
+	blo	.h
+	; the staged cells into the bitmap
+	lea	(rd_rstage).l,a0
+	lea	(bmB).l,a1
+	move.w	d5,d0
+	mulu.w	#8*6*64,d0
+	adda.l	d0,a1				;its row
+	lea	(rd_rstg).l,a2
+	moveq	#0,d6				;group of 4 cells
+.g	bfextu	(a2){d6:4},d1			;(bit 3: its first)
+	beq	.gn
+	cmpi.b	#15,d1
+	bne	.gp
+RBO	set	0
+	REPT	8*6
+	move.l	RBO(a0),RBO(a1)
+RBO	set	RBO+64
+	ENDR
+	bra	.gn
+.gp	moveq	#3,d2
+.gb	btst	d2,d1
+	beq	.gbn
+	moveq	#3,d3
+	sub.w	d2,d3				;its byte
+	lea	(a0,d3.w),a3
+	lea	(a1,d3.w),a4
+RBO	set	0
+	REPT	8*6
+	move.b	RBO(a3),RBO(a4)
+RBO	set	RBO+64
+	ENDR
+.gbn	dbf	d2,.gb
+.gn	addq.l	#4,a0
+	addq.l	#4,a1
+	addq.w	#4,d6
+	cmpi.w	#64,d6
+	blo	.g
+	movem.l	(sp)+,a4-a5
+	rts
+.pairs	; d2 shifted on by the 16 pixel columns of the 32 cells d0 (pairs of bits)
+	moveq	#15,d3
+.pr	add.l	d2,d2
+	move.l	d0,d1
+	andi.l	#$C0000000,d1
+	beq.s	.pz
+	addq.l	#1,d2
+.pz	lsl.l	#2,d0
+	dbf	d3,.pr
 	rts
 
 ;	(rd_updateB, rd_btiles) The rink's cell d0.w to wait for rd_bpend_run: Z set. Keeps all.
@@ -2264,15 +2497,6 @@ rd_restore
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+68).l		;(statistics: groups of rows)
 	ENDC
-	movem.l	d0-d1,-(sp)			;(their rows of the bitmap read: rd_bmrd)
-	move.l	(rd_bmrd).l,d1
-	move.w	d5,d0
-.gm	bset	d0,d1
-	addq.w	#1,d0
-	cmp.w	d7,d0
-	blt.s	.gm
-	move.l	d1,(rd_bmrd).l
-	movem.l	(sp)+,d0-d1
 .run	bfffo	d6{0:0},d1			;first column
 	move.l	d6,d2
 	lsl.l	d1,d2
@@ -2341,10 +2565,14 @@ rd_restore
 	bsr	rd_cq_endblit
 	tst.l	d6
 	bne	.run
-	move.l	(rd_rmask).l,d0			;(those rows: rd_wmap)
+	move.l	(rd_rmask).l,d0			;(those rows: rd_wmap; read in the bitmap: rd_bmrc)
 	clr.l	(rd_rmask).l
 	lea	(rd_wmap).l,a0
+	movea.l	(rd_bmrp).l,a1
 .wm	move.l	d0,(a0,d5.w*4)
+	moveq	#DWRAP-1,d1
+	and.w	d5,d1
+	or.l	d0,(a1,d1.w*4)
 	addq.w	#1,d5
 	cmp.w	d7,d5
 	blt.s	.wm
@@ -2410,7 +2638,12 @@ rd_mark_u
 ;	Copy plane B to the back buffer at its scroll position (blitter). The bitmap wraps, so up
 ;	to 4 rectangles.
 rd_blitB
-	move.l	#-1,(rd_bmrd).l			;(all of the bitmap read: rd_bmrd)
+	movem.l	d0/a0,-(sp)			;(all of the bitmap read: rd_bmrc)
+	movea.l	(rd_bmrp).l,a0
+	moveq	#32-1,d0
+.ba	move.l	#-1,(a0)+
+	dbf	d0,.ba
+	movem.l	(sp)+,d0/a0
 	; vertical pieces: [by0, min(H, by0+224)) then from 0
 	move.w	(rd_ch).l,d6
 	lsl.w	#3,d6				;plane height
@@ -3120,11 +3353,22 @@ rd_hud_byte
 	move.b	2*OSBPR(a0),d0
 	lsl.w	#8,d0
 	move.b	3*OSBPR(a0),d0
+	moveq	#0,d1				;(the pixels under the mask only: what is under a clear
+	move.b	d2,d1				;one is never shown)
+	move.w	d1,d3
+	lsl.w	#8,d3
+	or.w	d3,d1
+	move.w	d1,d3
+	swap	d1
+	move.w	d3,d1
+	and.l	d1,d0
 	moveq	#1,d1				;(1: in use) planes 4-5, the mask
 	lsl.w	#8,d1
 	move.b	4*OSBPR(a0),d1
+	and.b	d2,d1
 	lsl.l	#8,d1
 	move.b	5*OSBPR(a0),d1
+	and.b	d2,d1
 	lsl.l	#8,d1
 	move.b	d2,d1
 	move.l	d0,d3
@@ -3278,15 +3522,13 @@ rd_ovl_redraw
 	adda.l	d4,a1
 	lea	(a1,d0.w*2),a1			;its first word
 	moveq	#NPLANES-1,d4
-.cp	movea.l	a1,a2
-	movea.l	a1,a3
-	adda.l	#rd_ovlmlo-rd_ovl,a3		;(the masks' word)
+.cp	movea.l	a1,a3
+	adda.l	#rd_ovlmlo-rd_ovl,a3		;(the masks' word: the image under them is not shown)
 	movea.l	a1,a4
 	adda.l	#rd_ovlmhi-rd_ovl,a4
 	move.w	d1,d5
 	sub.w	d0,d5				;words - 1
-.cw	clr.w	(a2)+
-	clr.w	(a3)+
+.cw	clr.w	(a3)+
 	clr.w	(a4)+
 	dbf	d5,.cw
 	lea	OSBPR(a1),a1
@@ -3317,12 +3559,6 @@ rd_ovl_redraw
 	move.w	#$0100,$040(a6)
 	move.w	#0,$042(a6)
 	move.w	#0,$066(a6)
-	lea	(rd_ovl).l,a0
-	adda.l	d3,a0
-	move.l	a0,$054(a6)
-	move.w	d2,$05C(a6)
-	move.w	#OSBPR/2,$05E(a6)
-	bsr	rd_waitblit
 	lea	(rd_ovlmlo).l,a0
 	adda.l	d3,a0
 	move.l	a0,$054(a6)
@@ -3346,10 +3582,7 @@ rd_ovl_redraw
 	dbf	d0,.icf
 	bsr	rd_waitblit
 	IFD	VERIFY
-	lea	(rd_ovl).l,a0			;(the image and masks all clear now)
-	move.w	#OSROW*SCRH/4-1,d0
-	bsr.s	.vz
-	lea	(rd_ovlmlo).l,a0
+	lea	(rd_ovlmlo).l,a0		;(the masks all clear now)
 	move.w	#OSROW*SCRH/2-1,d0
 	bsr.s	.vz
 	ENDC
@@ -3491,6 +3724,11 @@ rd_ovl_cell
 .mlo	move.w	d1,d0				;x
 	move.w	d2,d7				;y
 	move.w	d6,d2
+	move.w	d0,d1
+	addi.w	#4*8,d1
+	moveq	#7,d3
+	and.w	d1,d3
+	beq	.al				;(a whole byte: the cell's own)
 	move.w	#7,(rd_rowc).l
 .row	tst.w	d7
 	bmi	.skip
@@ -3533,6 +3771,54 @@ rd_ovl_cell
 	subq.w	#1,(rd_rowc).l
 	bpl	.row
 .done	rts
+.al	; at a whole byte: its bytes are the cell's alone, so stored, not merged (what is under
+	; a clear mask is never shown; the masks were cleared, rd_ovl_redraw, rd_ovl_setcell)
+	lsr.w	#3,d1				;its byte
+	move.w	d7,d3
+	muls.w	#OSROW,d3
+	lea	(rd_ovl).l,a1
+	adda.l	d3,a1
+	adda.w	d1,a1
+	movea.l	a5,a0
+	adda.l	d3,a0
+	adda.w	d1,a0
+	moveq	#7,d1
+.ar	tst.w	d7
+	bmi.s	.as
+	cmpi.w	#SCRH,d7
+	bge.s	.done
+	move.b	(a3),d3				;mask
+	move.l	(a2),d6				;p0 p1 p2 p3
+	move.b	d6,3*OSBPR(a1)
+	lsr.l	#8,d6
+	move.b	d6,2*OSBPR(a1)
+	lsr.w	#8,d6
+	move.b	d6,OSBPR(a1)
+	swap	d6
+	move.b	d6,(a1)
+	moveq	#0,d6
+	btst	#0,d2
+	beq.s	.a4
+	move.b	d3,d6
+.a4	move.b	d6,4*OSBPR(a1)
+	moveq	#0,d6
+	btst	#1,d2
+	beq.s	.a5
+	move.b	d3,d6
+.a5	move.b	d6,5*OSBPR(a1)
+	move.b	d3,(a0)
+	move.b	d3,OSBPR(a0)
+	move.b	d3,2*OSBPR(a0)
+	move.b	d3,3*OSBPR(a0)
+	move.b	d3,4*OSBPR(a0)
+	move.b	d3,5*OSBPR(a0)
+.as	adda.w	d4,a2
+	adda.w	d5,a3
+	lea	OSROW(a1),a1
+	lea	OSROW(a0),a0
+	addq.w	#1,d7
+	dbf	d1,.ar
+	rts
 
 ;	Cut the overlay of priority rd_pass into the back buffer: its rectangles (rd_ovl_rects), one
 ;	blit each for the 6 planes (A the mask plane, B the overlay, C / D the screen). Low priority
@@ -3556,6 +3842,7 @@ rd_ovl_blit
 .e	dbf	d7,.rect
 	bra	rd_cq_flush			;(the last batch let go)
 .blitrun	; pixels d0 .. d1 of bands d2 .. d2 + d3 - 1
+	bfset	(rd_ovrd).l{d2:d3}		;(read by a blit: rd_ovl_setcell)
 	; lines of the bands on screen
 	subq.w	#1,d2
 	lsl.w	#3,d2				;first line
@@ -3747,7 +4034,6 @@ rd_ovl_cells_changed
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+20).l
 	ENDC
-	bsr	rd_waitblit			;(the frame before's blits may still read the overlay)
 	lea	(rd_aused).l,a3
 	lea	(rd_chgA).l,a4
 	move.w	(rd_nchgA).l,d4
@@ -3828,6 +4114,26 @@ rd_ovl_cells_changed
 ;	it if its tile is not empty. a3 = rd_aused.
 rd_ovl_setcell
 	movem.l	d0-d7/a0-a6,-(sp)
+	; a blit queued in the last 3 frames that reads its bands (rd_ovrd): let them all finish
+	move.l	(rd_ovrd).l,d3
+	or.l	(rd_ovrd+4).l,d3
+	or.l	(rd_ovrd+8).l,d3
+	move.w	d2,d4
+	asr.w	#3,d4
+	addq.w	#1,d4				;its band (from line -8)
+	ext.l	d4
+	moveq	#1,d5
+	moveq	#7,d6
+	and.w	d2,d6
+	beq.s	.w1
+	moveq	#2,d5				;(and the one after, if not at a whole cell)
+.w1	bftst	d3{d4:d5}
+	beq.s	.nw
+	bsr	rd_waitblit
+	clr.l	(rd_ovrd).l
+	clr.l	(rd_ovrd+4).l
+	clr.l	(rd_ovrd+8).l
+.nw
 	move.w	d0,d3
 	andi.l	#$7FF,d3
 	lea	(rd_aused).l,a3
@@ -5258,8 +5564,8 @@ fe_ring
 	movem.l	d0/a0,-(sp)
 	move	sr,-(sp)
 	; no frame half drawn (its images, its place in the ring): the renderer on until it is
-	; done (the game's wait, hal_idle; one that comes with the vertical blank off (level 6 or
-	; more) cannot switch to it: the level lowered meanwhile)
+	; done (hal_yield; with the vertical blank off (level 6 or more) the level is lowered
+	; meanwhile)
 .w	tst.b	(rd_busy).l
 	beq.s	.nb
 	move	(sp),d0
@@ -5267,7 +5573,7 @@ fe_ring
 	cmpi.w	#$0600,d0
 	blo.s	.i
 	move	#$2500,sr
-.i	jsr	(hal_idle).l
+.i	jsr	(hal_yield).l
 	move	(sp),sr
 	bra.s	.w
 .nb	bsr	rd_waitblit			;(and no blit queued reads an image)
@@ -7178,9 +7484,14 @@ rd_fixcell
 ;	everything.
 rd_fix_blit
 	movem.l	d0-d1/a0-a2/a5-a6,-(sp)
-	move.l	(rd_bmrd).l,d0			;(its row of the bitmap read: rd_bmrd)
-	bset	d5,d0
-	move.l	d0,(rd_bmrd).l
+	movea.l	(rd_bmrp).l,a0			;(its word of the bitmap read: rd_bmrc)
+	moveq	#31,d0
+	and.w	d5,d0
+	lea	(a0,d0.w*4),a0
+	moveq	#0,d0
+	move.w	d4,d0
+	lsr.w	#1,d0
+	bfset	(a0){d0:1}
 	move.w	d4,d0
 	andi.w	#$FFFE,d0			;the word's byte
 	move.w	d5,d1
@@ -7301,9 +7612,13 @@ rd_fix_runs
 	bra	rd_cq_flush			;(the last batch let go)
 	; words d0 (first), d1 (how many) of plane row d5, at screen line d4
 .blit	movem.l	d0-d2/a0-a2/a5-a6,-(sp)
-	move.l	(rd_bmrd).l,d2			;(its row of the bitmap read: rd_bmrd)
-	bset	d5,d2
-	move.l	d2,(rd_bmrd).l
+	movea.l	(rd_bmrp).l,a0			;(its words of the bitmap read: rd_bmrc)
+	moveq	#31,d2
+	and.w	d5,d2
+	lea	(a0,d2.w*4),a0
+	moveq	#0,d2
+	move.w	d0,d2
+	bfset	(a0){d2:d1}
 	add.w	d0,d0				;its byte
 	move.w	d5,d2
 	mulu.w	#8*64*NPLANES,d2		;the bitmap's row (64 cells across)
@@ -7414,9 +7729,13 @@ rd_fixsw	ds.b	1			;(rd_fixups: the rows' halves swapped)
 	even
 rd_rsend	ds.w	1			;(rd_restore: the row past the last to look at)
 	even
-rd_bmrd		ds.l	3			;the rows of bmB (bit r: rows r, r + 32 ..) that blits
-						;read, queued in this frame, the one before, the one
-						;before that (frames older are done): rd_cellB
+rd_rsel		ds.l	2			;rd_rowB: the row's cells to draw (column 0 the top bit),
+rd_rstg		ds.l	2			;those staged
+rd_bmrc		ds.l	3*32			;per frame (the last 3), per row of bmB: its 16 pixel
+						;columns blits queued then read (column 0 the top bit)
+rd_bmrp		ds.l	1			;this frame's (rd_bmrd_age)
+rd_ovrd		ds.l	3			;the overlay's bands of 8 lines (from line -8) blits read,
+						;queued in this frame, the one before, the one before that
 	even
 rd_sh		ds.w	1
 rd_sor		ds.w	1

@@ -390,6 +390,9 @@ os_save_prof
 	move.l	d0,(prof_mark+16).l
 	move.w	(snd_delay).l,d0		;(and the sound's delay now: the last slot)
 	move.l	d0,(prof_mark+52+60).l
+	IFD	PROFMARK
+	move.l	(prof_pos).l,(prof_mark+52+52).l	;(the samples' ring position)
+	ENDC
 	move.l	d4,d1
 	move.l	#prof_mark,d2
 	move.l	#52+64+16,d3

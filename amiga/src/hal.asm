@@ -251,11 +251,13 @@ hal_int6
 	; benchmark builds: a tick that comes while the game runs (not waiting since the last
 	; one) waits for the game's next wait (hal_idle), so the game's course does not depend on
 	; the renderer's timing; BENCHTP ticks on, it runs anyway (a wait loop without hal_idle)
+	tst.b	(hal_yielding).l		;(the renderer on for the game, which does not wait
+	bne.s	.tp				;for a tick: hal_yield)
 	tst.b	(ctx_cur).l
 	bne.s	.tw
 	tst.b	(hal_idled).l
 	bne.s	.tw
-	addq.b	#1,(hal_tickpend).l
+.tp	addq.b	#1,(hal_tickpend).l
 	cmpi.b	#BENCHTP,(hal_tickpend).l
 	bhs.s	.tf
 	IFD	PROFILE
@@ -372,6 +374,24 @@ hal_idle_no					;(the harness: the game waits, nothing to draw)
 	move.l	(sp)+,d0
 	rts
 
+;	The game waits for the renderer to finish a frame half drawn (fe_ring), not for a game
+;	tick: the renderer gets the CPU as in hal_idle, but a BENCH build's tick count is left
+;	alone (a tick that comes meanwhile waits for the game's next wait), so the game's course
+;	does not depend on whether a frame was half drawn. Keeps all.
+hal_yield
+	tst.b	(ctx_ready).l
+	beq.s	.x
+	clr.w	(hal_starve).l
+	PEV	'R'
+	IFD	BENCH
+	st	(hal_yielding).l
+	ENDC
+	trap	#0
+	IFD	BENCH
+	sf	(hal_yielding).l
+	ENDC
+.x	rts
+
 	IFD	BENCH
 ;	A game tick put off while the game ran (hal_int6), now that it waits: as the interrupt
 ;	would have run it, at level 6. Keeps all.
@@ -467,6 +487,23 @@ prof_event
 	andi.l	#PEVMAX-1,d1
 	move.l	d1,(prof_evpos).l
 	addq.l	#1,(prof_evcount).l
+	IFD	PROFMARK
+	move.b	12+2+4+1(sp),d0			;(a frame's start and end among the PC samples:
+	cmpi.b	#'S',d0				;$3F0000 and the code)
+	beq.s	.pm
+	cmpi.b	#'D',d0
+	bne.s	.npm
+.pm	andi.l	#$FF,d0
+	ori.l	#$3F000000,d0
+	move.l	(prof_pos).l,d1
+	lea	(prof_buf).l,a0
+	move.l	d0,(a0,d1.l*4)
+	addq.l	#1,d1
+	andi.l	#PROFMAX-1,d1
+	move.l	d1,(prof_pos).l
+	addq.l	#1,(prof_count).l
+.npm
+	ENDC
 	movem.l	(sp)+,d0-d1/a0
 	move	(sp)+,sr
 	rts
@@ -523,7 +560,11 @@ hal_display_init
 	move.l	#$008A0000,(a1)			;COPJMP2: the blit queue
 	move.l	a0,(CUSTOM+$080).l		;COP1LC
 	move.w	d0,(CUSTOM+$088).l		;COPJMP1
+	IFD	NASTY
+	move.w	#$87E0,(CUSTOM+DMACON).l	;(the blitter before the CPU: a test)
+	ELSE
 	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
+	ENDC
 	rts
 
 ;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the
@@ -622,6 +663,7 @@ hal_frames	ds.l	1
 hal_tickvb	ds.l	1			;rd_vblanks at the last game tick
 hal_pcring	ds.l	17
 hal_idled	ds.b	1			;(BENCH: the game waited since the last tick)
+hal_yielding	ds.b	1			;(BENCH: the game in hal_yield)
 hal_tickpend	ds.b	1			;(BENCH: ticks put off)
 	even
 hal_pcpos	ds.w	1

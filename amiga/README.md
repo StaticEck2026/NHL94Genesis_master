@@ -132,6 +132,11 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
   waiting for a buffer, the show queued, the queue at it or held, the copper list set, vertical
   blanks, game ticks), written after the profile (`prof_ev`).
+- `-DPROFMARK=1` (with `-DPROFILE=1`) also puts each frame's start and end of drawing among the
+  PC samples, so `amiga/tools/amilate.py LISTING nhl94.prof` can tell what the frames shown
+  late (2 or more vertical blanks after the one before) spent their time on, against the frames
+  on time, and list each late frame's busiest renderer routines.
+- `-DNASTY=1` gives the blitter priority over the CPU on the chip bus (a test).
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
   of the 37 sprites a frame in play, about 9% of the renderer's time).
@@ -322,7 +327,11 @@ harness gives the sprite image ring a second part as the launcher would, 256 KB
 blitter's cycles and blits since the frame before by kind (copies A to D, cookie cuts, D only,
 other), with NHL_DETERM the same game every build. `NHL_BLITLOG=file` writes every blit: the
 frames shown so far, the game frame, BLTCON0, BLTCON1, the first and last word masks, the A, B,
-C and D pointers (0: not used), words, lines and its time.
+C and D pointers (0: not used), words, lines and its time. `NHL_HAZARD=n` reports (up to n)
+blits that read a word the CPU wrote after the blit was queued (after it wrote the copper's
+move that starts it), with the pc of that write and of the queueing: what a queued blit reads
+has to stay as it was until it has run, a vertical blank's restart included. (A cookie cut's
+last word of a row, whose mask is 0, is not reported: what it reads is never used.)
 
 ## Testing without an Amiga
 
