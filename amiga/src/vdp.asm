@@ -193,13 +193,10 @@ hal_vdp_dma
 	lsr.l	#1,d0				;longs
 	beq	.word
 	subq.l	#1,d0
-.long	move.l	(a0)+,d2
-	cmp.l	(a1),d2
-	bne	.chl
-	addq.l	#4,a1
-	dbf	d0,.long
-	bra	.word
-.chl	move.l	d2,(a1)
+.long	cmpm.l	(a0)+,(a1)+
+	dbne	d0,.long
+	beq	.word				;(the rest the same)
+	move.l	-4(a0),-(a1)			;changed
 	bsr	.mark
 	addq.l	#4,a1
 	dbf	d0,.long

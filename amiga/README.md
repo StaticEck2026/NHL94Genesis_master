@@ -140,8 +140,9 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
   not listed for repair (nor drawn over by the blits listed for the frame) must match the
   bitmap. It also compares every name table each frame
-  and fails if one changed that the write marks said could not have. The test harness reports
-  the first failure.
+  and fails if one changed that the write marks said could not have (or, written only by DMA,
+  fills and copies, outside the blocks they marked). The test harness reports the first
+  failure.
 
 ## How it works
 
@@ -162,7 +163,8 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   objects too: `addframe2`, which writes a player's frame as a few sprites in a row of the
   sprite table, notes the range and the frame (with its flips and palette); the notes go with
   the table when it is sent, and the renderer draws each such object as one image, built once
-  from the native tiles (its sprites in their order, at any pixel offsets), kept in the sprite
+  from the native tiles (its sprites in their order, at any pixel offsets: one at a whole byte
+  over none drawn before it goes straight in, the others through bit fields), kept in the sprite
   image ring and found by its frame: one blit an object instead of one a sprite. An object
   drawn the same in the frame before (the same frame, place, scroll and image in its place of
   the sprite list) takes that blit, its box and its cover again instead of being placed and cut
@@ -250,7 +252,9 @@ The hardware layer:
   interrupt masks (5, 3: the Genesis line interrupt) are lowered to 0 in conversion, so the
   blit queue is fed while the game's code runs. The renderer only reads which name tables the
   game may have written (DMA, fills and copies mark the blocks they change, data port writes
-  the block they begin in) and compares only those with its copies.
+  the block they begin in) and compares only those with its copies: a table written by a
+  data port write all of it, one written only by DMA, fills and copies only the 32 byte blocks
+  they changed (the game clock's 5 words: 8 longs compared instead of 1024).
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.

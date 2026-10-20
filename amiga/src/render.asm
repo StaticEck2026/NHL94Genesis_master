@@ -68,6 +68,12 @@ tp_cls		ds.b	4096			;0 empty, 1 opaque, 2 mixed
 tc_dirty	ds.l	64			;one bit per tile: convert before use
 tc_pend		ds.l	64			;one bit per tile: changed, converted when a sprite needs it
 tc_chg		ds.l	64			;tiles converted this frame
+rd_ntb		ds.l	3			;rd_ntnext: the block to look from, the end, the first
+rd_ntfull	ds.b	1			;rd_ntwritten: the whole name table to compare
+rd_ntblkm	ds.b	1			;(rd_updateB: comparing block by block)
+	even
+rd_tcn		ds.w	1			;its longs with a bit set (rd_decode_dirty): how many,
+rd_tcl		ds.w	64			;their byte offsets
 rd_ptab		ds.l	256			;byte (2 pixels) -> its bits in the 4 plane bytes
 rd_pftab	ds.l	256			;the same for the flipped tile
 rd_nibtab	ds.w	256			;chunky fallback: byte -> 2 pixel bytes
@@ -367,18 +373,37 @@ rd_dirty_all
 	movem.l	(sp)+,d0/a0
 	rts
 
-;	Convert every dirty tile; tc_chg = the tiles converted. d0 = 0 if none. (rd_frame holds
+;	Convert every dirty tile; tc_chg = the tiles converted (rd_tcn, rd_tcl: its longs with any).
+;	d0 = 0 if none. (rd_frame holds
 ;	the game's tick meanwhile: the game, which sets the bits, cannot run.)
 rd_decode_dirty
+	lea	(tc_chg).l,a3			;(clear but where it had bits: rd_tcl)
+	lea	(rd_tcl).l,a0
+	move.w	(rd_tcn).l,d0
+	bra.s	.ce
+.cl	move.w	(a0)+,d1
+	clr.l	(a3,d1.w)
+.ce	dbf	d0,.cl
+	clr.w	(rd_tcn).l
 	lea	(tc_dirty).l,a4
-	lea	(tc_chg).l,a3
-	moveq	#0,d7				;the tile of the long's bit 31
 	moveq	#0,d3				;any
-.long	move.l	(a4),d6
-	clr.l	(a4)
-	move.l	d6,(a3)+
-	beq	.next
+	moveq	#63,d5				;longs left - 1
+.sc	tst.l	(a4)+
+	dbne	d5,.sc
+	beq	.x				;(no more)
+	move.l	-(a4),d6			;a long with bits
+	clr.l	(a4)+
+	moveq	#63,d7
+	sub.w	d5,d7
+	move.w	d7,d1
+	lsl.w	#2,d1
+	move.l	d6,(a3,d1.w)
+	move.w	(rd_tcn).l,d0			;(the long noted)
+	lea	(rd_tcl).l,a0
+	move.w	d1,(a0,d0.w*2)
+	addq.w	#1,(rd_tcn).l
 	moveq	#1,d3
+	lsl.l	#5,d7				;the tile of the long's bit 31
 .bit	bfffo	d6{0:0},d0
 	bfclr	d6{d0:1}
 	add.l	d7,d0				;a tile
@@ -393,16 +418,13 @@ rd_decode_dirty
 	move.l	(rd_count).l,(a0,d0.l*4)	;(the sprite image cache sees it)
 	bra.s	.nb
 .now	bfclr	(tc_pend).l{d0:1}
-	movem.l	d3/a3,-(sp)
+	movem.l	d3/d5/a3,-(sp)
 	bsr	rd_decode_tile
-	movem.l	(sp)+,d3/a3
+	movem.l	(sp)+,d3/d5/a3
 .nb	tst.l	d6
 	bne.s	.bit
-.next	addq.l	#4,a4
-	addi.l	#32,d7
-	cmpi.l	#2048,d7
-	bne	.long
-	move.l	d3,d0
+	dbf	d5,.sc
+.x	move.l	d3,d0
 	rts
 
 ;	Tiles d0 (0-2047) to d0 + d1 - 1 (wrapping round): those waiting (tc_pend) converted. Keeps
@@ -1359,13 +1381,16 @@ rd_bq_int
 ;	Can the name table at VRAM d0 (32 byte aligned), d1 bytes long, have changed since it was
 ;	last compared with its copy? Only if a DMA, fill or copy changed its blocks (tc_chg) or a
 ;	data port write began in one (vdp_wmap: cleared here), or the copies are not in step
-;	(rd_ntsync). d0.b = $FF if so, else 0 (and the flags). Uses d0-d4/a0-a1.
+;	(rd_ntsync). d0.b = $FF if so, else 0 (and the flags). rd_ntfull: a data port write or the
+;	copies not in step (all of it to compare; else only the blocks of tc_chg: a DMA, fill or
+;	copy marks each it writes). Uses d0-d4/a0-a1.
 rd_ntwritten
 	lsr.l	#5,d0				;first block
 	moveq	#31,d2
 	add.l	d2,d1
 	lsr.l	#5,d1				;blocks
 	moveq	#0,d2
+	sf	(rd_ntfull).l
 	lea	(vdp_wmap).l,a0
 	lea	(tc_chg).l,a1
 	move	sr,-(sp)
@@ -1375,8 +1400,11 @@ rd_ntwritten
 	bhs.s	.w
 	move.l	d1,d3
 .w	bfextu	(a0){d0:d3},d4
-	or.l	d4,d2
+	beq.s	.w0
+	st	(rd_ntfull).l
+.w0	or.l	d4,d2
 	IFD	STATS
+	tst.l	d4
 	beq.s	.s1
 	addq.l	#1,(rd_dbg_x+32).l
 	move.l	d0,(rd_dbg_x+36).l
@@ -1398,10 +1426,79 @@ rd_ntwritten
 	move	(sp)+,sr
 	tst.b	(rd_ntsync).l
 	seq	d0
+	or.b	d0,(rd_ntfull).l
 	tst.l	d2
 	sne	d1
 	or.b	d1,d0
 	rts
+
+;	The next block (32 bytes) of the name table being compared with a tc_chg bit: from
+;	rd_ntb (the block to look from), below rd_ntb+4; d0 = its offset in the table (rd_ntb+8: the
+;	table's first block), rd_ntb on past it; C set if none. Uses d0-d2/a0.
+rd_ntnext
+	move.l	(rd_ntb).l,d0
+.l	cmp.l	(rd_ntb+4).l,d0
+	bhs.s	.no
+	move.l	d0,d1
+	lsr.l	#5,d1
+	lea	(tc_chg).l,a0
+	move.l	(a0,d1.l*4),d2
+	moveq	#31,d1
+	and.l	d0,d1
+	lsl.l	d1,d2				;(its bits from this block on)
+	bne.s	.b
+	addi.l	#32,d0				;(none: the next long)
+	andi.l	#-32,d0
+	bra.s	.l
+.b	bfffo	d2{0:0},d1
+	add.l	d1,d0
+	cmp.l	(rd_ntb+4).l,d0
+	bhs.s	.no
+	move.l	d0,d1
+	addq.l	#1,d1
+	move.l	d1,(rd_ntb).l
+	sub.l	(rd_ntb+8).l,d0
+	lsl.l	#5,d0
+	andi	#$FE,ccr			;(C clear)
+	rts
+.no	ori	#1,ccr
+	rts
+
+;	The name table at a0 (in vdp_vram), d7 + 1 longs: its blocks for rd_ntnext. Keeps all.
+rd_ntblocks
+	movem.l	d0-d1,-(sp)
+	move.l	a0,d0
+	subi.l	#vdp_vram,d0
+	lsr.l	#5,d0
+	move.l	d0,(rd_ntb).l
+	move.l	d0,(rd_ntb+8).l
+	moveq	#0,d1
+	move.w	d7,d1
+	addq.l	#1,d1
+	lsr.l	#3,d1				;(8 longs a block)
+	add.l	d1,d0
+	move.l	d0,(rd_ntb+4).l
+	movem.l	(sp)+,d0-d1
+	rts
+
+	IFD	VERIFY
+;	Debug: the name table's long at a0 - 4 changed, rd_ntwritten said only blocks of tc_chg
+;	could have and its is not one: rd_ntfail with d0 (the table) + $10. Keeps all.
+rd_ntblkchk
+	tst.b	(rd_ntfull).l
+	bne.s	.x
+	movem.l	d0-d1,-(sp)
+	move.l	a0,d1
+	subq.l	#4,d1
+	subi.l	#vdp_vram,d1
+	lsr.l	#5,d1
+	bftst	(tc_chg).l{d1:1}
+	bne.s	.ok
+	addi.w	#$10,d0
+	bsr	rd_ntfail
+.ok	movem.l	(sp)+,d0-d1
+.x	rts
+	ENDC
 
 	IFD	VERIFY
 ;	Debug: a name table changed that rd_ntwritten said could not have (d0 = 1 plane B, 2 plane
@@ -1465,16 +1562,22 @@ rd_updateB
 	move.w	#BMAX/2-1,d3
 .ct	clr.l	(a1)+
 	dbf	d3,.ct
-.same	; were any tiles of plane B converted again?
+.same	; were any tiles of plane B converted again? (tc_chg's longs with any: rd_tcl)
+	moveq	#0,d3
+	move.w	(rd_tcn).l,d4
+	beq.s	.tun
+	subq.w	#1,d4
+	move.l	a3,-(sp)
+	lea	(rd_tcl).l,a3
 	lea	(tc_chg).l,a1
 	lea	(rd_bused).l,a2
-	moveq	#0,d3
-	moveq	#63,d4
-.tu	move.l	(a1)+,d5
-	and.l	(a2)+,d5
-	or.l	d5,d3
+.tu	move.w	(a3)+,d5
+	move.l	(a1,d5.w),d7
+	and.l	(a2,d5.w),d7
+	or.l	d7,d3
 	dbf	d4,.tu
-	move.l	d3,(rd_btchg).l
+	movea.l	(sp)+,a3
+.tun	move.l	d3,(rd_btchg).l
 	IFD	STATS
 	beq.s	.st0
 	addq.l	#1,(rd_dbg_x+0).l
@@ -1501,9 +1604,23 @@ rd_updateB
 	addq.w	#1,d7
 	lsr.w	#1,d7
 	subq.w	#1,d7				;longs - 1
+	sf	(rd_ntblkm).l
+	IFND	VERIFY
+	tst.b	(rd_ntfull).l			;(only blocks a DMA, fill or copy wrote: those)
+	bne.s	.f
+	st	(rd_ntblkm).l
+	bsr	rd_ntblocks
+.fb	bsr	rd_ntnext
+	bcs	.fdone
+	movea.l	(rd_tmp).l,a0
+	adda.l	d0,a0
+	lea	(shB).l,a1
+	adda.l	d0,a1
+	moveq	#7,d7
+	ENDC
 .f	cmpm.l	(a0)+,(a1)+
 	dbne	d7,.f
-	beq	.fdone
+	beq	.fend
 	; long at a0-4 differs: its two cells
 	movem.l	d7/a0-a1,-(sp)
 	move.l	a0,d0
@@ -1526,7 +1643,20 @@ rd_updateB
 	moveq	#1,d0
 	bsr	rd_ntfail
 	move.l	(sp)+,d0
-.vok
+.vok	tst.b	(rd_ntfull).l			;(a DMA's block?)
+	bne.s	.vk2
+	movem.l	d0/d1,-(sp)
+	move.l	(rd_tmp).l,d1
+	subi.l	#vdp_vram,d1
+	add.l	d0,d1
+	add.l	d0,d1
+	lsr.l	#5,d1
+	bftst	(tc_chg).l{d1:1}
+	bne.s	.vk1
+	moveq	#$11,d0
+	bsr	rd_ntfail
+.vk1	movem.l	(sp)+,d0/d1
+.vk2
 	ENDC
 	moveq	#0,d4
 	move.w	d0,d4
@@ -1544,6 +1674,11 @@ rd_updateB
 	dbf	d3,.fc
 	movem.l	(sp)+,d7/a0-a1
 	dbf	d7,.f
+.fend
+	IFND	VERIFY
+	tst.b	(rd_ntblkm).l
+	bne	.fb
+	ENDC
 .fdone	tst.l	(rd_btchg).l
 	beq.s	.fd2
 	bsr	rd_btiles
@@ -2067,16 +2202,26 @@ rd_scrollpos
 rd_restore
 	movea.l	(rd_dmap).l,a2
 	moveq	#0,d7				;row
+	move.w	#DROWS,(rd_rsend).l
+	tst.w	(rd_scroll).l
+	beq.s	.row
+	move.w	(rd_brow0).l,d7			;(scroll mode: the rows on the screen; the others
+	move.w	d7,d0				;stay marked until they come on it)
+	addi.w	#SCRH-1,d0
+	lsr.w	#DLS,d7
+	lsr.w	#DLS,d0
+	addq.w	#1,d0
+	move.w	d0,(rd_rsend).l
 .row	move.l	(a2,d7.w*4),d6
 	bne.s	.dirty
 	addq.w	#1,d7
-	cmpi.w	#DROWS,d7
+	cmp.w	(rd_rsend).l,d7
 	blt.s	.row
 	rts
 .dirty	move.w	d7,d5				;first row
 .same	clr.l	(a2,d7.w*4)
 	addq.w	#1,d7
-	cmpi.w	#DROWS,d7
+	cmp.w	(rd_rsend).l,d7
 	bge.s	.grp
 	moveq	#DWRAP-1,d0
 	and.w	d7,d0
@@ -2162,7 +2307,7 @@ rd_restore
 	addq.w	#1,d5
 	cmp.w	d7,d5
 	blt.s	.wm
-	cmpi.w	#DROWS,d7
+	cmp.w	(rd_rsend).l,d7
 	blt	.row
 	bra	rd_cq_flush
 
@@ -3661,7 +3806,7 @@ rd_buildA
 	lsr.w	#1,d4
 	subq.w	#1,d4				;longs - 1
 	moveq	#0,d3				;listed
-	bsr	.cmp
+	bsr	.cmpd
 	move.w	d3,(rd_nchgA).l
 .caw	movem.l	d2-d4,-(sp)
 	move.l	(rd_wbase).l,d0
@@ -3683,19 +3828,26 @@ rd_buildA
 	lsl.w	#4,d4				;* 32 rows / 2
 	subq.w	#1,d4
 	moveq	#0,d3
-	bsr	.cmp
+	bsr	.cmpd
 	move.w	d3,(rd_nchgW).l
 .cww	st	(rd_ntsync).l			;(the copies are in step from here on)
-	; tiles of these cells converted again?
+	; tiles of these cells converted again? (tc_chg's longs with any: rd_tcl)
+	move.w	(rd_tcn).l,d0
+	beq.s	.tun
+	subq.w	#1,d0
+	move.l	a2,-(sp)
+	lea	(rd_tcl).l,a2
 	lea	(tc_chg).l,a0
 	lea	(rd_aused).l,a1
-	moveq	#63,d0
-.tu	move.l	(a0)+,d1
-	and.l	(a1)+,d1
-	beq	.tu1
+.tu	move.w	(a2)+,d1
+	move.l	(a0,d1.w),-(sp)
+	move.l	(a1,d1.w),d1
+	and.l	(sp)+,d1
+	beq.s	.tu1
 	moveq	#2,d5
 .tu1	dbf	d0,.tu
-	tst.w	d5
+	movea.l	(sp)+,a2
+.tun	tst.w	d5
 	beq	.keep
 	cmpi.w	#1,d5
 	bne	.full
@@ -3706,8 +3858,30 @@ rd_buildA
 	bne	.full
 	bsr	rd_ovl_cells_changed
 	bra	.keep
+.cmpd	; the same, only the blocks a DMA, fill or copy wrote if no more can have changed
+	; (rd_ntfull)
+	IFND	VERIFY
+	tst.b	(rd_ntfull).l
+	bne.s	.cmp
+	move.l	a0,(rd_tmp+16).l
+	move.l	a1,(rd_tmp+20).l
+	move.l	d7,-(sp)
+	move.w	d4,d7
+	bsr	rd_ntblocks
+	move.l	(sp)+,d7
+.cdb	bsr	rd_ntnext
+	bcs.s	.cdx
+	movea.l	(rd_tmp+16).l,a0
+	adda.l	d0,a0
+	movea.l	(rd_tmp+20).l,a1
+	adda.l	d0,a1
+	moveq	#7,d4
+	bsr.s	.cs
+	bra.s	.cdb
+.cdx	rts
+	ENDC
 .cmp	; the name table a0 against its copy a1, d4 + 1 longs: changed longs listed (.note) and
-	; copied. Uses d0-d1, d4, a0-a1.
+	; copied. Uses d0-d2, d4, a0-a1.
 	move.l	a0,(rd_tmp+16).l
 .cs	cmpm.l	(a0)+,(a1)+
 	dbne	d4,.cs
@@ -3722,14 +3896,14 @@ rd_buildA
 .cx	rts
 .note	; long d2 of a name table changed: list it (d3 = count), or ask for a full redraw
 	IFD	VERIFY
-	tst.b	(rd_ntcur).l
-	bne.s	.nok
 	move.l	d0,-(sp)
 	moveq	#0,d0
 	move.b	(rd_nttab).l,d0
+	tst.b	(rd_ntcur).l
+	bne.s	.nok
 	bsr	rd_ntfail
+.nok	bsr	rd_ntblkchk
 	move.l	(sp)+,d0
-.nok
 	ENDC
 	moveq	#1,d1
 	cmpi.w	#2,d5
@@ -4237,8 +4411,9 @@ rd_box_set
 	moveq	#0,d2
 	move.b	3(a1),d2
 	lea	(a2,d1.w*4),a0
-.r	bfset	(a0){d0:d2}
-	addq.l	#4,a0
+	moveq	#0,d1
+	bfset	d1{d0:d2}			;(its columns: within a row's long)
+.r	or.l	d1,(a0)+
 	dbf	d3,.r
 .x	rts
 
@@ -4515,6 +4690,8 @@ rd_op_end
 	move.b	OPREC-2(a4),d0			;column,
 	moveq	#0,d2
 	move.b	OPREC-1(a4),d2			;columns
+	moveq	#0,d5
+	bfset	d5{d0:d2}			;(its columns: within a row's long)
 	lea	(rd_wmap).l,a0
 	lea	(a0,d1.w*4),a0
 	tst.b	(a3)+
@@ -4523,15 +4700,14 @@ rd_op_end
 	beq.s	.en				;(kept, and nothing of it on the screen)
 	movea.l	a0,a1
 	move.w	d3,d4
-.et	bftst	(a1){d0:d2}
+.et	move.l	(a1)+,d0
+	and.l	d5,d0
 	bne.s	.es
-	addq.l	#4,a1
 	dbf	d4,.et
 	bra.s	.en				;(kept as it is)
 .ed	cmpi.b	#$FF,d1
 	beq.s	.eb
-.es	bfset	(a0){d0:d2}			;(drawn: the blits after it over it are too)
-	addq.l	#4,a0
+.es	or.l	d5,(a0)+			;(drawn: the blits after it over it are too)
 	dbf	d3,.es
 .eb
 	IFD	STATS
@@ -5419,12 +5595,29 @@ rd_obj_build
 	move.w	d2,(rd_owb).l			;bytes a row (as rd_spr_geom has it)
 	lsl.w	#3,d3
 	move.w	d3,(rd_olines).l
-	; the scratch: lines of 7 rows of 8 bytes (planes 0-3, the palette planes 4, 5, the mask)
-	mulu.w	#56/4,d3
+	; the scratch: lines of 7 rows of 8 bytes (planes 0-3, the palette planes 4, 5, the mask);
+	; the bytes of each row the image has cleared (all the mask's: rd_obj_box)
 	subq.w	#1,d3
 	lea	(rd_oscr).l,a0
-.cl	clr.l	(a0)+
-	dbf	d3,.cl
+	moveq	#0,d0
+	cmpi.w	#4,(rd_owb).l
+	bhi.s	.c8
+.c4	move.l	d0,(a0)
+	move.l	d0,8(a0)
+	move.l	d0,16(a0)
+	move.l	d0,24(a0)
+	move.l	d0,32(a0)
+	move.l	d0,40(a0)
+	move.l	d0,48(a0)
+	move.l	d0,52(a0)
+	lea	56(a0),a0
+	dbf	d3,.c4
+	bra.s	.cd
+.c8	REPT	14
+	move.l	d0,(a0)+
+	ENDR
+	dbf	d3,.c8
+.cd
 	; the sprites, the last first (the first is in front)
 	move.w	(rd_on).l,d0
 	subq.w	#1,d0
@@ -5461,11 +5654,12 @@ rd_obj_build
 	rts
 
 ;	One sprite of an object (a6: its rd_opc entry) into the scratch (rd_oscr) at its place
-;	from rd_ominx, rd_ominy. First its lines unpacked (rd_opbuf: per line the 4 planes and the
-;	mask, each a long, the sprite's bytes in its low end; the tiles are native: Spritetiles has
-;	a long a line, the 4 plane bytes; flipped: each byte's bits reversed, the columns and the
-;	lines from the last), then each line merged into the scratch under its mask: one bit field
-;	a plane.
+;	from rd_ominx, rd_ominy. The tiles are native: Spritetiles has a long a line, the 4 plane
+;	bytes; flipped: each byte's bits reversed, the columns and the lines from the last. At a
+;	whole byte and over no sprite drawn before it (the scratch is clear there), its bytes go
+;	straight in. Else first its lines unpacked (rd_opbuf: per line the 4 planes and the mask,
+;	each a long, the sprite's bytes in its low end), then each line merged into the scratch
+;	under its mask: one bit field a plane.
 rd_obj_piece
 	moveq	#0,d0
 	move.b	6(a6),d0
@@ -5514,7 +5708,95 @@ rd_obj_piece
 	lsl.w	#2,d0
 	adda.w	d0,a0
 	movea.w	#-4,a5
-.nv	; unpacked: the column c's bytes at 4 - across + c of each long
+.nv	bsr	rd_obj_overlap
+	tst.b	(rd_oovl).l
+	bne	.bf
+	move.l	(rd_opx).l,d2
+	moveq	#7,d0
+	and.w	d2,d0
+	bne	.bf
+	; at a whole byte over nothing: straight in (d2, d4: the palette planes' bytes of the mask)
+	lsr.w	#3,d2
+	movea.l	(rd_opline).l,a1
+	adda.w	d2,a1
+	moveq	#0,d2
+	btst	#13,d5
+	beq.s	.s4
+	moveq	#-1,d2
+.s4	moveq	#0,d4
+	btst	#14,d5
+	beq.s	.s5
+	moveq	#-1,d4
+.s5	moveq	#0,d1
+	btst	#11,d5
+	bne.s	.sfl
+.sl	movea.l	a0,a3
+	movea.l	a1,a6
+	move.w	(rd_opw).l,d7
+	subq.w	#1,d7
+.sc	move.l	(a3),d0
+	adda.l	a4,a3
+	move.b	d0,24(a6)			;plane 3
+	move.b	d0,d3
+	lsr.w	#8,d0
+	move.b	d0,16(a6)			;2
+	or.b	d0,d3
+	swap	d0
+	move.b	d0,8(a6)			;1
+	or.b	d0,d3
+	lsr.w	#8,d0
+	move.b	d0,(a6)				;0
+	or.b	d0,d3
+	move.b	d3,48(a6)			;the mask
+	move.b	d3,d0
+	and.b	d2,d0
+	move.b	d0,32(a6)			;the palette planes
+	and.b	d4,d3
+	move.b	d3,40(a6)
+	addq.l	#1,a6
+	dbf	d7,.sc
+	adda.l	a5,a0
+	lea	56(a1),a1
+	dbf	d6,.sl
+	rts
+.sfl	movea.l	a0,a3				;(flipped: each byte's bits reversed)
+	movea.l	a1,a6
+	move.w	(rd_opw).l,d7
+	subq.w	#1,d7
+.sfc	move.l	(a3),d0
+	adda.l	a4,a3
+	move.b	d0,d1
+	move.b	(a2,d1.w),d1
+	move.b	d1,24(a6)			;plane 3
+	move.b	d1,d3
+	lsr.w	#8,d0
+	move.b	d0,d1
+	move.b	(a2,d1.w),d1
+	move.b	d1,16(a6)			;2
+	or.b	d1,d3
+	swap	d0
+	move.b	d0,d1
+	move.b	(a2,d1.w),d1
+	move.b	d1,8(a6)			;1
+	or.b	d1,d3
+	lsr.w	#8,d0
+	move.b	d0,d1
+	move.b	(a2,d1.w),d1
+	move.b	d1,(a6)				;0
+	or.b	d1,d3
+	move.b	d3,48(a6)			;the mask
+	move.b	d3,d0
+	and.b	d2,d0
+	move.b	d0,32(a6)			;the palette planes
+	and.b	d4,d3
+	move.b	d3,40(a6)
+	addq.l	#1,a6
+	dbf	d7,.sfc
+	adda.l	a5,a0
+	lea	56(a1),a1
+	dbf	d6,.sfl
+	rts
+.bf	; unpacked: the column c's bytes at 4 - across + c of each long
 	lea	(rd_opbuf+4).l,a1
 	suba.w	(rd_opw).l,a1
 	moveq	#0,d1
@@ -5561,8 +5843,6 @@ rd_obj_piece
 	dbf	d6,.ul
 	; merged: under each line's mask; inserted if it overlaps no sprite drawn before it (the
 	; image is clear there)
-	movea.l	4(sp),a6			;(its entry: the caller's)
-	bsr	rd_obj_overlap
 	lea	(rd_opbuf).l,a0
 	movea.l	(rd_opline).l,a1
 	move.l	(rd_opx).l,d2
@@ -6345,21 +6625,31 @@ rd_fixups
 	bsr	rd_waitblit			;(the CPU draws into the back buffer)
 .go	cmpi.w	#64,(rd_cw).l
 	bne	.list
-	lea	(rd_fixmap).l,a0
-	moveq	#2*32-1,d0
-.cf	clr.l	(a0)+
-	dbf	d0,.cf
-	lea	(rd_fixmap).l,a0
+	lea	(rd_fixmap+2*32*4).l,a0
+	moveq	#0,d0
+	moveq	#0,d1
+	moveq	#0,d2
+	moveq	#0,d3
+	REPT	2*32/4
+	movem.l	d0-d3,-(a0)
+	ENDR
 	lea	(rd_cover).l,a1
-	lea	(rd_tmp).l,a2
 	lea	(rd_hibits).l,a3
 	moveq	#0,d4
 	move.w	(rd_bx0).l,d4
 	moveq	#7,d5
-	and.w	d4,d5				;pixels into the cell (0: one plane column a screen cell)
+	and.w	d4,d5
+	movea.w	d5,a2				;pixels into the cell (0: one plane column a screen cell)
 	lsr.w	#3,d4
-	neg.l	d4
-	addi.l	#64,d4				;the row twice (128 bits) from here: at plane columns
+	neg.w	d4
+	andi.w	#63,d4				;a row (64 bits) rotated left by this: at plane columns
+	sf	(rd_fixsw).l
+	cmpi.w	#32,d4
+	blo.s	.r0
+	st	(rd_fixsw).l			;(by 32 and more: its halves swapped first)
+	subi.w	#32,d4
+.r0	moveq	#32,d5
+	sub.w	d4,d5				;(32: a shift that leaves nothing)
 	move.w	(rd_by0).l,d6
 	moveq	#7,d3
 	and.w	d6,d3
@@ -6371,22 +6661,27 @@ rd_fixups
 	move.l	d0,d2
 	or.l	d1,d2
 	beq	.nsr
-	movem.l	d0-d1,(a2)
-	movem.l	d0-d1,8(a2)
-	bfextu	(a2){d4:0},d0			;the covered screen cells at their plane columns
-	addi.l	#32,d4
-	bfextu	(a2){d4:0},d1
-	tst.w	d5
-	beq.s	.one
-	subq.l	#1,d4				;and the column after each
-	bfextu	(a2){d4:0},d2
+	tst.b	(rd_fixsw).l			;the covered screen cells at their plane columns
+	beq.s	.r1
+	exg	d0,d1
+.r1	move.l	d0,d2
+	move.l	d1,d3
+	lsl.l	d4,d0
+	lsr.l	d5,d3
+	or.l	d3,d0
+	lsl.l	d4,d1
+	lsr.l	d5,d2
 	or.l	d2,d1
-	subi.l	#32,d4
-	bfextu	(a2){d4:0},d2
+	move.l	a2,d2
+	beq.s	.rows
+	move.l	d1,d3				;and the column after each (the row rotated right by
+	lsr.l	#1,d3				;one more)
+	move.l	d0,d2
+	roxr.l	#1,d2
+	move.l	d1,d3
+	roxr.l	#1,d3
 	or.l	d2,d0
-	addq.l	#1,d4
-	bra.s	.rows
-.one	subi.l	#32,d4
+	or.l	d3,d1
 .rows	move.w	d7,d3
 	add.w	d6,d3
 	andi.w	#31,d3
@@ -6844,6 +7139,9 @@ rd_spal		ds.w	1
 rd_colx		ds.w	1
 rd_ctile	ds.l	1
 rd_fixchk	ds.b	1			;rd_fixcell: look in rd_cover
+rd_fixsw	ds.b	1			;(rd_fixups: the rows' halves swapped)
+	even
+rd_rsend	ds.w	1			;(rd_restore: the row past the last to look at)
 	even
 rd_sh		ds.w	1
 rd_sor		ds.w	1
