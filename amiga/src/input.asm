@@ -83,7 +83,7 @@ hal_int2
 	bne	.nf7
 	jsr	(snd_filter_toggle).l
 	bra	.hs
-.nf7	cmpi.b	#$55,d1				;F6: a steady 25 frames a second / as many as can be
+.nf7	cmpi.b	#$55,d1				;F6: as many frames as can be / a steady 25 or 30
 	bne	.nf6
 	eori.l	#1^2,(hal_pace).l
 	bra	.hs

@@ -1291,8 +1291,10 @@ rd_showdue
 	lsl.w	#2,d0
 	lea	(rd_shownvb).l,a1
 	move.l	(rd_vblanks).l,(a1,d0.w)
-	; its delay: vertical blanks from its game state (rd_snaptime) to its showing (from the
-	; next frame on). The sound waits as long (snd_delay: the mean, to within 3/4 frame)
+	; its delay: vertical blanks from the tick that gave its game state (rd_snaptime) to its
+	; showing (from the next frame on), and half a frame more for the beam to come down the
+	; screen to the middle. The sound waits as long (snd_delay: the mean, to within 3/4
+	; frame)
 	move.l	d1,-(sp)
 	lea	(rd_snapvb).l,a1
 	move.l	(rd_vblanks).l,d1
@@ -1307,6 +1309,7 @@ rd_showdue
 	addq.l	#1,(a1,d1.w*4)
 	ENDC
 	lsl.w	#8,d1
+	addi.w	#128,d1
 	sub.w	(snd_latf).l,d1
 	asr.w	#3,d1
 	add.w	d1,(snd_latf).l
@@ -1329,7 +1332,8 @@ rd_snaptime
 	movem.l	d0/a0,-(sp)
 	move.w	(rd_bufi).l,d0
 	lea	(rd_snapvb).l,a0
-	move.l	(rd_vblanks).l,(a0,d0.w*4)
+	move.l	(hal_tickvb).l,(a0,d0.w*4)	;(the tick that gave the state: its sound is the
+						;frame's commands that tick took, snd_z80_poll)
 	movem.l	(sp)+,d0/a0
 	rts
 
@@ -8332,7 +8336,7 @@ rd_bqhold	ds.b	1			;the copper waits at a show for a vertical blank
 	even
 rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
 rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)
-rd_snapvb	ds.l	NBUF			;rd_vblanks when each buffer's game state was taken
+rd_snapvb	ds.l	NBUF			;rd_vblanks at the tick that gave each buffer's game state
 rd_showbuf	ds.w	1			;(its buffer)
 		even
 rd_c4m		ds.w	1			;$FFFF: 4 columns, $FF00: 3

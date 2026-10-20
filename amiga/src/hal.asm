@@ -50,7 +50,7 @@ PROFMAX		equ	65536
 CIA_CLOCK	equ	709379			;PAL E clock
 CIA_CLOCK_NTSC	equ	715909
 	IFND	RDPACE
-RDPACE		equ	2			;hal_pace at the start
+RDPACE		equ	1			;hal_pace at the start
 	ENDC
 	IFND	BENCHTP
 BENCHTP		equ	60			;(BENCH: ticks put off at most, hal_int6)
@@ -291,6 +291,7 @@ hal_int6
 .nowd
 	ENDIF
 	PEV	'T'				;(statistics: a game tick)
+	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the sound's delay, rd_showdue)
 	jsr	(snd_z80_poll).l
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
 	pea	(.post).l
@@ -382,6 +383,7 @@ hal_tick_late
 	jsr	(bench_wait).l
 	addq.l	#1,(hal_frames).l
 	PEV	'T'
+	move.l	(rd_vblanks).l,(hal_tickvb).l
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(snd_z80_poll).l
 	movem.l	(sp)+,d0-d7/a0-a6
@@ -605,9 +607,10 @@ hal_exception
 	move.w	#$F00,(CUSTOM+$180).l
 .hang	bra	.hang
 
-hal_pace	dc.l	RDPACE			;a new frame every 2 game ticks at most, each shown
-						;for 2 vertical blanks at least (a steady 25 a second
-						;on PAL), or 1: as many as there is time for; F6
+hal_pace	dc.l	RDPACE			;1: a new frame each game tick if there is time for it
+						;(50 or 60 a second), or 2: every 2 game ticks at most,
+						;each shown for 2 vertical blanks at least (a steady 25
+						;or 30 a second); F6
 hal_hz		dc.w	0			;game frames a second (0: from the display)
 
 	section	bss,bss
@@ -616,6 +619,7 @@ hal_vectors	ds.l	64
 hal_exc_info	ds.l	4
 hal_exc_regs	ds.l	16
 hal_frames	ds.l	1
+hal_tickvb	ds.l	1			;rd_vblanks at the last game tick
 hal_pcring	ds.l	17
 hal_idled	ds.b	1			;(BENCH: the game waited since the last tick)
 hal_tickpend	ds.b	1			;(BENCH: ticks put off)

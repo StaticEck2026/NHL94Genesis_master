@@ -10,7 +10,7 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.8 MB of any memory (fast
-  RAM where there is some: its code, its data and the Genesis RAM window) and about 1.5 MB of
+  RAM where there is some: its code, its data and the Genesis RAM window) and about 1.6 MB of
   chip RAM (and up to 256 KB more for sprite images if it is free: fewer are built again), so
   it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
   (each part's compressed bytes, then the next), so that is about the most it takes. Kickstart
@@ -24,12 +24,12 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
   Amiga, if the monitor takes it), and the game's rate with it.
 
 Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
-`-DBENCH=1` build), gameplay is capped at a steady 25 frames a second on a 50 Hz display, or 30
-on a 60 Hz one (`F8`): 95% (50 Hz) and 92 to 94% (60 Hz) of the frames are on the screen for
-exactly 2 vertical blanks; the others are heavy moments (a faceoff, many new animation frames at
-once, the rink scrolling a long way). The game itself always runs at full speed; it is the
-screen updates that are fewer. `F6` lifts the cap: about 44 frames a second on average at 50 Hz,
-but unevenly paced (a frame shows for 1 or 2 vertical blanks), which looks less smooth.
+`-DBENCH=1` build), the screen is updated as often as there is time for, up to every vertical
+blank: at 50 Hz about 48.5 frames a second (99% of them on the screen for one vertical blank),
+at 60 Hz 47 to 59 a second depending on the run (89 to 99% for one); the others are heavy
+moments (many new animation frames at once, the rink scrolling a long way). The game itself
+always runs at full speed. `F6` caps the screen at a steady 25 or 30 frames a second instead
+(98 to 99% of them on the screen for exactly 2 vertical blanks).
 
 ## Running
 
@@ -74,11 +74,11 @@ you quit, and is read when it starts.
 | A | CD32 green or yellow / `Z` | CD32 green or yellow / `F1` |
 | Start (pause) | CD32 play / `Return` | CD32 play / `F4` |
 
-`Esc` quits to the Workbench and writes the save file. `F6` switches between a steady 25 frames
-a second and as many as there is time for. `F7` switches the Amiga's audio low-pass filter (on
-at start, like the output filter of a model 1 Genesis). `F8` switches the display between 50 and
-60 Hz and the game between 50 and 60 frames a second with it (the cap is then 25 or 30 frames a
-second).
+`Esc` quits to the Workbench and writes the save file. `F6` switches between as many frames a
+second as there is time for (up to the display's 50 or 60, the start) and a steady 25 or 30.
+`F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model
+1 Genesis). `F8` switches the display between 50 and 60 Hz and the game between 50 and 60 frames
+a second with it.
 
 ### Screen
 
@@ -109,7 +109,7 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   frame's game state to its showing, the sound's delay at the end, and the time spent in the
   game, its vblank code and the renderer (counted on the CIA-B clock at every switch, so time
   with interrupts off, which the PC samples cannot see into, is counted too).
-- `-DRDPACE=1` starts with the frame rate cap off (as `F6`).
+- `-DRDPACE=2` starts with the frame rate capped at 25 or 30 a second (as `F6`).
 - `-DBENCH=1` makes a benchmark build that plays nearly the same game every run and every
   build: everything is counted in the game's waits for a frame (one a game frame, however late
   the frames come): its random numbers (its reads of the beam position) come from that count,
@@ -264,21 +264,24 @@ The hardware layer:
 - `sound.asm`: the four Paula voices in place of the Z80, YM2612 and DAC. The game's own 68000
   sound driver runs unchanged. `sound.asm` reads the commands the driver writes for the Z80:
   key on, key off, frequency, volume and patch per FM channel, and the PCM start, rate and volume.
-  All audio is 8 bit at 11 kHz at most. The 32 FM patches are rendered to samples at 11025 Hz at
-  build time by `amiga/tools/fmrender.py`, a model of the YM2612. Each patch has an attack and a
-  loop at each octave band it is used at, so every note plays at 7.8 to 15.6 kHz. The synthesis runs at 8 times the sample rate and is low-pass
+  All audio is 8 bit, played as fast as Paula plays (a period of 124: about 28.6 kHz). The 32
+  FM patches are rendered to samples at 20000 Hz at build time by `amiga/tools/fmrender.py`, a
+  model of the YM2612. Each patch has an attack and a loop at each octave band it is used at, so
+  every note plays at 14.1 to 28.3 kHz. The synthesis runs at 8 times the sample rate and is low-pass
   filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
   back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
   note takes a free voice, else the quietest released one, else the oldest. The PCM sounds
-  (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`:
-  most already play at 11 kHz or less and are kept as they are; the two the game plays faster
-  (the glass at 29 kHz, a hit at 12 kHz) are resampled to 11025 Hz and played at a period that
-  keeps their pitch. A frame's picture reaches the screen a few vertical blanks after the game
-  made it (drawn, then queued behind the frames before it: 3 with the 25 fps cap, 2 to 3
-  without), so the sound would come before what it goes with. Each game frame's sound commands,
-  with the Z80 RAM bytes they use, go into a delay line and are carried out that much later;
-  the renderer measures the picture's delay at every frame shown and keeps the sound's delay
-  at its mean, changing it only when it is off by 3/4 of a frame.
+  (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`,
+  at the game's own rates (6.5 to 12 kHz); the glass, which the game plays at 29 kHz, faster
+  than Paula, is resampled to 28.6 kHz and played at a period that keeps its pitch. A frame's
+  picture reaches the screen a few vertical blanks after the game made it (drawn, then queued
+  behind the frames before it: 2 to 3 at full speed, 3 with the 25 fps cap), so the sound
+  would come before what it goes with. Each game frame's sound commands, with the Z80 RAM bytes
+  they use, go into a delay line and are carried out that much later; the renderer measures
+  the picture's delay at every frame shown, from the game tick that gave the frame its state
+  (whose commands are the frame's) to its showing, and half a frame more for the beam to come
+  down to the middle of the screen, and keeps the sound's delay at its mean, changing it only
+  when it is off by 3/4 of a frame.
 - `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
   file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
   decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
