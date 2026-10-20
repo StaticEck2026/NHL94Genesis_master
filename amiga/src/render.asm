@@ -1930,13 +1930,13 @@ rd_restore
 	move.w	d4,d3				;to its last
 	bra.s	.ext
 .blit	bsr	rd_cq_blit			;the copper block
-	tst.b	(rd_cqkind).l
-	bne.s	.k
+	cmpi.b	#1,(rd_cqkind).l
+	beq.s	.k
 	move.l	#$004009F0,(a5)+		;BLTCON0: A to D (once for the restores in a row)
 	move.l	#$00420000,(a5)+		;BLTCON1
 	move.l	#$0044FFFF,(a5)+		;BLTAFWM
 	move.l	#$0046FFFF,(a5)+		;BLTALWM
-	st	(rd_cqkind).l
+	move.b	#1,(rd_cqkind).l
 .k	move.w	d5,d0
 	andi.w	#DWRAP-1,d0
 	mulu.w	#DLH*64*6,d0			;the bitmap: 64 cells, 6 planes a line
@@ -3008,7 +3008,7 @@ rd_ovl_blit
 	addq.w	#1,d7
 	cmpi.w	#30,d7
 	blt	.band
-	rts
+	bra	rd_cq_flush			;(the last batch let go)
 .blitrun	; pixels d0 .. d1 of band d7
 	; lines of the band on screen
 	move.w	d7,d2
@@ -3079,30 +3079,40 @@ rd_ovl_blit
 	adda.w	d6,a0
 	move.w	d1,d4
 	add.w	d4,d4				;bytes a row
-	; one blit for the 6 planes: rows of the interleaved image, mask and screen
-	bsr	rd_bq_alloc
+	; one blit for the 6 planes: rows of the interleaved image, mask and screen (the copper
+	; block: rd_cq_blit)
+	move.l	a5,-(sp)
+	bsr	rd_cq_blit
+	sf	(rd_cqkind).l
 	ror.w	#4,d5
-	move.w	d5,$042(a6)			;BLTCON1: B shift
-	ori.w	#$0FCA,d5
-	move.w	d5,$040(a6)			;A shift; A mask, B overlay, C, D: AB + /AC
-	move.w	#$FFFF,$044(a6)
-	move.w	#0,$046(a6)			;the extra word
-	move.l	a2,$050(a6)			;A: mask
-	move.l	a1,$04C(a6)			;B: overlay
-	move.l	a0,$048(a6)			;C
-	move.l	a0,$054(a6)			;D
-	move.w	#OSBPR,d5
-	sub.w	d4,d5
-	move.w	d5,$064(a6)			;AMOD
-	move.w	d5,$062(a6)			;BMOD
-	move.w	#SBPR,d5
-	sub.w	d4,d5
-	move.w	d5,$060(a6)			;CMOD
-	move.w	d5,$066(a6)			;DMOD
+	move.l	#$00420000,d6
+	move.w	d5,d6
+	move.l	d6,(a5)+			;BLTCON1: B shift
+	ori.w	#$0FCA,d6
+	eori.l	#($042^$040)<<16,d6
+	move.l	d6,(a5)+			;BLTCON0: A shift; A mask, B overlay, C, D: AB + /AC
+	move.l	#$0044FFFF,(a5)+		;BLTAFWM
+	move.l	#$00460000,(a5)+		;BLTALWM: the extra word
+	move.l	#$00740000,(a5)+		;BLTADAT: what the shift brings into the first word
+	CQA	$050,a2,d6			;A: mask
+	CQA	$04C,a1,d6			;B: overlay
+	CQA	$048,a0,d6			;C
+	CQA	$054,a0,d6			;D
+	move.l	#$00640000|OSBPR,d6
+	sub.w	d4,d6
+	move.l	d6,(a5)+			;BLTAMOD
+	eori.l	#($064^$062)<<16,d6
+	move.l	d6,(a5)+			;BLTBMOD
+	move.l	#$00600000|SBPR,d6
+	sub.w	d4,d6
+	move.l	d6,(a5)+			;BLTCMOD
+	eori.l	#($060^$066)<<16,d6
+	move.l	d6,(a5)+			;BLTDMOD
 	mulu.w	#NPLANES,d3
-	move.w	d3,$05C(a6)			;lines * 6 planes
-	move.w	d1,$05E(a6)
-	bsr	rd_bq_go
+	CQV	$05C,d3,d6			;BLTSIZV: lines * 6 planes
+	CQV	$05E,d1,d6			;BLTSIZH
+	bsr	rd_cq_endblit
+	movea.l	(sp)+,a5
 .bx	rts
 
 ;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
@@ -5660,7 +5670,7 @@ rd_fixcell
 ;	high priority plane B pixels are right over anything drawn before the high pass. Keeps
 ;	everything.
 rd_fix_blit
-	movem.l	d0-d1/a0-a2/a6,-(sp)
+	movem.l	d0-d1/a0-a2/a5-a6,-(sp)
 	move.w	d4,d0
 	andi.w	#$FFFE,d0			;the word's byte
 	move.w	d5,d1
@@ -5677,22 +5687,41 @@ rd_fix_blit
 	movea.l	(rd_buf).l,a2
 	adda.l	d1,a2
 	lea	SCRX(a2,d0.w),a2
-	bsr	rd_bq_alloc
-	move.l	#$0FCA0000,$040(a6)		;A mask, B bitmap, C, D: AB + /AC
-	move.l	#-1,$044(a6)
-	move.l	a1,$050(a6)			;BLTAPT
-	move.l	a0,$04C(a6)			;BLTBPT
-	move.l	a2,$048(a6)			;BLTCPT
-	move.l	a2,$054(a6)			;BLTDPT
-	move.w	#64-2,$064(a6)			;BLTAMOD
-	move.w	#64-2,$062(a6)			;BLTBMOD
-	move.w	#SBPR-2,$060(a6)		;BLTCMOD
-	move.w	#SBPR-2,$066(a6)		;BLTDMOD
-	move.w	#8*NPLANES,$05C(a6)
-	move.w	#1,$05E(a6)
-	bsr	rd_bq_go
-	movem.l	(sp)+,d0-d1/a0-a2/a6
+	moveq	#1,d1				;(one word)
+	bsr	rd_fix_cq
+	movem.l	(sp)+,d0-d1/a0-a2/a5-a6
 	rts
+
+;	The fixup blit (rd_fix_blit, rd_fix_runs): the bitmap a0 through its mask a1 over the buffer
+;	a2, d1 words across, 8 lines; its copper block. Uses d0-d1, a0, a5-a6.
+rd_fix_cq
+	bsr	rd_cq_blit
+	cmpi.b	#2,(rd_cqkind).l
+	beq.s	.k
+	move.l	#$00400FCA,(a5)+		;BLTCON0: A mask, B bitmap, C, D: AB + /AC (once for
+	move.l	#$00420000,(a5)+		;the fixups in a row)
+	move.l	#$0044FFFF,(a5)+
+	move.l	#$0046FFFF,(a5)+
+	move.b	#2,(rd_cqkind).l
+.k	CQA	$050,a1,d0			;BLTAPT: the mask
+	CQA	$054,a2,d0			;BLTDPT
+	CQA	$048,a2,d0			;BLTCPT
+	CQA	$04C,a0,d0			;BLTBPT: the bitmap
+	move.l	#$00640000|64,d0
+	sub.w	d1,d0
+	sub.w	d1,d0
+	move.l	d0,(a5)+			;BLTAMOD
+	eori.l	#($064^$062)<<16,d0
+	move.l	d0,(a5)+			;BLTBMOD
+	move.l	#$00600000|SBPR,d0
+	sub.w	d1,d0
+	sub.w	d1,d0
+	move.l	d0,(a5)+			;BLTCMOD
+	eori.l	#($060^$066)<<16,d0
+	move.l	d0,(a5)+			;BLTDMOD
+	move.l	#$005C0000|(8*NPLANES),(a5)+	;BLTSIZV
+	CQV	$05E,d1,d0			;BLTSIZH
+	bra	rd_cq_endblit
 
 ;	Scroll mode, 64 cells across (the screen's columns do not wrap there): each plane row's
 ;	cells of rd_fixmap (a0) as words (2 cells each) on the screen, and each run of them one
@@ -5758,9 +5787,9 @@ rd_fix_runs
 .nr	addq.w	#1,d5
 	cmpi.w	#32,d5
 	blo	.r
-	rts
+	bra	rd_cq_flush			;(the last batch let go)
 	; words d0 (first), d1 (how many) of plane row d5, at screen line d4
-.blit	movem.l	d0-d2/a0-a2/a6,-(sp)
+.blit	movem.l	d0-d2/a0-a2/a5-a6,-(sp)
 	add.w	d0,d0				;its byte
 	move.w	d5,d2
 	mulu.w	#8*64*NPLANES,d2		;the bitmap's row (64 cells across)
@@ -5776,27 +5805,8 @@ rd_fix_runs
 	movea.l	(rd_buf).l,a2
 	adda.l	d2,a2
 	lea	SCRX(a2,d0.w),a2
-	bsr	rd_bq_alloc
-	move.l	#$0FCA0000,$040(a6)		;A mask, B bitmap, C, D: AB + /AC
-	move.l	#-1,$044(a6)
-	move.l	a1,$050(a6)			;BLTAPT
-	move.l	a0,$04C(a6)			;BLTBPT
-	move.l	a2,$048(a6)			;BLTCPT
-	move.l	a2,$054(a6)			;BLTDPT
-	move.w	d1,d2
-	add.w	d2,d2				;bytes
-	moveq	#64,d0
-	sub.w	d2,d0
-	move.w	d0,$064(a6)			;BLTAMOD
-	move.w	d0,$062(a6)			;BLTBMOD
-	moveq	#SBPR,d0
-	sub.w	d2,d0
-	move.w	d0,$060(a6)			;BLTCMOD
-	move.w	d0,$066(a6)			;BLTDMOD
-	move.w	#8*NPLANES,$05C(a6)
-	move.w	d1,$05E(a6)
-	bsr	rd_bq_go
-	movem.l	(sp)+,d0-d2/a0-a2/a6
+	bsr	rd_fix_cq
+	movem.l	(sp)+,d0-d2/a0-a2/a5-a6
 	rts
 
 ;	(rd_fix_runs) A byte of 8 cells (bit 7 the first) to 4 words of 2 cells (bit 3 the first).
@@ -6913,7 +6923,8 @@ rd_cqjmv	ds.l	1			;a copper move of its start to COP2LCL
 rd_cqpmv	ds.l	1			;and of the parking place
 rd_cqjmp	ds.l	1			;(rd_cq_open: the stop to make a jump to the start)
 rd_cqfree	ds.w	1			;bytes free after the stop, to the ring's end at most
-rd_cqkind	ds.b	1			;the blitter holds rd_restore's BLTCON0 .. BLTALWM
+rd_cqkind	ds.b	1			;the blitter holds BLTCON0 .. BLTALWM of 1: rd_restore,
+						;2: the fixups (0: not known)
 rd_cqbat	ds.b	1			;blits in the batch open (rd_cq_blit)
 	even
 rd_cqba5	ds.l	1			;(its moves' end,
