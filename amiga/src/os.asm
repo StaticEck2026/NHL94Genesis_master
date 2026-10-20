@@ -10,6 +10,7 @@ EXEC_Disable		equ	-120
 EXEC_Enable		equ	-126
 EXEC_AllocMem		equ	-198
 EXEC_FreeMem		equ	-210
+EXEC_AllocAbs		equ	-204
 EXEC_OpenLibrary	equ	-552
 EXEC_CloseLibrary	equ	-414
 EXEC_Supervisor		equ	-30
@@ -80,7 +81,33 @@ _start
 	bne	.win
 	lea	(.msgnomem,pc),a0
 	bra	.error
-.win	move.l	d0,(os_backup).l
+.win	; only the 64K window in it kept: the block given back and the window taken (with no
+	; other task in between); if that fails, the block kept
+	jsr	EXEC_Forbid(a6)
+	move.l	d0,d2
+	movea.l	d0,a1
+	move.l	#$20000,d0
+	jsr	EXEC_FreeMem(a6)
+	move.l	d2,d1
+	addi.l	#$FFFF,d1
+	clr.w	d1
+	movea.l	d1,a1
+	move.l	#$10000,d0
+	jsr	EXEC_AllocAbs(a6)
+	move.l	#$10000,(os_backsz).l
+	tst.l	d0
+	bne.s	.wa
+	movea.l	d2,a1
+	move.l	#$20000,d0
+	jsr	EXEC_AllocAbs(a6)
+	move.l	#$20000,(os_backsz).l
+	tst.l	d0
+	bne.s	.wa
+	jsr	EXEC_Permit(a6)
+	lea	(.msgnomem,pc),a0
+	bra	.error
+.wa	jsr	EXEC_Permit(a6)
+	move.l	d0,(os_backup).l
 	addi.l	#$FFFF,d0
 	clr.w	d0
 	movea.l	d0,a0
@@ -175,7 +202,7 @@ _start
 	bsr	os_save_prof
 	ENDIF
 	movea.l	(os_backup).l,a1
-	move.l	#$20000,d0
+	move.l	(os_backsz).l,d0
 	jsr	EXEC_FreeMem(a6)
 	moveq	#0,d7
 	bra	.close
@@ -396,7 +423,8 @@ os_dos		ds.l	1
 os_gfx		ds.l	1
 os_ciab		ds.l	1
 os_view		ds.l	1
-os_backup	ds.l	1			;the block that holds the RAM window
+os_backup	ds.l	1			;the RAM window's memory,
+os_backsz	ds.l	1			;its size
 os_cacr		ds.l	1
 os_intena	ds.w	1
 os_dmacon	ds.w	1

@@ -9,8 +9,13 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
-- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.5 MB of any memory and
-  about 1.5 MB of chip RAM, so it does not fit in a stock 2 MB A1200.
+- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.8 MB of any memory (fast
+  RAM where there is some: its code, its data and the Genesis RAM window) and about 1.5 MB of
+  chip RAM, so it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
+  (each part's compressed bytes, then the next), so that is about the most it takes. Kickstart
+  leaves nearly all of 2 MB of fast RAM free, so it should fit there (not tested: the tests here
+  use the AROS ROM, which keeps some 0.7 MB of the fast RAM for itself, so with it the game needs
+  4 MB).
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
@@ -51,7 +56,8 @@ directory.
   preset with 8 MB fast RAM), then drop `nhl94.hdf` onto the page. Do not drop `nhl94.game`
   itself: an executable that big is put on a high density floppy, and booting that hangs or crashes
   (it does with any large executable).
-- **FS-UAE, WinUAE, Amiberry**: an A1200 with `fast_memory` of 2 MB or more and `nhl94.hdf` as
+- **FS-UAE, WinUAE, Amiberry**: an A1200 with `fast_memory` of 2 MB or more (4 MB with the AROS
+  ROM) and `nhl94.hdf` as
   the first hard drive (or the directory with the three files as a hard drive folder).
 
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when

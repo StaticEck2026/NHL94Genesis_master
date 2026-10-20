@@ -43,7 +43,7 @@ CHPITCH		equ	384			;chunky fallback: bytes per line
 CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
 SCARENA		equ	$40000			;sprite image cache: bytes of images (a power of 2)
-SCSLOTS		equ	4096			;its table entries (a power of 2): key, ring position,
+SCSLOTS		equ	1024			;its table entries (a power of 2): key, ring position,
 						;frame built, image, its box (rd_sc_box), the key's
 						;second long (a data address key: rd_sc_get), 32 bytes
 

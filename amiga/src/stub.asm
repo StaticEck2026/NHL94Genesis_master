@@ -106,104 +106,105 @@ start
 ;	NHL94.pak, if it is there: d0 = its seglist (hunks allocated as LoadSeg does: a long of the
 ;	size, the next hunk's BPTR, the contents), 0 if there is no NHL94.pak, -1 with a0 = the
 ;	message if it cannot be loaded. a6 = dos.library.
+;	Memory: the hunks with data are allocated and inflated one at a time, each from its
+;	compressed bytes read into a buffer of their own (freed before the next), the others (BSS)
+;	after them: so the most taken at once is the hunks and the largest hunk's compressed bytes
+;	(not the whole file as well).
 pakload
 	movem.l	d2-d7/a2-a5,-(sp)
 	clr.l	pakbuf
 	clr.l	relbuf
 	clr.l	hunks
+	lea	hunkbase,a0
+	moveq	#MAXHUNKS-1,d0
+.ch	clr.l	(a0)+
+	dbf	d0,.ch
 	move.l	#pakname,d1
 	move.l	#1005,d2			;MODE_OLDFILE
 	jsr	DOS_Open(a6)
-	move.l	d0,d4
+	move.l	d0,pakfh
 	beq	.none
-	move.l	d4,d1				;its size: from the end back to the start
-	moveq	#0,d2
-	moveq	#1,d3				;OFFSET_END
-	jsr	DOS_Seek(a6)
-	move.l	d4,d1
-	moveq	#0,d2
-	moveq	#-1,d3				;OFFSET_BEGINNING
-	jsr	DOS_Seek(a6)
-	move.l	d0,d5
-	ble	.badc
-	move.l	d5,d0
+	; the header: 'NHLZ', hunks, reloc table bytes; per hunk its size and compressed bytes;
+	; the reloc table's compressed bytes
+	lea	pakhdr,a2
+	moveq	#12,d3
+	movea.l	a2,a0
+	bsr	pakread
+	bne	.bad
+	cmpi.l	#'NHLZ',(a2)
+	bne	.bad
+	move.l	4(a2),d7			;hunks
+	beq	.bad
+	cmpi.l	#MAXHUNKS,d7
+	bhi	.bad
+	move.l	d7,d3
+	lsl.l	#3,d3
+	addq.l	#4,d3
+	lea	12(a2),a0
+	bsr	pakread
+	bne	.bad
+	; the hunks with data, in order (their bytes follow each other in the file)
+	moveq	#0,d6				;hunk
+.hd	move.l	d6,d0
+	lsl.l	#3,d0
+	lea	12(a2,d0.l),a3			;its size, compressed bytes
+	tst.l	4(a3)
+	beq.s	.hdn
+	bsr	pakhunk
+	beq	.mem
+	move.l	4(a3),d0			;its compressed bytes
 	addq.l	#4,d0				;(the inflater may read a little past the end)
 	moveq	#1,d1				;MEMF_PUBLIC
 	bsr	alloc
 	move.l	d0,pakbuf
-	beq	.memc
-	move.l	d4,d1
-	move.l	d0,d2
-	move.l	d5,d3
-	jsr	DOS_Read(a6)
-	cmp.l	d5,d0
-	bne	.badc
-	move.l	d4,d1
-	jsr	DOS_Close(a6)
-	movea.l	pakbuf,a2
-	cmpi.l	#'NHLZ',(a2)
-	bne	.bad
-	move.l	4(a2),d7			;hunks
-	cmpi.l	#MAXHUNKS,d7
-	bhi	.bad
-	; allocate the hunks, linked
-	lea	12(a2),a3			;(size, compressed bytes) per hunk
-	lea	hunkbase,a4
-	lea	hunks,a5			;where the BPTR to the next one goes
-	moveq	#0,d6
-.al	move.l	(a3),d0
-	andi.l	#$3FFFFFFF,d0
-	lsl.l	#2,d0
-	addq.l	#8,d0
-	move.l	#$10001,d1			;MEMF_CLEAR | MEMF_PUBLIC
-	btst	#6,(a3)				;(bit 30: chip)
-	beq.s	.nc
-	addq.l	#2,d1
-.nc	btst	#7,(a3)				;(bit 31: fast)
-	beq.s	.nf
-	addq.l	#4,d1
-.nf	move.l	d0,d5
-	bsr	alloc
-	tst.l	d0
 	beq	.mem
 	movea.l	d0,a0
-	move.l	d5,(a0)+			;size
-	move.l	a0,d0
-	lsr.l	#2,d0
-	move.l	d0,(a5)				;BPTR of the next long
-	movea.l	a0,a5
-	clr.l	(a0)+
-	move.l	a0,(a4)+			;the contents
-	addq.l	#8,a3
-	addq.w	#1,d6
-	cmp.w	d7,d6
-	blt.s	.al
-	; inflate them
-	lea	12(a2),a3
+	move.l	4(a3),d3
+	bsr	pakread
+	bne	.bad
+	movea.l	pakbuf,a0
+	move.l	d6,d0
+	lsl.l	#2,d0
+	lea	hunkbase,a1
+	movea.l	(a1,d0.l),a1
+	bsr	inflate
+	bsr	pakbufs
+.hdn	addq.l	#1,d6
+	cmp.l	d7,d6
+	blo.s	.hd
+	; the others (BSS)
+	moveq	#0,d6
+.hb	move.l	d6,d0
+	lsl.l	#3,d0
+	lea	12(a2,d0.l),a3
+	tst.l	4(a3)
+	bne.s	.hbn
+	bsr	pakhunk
+	beq	.mem
+.hbn	addq.l	#1,d6
+	cmp.l	d7,d6
+	blo.s	.hb
+	; the reloc table: inflated, then applied
 	move.l	d7,d0
 	lsl.l	#3,d0
-	lea	16(a2,d0.l),a0			;the first deflate data
-	lea	hunkbase,a4
-	move.w	d7,d6
-	subq.w	#1,d6
-.in	movea.l	(a4)+,a1
-	move.l	4(a3),d0
-	beq.s	.inn
-	move.l	a0,-(sp)
-	bsr	inflate
-	movea.l	(sp)+,a0
-	adda.l	d0,a0
-.inn	addq.l	#8,a3
-	dbf	d6,.in
-	; the reloc table: inflated, then applied
-	move.l	a0,-(sp)
+	move.l	12(a2,d0.l),d5			;its compressed bytes
+	move.l	d5,d0
+	addq.l	#4,d0
+	moveq	#1,d1
+	bsr	alloc
+	move.l	d0,pakbuf
+	beq	.mem
+	movea.l	d0,a0
+	move.l	d5,d3
+	bsr	pakread
+	bne	.bad
 	move.l	8(a2),d0
 	addq.l	#4,d0
 	moveq	#1,d1
 	bsr	alloc
-	movea.l	(sp)+,a0
 	move.l	d0,relbuf
 	beq	.mem
+	movea.l	pakbuf,a0
 	movea.l	d0,a1
 	bsr	inflate
 	movea.l	relbuf,a3
@@ -225,7 +226,23 @@ pakload
 	bra.s	.rg
 .rn	dbf	d6,.rh
 	bsr	pakbufs
-	movea.l	(4).w,a6
+	bsr	pakclose
+	; the seglist: each hunk's next-hunk long the BPTR of the next one's
+	lea	hunkbase,a4
+	move.l	(a4),d0
+	subq.l	#4,d0
+	lsr.l	#2,d0
+	move.l	d0,hunks
+	move.w	d7,d6
+	subq.w	#2,d6
+	bmi.s	.l1
+.ln	movea.l	(a4)+,a0
+	move.l	(a4),d0
+	subq.l	#4,d0
+	lsr.l	#2,d0
+	move.l	d0,-4(a0)
+	dbf	d6,.ln
+.l1	movea.l	(4).w,a6
 	cmpi.w	#37,20(a6)			;(LIB_VERSION: CacheClearU from V37)
 	blo.s	.cc
 	jsr	EXEC_CacheClearU(a6)
@@ -235,20 +252,79 @@ pakload
 	bra.s	.x
 .none	moveq	#0,d0
 	bra.s	.x
-.memc	move.l	d4,d1
-	jsr	DOS_Close(a6)
 .mem	lea	(msgmem,pc),a0
 	bra.s	.fail
-.badc	move.l	d4,d1
-	jsr	DOS_Close(a6)
 .bad	lea	(msgpak,pc),a0
 .fail	move.l	a0,-(sp)
 	bsr	pakbufs
-	move.l	hunks,d1
-	bsr	pakfree
+	bsr	pakclose
+	bsr	pakfreeh
 	movea.l	(sp)+,a0
 	moveq	#-1,d0
 .x	movem.l	(sp)+,d2-d7/a2-a5
+	rts
+
+;	Read d3 bytes of NHL94.pak to a0: Z set if they were. a6 = dos.library. Uses d0-d3.
+pakread	move.l	pakfh,d1
+	move.l	a0,d2
+	move.l	d3,-(sp)
+	jsr	DOS_Read(a6)
+	cmp.l	(sp)+,d0
+	rts
+
+;	Close NHL94.pak if it is open. Keeps all but d0-d1 (dos.library: a6).
+pakclose
+	move.l	pakfh,d1
+	beq.s	.x
+	clr.l	pakfh
+	jsr	DOS_Close(a6)
+.x	rts
+
+;	Hunk d6 (a3: its size in longs with the memory type, as in HUNK_HEADER) allocated (cleared):
+;	hunkbase + 4 * d6 = its contents, the size and a long for the next hunk's BPTR before them.
+;	Z set if there is not the memory. Keeps d2-d7/a2-a6.
+pakhunk	move.l	(a3),d0
+	andi.l	#$3FFFFFFF,d0
+	lsl.l	#2,d0
+	addq.l	#8,d0
+	move.l	#$10001,d1			;MEMF_CLEAR | MEMF_PUBLIC
+	btst	#6,(a3)				;(bit 30: chip)
+	beq.s	.nc
+	addq.l	#2,d1
+.nc	btst	#7,(a3)				;(bit 31: fast)
+	beq.s	.nf
+	addq.l	#4,d1
+.nf	move.l	d0,-(sp)
+	bsr	alloc
+	move.l	(sp)+,d1
+	tst.l	d0
+	beq.s	.x
+	movea.l	d0,a0
+	move.l	d1,(a0)+			;size
+	clr.l	(a0)+				;(the next hunk: linked at the end)
+	move.l	d6,d0
+	lsl.l	#2,d0
+	lea	hunkbase,a1
+	move.l	a0,(a1,d0.l)
+	moveq	#1,d0				;(not Z)
+.x	rts
+
+;	Free the hunks pakhunk allocated (a failed load). Keeps a6.
+pakfreeh
+	move.l	a6,-(sp)
+	movea.l	(4).w,a6
+	lea	hunkbase,a2
+	moveq	#MAXHUNKS-1,d2
+.f	move.l	(a2),d0
+	beq.s	.n
+	clr.l	(a2)
+	movea.l	d0,a1
+	subq.l	#8,a1
+	move.l	(a1),d0
+	jsr	EXEC_FreeMem(a6)
+.n	addq.l	#4,a2
+	dbf	d2,.f
+	movea.l	(sp)+,a6
 	rts
 
 ;	Free the packed file and the reloc table. Keeps a6.
@@ -329,6 +405,8 @@ wbmsg		ds.l	1
 seglist		ds.l	1
 pakbuf		ds.l	1
 relbuf		ds.l	1
+pakfh		ds.l	1				;NHL94.pak while it is read
+pakhdr		ds.l	3+2*MAXHUNKS+1			;its header
 hunks		ds.l	1				;the seglist being built
 hunkbase	ds.l	MAXHUNKS
 packed		ds.b	1
