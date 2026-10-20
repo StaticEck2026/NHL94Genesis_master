@@ -647,12 +647,14 @@ rd_frame
 .blk	tst.l	(a0)+				;(both tables)
 	dbne	d0,.blk
 	bne.s	.draw
+	bsr	rd_bmrd_age
 	bsr	rd_vsync
 	bsr	rd_snaptime
 	bsr	rd_show
 	addq.l	#1,(rd_count).l
 	bra	.skip
-.draw	bsr	rd_vsync			;(the state is taken once there is a buffer for it)
+.draw	bsr	rd_bmrd_age
+	bsr	rd_vsync			;(the state is taken once there is a buffer for it)
 	move.l	(rd_scmin).l,(rd_scmin+4).l	;(the frame before that has been shown: its blits
 	move.l	#$7FFFFFFF,(rd_scmin).l		;are done)
 	move.w	#$2000,(CUSTOM+INTENA).l	;the sprite list and the tiles of one game tick: no
@@ -1330,6 +1332,14 @@ rd_showdue
 .lk	move.l	(sp)+,d1
 .x	rts
 
+;	A frame begins: the bitmap's rows read by its blits from none (rd_bmrd, rd_cellB), the
+;	frames before's a frame older. Keeps all.
+rd_bmrd_age
+	move.l	(rd_bmrd+4).l,(rd_bmrd+8).l
+	move.l	(rd_bmrd).l,(rd_bmrd+4).l
+	clr.l	(rd_bmrd).l
+	rts
+
 ;	The back buffer's game state is taken now (rd_showdue: the picture's delay). Keeps all.
 rd_snaptime
 	movem.l	d0/a0,-(sp)
@@ -1780,7 +1790,18 @@ rd_cellB
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+4).l
 	ENDC
+	; a blit queued that reads its row of the bitmap (rd_bmrd): let them all finish first
+	move.l	d0,-(sp)
+	move.l	(rd_bmrd).l,d0
+	or.l	(rd_bmrd+4).l,d0
+	or.l	(rd_bmrd+8).l,d0
+	btst	d5,d0
+	beq.s	.nw
 	bsr	rd_waitblit
+	clr.l	(rd_bmrd).l			;(none waits now)
+	clr.l	(rd_bmrd+4).l
+	clr.l	(rd_bmrd+8).l
+.nw	move.l	(sp)+,d0
 	; all buffers are to be mended there (scroll mode: rows 0-27 are in a buffer twice)
 	moveq	#0,d1				;(bit field offsets are longs)
 	move.w	d4,d1
@@ -2243,6 +2264,15 @@ rd_restore
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+68).l		;(statistics: groups of rows)
 	ENDC
+	movem.l	d0-d1,-(sp)			;(their rows of the bitmap read: rd_bmrd)
+	move.l	(rd_bmrd).l,d1
+	move.w	d5,d0
+.gm	bset	d0,d1
+	addq.w	#1,d0
+	cmp.w	d7,d0
+	blt.s	.gm
+	move.l	d1,(rd_bmrd).l
+	movem.l	(sp)+,d0-d1
 .run	bfffo	d6{0:0},d1			;first column
 	move.l	d6,d2
 	lsl.l	d1,d2
@@ -2380,6 +2410,7 @@ rd_mark_u
 ;	Copy plane B to the back buffer at its scroll position (blitter). The bitmap wraps, so up
 ;	to 4 rectangles.
 rd_blitB
+	move.l	#-1,(rd_bmrd).l			;(all of the bitmap read: rd_bmrd)
 	; vertical pieces: [by0, min(H, by0+224)) then from 0
 	move.w	(rd_ch).l,d6
 	lsl.w	#3,d6				;plane height
@@ -7147,6 +7178,9 @@ rd_fixcell
 ;	everything.
 rd_fix_blit
 	movem.l	d0-d1/a0-a2/a5-a6,-(sp)
+	move.l	(rd_bmrd).l,d0			;(its row of the bitmap read: rd_bmrd)
+	bset	d5,d0
+	move.l	d0,(rd_bmrd).l
 	move.w	d4,d0
 	andi.w	#$FFFE,d0			;the word's byte
 	move.w	d5,d1
@@ -7267,6 +7301,9 @@ rd_fix_runs
 	bra	rd_cq_flush			;(the last batch let go)
 	; words d0 (first), d1 (how many) of plane row d5, at screen line d4
 .blit	movem.l	d0-d2/a0-a2/a5-a6,-(sp)
+	move.l	(rd_bmrd).l,d2			;(its row of the bitmap read: rd_bmrd)
+	bset	d5,d2
+	move.l	d2,(rd_bmrd).l
 	add.w	d0,d0				;its byte
 	move.w	d5,d2
 	mulu.w	#8*64*NPLANES,d2		;the bitmap's row (64 cells across)
@@ -7376,6 +7413,10 @@ rd_fixchk	ds.b	1			;rd_fixcell: look in rd_cover
 rd_fixsw	ds.b	1			;(rd_fixups: the rows' halves swapped)
 	even
 rd_rsend	ds.w	1			;(rd_restore: the row past the last to look at)
+	even
+rd_bmrd		ds.l	3			;the rows of bmB (bit r: rows r, r + 32 ..) that blits
+						;read, queued in this frame, the one before, the one
+						;before that (frames older are done): rd_cellB
 	even
 rd_sh		ds.w	1
 rd_sor		ds.w	1
