@@ -790,7 +790,10 @@ rd_spin_vs					;(the harness: the renderer waits here)
 ;	Wait until the blits given to the copper are done: it has started them all (it stopped at
 ;	the ring's end, SOFT) and the blitter has finished. Keeps all.
 rd_waitblit
-	tst.b	(rd_cqidle).l			;nothing given to it since it stopped
+	tst.b	(rd_cqbat).l			;(a batch open: let go first)
+	beq.s	rd_wb_q
+	bsr	rd_cq_flush
+rd_wb_q	tst.b	(rd_cqidle).l			;nothing given to it since it stopped
 	bne.s	rd_wb_blt
 rd_spin_q
 .q	btst	#2,(CUSTOM+$01F).l		;INTREQR SOFT
@@ -924,9 +927,6 @@ rd_cq_close
 	subq.l	#4,a5
 	move.l	#CQ_WBLT,4(a6)
 	move.l	#$009C0004,(a6)			;(INTREQ: SOFT off)
-	IFD	PROFILE
-	addq.l	#1,(prof_mark+80).l		;(statistics: blocks)
-	ENDC
 	move.l	(rd_cqjmp).l,d0			;the copper's stop before (it may wait there)
 	bne.s	.j
 	move.l	a6,d0
@@ -957,13 +957,83 @@ rd_cq_close
 .k1	move	(sp)+,sr
 	rts
 
+;	Batches: the blits of a pass (rd_restore's, the sprites') go to the copper CQBATCH at a time:
+;	within a batch a blit takes only a move to COP2LCL and the next one's wait for the blitter
+;	(not a stop, its replacing and a look at SOFT each). rd_cq_blit begins a blit's moves (a6,
+;	a5 as rd_cq_open: the batch's place, where the moves go), rd_cq_endblit ends them (the batch
+;	is let go when full), rd_cq_flush lets an open batch go (at a pass's end, before any other
+;	blit or a wait for the blitter: the copper waits before a batch until it is let go).
+CQBATCH	equ	4
+
+rd_cq_blit
+	IFD	PROFILE
+	addq.l	#1,(prof_mark+80).l		;(statistics: blits)
+	ENDC
+	addq.b	#1,(rd_cqbat).l
+	cmpi.b	#1,(rd_cqbat).l
+	beq	rd_cq_open			;(the batch's first)
+	movea.l	(rd_cqba6).l,a6
+	movea.l	(rd_cqba5).l,a5
+;	Between two blits of a batch: the move to COP2LCL (a vertical blank's restart goes on at
+;	the next one) and the next one's wait for the blitter; room for one more largest block,
+;	else the batch is let go and a new one begun. Keeps all but a5, a6.
+rd_cq_next
+	move.l	d0,-(sp)
+	move.l	a5,d0
+	sub.l	a6,d0
+	addi.w	#CQMAXB,d0
+	cmp.w	(rd_cqfree).l,d0
+	bhi.s	.full
+	move.l	a5,d0
+	addq.l	#4,d0
+	swap	d0
+	move.w	#$086,d0
+	swap	d0
+	move.l	d0,(a5)+			;COP2LCL: the next blit's wait
+	move.l	#CQ_WBLT,(a5)+
+	move.l	(sp)+,d0
+	rts
+.full	movem.l	d1/a0,-(sp)
+	bsr	rd_cq_close
+	movem.l	(sp)+,d1/a0
+	move.l	(sp)+,d0
+	move.b	#1,(rd_cqbat).l
+	bra	rd_cq_open
+
+;	A blit's moves written (to a5): the batch let go if full. Uses d0-d1, a0, a5.
+rd_cq_endblit
+	cmpi.b	#CQBATCH,(rd_cqbat).l
+	bhs.s	.c
+	move.l	a5,(rd_cqba5).l
+	move.l	a6,(rd_cqba6).l
+	rts
+.c	sf	(rd_cqbat).l
+	bra	rd_cq_close
+
+;	The batch open, if any, let go. Keeps all.
+rd_cq_flush
+	tst.b	(rd_cqbat).l
+	bne.s	.f
+	rts
+.f	movem.l	d0-d1/a0/a5-a6,-(sp)
+	sf	(rd_cqbat).l
+	movea.l	(rd_cqba6).l,a6
+	movea.l	(rd_cqba5).l,a5
+	bsr	rd_cq_close
+	movem.l	(sp)+,d0-d1/a0/a5-a6
+	rts
+
 ;	The blit (or marker) from rd_bq_alloc goes to the copper: the moves of the registers it
 ;	uses. Keeps all.
 rd_bq_go
 	movem.l	d0-d1/d3/d7/a0-a1/a5-a6,-(sp)
+	bsr	rd_cq_flush			;(after the batch open)
 	lea	(rd_bqe).l,a0
 	tst.w	$05E-$040(a0)
 	beq	.mark
+	IFD	PROFILE
+	addq.l	#1,(prof_mark+80).l		;(statistics: blits)
+	ENDC
 	bsr	rd_cq_open
 	sf	(rd_cqkind).l
 	move.w	(a0),d3				;BLTCON0
@@ -1859,7 +1929,7 @@ rd_restore
 	sub.w	d1,d4
 	move.w	d4,d3				;to its last
 	bra.s	.ext
-.blit	bsr	rd_cq_open			;the copper block
+.blit	bsr	rd_cq_blit			;the copper block
 	tst.b	(rd_cqkind).l
 	bne.s	.k
 	move.l	#$004009F0,(a5)+		;BLTCON0: A to D (once for the restores in a row)
@@ -1898,12 +1968,12 @@ rd_restore
 	add.l	d0,(rd_dbg_x+52).l		;(statistics: words restored and blits)
 	addq.l	#1,(rd_dbg_x+48).l
 	ENDC
-	bsr	rd_cq_close
+	bsr	rd_cq_endblit
 	tst.l	d6
 	bne	.run
 	cmpi.w	#DROWS,d7
 	blt	.row
-	rts
+	bra	rd_cq_flush
 
 ;	Note the rectangle d0 (x), d1 (y), d2 (w), d3 (h) on the screen as drawn over in the back
 ;	buffer's dirty map. Keeps everything (rd_mark_u: uses d0-d3/a0).
@@ -2572,7 +2642,7 @@ rd_hud_cell
 .ng	addq.w	#1,d5
 	dbf	d7,.fg
 	bra	.full
-.fd	addq.l	#1,(rd_hudgen).l
+.fd
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+72).l		;(statistics: HUD cells made again)
 	ENDC
@@ -2687,6 +2757,7 @@ rd_hud_byte
 	move.w	d3,(rd_hudnc).l
 	move.b	d3,(a3,d1.w)
 	move.b	d1,(a4,d3.w)
+	addq.l	#1,(rd_hudgen).l		;(the copper lists' HUD colours)
 .cok	btst	#0,d3
 	beq.s	.s1
 	bset	d0,d4
@@ -3552,7 +3623,7 @@ rd_sprites_planar
 	bsr	rd_sprite_blit
 	movem.l	(sp)+,d5/a4
 .n	dbf	d5,.each
-.x	rts
+.x	bra	rd_cq_flush			;(the last batch let go)
 
 ;	Sprite a4.
 rd_sprite_blit
@@ -3748,7 +3819,7 @@ rd_spr_cut
 	adda.w	d7,a3
 	lea	(a2,d2.w*2),a2
 	lea	(a3,d2.w*2),a3
-	bsr	rd_cq_open			;the copper block
+	bsr	rd_cq_blit			;the copper block
 	sf	(rd_cqkind).l
 	lsr.w	#4,d0
 	add.w	d2,d0
@@ -3809,7 +3880,7 @@ rd_spr_cut
 	CQV	$05C,d5,d7			;BLTSIZV
 	lsr.w	#1,d3
 	CQV	$05E,d3,d7			;BLTSIZH
-	bra	rd_cq_close
+	bra	rd_cq_endblit
 .x	rts
 
 ;	------------------------------------------------------------------------------------------
@@ -6527,7 +6598,25 @@ rd_show
 	beq	.nofps
 	bsr	rd_fps
 .nofps	movea.l	(rd_backcop).l,a0
-	move.l	#$009C0006,(a0)+		;INTREQ: SOFT, DSKBLK off (the blit queue's copper state)
+	; the list's moves but for the scroll (BPLCON1, the bitplane pointers) stay as they were
+	; made while the display rate, the width and the HUD do (rd_shkey: per buffer)
+	moveq	#0,d0
+	move.w	(rd_bufi).l,d0
+	lea	(rd_shkey).l,a1
+	lea	(a1,d0.w*8),a1
+	moveq	#0,d1
+	move.b	(hal_pal).l,d1
+	swap	d1
+	move.w	(rd_w).l,d1
+	move.l	(rd_hudgen).l,d2
+	sf	(rd_shfast).l
+	cmp.l	(a1),d1
+	bne.s	.key
+	cmp.l	4(a1),d2
+	bne.s	.key
+	st	(rd_shfast).l
+.key	move.l	d1,(a1)+
+	move.l	d2,(a1)
 	; the 224 lines: from line $3C on PAL, $1A on NTSC (262 lines a frame)
 	move.w	#$3CA1,d1			;DIWSTRT, H32 (256 pixels)
 	move.w	#$1CA1,d2			;DIWSTOP
@@ -6550,22 +6639,36 @@ rd_show
 	move.w	#$0038,d3			;Not from $18: those fetches would take the DMA slots
 	move.w	#SROW-36,d5			;of sprites 1-7 (the HUD, rd_hud_build)
 	move.w	#$000D,d4			;FMODE: 32 bit bitplane fetch, 64 pixel sprites
-.dw	move.w	#$08E,(a0)+
-	move.w	d1,(a0)+
-	move.w	#$090,(a0)+
-	move.w	d2,(a0)+
-	move.w	#$092,(a0)+			;DDFSTRT
-	move.w	d3,(a0)+
-	COPMOVE	$094,#$00B8			;DDFSTOP
-	move.w	#$108,(a0)+			;BPL1MOD, BPL2MOD: interleaved
-	move.w	d5,(a0)+
-	move.w	#$10A,(a0)+
-	move.w	d5,(a0)+
-	move.w	#$1FC,(a0)+			;FMODE (the fewer bitplane fetches the more of the bus is
-	move.w	d4,(a0)+			;left to the blitter and the CPU)
+.dw	tst.b	(rd_shfast).l
+	bne	.dyn
+	move.l	#$009C0006,(a0)			;INTREQ: SOFT, DSKBLK off (the blit queue's copper state)
+	move.w	#$08E,4(a0)
+	move.w	d1,6(a0)
+	move.w	#$090,8(a0)
+	move.w	d2,10(a0)
+	move.w	#$092,12(a0)			;DDFSTRT
+	move.w	d3,14(a0)
+	move.l	#$009400B8,16(a0)		;DDFSTOP
+	move.w	#$108,20(a0)			;BPL1MOD, BPL2MOD: interleaved
+	move.w	d5,22(a0)
+	move.w	#$10A,24(a0)
+	move.w	d5,26(a0)
+	move.w	#$1FC,28(a0)			;FMODE (the fewer bitplane fetches the more of the bus is
+	move.w	d4,30(a0)			;left to the blitter and the CPU)
+	move.l	#$01006201,32(a0)		;BPLCON0: 6 planes, colour, ECS bits on
+	move.w	#$102,36(a0)			;BPLCON1
+	move.l	#$01040224,40(a0)		;BPLCON2: KILLEHB (6 planes would be Extra Half-Brite)
+	move.l	#$010C0044,44(a0)		;BPLCON4: sprite colours 64-79
+	lea	48(a0),a1			;the bitplane pointers' registers
+	move.w	#$0E0,d1
+	moveq	#NPLANES*2-1,d2
+.bpr	move.w	d1,(a1)
+	addq.l	#4,a1
+	addq.w	#2,d1
+	dbf	d2,.bpr
 	; the delay puts buffer bit rd_xorg at the window's first pixel; the bit fetched first is
 	; on a fetch boundary (it can be before the row: those pixels are not shown)
-	move.w	(rd_xorg).l,d0
+.dyn	move.w	(rd_xorg).l,d0
 	move.w	d6,d1
 	sub.w	d0,d1
 	and.w	d7,d1				;delay
@@ -6585,23 +6688,17 @@ rd_show
 .d16	btst	#5,d1
 	beq.s	.d32
 	ori.w	#$8800,d2			;PF1H7, PF2H7: 32 pixels
-.d32	COPMOVE	$100,#$6201			;BPLCON0: 6 planes, colour, ECS bits on
-	move.w	#$102,(a0)+			;BPLCON1
-	move.w	d2,(a0)+
-	COPMOVE	$104,#$0224			;BPLCON2: KILLEHB (6 planes would be Extra Half-Brite)
-	COPMOVE	$10C,#$0044			;BPLCON4: sprite colours 64-79
-	move.w	#$0E0,d1
+.d32	move.w	d2,38(a0)			;BPLCON1
+	lea	50(a0),a1			;the bitplane pointers
 	moveq	#NPLANES-1,d2
-.bp	move.w	d1,(a0)+
+.bp	swap	d0
+	move.w	d0,(a1)
 	swap	d0
-	move.w	d0,(a0)+
-	addq.w	#2,d1
-	move.w	d1,(a0)+
-	swap	d0
-	move.w	d0,(a0)+
-	addq.w	#2,d1
+	move.w	d0,4(a1)
+	addq.l	#8,a1
 	addi.l	#SBPR,d0
 	dbf	d2,.bp
+	lea	96(a0),a0			;(the sprites' pointers)
 	; the sprites: the HUD's (rd_hud_build) or none. This buffer shows its own copy of them,
 	; brought up to date from rd_hudm now: the frames queued before it keep the HUD of their
 	; moment (a clock digit changes with the rest of the picture)
@@ -6650,7 +6747,11 @@ rd_show
 	tst.l	d2
 	bne.s	.hb
 .hk	movem.l	(sp)+,d3-d5/a0/a2-a3
-.hs0	lea	(rd_hudspt).l,a1
+.hs0	tst.b	(rd_shfast).l
+	beq.s	.hsp
+	lea	64(a0),a0			;(as they were)
+	bra.s	.hse
+.hsp	lea	(rd_hudspt).l,a1
 	move.w	#$120,d1
 	moveq	#7,d2
 .sp	move.l	(a1)+,d0
@@ -6667,6 +6768,7 @@ rd_show
 	move.w	d0,(a0)+
 	addq.w	#2,d1
 	dbf	d2,.sp
+.hse
 	; the 64 colours: per bank of 32 the high nibbles, then (LOCT) the low nibbles. Already
 	; there if neither they nor the HUD changed since this buffer's list was made.
 	moveq	#0,d0
@@ -6772,7 +6874,12 @@ rd_show
 	section	bss,bss
 rd_tline	ds.w	1
 rd_hudspt	ds.l	8			;the sprites' data in rd_hudm (rd_sprnull: none)
-rd_hudgen	ds.l	1			;(changed when it changes)
+rd_hudgen	ds.l	1			;(changed when its sprites or their colours change, not a
+						;cell's bytes: the copper lists' HUD parts, rd_show)
+rd_shkey	ds.l	2*NBUF			;per buffer: display rate, width; rd_hudgen of its copper
+						;list's moves but the scroll (rd_show)
+rd_shfast	ds.b	1			;(rd_show: those as they were)
+	even
 rd_hudbd	ds.l	NBUF			;per buffer: its copy's bands of 8 lines to make again
 						;(bit group * 8 + band from the top; -1: all)
 rd_hudcopy	ds.l	1			;(rd_show: the back buffer's copy)
@@ -6807,6 +6914,10 @@ rd_cqpmv	ds.l	1			;and of the parking place
 rd_cqjmp	ds.l	1			;(rd_cq_open: the stop to make a jump to the start)
 rd_cqfree	ds.w	1			;bytes free after the stop, to the ring's end at most
 rd_cqkind	ds.b	1			;the blitter holds rd_restore's BLTCON0 .. BLTALWM
+rd_cqbat	ds.b	1			;blits in the batch open (rd_cq_blit)
+	even
+rd_cqba5	ds.l	1			;(its moves' end,
+rd_cqba6	ds.l	1			;its place)
 	even
 rd_cqmq		ds.b	8*16			;show markers: where, where the copper goes on, the
 						;copper list, the buffer
