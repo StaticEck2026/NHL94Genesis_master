@@ -383,6 +383,13 @@ static void blit_exec(void)
     in_blit = 0;
     if (frame >= 1700 && getenv("NHL_BLITKINDS"))   /* by the buffers it reads and writes */
         blitkind_add(con0, useA ? a0 : 0, useB ? b0 : 0, useC ? c0 : 0, useD ? d0 : 0, h * w, blit_time);
+    if (getenv("NHL_BLITLOG")) {        /* every blit: the frame shown next, its registers, its time */
+        static FILE *blf;
+        extern int bf_shown;
+        if (!blf) blf = fopen(getenv("NHL_BLITLOG"), "w");
+        fprintf(blf, "%d %d %04x %04x %04x %04x %x %x %x %x %d %d %lld\n", bf_shown, frame, con0, con1, afwm, alwm,
+                useA ? a0 : 0, useB ? b0 : 0, useC ? c0 : 0, useD ? d0 : 0, w, h, blit_time);
+    }
     if (getenv("NHL_BLITFRAMES")) {     /* this frame's blitter time by kind (written at its show) */
         extern long long bf_t[4], bf_n[4];
         int k = (con0 & 0x0FFF) == 0x09F0 ? 0 : (con0 & 0x0FFF) == 0x0FCA ? 1 : (con0 & 0x0F00) == 0x0100 ? 2 : 3;
@@ -519,6 +526,7 @@ static void copper_run(void)
 }
 
 long long bf_t[4], bf_n[4];
+int bf_shown;                           /* copper lists set so far (NHL_BLITLOG) */
 static void blitframe_shown(void)
 {                                       /* NHL_BLITFRAMES=file: a line a frame shown: the game
                                            frame, the blitter's cycles and blits by kind (copy A
@@ -557,6 +565,7 @@ static void custom_write(uint32_t a, uint32_t v)
     if (off == 0x05E) do_blit(creg[0x5C / 2] & 0x7FFF ? creg[0x5C / 2] & 0x7FFF : 0x8000, (v & 0x7FF) ? (v & 0x7FF) : 0x800);
     if (off == 0x180 && v == 0xF00) red_screen = 1;
     if (off == 0x082 && getenv("NHL_BLITFRAMES")) blitframe_shown();
+    if (off == 0x082) bf_shown++;
     if (off == 0x080) cop1lc = (cop1lc & 0xFFFF) | (v << 16);
     if (off == 0x082) cop1lc = (cop1lc & 0xFFFF0000) | (v & 0xFFFF);
 }
@@ -1083,6 +1092,8 @@ int main(int argc, char **argv)
                 rd32(k + 68), rd32(k + 64), rd32(k + 84), rd32(k + 88));
         fprintf(stderr, "renderer: DMA words %u, of them sprite tiles %u\n", rd32(k + 92), rd32(k + 96));
         fprintf(stderr, "renderer: objects drawn as one image %u, their images built %u\n", rd32(k + 100), rd32(k + 104));
+        fprintf(stderr, "renderer: blits listed %u, drawn %u; listings ended half way %u\n", rd32(k + 112), rd32(k + 116),
+                rd32(k + 108));
         fprintf(stderr, "renderer: sprite images built: not in the table %u, the ring came round %u, a tile converted %u\n",
                 rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",

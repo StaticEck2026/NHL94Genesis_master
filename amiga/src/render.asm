@@ -245,6 +245,14 @@ rd_init
 	move.w	#NBUF*DROWS-1,d0
 .dm	move.l	#-1,(a0)+			;nothing in the buffers yet
 	dbf	d0,.dm
+	lea	(rd_oplists).l,a0		;(no blits listed: rd_op_end)
+	lea	(rd_opold).l,a1
+	moveq	#NBUF-1,d0
+.ol	move.l	a0,(a1)+
+	lea	OPMAX*OPREC(a0),a0
+	dbf	d0,.ol
+	move.l	a0,(rd_opnew).l
+	bsr	rd_op_invall
 	move.w	#SCRX*8,(rd_xorg).l
 	clr.w	(rd_brow0).l
 	lea	(rd_cop).l,a0
@@ -639,6 +647,7 @@ rd_frame
 	bsr	rd_fast
 	bra	.shown
 .chunky	moveq	#-1,d0
+	bsr	rd_op_invall			;(the buffers drawn otherwise)
 	sf	(rd_ntsync).l			;(name table writes are not followed meanwhile)
 	bsr	rd_hud_off
 	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches (all redrawn and
@@ -682,8 +691,8 @@ rd_fast
 	bsr	rd_vsync			;(from here on the back buffer is written)
 	tst.w	(rd_scroll).l
 	beq.s	.copy
-	bsr	rd_restore			;scroll mode: plane B is in the buffer, mended
-	bra.s	.b
+	bsr	rd_op_begin			;scroll mode: plane B is in the buffer, mended where
+	bra.s	.b				;the frame's blits are listed (rd_op_end)
 .copy	bsr	rd_blitB
 	moveq	#0,d0				;(to be mended when back in scroll mode)
 	moveq	#0,d1
@@ -713,6 +722,7 @@ rd_fast
 	bne.s	.hs				;(the high priority overlay is the HUD sprites)
 	bsr	rd_ovl_blit
 .hs	bsr	rd_sprites_planar
+	bsr	rd_op_end
 	IFD	VERIFY
 	bsr	rd_waitblit
 	bra	rd_verify
@@ -728,8 +738,10 @@ rd_verify
 	tst.l	(rd_vfail).l
 	bne	.x
 	movea.l	(rd_dmap).l,a2
+	lea	(rd_vmap).l,a3
 	moveq	#0,d7				;cell row
 .r	move.l	(a2,d7.w*4),d6
+	or.l	(a3,d7.w*4),d6			;(and what the frame's listed blits drew)
 	moveq	#0,d5				;column
 .c	btst	#31,d6
 	bne.s	.n
@@ -1929,7 +1941,8 @@ rd_restore
 	sub.w	d1,d4
 	move.w	d4,d3				;to its last
 	bra.s	.ext
-.blit	bsr	rd_cq_blit			;the copper block
+.blit	bfset	(rd_rmask).l{d1:d3}		;(what is restored, the columns between too)
+	bsr	rd_cq_blit			;the copper block
 	cmpi.b	#1,(rd_cqkind).l
 	beq.s	.k
 	move.l	#$004009F0,(a5)+		;BLTCON0: A to D (once for the restores in a row)
@@ -1971,6 +1984,13 @@ rd_restore
 	bsr	rd_cq_endblit
 	tst.l	d6
 	bne	.run
+	move.l	(rd_rmask).l,d0			;(those rows: rd_wmap)
+	clr.l	(rd_rmask).l
+	lea	(rd_wmap).l,a0
+.wm	move.l	d0,(a0,d5.w*4)
+	addq.w	#1,d5
+	cmp.w	d7,d5
+	blt.s	.wm
 	cmpi.w	#DROWS,d7
 	blt	.row
 	bra	rd_cq_flush
@@ -1984,9 +2004,9 @@ rd_mark
 	rts
 rd_mark_u
 	tst.w	d2
-	ble.s	.x
+	ble	.x
 	tst.w	d3
-	ble.s	.x
+	ble	.x
 	add.w	(rd_xorg).l,d0
 	subi.w	#SCRX*8,d0			;plane x
 	add.w	d0,d2
@@ -1999,7 +2019,7 @@ rd_mark_u
 	ble.s	.2
 	moveq	#31,d2
 .2	sub.w	d0,d2
-	bmi.s	.x
+	bmi	.x
 	addq.w	#1,d2				;columns (32 is coded as 0)
 	add.w	(rd_brow0).l,d1
 	add.w	d1,d3
@@ -2012,14 +2032,23 @@ rd_mark_u
 	ble.s	.4
 	moveq	#DROWS-1,d3
 .4	sub.w	d1,d3
-	bmi.s	.x
+	bmi	.x
+	tst.b	(rd_stage).l
+	bne.s	.st
 	ext.l	d0				;(a bit field offset is a long)
 	movea.l	(rd_dmap).l,a0
 	lea	(a0,d1.w*4),a0
 .r	bfset	(a0){d0:d2}
 	addq.l	#4,a0
 	dbf	d3,.r
-.x	rts
+	rts
+.st	move.b	d1,(rd_opbox).l			;(listing: the blit's box, rd_cut_emit)
+	move.b	d3,(rd_opbox+1).l
+	move.b	d0,(rd_opbox+2).l
+	move.b	d2,(rd_opbox+3).l
+	rts
+.x	move.b	#$FF,(rd_opbox).l		;(none)
+	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	Copy plane B to the back buffer at its scroll position (blitter). The bitmap wraps, so up
@@ -2791,6 +2820,8 @@ rd_ovl_redraw
 	addq.l	#1,(rd_dbg_x+16).l
 	ENDC
 	sf	(rd_ovldirty).l
+	st	(rd_ovlrst).l
+	addq.l	#1,(rd_ovlgen).l
 	; clear image and masks (blitter, D only)
 	bsr	rd_waitblit
 	bsr	rd_cq_inval			;(the blitter's registers written here)
@@ -2832,6 +2863,8 @@ rd_ovl_redraw
 
 ;	Cell d0 at (d1, d2) into the overlay.
 rd_ovl_cell
+	st	(rd_ovlrst).l			;(its rectangles to be made again)
+	addq.l	#1,(rd_ovlgen).l		;(the blits of it before are not the same)
 	; rows table: this cell's 8 lines extend its rows' extents
 	lea	(rd_ovlrows).l,a5
 	tst.w	d0
@@ -2948,73 +2981,32 @@ rd_ovl_cell
 	bpl	.row
 .done	rts
 
-;	Cut the overlay rows of priority rd_pass into the back buffer: per band of 8 lines, the
-;	words from the band's x min to x max, one blit per plane (A the mask plane, B the overlay,
-;	C / D the screen). Low priority bands also mark rd_cover.
+;	Cut the overlay of priority rd_pass into the back buffer: its rectangles (rd_ovl_rects), one
+;	blit each for the 6 planes (A the mask plane, B the overlay, C / D the screen). Low priority
+;	ones also mark rd_cover.
 rd_ovl_blit
-	lea	(rd_ovlrows).l,a4
+	tst.b	(rd_ovlrst).l
+	beq.s	.r
+	bsr	rd_ovl_rects
+.r	lea	(rd_ovlrl).l,a4
 	movea.l	#rd_ovlmlo,a3
 	tst.w	(rd_pass).l
-	beq	.lo
-	lea	32*4(a4),a4
+	beq.s	.lo
+	lea	(rd_ovlrh).l,a4
 	movea.l	#rd_ovlmhi,a3
-.lo	lea	(rd_ovlcolf).l,a5
-	tst.w	(rd_pass).l
-	beq.s	.lof
-	lea	32*48(a5),a5
-.lof	moveq	#0,d7				;band (lines -8 + 8 * band)
-.band	move.w	(a4),d0				;x min
-	move.w	2(a4),d1			;x max
-	cmp.w	d1,d0
-	bgt	.next
-	; runs of flagged columns between them
-	addq.w	#8,d0
-	asr.w	#3,d0				;first column
-	addq.w	#8,d1
-	asr.w	#3,d1				;last column
-	tst.w	d0
-	bpl.s	.c0
-	moveq	#0,d0
-.c0	cmpi.w	#47,d1
-	ble.s	.c1
-	moveq	#47,d1
-.c1	move.w	d7,d2
-	mulu.w	#48,d2
-	lea	(a5,d2.w),a2			;this band's flags
-.run	cmp.w	d1,d0
-	bgt	.next
-	tst.b	(a2,d0.w)
-	bne.s	.rs
-	addq.w	#1,d0
-	bra.s	.run
-.rs	move.w	d0,d2				;run start
-.re	addq.w	#1,d0
-	cmp.w	d1,d0
-	bgt.s	.rx
-	tst.b	(a2,d0.w)
-	bne.s	.re
-.rx	; columns d2 .. d0-1: pixels d2*8-8 .. d0*8-9
-	movem.l	d0-d1/a2,-(sp)
-	move.w	d0,d1
-	lsl.w	#3,d1
-	subi.w	#9,d1
-	move.w	d2,d0
-	lsl.w	#3,d0
-	subq.w	#8,d0
-	bsr	.blitrun
-	movem.l	(sp)+,d0-d1/a2
-	bra.s	.run
-.next	addq.l	#4,a4
-	addq.w	#1,d7
-	cmpi.w	#30,d7
-	blt	.band
+.lo	move.w	(a4)+,d7			;rectangles
+	bra.s	.e
+.rect	movem.w	(a4)+,d0-d3
+	movem.l	d7/a4,-(sp)
+	bsr.s	.blitrun
+	movem.l	(sp)+,d7/a4
+.e	dbf	d7,.rect
 	bra	rd_cq_flush			;(the last batch let go)
-.blitrun	; pixels d0 .. d1 of band d7
-	; lines of the band on screen
-	move.w	d7,d2
+.blitrun	; pixels d0 .. d1 of bands d2 .. d2 + d3 - 1
+	; lines of the bands on screen
 	subq.w	#1,d2
 	lsl.w	#3,d2				;first line
-	moveq	#8,d3				;lines
+	lsl.w	#3,d3				;lines
 	tst.w	d2
 	bpl	.t
 	add.w	d2,d3
@@ -3079,41 +3071,122 @@ rd_ovl_blit
 	adda.w	d6,a0
 	move.w	d1,d4
 	add.w	d4,d4				;bytes a row
-	; one blit for the 6 planes: rows of the interleaved image, mask and screen (the copper
-	; block: rd_cq_blit)
+	; one blit for the 6 planes: rows of the interleaved image, mask and screen (A the mask,
+	; B the overlay, C / D the screen; the extra word masked off)
 	move.l	a5,-(sp)
-	bsr	rd_cq_blit
-	sf	(rd_cqkind).l
-	ror.w	#4,d5
-	move.l	#$00420000,d6
-	move.w	d5,d6
-	move.l	d6,(a5)+			;BLTCON1: B shift
-	ori.w	#$0FCA,d6
-	eori.l	#($042^$040)<<16,d6
-	move.l	d6,(a5)+			;BLTCON0: A shift; A mask, B overlay, C, D: AB + /AC
-	move.l	#$0044FFFF,(a5)+		;BLTAFWM
-	move.l	#$00460000,(a5)+		;BLTALWM: the extra word
-	move.l	#$00740000,(a5)+		;BLTADAT: what the shift brings into the first word
-	CQA	$050,a2,d6			;A: mask
-	CQA	$04C,a1,d6			;B: overlay
-	CQA	$048,a0,d6			;C
-	CQA	$054,a0,d6			;D
-	move.l	#$00640000|OSBPR,d6
-	sub.w	d4,d6
-	move.l	d6,(a5)+			;BLTAMOD
-	eori.l	#($064^$062)<<16,d6
-	move.l	d6,(a5)+			;BLTBMOD
-	move.l	#$00600000|SBPR,d6
-	sub.w	d4,d6
-	move.l	d6,(a5)+			;BLTCMOD
-	eori.l	#($060^$066)<<16,d6
-	move.l	d6,(a5)+			;BLTDMOD
-	mulu.w	#NPLANES,d3
-	CQV	$05C,d3,d6			;BLTSIZV: lines * 6 planes
-	CQV	$05E,d1,d6			;BLTSIZH
-	bsr	rd_cq_endblit
+	move.w	d1,d7				;words
+	move.w	#OSBPR,d0
+	sub.w	d4,d0				;A, B modulo
+	moveq	#SBPR,d1
+	sub.w	d4,d1				;C, D modulo
+	move.w	d3,d2
+	mulu.w	#NPLANES,d2			;lines * 6 planes
+	move.w	d7,d3
+	move.w	d5,d4
+	ror.w	#4,d4				;(BLTCON1: B shift)
+	moveq	#0,d5				;the last word's mask
+	move.l	(rd_ovlgen).l,d6
+	bsr	rd_cut_emit
 	movea.l	(sp)+,a5
 .bx	rts
+
+;	The overlay's rectangles, per priority (rd_ovlrl, rd_ovlrh: their number, then x0, x1 (pixels),
+;	first band, bands), from the runs of columns with cells in each band of 8 lines (rd_ovlrows,
+;	rd_ovlcolf): a run the same in the band below makes its rectangle one band taller. Made
+;	again when a cell is drawn into the overlay (rd_ovlrst). Keeps all.
+OVLRUNS	equ	24				;runs in a band at most (48 columns)
+OVLRECTS	equ	30*OVLRUNS
+rd_ovl_rects
+	sf	(rd_ovlrst).l
+	movem.l	d0-d7/a0-a6,-(sp)
+	lea	(rd_ovlrows).l,a4
+	lea	(rd_ovlcolf).l,a5
+	lea	(rd_ovlrl).l,a6
+	bsr.s	.pass
+	lea	(rd_ovlrows+32*4).l,a4
+	lea	(rd_ovlcolf+32*48).l,a5
+	lea	(rd_ovlrh).l,a6
+	bsr.s	.pass
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+.pass	movea.l	a6,a0				;(their number)
+	clr.w	(a6)+
+	lea	(rd_ovlrun).l,a1		;the band before's runs: first, last column, rectangle
+	lea	OVLRUNS*8(a1),a2		;this band's
+	clr.w	(rd_ovlrpn).l
+	moveq	#0,d7				;band
+.band	moveq	#0,d5				;runs in this band
+	movea.l	a1,a3
+	move.w	(rd_ovlrpn).l,d4		;in the band before
+	move.w	(a4),d0				;x min
+	move.w	2(a4),d1			;x max
+	cmp.w	d1,d0
+	bgt	.nb
+	addq.w	#8,d0
+	asr.w	#3,d0				;first column
+	addq.w	#8,d1
+	asr.w	#3,d1				;last
+	tst.w	d0
+	bpl.s	.c0
+	moveq	#0,d0
+.c0	cmpi.w	#47,d1
+	ble.s	.run
+	moveq	#47,d1
+.run	cmp.w	d1,d0
+	bgt	.nb
+	tst.b	(a5,d0.w)
+	bne.s	.rs
+	addq.w	#1,d0
+	bra.s	.run
+.rs	move.w	d0,d2				;a run: first column
+.re	addq.w	#1,d0
+	cmp.w	d1,d0
+	bgt.s	.rx
+	tst.b	(a5,d0.w)
+	bne.s	.re
+.rx	move.w	d0,d3
+	subq.w	#1,d3				;last column
+	; the same run in the band before: its rectangle one band taller
+.pr	tst.w	d4
+	beq.s	.new
+	cmp.w	(a3),d2
+	blt.s	.new
+	beq.s	.pe
+	addq.l	#8,a3				;(that one ends before)
+	subq.w	#1,d4
+	bra.s	.pr
+.pe	cmp.w	2(a3),d3
+	bne.s	.new
+	move.w	4(a3),d6
+	addq.w	#1,8(a0,d6.w*8)			;(its bands)
+	addq.l	#8,a3
+	subq.w	#1,d4
+	bra.s	.cur
+.new	move.w	d2,d6
+	lsl.w	#3,d6
+	subq.w	#8,d6
+	move.w	d6,(a6)+			;x0
+	move.w	d3,d6
+	lsl.w	#3,d6
+	subq.w	#1,d6
+	move.w	d6,(a6)+			;x1
+	move.w	d7,(a6)+			;first band
+	move.w	#1,(a6)+			;bands
+	move.w	(a0),d6
+	addq.w	#1,(a0)
+.cur	move.w	d2,(a2,d5.w*8)
+	move.w	d3,2(a2,d5.w*8)
+	move.w	d6,4(a2,d5.w*8)
+	addq.w	#1,d5
+	bra.s	.run
+.nb	move.w	d5,(rd_ovlrpn).l
+	exg	a1,a2
+	addq.l	#4,a4
+	lea	48(a5),a5
+	addq.w	#1,d7
+	cmpi.w	#30,d7
+	blt	.band
+	rts
 
 ;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
 ;	scrolled by whole cells. d6 = plane cells across, d7 = down.
@@ -3687,7 +3760,10 @@ rd_sprite_blit
 	; the CPU draws
 	tst.w	(rd_c0).l
 	beq.s	.cache
-	move.w	(rd_sx).l,d0			;(the whole sprite)
+	tst.b	(rd_stage).l			;(the CPU draws: the blits before first)
+	beq.s	.nl
+	bsr	rd_op_fallback
+.nl	move.w	(rd_sx).l,d0			;(the whole sprite)
 	move.w	(rd_sy).l,d1
 	move.w	(rd_scw).l,d2
 	lsl.w	#3,d2
@@ -3829,69 +3905,432 @@ rd_spr_cut
 	adda.w	d7,a3
 	lea	(a2,d2.w*2),a2
 	lea	(a3,d2.w*2),a3
-	bsr	rd_cq_blit			;the copper block
-	sf	(rd_cqkind).l
 	lsr.w	#4,d0
 	add.w	d2,d0
 	add.w	d0,d0				;destination byte of the first word
+	movea.l	(rd_back).l,a0
+	move.w	(rd_sy).l,d7
+	add.w	d6,d7
+	lea	(rd_rowoff).l,a1
+	adda.l	(a1,d7.w*4),a0
+	adda.w	d0,a0				;C, D: the screen
+	movea.l	a2,a1				;B: the image
+	movea.l	a3,a2				;A: its mask
+	add.w	d3,d3				;bytes a row
+	add.w	d2,d2				;past the image's row (the word the shift goes into):
+	add.w	d3,d2				;that word of the mask is masked off
 	ror.w	#4,d1
+	move.w	d1,d7				;(BLTCON1: B shift)
+	moveq	#-1,d1				;the last word's mask
+	cmp.w	d4,d2
+	bls.s	.lw
+	moveq	#0,d1
+.lw	move.w	d4,d0
+	sub.w	d3,d0				;A, B modulo
+	move.w	d5,d2				;lines * 6 planes
+	add.w	d2,d2
+	add.w	d5,d2
+	add.w	d2,d2
+	move.w	d1,d5
+	move.w	d7,d4
+	moveq	#SBPR,d1
+	sub.w	d3,d1				;C, D modulo
+	lsr.w	#1,d3				;words
+	move.l	(rd_imgpos).l,d6
+	bra	rd_cut_emit
+.x	rts
+
+;	------------------------------------------------------------------------------------------
+;	Unchanged areas kept (scroll mode). A buffer holds what was drawn into it when it was last
+;	the back buffer; most of that is the same again in a still scene (a faceoff, a goal) and
+;	often in play. So the frame's cut blits (sprites, overlay, plane B fixups: rd_cut_emit)
+;	are listed first (rd_stage), each with its box of the dirty map, and the list matched in
+;	order with the buffer's last one (the same blit: the same pointers, sizes, shift and image).
+;	Then what the last frame drew and this one does not (its blits without a match) and the
+;	cells that changed under it (the dirty map) are restored, and of this frame's blits only
+;	those are drawn that are new, over what was restored, or over a blit drawn before them in
+;	this frame. A blit the CPU draws, a full list or an image written over in the ring end the
+;	listing for the frame (rd_op_fallback): all is restored and drawn as it comes.
+OPMAX		equ	256			;blits a list
+OPREC		equ	32			;a blit: C/D, B, A (longs), A/B modulo, C/D modulo,
+						;lines (BLTSIZV), words, BLTCON1, last word mask (words),
+						;the image (long), its box (row, rows - 1, column, columns)
+
+;	The bucket (\2, 0 to OPHASH - 1) of the listed blit \1 by its C/D pointer; \3 a data
+;	register to use.
+OPHASHF	MACRO
+	move.l	(\1),\2
+	move.l	\2,\3
+	lsr.l	#6,\3
+	eor.w	\3,\2
+	andi.w	#OPHASH-1,\2
+	ENDM
+
+;	Begin the frame's list. Uses nothing.
+rd_op_begin
+	st	(rd_stage).l
+	clr.w	(rd_opn).l
+	move.l	#$FF000000,(rd_opbox).l
+	rts
+
+;	The buffer's list a3, d6 blits (-1: none), as rd_op_end finds it. Uses d0.
+rd_op_old
+	move.l	a0,-(sp)
+	move.w	(rd_bufi).l,d0
+	lea	(rd_opold).l,a0
+	movea.l	(a0,d0.w*4),a3
+	lea	(rd_opoldn).l,a0
+	move.w	(a0,d0.w*2),d6
+	movea.l	(sp)+,a0
+	rts
+
+;	Every buffer's list unknown (what is in the buffers was drawn some other way). Keeps all.
+rd_op_invall
+	move.l	#-1,(rd_opoldn).l
+	move.w	#-1,(rd_opoldn+4).l
+	rts
+
+;	The box (a1: row, rows - 1, column, columns; row $FF: none) set in the map a2.
+;	Uses d0-d3, a0.
+rd_box_set
+	moveq	#0,d1
+	move.b	(a1),d1
+	cmpi.b	#$FF,d1
+	beq.s	.x
+	moveq	#0,d3
+	move.b	1(a1),d3
+	moveq	#0,d0
+	move.b	2(a1),d0
+	moveq	#0,d2
+	move.b	3(a1),d2
+	lea	(a2,d1.w*4),a0
+.r	bfset	(a0){d0:d2}
+	addq.l	#4,a0
+	dbf	d3,.r
+.x	rts
+
+;	A cut blit: A (a2) a mask, B (a1) an image, C = D (a0) the screen, D = AB + /AC; A and B
+;	shifted by d4 (BLTCON1's), d5 the last word's A mask, d0 A and B's modulo, d1 C and D's,
+;	d2 BLTSIZV, d3 words; d6 what B's image is (its place in the sprite image ring; the
+;	overlay's generation). To the copper (rd_cut_blit), or to the frame's list with its box
+;	(rd_opbox). Uses d0-d7, a0-a2, a5-a6.
+rd_cut_emit
+	tst.b	(rd_stage).l
+	beq	rd_cut_blit
+	move.w	(rd_opn).l,d7
+	cmpi.w	#OPMAX,d7
+	bhs.s	.full
+	movea.l	(rd_opnew).l,a6
+	lsl.w	#5,d7
+	adda.w	d7,a6
+	move.l	a0,(a6)+
+	move.l	a1,(a6)+
+	move.l	a2,(a6)+
+	move.w	d0,(a6)+
+	move.w	d1,(a6)+
+	move.w	d2,(a6)+
+	move.w	d3,(a6)+
+	move.w	d4,(a6)+
+	move.w	d5,(a6)+
+	move.l	d6,(a6)+
+	move.l	(rd_opbox).l,(a6)
+	addq.w	#1,(rd_opn).l
+	rts
+.full	bsr	rd_op_fallback			;(the list is full: drawn as it comes from here)
+	movem.l	d0-d3/a0-a2,-(sp)
+	lea	(rd_opbox).l,a1			;(this one's box: the dirty map, as rd_mark would)
+	movea.l	(rd_dmap).l,a2
+	bsr	rd_box_set
+	movem.l	(sp)+,d0-d3/a0-a2
+;	The blit of rd_cut_emit to the copper. Uses d0-d1/d7, a0, a5-a6.
+rd_cut_blit
+	bsr	rd_cq_blit			;the copper block
+	tst.w	d4
+	bne.s	.sh
+	cmpi.w	#-1,d5
+	bne.s	.sh
+	cmpi.b	#2,(rd_cqkind).l		;(no shift, all of the last word: the constants as
+	beq.s	.k				;the blit before's, if they are)
+	move.l	#$00400FCA,(a5)+		;BLTCON0: A mask, B image, C, D: AB + /AC
+	move.l	#$00420000,(a5)+		;BLTCON1
+	move.l	#$0044FFFF,(a5)+		;BLTAFWM
+	move.l	#$0046FFFF,(a5)+		;BLTALWM
+	move.b	#2,(rd_cqkind).l
+	bra.s	.k
+.sh	sf	(rd_cqkind).l
 	move.l	#$00420000,d7
-	move.w	d1,d7
+	move.w	d4,d7
 	move.l	d7,(a5)+			;BLTCON1: B shift
 	ori.w	#$0FCA,d7
 	eori.l	#($042^$040)<<16,d7
 	move.l	d7,(a5)+			;BLTCON0: A shift; A mask, B image, C, D: AB + /AC
 	move.l	#$0044FFFF,(a5)+		;BLTAFWM
+	move.l	#$00460000,d7
+	move.w	d5,d7
+	move.l	d7,(a5)+			;BLTALWM
 	move.l	#$00740000,(a5)+		;BLTADAT: what the shift brings into the first word
-	CQA	$050,a3,d7			;BLTAPT
-	CQA	$04C,a2,d7			;BLTBPT
-	movea.l	(rd_back).l,a0
-	move.w	(rd_sy).l,d1
-	add.w	d6,d1
-	lea	(rd_rowoff).l,a1
-	adda.l	(a1,d1.w*4),a0
-	adda.w	d0,a0
-	move.l	a0,d7				;BLTCPT, BLTDPT
-	clr.w	d7
-	swap	d7
-	ori.l	#$00480000,d7
-	move.l	d7,(a5)+
-	eori.l	#($048^$054)<<16,d7
-	move.l	d7,(a5)+
-	move.l	#$004A0000,d7
-	move.w	a0,d7
-	move.l	d7,(a5)+
-	eori.l	#($04A^$056)<<16,d7
-	move.l	d7,(a5)+
-	add.w	d3,d3				;bytes a row
-	move.w	d2,d0				;past the image's row (the word the shift goes into):
-	add.w	d0,d0				;that word of the mask is masked off
-	add.w	d3,d0
-	move.l	#$0046FFFF,d7			;BLTALWM
-	cmp.w	d4,d0
-	bls.s	.lw
-	clr.w	d7
-.lw	move.l	d7,(a5)+
-	sub.w	d3,d4
-	move.l	#$00640000,d7
-	move.w	d4,d7
-	move.l	d7,(a5)+			;BLTAMOD
-	eori.l	#($064^$062)<<16,d7
-	move.l	d7,(a5)+			;BLTBMOD
-	move.l	#$00600000|SBPR,d7
-	sub.w	d3,d7
-	move.l	d7,(a5)+			;BLTCMOD
-	eori.l	#($060^$066)<<16,d7
-	move.l	d7,(a5)+			;BLTDMOD
-	move.w	d5,d4				;lines * 6 planes
-	add.w	d4,d4
-	add.w	d4,d5
-	add.w	d5,d5
-	CQV	$05C,d5,d7			;BLTSIZV
-	lsr.w	#1,d3
+.k	CQA	$050,a2,d7			;BLTAPT
+	CQA	$04C,a1,d7			;BLTBPT
+	CQA	$048,a0,d7			;BLTCPT
+	CQA	$054,a0,d7			;BLTDPT
+	CQV	$064,d0,d7			;BLTAMOD
+	CQV	$062,d0,d7			;BLTBMOD
+	CQV	$060,d1,d7			;BLTCMOD
+	CQV	$066,d1,d7			;BLTDMOD
+	CQV	$05C,d2,d7			;BLTSIZV
 	CQV	$05E,d3,d7			;BLTSIZH
 	bra	rd_cq_endblit
-.x	rts
+
+;	The listed blit a1 to the copper. Uses d0-d7, a0-a2, a5-a6.
+rd_op_blit
+	movem.w	12(a1),d0-d5
+	movem.l	(a1),a0-a2			;(a1 last)
+	bra	rd_cut_blit
+
+;	The listing ends half way (rd_cut_emit, rd_sprite_blit, rd_sc_alloc): what the buffer's last
+;	frame drew restored with the dirty map, the blits listed so far drawn (their boxes in the
+;	dirty map: the list is not kept), and the rest of the frame drawn as it comes. Keeps all.
+rd_op_fallback
+	movem.l	d0-d7/a0-a6,-(sp)
+	sf	(rd_stage).l
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+92).l		;(statistics: listings ended half way)
+	ENDC
+	bsr	rd_op_old
+	movea.l	(rd_dmap).l,a2
+	movea.l	a3,a1
+	lea	OPREC-4(a1),a1
+	tst.w	d6
+	bgt.s	.oe
+	moveq	#0,d6				;(none listed)
+	bra.s	.oe
+.o	bsr	rd_box_set
+	lea	OPREC(a1),a1
+.oe	dbf	d6,.o
+	bsr	rd_restore
+	movea.l	(rd_opnew).l,a4
+	move.w	(rd_opn).l,d7
+	bra.s	.ne
+.n	lea	OPREC-4(a4),a1
+	movea.l	(rd_dmap).l,a2
+	bsr	rd_box_set
+	movea.l	a4,a1
+	move.l	d7,-(sp)
+	bsr	rd_op_blit
+	move.l	(sp)+,d7
+	lea	OPREC(a4),a4
+.ne	dbf	d7,.n
+	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
+;	The frame listed (rd_op_begin): restored, and its blits drawn where they have to be (above).
+;	Its list is the buffer's for the next time it is drawn. (Not listed, or the listing ended
+;	half way: the buffer's list is unknown.)
+OPHASH	equ	64				;rd_op_end: buckets of the last list's blits
+rd_op_end
+	tst.b	(rd_stage).l
+	bne.s	.go
+	move.w	(rd_bufi).l,d0
+	lea	(rd_opoldn).l,a0
+	move.w	#-1,(a0,d0.w*2)
+	rts
+.go	sf	(rd_stage).l
+	bsr	rd_op_old			;a3, d6: the buffer's last list
+	movea.l	(rd_opnew).l,a4
+	move.w	(rd_opn).l,d7
+	moveq	#0,d4				;blits matched
+	tst.w	d6
+	ble	.r
+	; the last list's blits by their C/D pointer: the first in each bucket, then the next
+	lea	(rd_ophb).l,a0
+	moveq	#OPHASH/2-1,d0
+.hc	move.l	#-1,(a0)+
+	dbf	d0,.hc
+	lea	(rd_ophb).l,a0
+	lea	(rd_ophn).l,a1
+	move.w	d6,d5
+	subq.w	#1,d5				;(from the last: the buckets in order)
+	move.w	d5,d0
+	lsl.w	#5,d0
+	lea	(a3,d0.w),a2
+.hi	OPHASHF	a2,d0,d1
+	move.w	(a0,d0.w*2),(a1,d5.w*2)
+	move.w	d5,(a0,d0.w*2)
+	lea	-OPREC(a2),a2
+	dbf	d5,.hi
+	; each blit: the first of the last list after the one matched before it (their order kept)
+	; with the same pointers, sizes, shift and image. Matched there: its box none (not restored)
+	moveq	#0,d5				;the last list's next
+	lea	(rd_opkeep).l,a6
+	movea.l	a4,a5
+	move.w	d7,d3
+	bra.s	.me
+.m	sf	(a6)
+	OPHASHF	a5,d0,d1
+	move.w	(a0,d0.w*2),d1
+	bra.s	.mf
+.mx	move.w	(a1,d1.w*2),d1			;(the next in the bucket)
+.mf	bmi.s	.mn
+	cmp.w	d5,d1
+	blt.s	.mx
+	move.w	d1,d0
+	lsl.w	#5,d0
+	lea	(a3,d0.w),a2
+	move.l	(a5),d0
+	cmp.l	(a2),d0
+	bne.s	.mx
+	move.l	4(a5),d0
+	cmp.l	4(a2),d0
+	bne.s	.mx
+	move.l	8(a5),d0
+	cmp.l	8(a2),d0
+	bne.s	.mx
+	move.l	12(a5),d0
+	cmp.l	12(a2),d0
+	bne.s	.mx
+	move.l	16(a5),d0
+	cmp.l	16(a2),d0
+	bne.s	.mx
+	move.l	20(a5),d0
+	cmp.l	20(a2),d0
+	bne.s	.mx
+	move.l	24(a5),d0
+	cmp.l	24(a2),d0
+	bne.s	.mx
+	st	(a6)
+	addq.w	#1,d4
+	move.b	#$FF,OPREC-4(a2)		;(not restored)
+	move.w	d1,d5
+	addq.w	#1,d5
+.mn	addq.l	#1,a6
+	lea	OPREC(a5),a5
+.me	dbf	d3,.m
+	; restored: the dirty map and the boxes of the last list's blits without a match
+	movea.l	(rd_dmap).l,a2
+	lea	OPREC-4(a3),a1
+	move.w	d6,d5
+	bra.s	.re
+.rm	bsr	rd_box_set
+	lea	OPREC(a1),a1
+.re	dbf	d5,.rm
+.r	movem.l	d4/d7/a4,-(sp)
+	tst.w	d4
+	beq.s	.nw
+	lea	(rd_wmap+DROWS*4).l,a0		;(what is restored: rd_restore notes it)
+	moveq	#0,d0
+	moveq	#0,d1
+	moveq	#0,d2
+	moveq	#0,d3
+	moveq	#DROWS/4-1,d5
+.cw	movem.l	d0-d3,-(a0)
+	dbf	d5,.cw
+.nw	bsr	rd_restore
+	movem.l	(sp)+,d4/d7/a4
+	IFD	STATS
+	add.l	d7,(rd_dbg_x+96).l		;(statistics: blits listed, drawn)
+	ENDC
+	tst.w	d4
+	bne.s	.w
+	; none matched: all drawn
+	bra.s	.ae
+.a	IFD	STATS
+	addq.l	#1,(rd_dbg_x+100).l
+	ENDC
+	movem.l	d7/a4,-(sp)
+	movea.l	a4,a1
+	bsr	rd_op_blit
+	movem.l	(sp)+,d7/a4
+	lea	OPREC(a4),a4
+.ae	dbf	d7,.a
+	bra.s	.done
+	; the blits: new, over what was restored or drawn before them
+.w	lea	(rd_opkeep).l,a3
+	bra.s	.ee
+.e	moveq	#0,d1
+	move.b	OPREC-4(a4),d1			;its box: row (none: $FF),
+	moveq	#0,d3
+	move.b	OPREC-3(a4),d3			;rows - 1,
+	moveq	#0,d0
+	move.b	OPREC-2(a4),d0			;column,
+	moveq	#0,d2
+	move.b	OPREC-1(a4),d2			;columns
+	lea	(rd_wmap).l,a0
+	lea	(a0,d1.w*4),a0
+	tst.b	(a3)+
+	beq.s	.ed
+	cmpi.b	#$FF,d1
+	beq.s	.en				;(kept, and nothing of it on the screen)
+	movea.l	a0,a1
+	move.w	d3,d4
+.et	bftst	(a1){d0:d2}
+	bne.s	.es
+	addq.l	#4,a1
+	dbf	d4,.et
+	bra.s	.en				;(kept as it is)
+.ed	cmpi.b	#$FF,d1
+	beq.s	.eb
+.es	bfset	(a0){d0:d2}			;(drawn: the blits after it over it are too)
+	addq.l	#4,a0
+	dbf	d3,.es
+.eb
+	IFD	STATS
+	addq.l	#1,(rd_dbg_x+100).l
+	ENDC
+	movem.l	d7/a3-a4,-(sp)
+	movea.l	a4,a1
+	bsr	rd_op_blit
+	movem.l	(sp)+,d7/a3-a4
+.en	lea	OPREC(a4),a4
+.ee	dbf	d7,.e
+.done	bsr	rd_cq_flush
+	IFD	VERIFY
+	lea	(rd_vmap).l,a0			;(rd_verify: the list's boxes)
+	moveq	#DROWS-1,d0
+.cv	clr.l	(a0)+
+	dbf	d0,.cv
+	movea.l	(rd_opnew).l,a1
+	lea	OPREC-4(a1),a1
+	lea	(rd_vmap).l,a2
+	move.w	(rd_opn).l,d5
+	bra.s	.ve
+.v	bsr	rd_box_set
+	lea	OPREC(a1),a1
+.ve	dbf	d5,.v
+	ENDC
+	; the list the buffer's
+	move.w	(rd_bufi).l,d0
+	lea	(rd_opold).l,a0
+	move.l	(a0,d0.w*4),d1
+	move.l	(rd_opnew).l,(a0,d0.w*4)
+	move.l	d1,(rd_opnew).l
+	lea	(rd_opoldn).l,a0
+	move.w	(rd_opn).l,(a0,d0.w*2)
+	rts
+
+;	(staging) The box of a plane B fixup: map column d0, d1 words, buffer line d2, 8 lines.
+;	Keeps all.
+rd_fix_box
+	movem.l	d2-d3,-(sp)
+	move.w	d2,d3
+	addq.w	#7,d3
+	asr.w	#DLS,d2
+	bpl.s	.1
+	moveq	#0,d2
+.1	asr.w	#DLS,d3
+	cmpi.w	#DROWS-1,d3
+	ble.s	.2
+	moveq	#DROWS-1,d3
+.2	sub.w	d2,d3
+	bmi.s	.e
+	move.b	d2,(rd_opbox).l
+	move.b	d3,(rd_opbox+1).l
+	move.b	d0,(rd_opbox+2).l
+	move.b	d1,(rd_opbox+3).l
+	movem.l	(sp)+,d2-d3
+	rts
+.e	move.b	#$FF,(rd_opbox).l
+	movem.l	(sp)+,d2-d3
+	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	Sprite image cache. A sprite's image (6 interleaved planes, rows of rd_wb bytes: its
@@ -3954,6 +4393,7 @@ rd_sc_get
 	move.l	20(a1),(rd_bp0).l
 	move.l	(rd_count).l,4(a1)
 	move.l	12(a1),d1			;(the oldest image used in this frame)
+	move.l	d1,(rd_imgpos).l		;(which image: rd_cut_emit)
 	cmp.l	(rd_scmin).l,d1
 	bge	.xm
 	move.l	d1,(rd_scmin).l
@@ -4069,6 +4509,7 @@ rd_sc_get
 	move.l	20(a4),20(a1)
 	move.l	d7,24(a1)
 	move.l	4(a4),d1			;(the oldest image used in this frame)
+	move.l	d1,(rd_imgpos).l		;(which image: rd_cut_emit)
 	cmp.l	(rd_scmin).l,d1
 	bge.s	.x
 	move.l	d1,(rd_scmin).l
@@ -4100,7 +4541,10 @@ rd_sc_alloc
 	IFD	STATS
 	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
 	ENDC
-	bsr	rd_waitblit
+	tst.b	(rd_stage).l			;(this frame's blits listed: drawn first)
+	beq.s	.nl
+	bsr	rd_op_fallback
+.nl	bsr	rd_waitblit
 	move.l	#$7FFFFFFF,(rd_scmin).l
 	move.l	#$7FFFFFFF,(rd_scmin+4).l
 .free	move.l	d2,d3
@@ -4399,6 +4843,7 @@ rd_obj_blit
 	addq.l	#1,(rd_dbg_x+84).l		;(statistics: objects drawn as one image)
 	ENDC
 	move.l	8(a2),d1			;(the oldest image used in this frame)
+	move.l	d1,(rd_imgpos).l		;(which image: rd_cut_emit)
 	cmp.l	(rd_scmin).l,d1
 	bge.s	.o
 	move.l	d1,(rd_scmin).l
@@ -5791,7 +6236,15 @@ rd_fix_blit
 	adda.w	d0,a1
 	move.w	(rd_brow0).l,d1
 	add.w	d2,d1
-	mulu.w	#SROW,d1
+	tst.b	(rd_stage).l
+	beq.s	.nb
+	movem.l	d0-d2,-(sp)
+	move.w	d1,d2				;(listing: its box)
+	lsr.w	#1,d0
+	moveq	#1,d1
+	bsr	rd_fix_box
+	movem.l	(sp)+,d0-d2
+.nb	mulu.w	#SROW,d1
 	movea.l	(rd_buf).l,a2
 	adda.l	d1,a2
 	lea	SCRX(a2,d0.w),a2
@@ -5801,35 +6254,28 @@ rd_fix_blit
 	rts
 
 ;	The fixup blit (rd_fix_blit, rd_fix_runs): the bitmap a0 through its mask a1 over the buffer
-;	a2, d1 words across, 8 lines; its copper block. Uses d0-d1, a0, a5-a6.
+;	a2, d1 words across, 8 lines (no shift: the constants as the fixups before's): rd_cut_emit
+;	(its box in rd_opbox when listing). Uses d0-d1, a0, a5-a6.
 rd_fix_cq
-	bsr	rd_cq_blit
-	cmpi.b	#2,(rd_cqkind).l
-	beq.s	.k
-	move.l	#$00400FCA,(a5)+		;BLTCON0: A mask, B bitmap, C, D: AB + /AC (once for
-	move.l	#$00420000,(a5)+		;the fixups in a row)
-	move.l	#$0044FFFF,(a5)+
-	move.l	#$0046FFFF,(a5)+
-	move.b	#2,(rd_cqkind).l
-.k	CQA	$050,a1,d0			;BLTAPT: the mask
-	CQA	$054,a2,d0			;BLTDPT
-	CQA	$048,a2,d0			;BLTCPT
-	CQA	$04C,a0,d0			;BLTBPT: the bitmap
-	move.l	#$00640000|64,d0
-	sub.w	d1,d0
-	sub.w	d1,d0
-	move.l	d0,(a5)+			;BLTAMOD
-	eori.l	#($064^$062)<<16,d0
-	move.l	d0,(a5)+			;BLTBMOD
-	move.l	#$00600000|SBPR,d0
-	sub.w	d1,d0
-	sub.w	d1,d0
-	move.l	d0,(a5)+			;BLTCMOD
-	eori.l	#($060^$066)<<16,d0
-	move.l	d0,(a5)+			;BLTDMOD
-	move.l	#$005C0000|(8*NPLANES),(a5)+	;BLTSIZV
-	CQV	$05E,d1,d0			;BLTSIZH
-	bra	rd_cq_endblit
+	movem.l	d2-d7/a1-a2,-(sp)
+	move.w	d1,d3				;words
+	add.w	d1,d1
+	moveq	#64,d0
+	sub.w	d1,d0				;A, B modulo
+	moveq	#SBPR,d7
+	sub.w	d1,d7
+	move.w	d7,d1				;C, D modulo
+	move.l	a0,d7
+	movea.l	a2,a0				;C, D: the screen
+	movea.l	a1,a2				;A: the mask
+	movea.l	d7,a1				;B: the bitmap
+	moveq	#8*NPLANES,d2
+	moveq	#0,d4
+	moveq	#-1,d5
+	moveq	#0,d6
+	bsr	rd_cut_emit
+	movem.l	(sp)+,d2-d7/a1-a2
+	rts
 
 ;	Scroll mode, 64 cells across (the screen's columns do not wrap there): each plane row's
 ;	cells of rd_fixmap (a0) as words (2 cells each) on the screen, and each run of them one
@@ -5909,7 +6355,13 @@ rd_fix_runs
 	adda.w	d0,a1
 	move.w	(rd_brow0).l,d2
 	add.w	d4,d2
-	mulu.w	#SROW,d2
+	tst.b	(rd_stage).l
+	beq.s	.nb
+	move.l	d0,-(sp)
+	lsr.w	#1,d0				;(listing: its box)
+	bsr	rd_fix_box
+	move.l	(sp)+,d0
+.nb	mulu.w	#SROW,d2
 	movea.l	(rd_buf).l,a2
 	adda.l	d2,a2
 	lea	SCRX(a2,d0.w),a2
@@ -7070,6 +7522,30 @@ rd_dbg_x	ds.l	26			;(statistics: see nhlrun)
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
 rd_ovlcolf	ds.b	2*32*48			;per priority, band: columns with cells
+rd_ovlrl	ds.w	1+4*OVLRECTS			;its rectangles, low priority (rd_ovl_rects)
+rd_ovlrh	ds.w	1+4*OVLRECTS			;high
+rd_ovlrun	ds.b	2*OVLRUNS*8
+rd_ovlrpn	ds.w	1
+rd_ovlrst	ds.b	1				;the rectangles are to be made again
+	even
+rd_ovlgen	ds.l	1				;changed when the overlay changes
+rd_oplists	ds.b	(NBUF+1)*OPMAX*OPREC		;blit lists (rd_op_end)
+rd_opold	ds.l	NBUF				;per buffer: the list of its last frame,
+rd_opoldn	ds.w	NBUF				;its blits (-1: not known)
+rd_opnew	ds.l	1				;the list being made
+rd_opn		ds.w	1				;its blits
+rd_opbox	ds.l	1				;the box of the blit being made (rd_mark_u)
+rd_imgpos	ds.l	1				;its image (rd_sc_get, rd_obj_blit)
+rd_wmap		ds.l	DROWS				;what is restored or drawn (rd_op_end)
+rd_rmask	ds.l	1				;(rd_restore)
+	IFD	VERIFY
+rd_vmap		ds.l	DROWS				;(rd_verify: the list's boxes)
+	ENDC
+rd_opkeep	ds.b	OPMAX				;per blit: the same as in the last list
+rd_ophb		ds.w	OPHASH				;rd_op_end: the last list's blits by C/D
+rd_ophn		ds.w	OPMAX
+rd_stage	ds.b	1				;listing the frame's blits (rd_op_begin)
+	even
 rd_c0		ds.w	1
 rd_ncol		ds.w	1
 rd_wb		ds.w	1

@@ -131,7 +131,8 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
   for now: they do not sound right yet.
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
-  not listed for repair must match the bitmap. It also compares every name table each frame
+  not listed for repair (nor drawn over by the blits listed for the frame) must match the
+  bitmap. It also compares every name table each frame
   and fails if one changed that the write marks said could not have. The test harness reports
   the first failure.
 
@@ -177,9 +178,21 @@ The hardware layer:
   the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
   by 8 lines a bit; `-DDLS=n` makes it 2^n lines, 1 or 2: finer rows restore fewer words
-  but take more blits, and each blit costs the CPU its copper block). Other
+  but take more blits, and each blit costs the CPU its copper block). A buffer keeps what was
+  drawn into it, and in a still scene (a faceoff, a goal) nearly all of it is the same again,
+  in play often much of it: so a frame's cut blits (sprites, overlay, plane B's high priority
+  cells) are first listed, each with its box of the dirty map, and matched in order with the
+  list of the buffer's last frame (the same pointers, sizes, shift and image: an image is
+  known by its place in the image ring's history). What the last frame drew and this one does
+  not is restored with the changed cells, and only the blits that are new, over what was
+  restored or over a blit drawn before them in this frame are drawn. A faceoff takes the
+  blitter some 15k cycles a frame instead of 220k, play about 40% less (harness). A sprite the
+  CPU draws (cut by the screen's left margin), a full list or an image written over in the ring
+  ends the listing for that frame: all is restored and drawn as it comes. Other
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
-  layer with masks. On the 256 pixel wide screens (the rink) the overlay's high priority part,
+  layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
+  of 8 lines, a run the same in the bands below one rectangle; made again when it changes). On
+  the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
   cell the game changes are made again (a clock digit). Each screen buffer shows its own copy
@@ -253,8 +266,9 @@ allows). So the CPU takes no interrupt for a blit and the blitter does not wait 
 CPU write to chip memory takes about 0.7 us, twice that while a blit runs (FS-UAE), and the
 68020 runs some 7 cycles an instruction from fast memory, so a block moves only the registers
 its blit uses (BLTSIZV always: the blitter counts it down), and the two kinds of blit there are
-most of (the sprites' cuts, the restores) write their blocks themselves with constants where
-they can (a run of restores sets BLTCON0 to BLTALWM once). After
+most of (the cuts: sprites, overlay, plane B fixups; the restores) write their blocks
+themselves with constants where they can (a run of restores sets BLTCON0 to BLTALWM once, so
+does a run of unshifted cuts). After
 the last block the copper stops, setting INTREQ's SOFT bit (no interrupt) first; the next block
 written there takes its place, and the CPU starts the copper again (COPJMP2) if SOFT says it
 stopped. A show marker sends the copper to a parking place that sets DSKBLK and calls the level
@@ -267,7 +281,9 @@ blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges 
 CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
 the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does. `NHL_BLITFRAMES=file` writes a line for each frame shown: the game frame and the
 blitter's cycles and blits since the frame before by kind (copies A to D, cookie cuts, D only,
-other), with NHL_DETERM the same game every build.
+other), with NHL_DETERM the same game every build. `NHL_BLITLOG=file` writes every blit: the
+frames shown so far, the game frame, BLTCON0, BLTCON1, the first and last word masks, the A, B,
+C and D pointers (0: not used), words, lines and its time.
 
 ## Testing without an Amiga
 

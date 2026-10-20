@@ -44,7 +44,7 @@ PEV	macro
 	addq.l	#2,sp
 	ENDC
 	endm
-PEVMAX		equ	16384
+PEVMAX		equ	65536
 PROFMAX		equ	65536
 
 CIA_CLOCK	equ	709379			;PAL E clock
