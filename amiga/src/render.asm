@@ -731,10 +731,14 @@ rd_fast
 	move.w	(rd_w).l,d2
 	move.w	#SCRH,d3
 	bsr	rd_mark
-.b	lea	(rd_cover).l,a0			;nothing low drawn yet
-	moveq	#2*32-1,d0
-.c	clr.l	(a0)+
-	dbf	d0,.c
+.b	lea	(rd_cover+2*32*4).l,a0		;nothing low drawn yet
+	moveq	#0,d0
+	moveq	#0,d1
+	moveq	#0,d2
+	moveq	#0,d3
+	REPT	2*32/4
+	movem.l	d0-d3,-(a0)
+	ENDR
 	bsr	rd_buildA
 	tst.b	(rd_ovldirty).l
 	beq	.ovl
@@ -3192,21 +3196,107 @@ rd_ovl_redraw
 	sf	(rd_ovldirty).l
 	st	(rd_ovlrst).l
 	addq.l	#1,(rd_ovlgen).l
-	; clear image and masks (blitter, D only)
-	bsr	rd_waitblit
+	bsr	rd_waitblit			;(blits queued before may read it)
+	; clear what the cells drawn since the last redraw cover (rd_ovlrows, either priority:
+	; per band of 8 lines its pixels across), the image and both masks: by the CPU if that is
+	; a little (a clock, a score), else the lines of those bands by the blitter
+	lea	(rd_ovlrows).l,a0
+	moveq	#0,d6				;words a line, the bands' summed
+	moveq	#0,d7				;band
+	moveq	#-1,d2				;the last with cells
+	moveq	#32,d3				;the first
+.sz	bsr	rd_ovl_bandw
+	bmi.s	.sz1
+	sub.w	d0,d1
+	addq.w	#1,d1
+	add.w	d1,d6
+	move.w	d7,d2
+	cmp.w	d3,d7
+	bge.s	.sz1
+	move.w	d7,d3
+.sz1	addq.l	#4,a0
+	addq.w	#1,d7
+	cmpi.w	#32,d7
+	blo.s	.sz
+	tst.w	d2
+	bmi	.clr				;(nothing there)
+	cmpi.w	#OVLCPU,d6
+	bhi	.blit
+	lea	(rd_ovlrows).l,a0
+	moveq	#0,d7				;band
+.cb	bsr	rd_ovl_bandw
+	bmi.s	.cbn
+	move.w	d7,d2
+	subq.w	#1,d2
+	lsl.w	#3,d2				;its first line
+	moveq	#7,d3				;lines - 1
+.cl	tst.w	d2
+	bmi.s	.cln
+	cmpi.w	#SCRH,d2
+	bge.s	.cbn
+	move.w	d2,d4
+	mulu.w	#OSROW,d4
+	lea	(rd_ovl).l,a1
+	adda.l	d4,a1
+	lea	(a1,d0.w*2),a1			;its first word
+	moveq	#NPLANES-1,d4
+.cp	movea.l	a1,a2
+	movea.l	a1,a3
+	adda.l	#rd_ovlmlo-rd_ovl,a3		;(the masks' word)
+	movea.l	a1,a4
+	adda.l	#rd_ovlmhi-rd_ovl,a4
+	move.w	d1,d5
+	sub.w	d0,d5				;words - 1
+.cw	clr.w	(a2)+
+	clr.w	(a3)+
+	clr.w	(a4)+
+	dbf	d5,.cw
+	lea	OSBPR(a1),a1
+	dbf	d4,.cp
+.cln	addq.w	#1,d2
+	dbf	d3,.cl
+.cbn	addq.l	#4,a0
+	addq.w	#1,d7
+	cmpi.w	#32,d7
+	blo.s	.cb
+	bra	.clr
+.blit	; the lines of those bands (blitter, D only): the image, then each mask
+	subq.w	#1,d3
+	lsl.w	#3,d3				;first line
+	bpl.s	.b0
+	moveq	#0,d3
+.b0	lsl.w	#3,d2
+	addq.w	#7,d2				;last
+	cmpi.w	#SCRH-1,d2
+	ble.s	.b1
+	move.w	#SCRH-1,d2
+.b1	sub.w	d3,d2
+	addq.w	#1,d2
+	mulu.w	#NPLANES,d2			;rows
+	mulu.w	#OSROW,d3			;(their offset)
 	bsr	rd_cq_inval			;(the blitter's registers written here)
 	lea	(CUSTOM).l,a6
 	move.w	#$0100,$040(a6)
 	move.w	#0,$042(a6)
-	move.l	#rd_ovl,$054(a6)
 	move.w	#0,$066(a6)
-	move.w	#SCRH*6,$05C(a6)
+	lea	(rd_ovl).l,a0
+	adda.l	d3,a0
+	move.l	a0,$054(a6)
+	move.w	d2,$05C(a6)
 	move.w	#OSBPR/2,$05E(a6)
 	bsr	rd_waitblit
-	move.l	#rd_ovlmlo,$054(a6)
-	move.w	#SCRH*6*2,$05C(a6)		;both masks (they follow each other)
+	lea	(rd_ovlmlo).l,a0
+	adda.l	d3,a0
+	move.l	a0,$054(a6)
+	move.w	d2,$05C(a6)
 	move.w	#OSBPR/2,$05E(a6)
-	; rows used, per priority: x min, x max (pixels), empty = min > max
+	bsr	rd_waitblit
+	lea	(rd_ovlmhi).l,a0
+	adda.l	d3,a0
+	move.l	a0,$054(a6)
+	move.w	d2,$05C(a6)
+	move.w	#OSBPR/2,$05E(a6)
+.clr	; rows used, per priority: x min, x max (pixels), empty = min > max
 	lea	(rd_ovlrows).l,a0
 	moveq	#2*32-1,d0
 .ir	move.w	#$7FFF,(a0)+
@@ -3217,6 +3307,14 @@ rd_ovl_redraw
 .icf	clr.l	(a0)+
 	dbf	d0,.icf
 	bsr	rd_waitblit
+	IFD	VERIFY
+	lea	(rd_ovl).l,a0			;(the image and masks all clear now)
+	move.w	#OSROW*SCRH/4-1,d0
+	bsr.s	.vz
+	lea	(rd_ovlmlo).l,a0
+	move.w	#OSROW*SCRH/2-1,d0
+	bsr.s	.vz
+	ENDC
 	; draw the cells
 	lea	(rd_alist).l,a4
 	move.w	(rd_alistn).l,d7
@@ -3230,6 +3328,48 @@ rd_ovl_redraw
 	movem.l	(sp)+,d7/a4
 	dbf	d7,.c
 .x	rts
+	IFD	VERIFY
+.vz	tst.l	(a0)+				;d0 + 1 longs from a0 clear, else rd_vfail: frame, $FD
+	bne.s	.vf
+	dbf	d0,.vz
+	rts
+.vf	tst.l	(rd_vfail).l
+	bne.s	.vx
+	move.w	(rd_count+2).l,(rd_vfail).l
+	move.w	#$FD00,(rd_vfail+2).l
+.vx	rts
+	ENDC
+
+;	The words of band a0 (rd_ovlrows: low priority there, high 32 bands on) that its cells
+;	cover, either priority: d0 the first, d1 the last (in a row of the overlay); N set if none.
+;	Uses d0-d1.
+OVLCPU	equ	48				;(rd_ovl_redraw: words a line the CPU clears at most)
+rd_ovl_bandw
+	move.w	(a0),d0				;x min, max
+	move.w	2(a0),d1
+	cmp.w	32*4(a0),d0
+	ble.s	.1
+	move.w	32*4(a0),d0
+.1	cmp.w	32*4+2(a0),d1
+	bge.s	.2
+	move.w	32*4+2(a0),d1
+.2	cmp.w	d1,d0
+	bgt.s	.none
+	addi.w	#32,d0				;(the overlay's margin)
+	bpl.s	.3
+	moveq	#0,d0
+.3	asr.w	#4,d0
+	addi.w	#32,d1
+	asr.w	#4,d1
+	cmpi.w	#OSBPR/2-1,d1
+	ble.s	.4
+	moveq	#OSBPR/2-1,d1
+.4	cmp.w	d1,d0
+	bgt.s	.none
+	tst.w	d0				;(N clear)
+	rts
+.none	moveq	#-1,d0
+	rts
 
 ;	Cell d0 at (d1, d2) into the overlay.
 rd_ovl_cell

@@ -208,7 +208,9 @@ The hardware layer:
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
   of 8 lines, a run the same in the bands below one rectangle; made again when a cell adds a
-  column). On
+  column). Drawn anew (more than a few of its cells changed), only the bands its cells covered
+  are cleared first: by the CPU for a little (a score box), else their lines by the blitter
+  (not all 190 KB of image and masks, which took the blitter some 3 frames). On
   the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
