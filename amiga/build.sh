@@ -29,6 +29,9 @@ if [ ! -f $PCMI ] || [ amiga/tools/pcmrender.py -nt $PCMI ] || [ src/sound94.asm
   python3 amiga/tools/pcmrender.py src/sound94.asm Extracted/NHL94/Sound $PCMI
 fi
 cp $PCMI output/amiga/src/pcm.i
+# The pictures of the EA Sports, title and game setup screens, deflated (inflated into a window
+# only while their screen is shown: fe_open)
+python3 amiga/tools/fepack.py Extracted/NHL94/Graphics output/amiga/src/fe.i
 cd output/amiga/src
 # Twice: the second time with the list of the places that hold RAM window addresses, which
 # ramrel.py takes from the first (its hunk is the last, so the others do not move).

@@ -128,8 +128,11 @@ rd_bp0		ds.w	1			;first pixel and last pixel across
 rd_bp1		ds.w	1
 rd_scpos	ds.l	1			;bytes written to its ring so far
 rd_scoff	ds.l	1			;the ring's place there (rd_scpos less its laps)
-rd_scsize	ds.l	1			;its bytes: SCARENA + rd_scxsz
+rd_scsize	ds.l	1			;its bytes: rd_scs0 + rd_scxsz
 rd_scx		ds.l	1			;its second part (set before rd_init: os.asm, the harness)
+fe_held		ds.b	1			;the window of fe_open is held
+fe_cur		ds.b	1			;the screen whose pictures are in it (0: none)
+	even
 rd_scxsz	ds.l	1			;and its bytes (0: none)
 rd_scmin	ds.l	2			;its oldest image used in this frame, in the one before
 rd_tchg		ds.l	2048			;frame each tile was last converted in
@@ -293,7 +296,7 @@ rd_init
 	bne.s	.sn
 	st	(rd_sprnat).l
 	move.l	(rd_scxsz).l,d0			;(the sprite image ring's size: once)
-	addi.l	#SCARENA,d0
+	add.l	(rd_scs0).l,d0
 	move.l	d0,(rd_scsize).l
 	lea	(Spritetiles).l,a0
 	move.l	#SPRTSIZE/4,d7
@@ -5113,8 +5116,9 @@ rd_sc_get
 	rts
 
 ;	Room in the sprite image ring for d1 bytes: d2 = its place (the bytes written to the ring
-;	before it), a2 = its address. The ring is rd_scarena, then rd_scx if there is one; an image
-;	is not split between them (what is left of a part is passed over). A blit queued in this
+;	before it), a2 = its address. The ring is rd_scarena (its first rd_scs0 bytes: the rest may
+;	be the window of fe_open), then rd_scx if there is one; an image is not split between them
+;	(what is left of a part is passed over). A blit queued in this
 ;	frame or the one before may still read an image of the ring this writes over (from the lap
 ;	before): if one was used there, they are let finish. Uses d3, d4.
 rd_sc_alloc
@@ -5122,11 +5126,11 @@ rd_sc_alloc
 	move.l	(rd_scoff).l,d3
 	move.l	d3,d4
 	add.l	d1,d4				;(its end)
-	cmpi.l	#SCARENA,d3
+	cmp.l	(rd_scs0).l,d3
 	bhs.s	.p2
-	cmpi.l	#SCARENA,d4
+	cmp.l	(rd_scs0).l,d4
 	bls.s	.fit
-	move.l	#SCARENA,d4			;(the rest of the first part is left)
+	move.l	(rd_scs0).l,d4			;(the rest of the first part is left)
 	bra.s	.skip
 .p2	cmp.l	(rd_scsize).l,d4
 	bls.s	.fit
@@ -5157,13 +5161,13 @@ rd_sc_alloc
 	move.l	#$7FFFFFFF,(rd_scmin).l
 	move.l	#$7FFFFFFF,(rd_scmin+4).l
 .free	move.l	(sp)+,d3			;its address
-	cmpi.l	#SCARENA,d3
+	cmp.l	(rd_scs0).l,d3
 	bhs.s	.a2
 	lea	(rd_scarena).l,a2
 	adda.l	d3,a2
 	bra.s	.a
 .a2	movea.l	(rd_scx).l,a2
-	suba.l	#SCARENA,a2
+	suba.l	(rd_scs0).l,a2
 	adda.l	d3,a2
 .a	add.l	d1,d3
 	move.l	d3,(rd_scoff).l
@@ -5171,6 +5175,92 @@ rd_sc_alloc
 	add.l	d1,d3
 	move.l	d3,(rd_scpos).l
 	rts
+
+;	------------------------------------------------------------------------------------------
+;	The pictures of the EA Sports, title and game setup screens (fe.i, fepack.py) are kept
+;	deflated: when a screen begins (patches.py), fe_open inflates its pictures into the window
+;	FEWIN, the top of the sprite image ring's first part, which the ring leaves alone while the
+;	window is held (rd_scs0); a game's start gives the window back (fe_close). The ring changes
+;	size only with no frame half drawn (the renderer is let finish one) and every image in it
+;	dropped. Keeps all.
+FEWIN	equ	rd_scarena+SCARENA-FEWSIZE
+fe_open_ea
+	move.l	d0,-(sp)
+	moveq	#1,d0
+	bra.s	fe_open
+fe_open_title
+	move.l	d0,-(sp)
+	moveq	#2,d0
+	bra.s	fe_open
+fe_open_setup
+	move.l	d0,-(sp)
+	moveq	#3,d0
+fe_open
+	cmp.b	(fe_cur).l,d0
+	beq.s	.x				;(there already)
+	movem.l	d1/a0-a1,-(sp)
+	tst.b	(fe_held).l
+	bne.s	.h
+	move.l	#SCARENA-FEWSIZE,d1
+	bsr	fe_ring
+	st	(fe_held).l
+.h	lea	(fe_table-8).l,a0
+	movea.l	(a0,d0.w*8),a0			;its block
+	lea	(FEWIN).l,a1
+	bsr	inflate
+	move.b	d0,(fe_cur).l
+	movem.l	(sp)+,d1/a0-a1
+.x	move.l	(sp)+,d0
+	rts
+fe_close
+	tst.b	(fe_held).l
+	beq.s	.x
+	move.l	d1,-(sp)
+	move.l	#SCARENA,d1
+	bsr	fe_ring
+	sf	(fe_held).l
+	sf	(fe_cur).l
+	move.l	(sp)+,d1
+.x	rts
+;	The ring's first part d1 bytes. Keeps all.
+fe_ring
+	movem.l	d0/a0,-(sp)
+	move	sr,-(sp)
+	; no frame half drawn (its images, its place in the ring): the renderer on until it is
+	; done (the game's wait, hal_idle; one that comes with the vertical blank off (level 6 or
+	; more) cannot switch to it: the level lowered meanwhile)
+.w	tst.b	(rd_busy).l
+	beq.s	.nb
+	move	(sp),d0
+	andi.w	#$0700,d0
+	cmpi.w	#$0600,d0
+	blo.s	.i
+	move	#$2500,sr
+.i	jsr	(hal_idle).l
+	move	(sp),sr
+	bra.s	.w
+.nb	bsr	rd_waitblit			;(and no blit queued reads an image)
+	move.l	(rd_scsize).l,d0
+	add.l	d0,d0
+	add.l	d0,(rd_scpos).l			;every image's place two laps back: none is found
+	clr.l	(rd_scoff).l
+	move.l	d1,(rd_scs0).l
+	move.l	d1,d0
+	add.l	(rd_scxsz).l,d0
+	move.l	d0,(rd_scsize).l
+	move.l	#$7FFFFFFF,(rd_scmin).l
+	move.l	#$7FFFFFFF,(rd_scmin+4).l
+	move	(sp)+,sr
+	movem.l	(sp)+,d0/a0
+	rts
+rd_scs0	dc.l	SCARENA				;the sprite image ring's first part (fe_ring)
+ifwork	equ	rd_ifwork			;(inflate's work space)
+	include	"inflate.i"
+	section	bss,bss
+rd_ifwork	ds.b	IF_SIZE
+	section	game,code
+	include	"fe.i"
+	section	game,code
 
 ;	The box of what the image a2 (d7 bytes, its mask after it) shows into its cache entry a4:
 ;	first line with a pixel and lines from there (0, 0: none), first and last pixel across.

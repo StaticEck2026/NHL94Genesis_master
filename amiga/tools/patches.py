@@ -122,6 +122,27 @@ P('video94.asm', """song
 	ENDC
 	jsr	(play_sfx_or_music_track).l""")
 
+# The pictures of the EA Sports, title and game setup screens are not in the program as they
+# are: fepack.py deflates them (fe.i, their labels in its window), fe_open (render.asm) inflates
+# a screen's when it begins, and a game's start gives the window back (fe_close).
+for _label, _file in (('GameSetUpMap', 'GameSetUp94-1.map.jim'), ('GameSetUpMap2', 'GameSetUp94-2.map.jim'),
+                      ('TitleScreenImg', 'Title94-1.map.jim'), ('NHLShieldImg', 'Title94-2.map.jim'),
+                      ('PAlogoImg', 'Title94-3.map.jim'), ('TitleImg', 'Title94-4.map.jim'),
+                      ('EASportsMap', 'EASportsMap.bin'), ('SetupMenuMap', 'GameSetupBkgd1.map.jim'),
+                      ('SetupFramerMap', 'GameSetupBkgd2.map.jim')):
+    P('graphics94.asm', r'^%s\b[^\n]*\n\tincbin\t[^\n]*\\%s\n\teven\n' % (_label, re.escape(_file)),
+      ';%s: fe.i (fepack.py)\n' % _label, 1, regex=True)
+for _rel, _label, _call in (('attract94.asm', 'EASportsScreen', 'fe_open_ea'),
+                            ('title94.asm', 'newTitleScreen', 'fe_open_title'),
+                            ('optsetup94.asm', 'setoptions', 'fe_open_setup'),
+                            ('hockey94.asm', 'StartGame', 'fe_close')):
+    P(_rel, r'^(%s\b[^\n]*\n(?:[ \t]+;[^\n]*\n)*)' % _label, r'\1\tjsr\t(%s).l\t\t\t;(fe.i: render.asm)\n' % _call, 1,
+      regex=True)
+# The raw PCM sounds are never read here (sound.asm plays their samples in pcm.i): only their
+# addresses are, in pcm_sample_table.
+P('sound94.asm', r'^\tincbin\t\.\.\\Extracted\\NHL94\\Sound\\(sfx_\w+_pcm)\.bin[^\n]*$',
+  r'\tdc.b\t0,0\t\t\t\t\t\t;(\1: its sample is in pcm.i)', 12, regex=True)
+
 # Pads: the vblank pad reader takes the Amiga pads.
 replace_routine('sound94.asm', 'ReadJoyData', '''\tmovem.l\td0-d1/a0-a1,-(sp)
 \tjsr\t(hal_readpads).l\t\t;d0 = pad 1, d1 = pad 2 (Genesis bit order, active low)

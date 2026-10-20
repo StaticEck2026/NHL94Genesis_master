@@ -9,7 +9,7 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
-- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.8 MB of any memory (fast
+- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.7 MB of any memory (fast
   RAM where there is some: its code, its data and the Genesis RAM window) and about 1.6 MB of
   chip RAM (and up to 256 KB more for sprite images if it is free: fewer are built again), so
   it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
@@ -282,6 +282,14 @@ The hardware layer:
   (whose commands are the frame's) to its showing, and half a frame more for the beam to come
   down to the middle of the screen, and keeps the sound's delay at its mean, changing it only
   when it is off by 3/4 of a frame.
+- The pictures of the EA Sports, title and game setup screens (44 KB) are not kept in the
+  program: `amiga/tools/fepack.py` deflates each screen's into a block (19 KB in all), and when
+  the screen begins (`fe_open`, called where the game's code for the screen begins) its block
+  is inflated into a window at the top of the sprite image cache, which the cache leaves alone
+  while the window is held (the cache emptied, with no frame half drawn, each time it changes
+  size). A game's start gives the window back (`fe_close`); the screen shown again inflates its
+  pictures again. The game's own copies of the PCM sounds (77 KB) are left out too: only their
+  addresses are used, the sounds are played from their samples in chip RAM.
 - `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
   file, allocates each hunk as AmigaDOS would, inflates it in place (`inflate.i`, a 68000 deflate
   decoder with a lookup table for codes of up to 9 bits) and applies the relocations. Otherwise
