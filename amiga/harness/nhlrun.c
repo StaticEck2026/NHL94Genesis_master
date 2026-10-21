@@ -721,8 +721,20 @@ static void amiga_png(const char *name)
     png_write(name, rgb, w, h);
 }
 
+static int harness_ncyc = 233000;      /* -c: CPU cycles a frame */
 static uint32_t io_read(uint32_t a, int size)
 {
+    if (a == 0xBFD800 || a == 0xBFD900 || a == 0xBFDA00) {    /* CIA-B TOD: horizontal syncs, as
+        many a frame as NTSC lines of 227.5 colour clocks take Paula's 60th of a second */
+        static uint32_t latch; static int held;
+        if (!held) {
+            double t = (frame - 1) + (double)(cycles_total + m68k_cycles_run() - vb_cycles) / harness_ncyc;
+            latch = (uint32_t)(t * (3546895.0 / 60 / 227.5)) & 0xFFFFFF;
+        }
+        if (a == 0xBFDA00) held = 1;          /* reading the high byte holds it until the low one */
+        if (a == 0xBFD800) held = 0;
+        return a == 0xBFD800 ? latch & 0xFF : a == 0xBFD900 ? (latch >> 8) & 0xFF : (latch >> 16) & 0xFF;
+    }
     if ((a & 0xFFFFFF00) == 0xBFDD00 || (a & 0xFFFF00) == 0xBFDD00) {   /* CIA-B ICR */
         int v = irq6_pending ? 0x81 : 0;
         irq6_pending = 0;
@@ -967,7 +979,7 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-f")) frames = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-S")) every = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-c")) ncyc = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-c")) harness_ncyc = ncyc = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-o")) outdir = argv[++i];
         else if (!strcmp(argv[i], "-r")) rawfile = argv[++i];
         else if (!strcmp(argv[i], "-p")) parse_pads(argv[++i]);

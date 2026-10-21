@@ -103,9 +103,8 @@ replace_routine('display94.asm', 'addframe2', '\tjmp\t(hal_addframe2).l\n')
 P('sound94.asm', 'dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80', 'dc.b	0,0')
 P('sound94.asm', 'dc.b	$09,$3E,fm_instrument_patches>>15', 'dc.b	$09,$3E,0')
 
-# The menu songs (title, end of period, scouting report: $78-$7A, the last) are off for now: they
-# do not sound right yet on Paula. The rink's music and the sound effects play. Build with
-# -DMENUMUSIC=1 for them.
+# The menu songs (title, end of period, scouting report: $78-$7A, the last) have more notes at once
+# than Paula's 4 voices: sound.asm mixes more while one plays (snd_song).
 P('video94.asm', """song
 	movem.l	d0-d7/a0-a6,-(sp)
 	clr.l	d0
@@ -116,10 +115,7 @@ P('video94.asm', """song
 	clr.l	d0
 	move.w	$40(sp),d0				;$40 = 16*4
 	bmi.w	.none
-	IFND	MENUMUSIC
-	cmpi.w	#$78,d0					;(the menu songs: off for now)
-	bhs.w	.none
-	ENDC
+	jsr	(snd_song).l				;(sound.asm: the voices for it)
 	jsr	(play_sfx_or_music_track).l""")
 
 # The pictures of the EA Sports, title and game setup screens are not in the program as they

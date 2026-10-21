@@ -698,8 +698,13 @@ rd_frame
 	move.w	d1,(rd_cells).l
 	; fast path?
 	move.b	11(a5),d0
-	andi.b	#7,d0
-	bne	.chunky				;line / cell scroll or column vscroll
+	btst	#2,d0
+	bne	.chunky				;column vscroll
+	andi.b	#3,d0
+	beq.s	.hw
+	tst.b	(rd_hsuni).l
+	beq	.chunky				;line / cell scroll (not all alike)
+.hw
 	bsr	rd_planesize			;d0 = cells across, d1 = down
 	mulu.w	d1,d0
 	cmpi.l	#BMAX,d0
@@ -1470,7 +1475,12 @@ rd_bq_int
 ;	copies not in step (all of it to compare; else only the blocks of tc_chg: a DMA, fill or
 ;	copy marks each it writes). Uses d0-d4/a0-a1.
 rd_ntwritten
-	lsr.l	#5,d0				;first block
+	cmpi.l	#VRAMSIZE,d0
+	blo.s	.v
+	st	(rd_ntfull).l			;(a copy, rd_narrow: compared all through)
+	moveq	#-1,d0
+	rts
+.v	lsr.l	#5,d0				;first block
 	moveq	#31,d2
 	add.l	d2,d1
 	lsr.l	#5,d1				;blocks
@@ -1608,7 +1618,11 @@ rd_updateB
 	andi.w	#7,d2
 	lsl.l	#8,d2
 	lsl.l	#5,d2				;name table address
-	lea	(vdp_vram).l,a0
+	tst.b	(rd_narrow).l
+	beq.s	.nar
+	move.l	#rd_vntB,d2			;(a wide plane's first 64 columns: its copy, as an
+	sub.l	#vdp_vram,d2			;offset from VRAM, rd_snapshot)
+.nar	lea	(vdp_vram).l,a0
 	adda.l	d2,a0				;a0 = name table
 	movem.l	d0-d2/a0,-(sp)
 	mulu.w	d0,d1
@@ -2886,7 +2900,83 @@ rd_snapshot
 	lsl.l	#2,d0
 	lea	(vdp_vram).l,a0
 	move.l	(a0,d0.l),(rd_hs).l		;full screen horizontal scroll: A, B
-	bsr	rd_collect_sprites
+	; scrolled by lines or cells, but all of them alike (the title screen once its picture
+	; has slid in): as the whole screen (rd_hsuni), not the per line fallback
+	sf	(rd_hsuni).l
+	move.b	(rd_regs+11).l,d1
+	andi.w	#3,d1
+	beq.s	.hu
+	adda.l	d0,a0
+	move.l	(a0),d2
+	moveq	#4,d3				;(lines, mode 3: a long each)
+	move.w	#SCRH-1,d1
+	btst	#0,(rd_regs+11).l
+	bne.s	.hl
+	moveq	#32,d3				;(cells, mode 2: a long each 8 lines)
+	moveq	#SCRH/8-1,d1
+.hl	cmp.l	(a0),d2
+	bne.s	.hu
+	adda.l	d3,a0
+	dbf	d1,.hl
+	st	(rd_hsuni).l
+.hu	; planes 128 cells wide by 32 (the title screen's, for its picture to slide in) whose
+	; screen stays in their first 64 columns: drawn as 64 x 32 planes of those, copied here
+	; (rd_vntA, rd_vntB: rd_narrow), not by the per line fallback
+	sf	(rd_narrow).l
+	move.b	(rd_regs+16).l,d1
+	andi.b	#$33,d1
+	cmpi.b	#$03,d1
+	bne	.nn
+	move.b	(rd_regs+11).l,d1
+	btst	#2,d1
+	bne	.nn				;(column scroll)
+	andi.b	#3,d1
+	beq.s	.nu
+	tst.b	(rd_hsuni).l
+	beq	.nn
+.nu	move.w	#512-8-320,d2			;(the first pixel across at most)
+	move.b	(rd_regs+12).l,d1
+	andi.b	#$81,d1
+	bne.s	.nw
+	move.w	#512-8-256,d2
+.nw	move.w	(rd_hs).l,d1			;A
+	neg.w	d1
+	andi.w	#1023,d1
+	cmp.w	d2,d1
+	bhi	.nn
+	move.w	(rd_hs+2).l,d1			;B
+	neg.w	d1
+	andi.w	#1023,d1
+	cmp.w	d2,d1
+	bhi	.nn
+	lea	(vdp_vram).l,a0
+	moveq	#0,d1
+	move.b	(rd_regs+4).l,d1
+	andi.w	#7,d1
+	lsl.l	#8,d1
+	lsl.l	#5,d1
+	lea	(a0,d1.l),a1			;B's name table
+	lea	(rd_vntB).l,a2
+	bsr.s	.nc
+	moveq	#0,d1
+	move.b	(rd_regs+2).l,d1
+	andi.w	#$38,d1
+	lsl.l	#8,d1
+	lsl.l	#2,d1
+	lea	(a0,d1.l),a1			;A's
+	lea	(rd_vntA).l,a2
+	bsr.s	.nc
+	move.b	#$01,(rd_regs+16).l		;(as 64 x 32)
+	st	(rd_narrow).l
+	bra.s	.nn
+.nc	moveq	#32-1,d1			;(each row's first 64 entries)
+.ncr	moveq	#64/2-1,d2
+.ncl	move.l	(a1)+,(a2)+
+	dbf	d2,.ncl
+	lea	128(a1),a1
+	dbf	d1,.ncr
+	rts
+.nn	bsr	rd_collect_sprites
 	bsr	rd_obj_mark
 	move	(sp)+,sr
 	rts
@@ -3586,11 +3676,19 @@ rd_ovl_redraw
 	sf	(rd_ovldirty).l
 	st	(rd_ovlrst).l
 	addq.l	#1,(rd_ovlgen).l
-	lea	(rd_ovlbg).l,a0			;(every band's stamp)
-	move.l	(rd_ovlgen).l,d0
-	moveq	#32-1,d1
-.bg	move.l	d0,(a0)+
-	dbf	d1,.bg
+	lea	(rd_ovlbg).l,a0			;(the stamps of the bands drawn again: all, or those
+	move.l	(rd_ovlgen).l,d0		;of rd_ovlpart)
+	move.l	(rd_ovlpart).l,d2
+	moveq	#0,d1
+.bg	tst.l	d2
+	beq.s	.bg1
+	btst	d1,d2
+	beq.s	.bg2
+.bg1	move.l	d0,(a0)
+.bg2	addq.l	#4,a0
+	addq.w	#1,d1
+	cmpi.w	#32,d1
+	blo.s	.bg
 	bsr	rd_waitblit			;(blits queued before may read it)
 	; clear what the cells drawn since the last redraw cover (rd_ovlrows, either priority:
 	; per band of 8 lines its pixels across), the image and both masks: by the CPU if that is
@@ -3600,7 +3698,9 @@ rd_ovl_redraw
 	moveq	#0,d7				;band
 	moveq	#-1,d2				;the last with cells
 	moveq	#32,d3				;the first
-.sz	bsr	rd_ovl_bandw
+.sz	bsr	.inp
+	beq.s	.sz1
+	bsr	rd_ovl_bandw
 	bmi.s	.sz1
 	sub.w	d0,d1
 	addq.w	#1,d1
@@ -3619,7 +3719,9 @@ rd_ovl_redraw
 	bhi	.blit
 	lea	(rd_ovlrows).l,a0
 	moveq	#0,d7				;band
-.cb	bsr	rd_ovl_bandw
+.cb	bsr	.inp
+	beq.s	.cbn
+	bsr	rd_ovl_bandw
 	bmi.s	.cbn
 	move.w	d7,d2
 	subq.w	#1,d2
@@ -3683,23 +3785,37 @@ rd_ovl_redraw
 	move.l	a0,$054(a6)
 	move.w	d2,$05C(a6)
 	move.w	#OSBPR/2,$05E(a6)
-.clr	; rows used, per priority: x min, x max (pixels), empty = min > max
+.clr	; rows used, per priority: x min, x max (pixels), empty = min > max (the bands drawn
+	; again)
 	lea	(rd_ovlrows).l,a0
-	moveq	#2*32-1,d0
-.ir	move.w	#$7FFF,(a0)+
-	move.w	#-$7FFF,(a0)+
-	dbf	d0,.ir
-	lea	(rd_ovlcolf).l,a0
-	move.w	#2*32*48/4-1,d0
-.icf	clr.l	(a0)+
+	lea	(rd_ovlcolf).l,a1
+	moveq	#0,d7				;band
+.ir	bsr	.inp
+	beq.s	.ir1
+	move.w	#$7FFF,(a0)
+	move.w	#-$7FFF,2(a0)
+	move.w	#$7FFF,32*4(a0)
+	move.w	#-$7FFF,32*4+2(a0)
+	moveq	#48/4-1,d0
+.icf	clr.l	32*48(a1)
+	clr.l	(a1)+
 	dbf	d0,.icf
+	lea	-48(a1),a1
+.ir1	addq.l	#4,a0
+	lea	48(a1),a1
+	addq.w	#1,d7
+	cmpi.w	#32,d7
+	blo.s	.ir
 	bsr	rd_waitblit
 	IFD	VERIFY
+	tst.l	(rd_ovlpart).l
+	bne.s	.nvz
 	lea	(rd_ovlmlo).l,a0		;(the masks all clear now)
 	move.w	#OSROW*SCRH/2-1,d0
 	bsr.s	.vz
+.nvz
 	ENDC
-	; draw the cells
+	; draw the cells (those over a band drawn again)
 	lea	(rd_alist).l,a4
 	move.w	(rd_alistn).l,d7
 	subq.w	#1,d7
@@ -3707,11 +3823,32 @@ rd_ovl_redraw
 .c	move.w	(a4)+,d1			;x
 	move.w	(a4)+,d2			;y
 	move.w	(a4)+,d0			;entry
-	movem.l	d7/a4,-(sp)
+	move.l	(rd_ovlpart).l,d4
+	beq.s	.cd
+	move.w	d2,d3
+	asr.w	#3,d3
+	addq.w	#1,d3				;its band
+	btst	d3,d4
+	bne.s	.cd
+	moveq	#7,d5
+	and.w	d2,d5
+	beq.s	.cs				;(in one band)
+	addq.w	#1,d3
+	btst	d3,d4
+	beq.s	.cs
+.cd	movem.l	d7/a4,-(sp)
 	bsr	rd_ovl_cell
 	movem.l	(sp)+,d7/a4
-	dbf	d7,.c
-.x	rts
+.cs	dbf	d7,.c
+.x	clr.l	(rd_ovlpart).l
+	rts
+.inp	; band d7 drawn again (all are if rd_ovlpart is 0)? Z clear if it is. Uses d0.
+	move.l	(rd_ovlpart).l,d0
+	beq.s	.in1
+	btst	d7,d0
+	rts
+.in1	moveq	#1,d0
+	rts
 	IFD	VERIFY
 .vz	tst.l	(a0)+				;d0 + 1 longs from a0 clear, else rd_vfail: frame, $FD
 	bne.s	.vf
@@ -4484,7 +4621,11 @@ rd_buildA
 	andi.w	#$38,d0
 	lsl.l	#8,d0
 	lsl.l	#2,d0
-	move.l	d0,(rd_abase).l
+	tst.b	(rd_narrow).l
+	beq.s	.nar
+	move.l	#rd_vntA,d0			;(a wide plane's first 64 columns: rd_snapshot)
+	sub.l	#vdp_vram,d0
+.nar	move.l	d0,(rd_abase).l
 	move.l	d0,(a3)+			;key: A base
 	move.w	(rd_cw).l,d6
 	move.w	(rd_ch).l,d7
@@ -4518,6 +4659,7 @@ rd_buildA
 	; name tables against their copies (copied as they are compared); changed longs listed
 	clr.w	(rd_nchgA).l
 	clr.w	(rd_nchgW).l
+	sf	(rd_wchg).l
 	movem.l	d2-d4,-(sp)
 	move.l	(rd_abase).l,d0
 	move.w	d6,d1
@@ -4634,7 +4776,12 @@ rd_buildA
 	bsr.s	.note
 	dbf	d4,.cs
 .cx	rts
-.note	; long d2 of a name table changed: list it (d3 = count), or ask for a full redraw
+.note	; long d2 of a name table changed: list it (d3 = count), or ask for a full redraw (the
+	; window's: noted, rd_wchg)
+	cmpi.b	#3,(rd_nttab).l
+	bne.s	.nwc
+	st	(rd_wchg).l
+.nwc
 	IFD	VERIFY
 	move.l	d0,-(sp)
 	moveq	#0,d0
@@ -4657,7 +4804,65 @@ rd_buildA
 .nfull	moveq	#2,d5
 	rts
 .full
-	; rebuild, the copies as drawn (a compare skipped while the key changed left them behind)
+	; only plane A's scroll or cells changed, not the window (nor its registers, tables or
+	; tiles): the bands the window fills are kept, from the one at its edge on (plane A's
+	; cells reach into that one when scrolled), and the others drawn again (rd_ovlpart: the
+	; title screen's credits scroll under its picture, which is the window)
+	clr.l	(rd_ovlpart).l
+	tst.b	(rd_wchg).l
+	bne	.fa
+	lea	(rd_akeynew).l,a0
+	lea	(rd_akey).l,a1
+	move.l	(a0),d0				;(the window's registers and base, plane A's base,
+	cmp.l	(a1),d0				;not its scroll, then the sizes)
+	bne	.fa
+	move.l	4(a0),d0
+	cmp.l	4(a1),d0
+	bne	.fa
+	move.w	8(a0),d0
+	cmp.w	8(a1),d0
+	bne	.fa
+	move.l	14(a0),d0
+	cmp.l	14(a1),d0
+	bne	.fa
+	move.w	18(a0),d0
+	cmp.w	18(a1),d0
+	bne	.fa
+	move.w	(rd_tcn).l,d0			;(tiles of these cells converted again)
+	beq.s	.pt
+	subq.w	#1,d0
+	lea	(rd_tcl).l,a2
+	lea	(tc_chg).l,a0
+	lea	(rd_aused).l,a1
+.ptl	move.w	(a2)+,d1
+	move.l	(a0,d1.w),d2
+	and.l	(a1,d1.w),d2
+	dbne	d0,.ptl
+	bne	.fa
+.pt	move.w	(rd_wy0).l,d0			;the window's rows: from the top (bands 0 to its last
+	move.w	(rd_wy1).l,d1			;but one row's) or to the bottom (from its second
+	cmp.w	d1,d0				;row's)
+	bge	.fa				;(none)
+	moveq	#-1,d2				;(bands drawn again)
+	tst.w	d0
+	bne.s	.pb
+	subq.w	#1,d1				;(rows 0 to d1 - 1: bands 0 to d1 - 1 kept)
+	ble	.fa
+.pk	bclr	d1,d2
+	subq.w	#1,d1
+	bpl.s	.pk
+	bra.s	.pp
+.pb	cmpi.w	#28,d1
+	bne	.fa
+	addq.w	#2,d0				;(rows d0 to 27: bands d0 + 2 to 31 kept)
+	cmpi.w	#31,d0
+	bhi	.fa
+.pc	bclr	d0,d2
+	addq.w	#1,d0
+	cmpi.w	#32,d0
+	blo.s	.pc
+.pp	move.l	d2,(rd_ovlpart).l
+.fa	; rebuild, the copies as drawn (a compare skipped while the key changed left them behind)
 	lea	(vdp_vram).l,a0
 	adda.l	(rd_abase).l,a0
 	lea	(rd_shA).l,a1
@@ -4683,7 +4888,15 @@ rd_buildA
 	moveq	#5,d0
 .kc	move.l	(a0)+,(a1)+
 	dbf	d0,.kc
-	lea	(rd_aused).l,a0
+	tst.l	(rd_ovlpart).l
+	beq.s	.fl
+	lea	(rd_alist).l,a2			;(only plane A's cells listed again: the window's
+	move.w	(rd_alistw).l,d0		;stay as they are, and the tiles they use)
+	mulu.w	#6,d0
+	adda.l	d0,a2
+	lea	(rd_aused).l,a3
+	bra.s	.acells
+.fl	lea	(rd_aused).l,a0
 	moveq	#63,d0
 .uc	clr.l	(a0)+
 	dbf	d0,.uc
@@ -4712,7 +4925,11 @@ rd_buildA
 	addq.w	#1,d5
 	cmpi.w	#28,d5
 	blt	.wr
-	; plane A cells outside the window
+	move.l	a2,d0
+	sub.l	#rd_alist,d0
+	divu.w	#6,d0
+	move.w	d0,(rd_alistw).l		;(the window's cells)
+.acells	; plane A cells outside the window
 	lea	(vdp_vram).l,a4
 	adda.l	(rd_abase).l,a4
 	moveq	#0,d5
@@ -5806,6 +6023,10 @@ fe_open
 .x	move.l	(sp)+,d0
 	rts
 fe_close
+	move.l	d0,-(sp)			;(a game: the sound on Paula's 4 voices, snd_song)
+	moveq	#0,d0
+	jsr	(snd_mixmode).l
+	move.l	(sp)+,d0
 	tst.b	(fe_held).l
 	beq.s	.x
 	move.l	d1,-(sp)
@@ -9183,6 +9404,16 @@ rd_fpsv		ds.w	1
 rd_fpst		ds.l	1
 rd_fpsc		ds.l	1
 		cnop	0,4
+rd_hsuni	ds.b	1			;(rd_snapshot) scrolled by lines or cells, all alike
+rd_narrow	ds.b	1			;(rd_snapshot) planes 128 wide drawn as 64 (rd_vntA, B)
+rd_wchg		ds.b	1			;(rd_buildA) the window's name table changed
+	even
+rd_ovlpart	ds.l	1			;the bands rd_ovl_redraw draws again (bit n: band n),
+						;0: all
+rd_alistw	ds.w	1			;the window's cells in rd_alist (the first)
+	cnop	0,4
+rd_vntA		ds.w	64*32			;(rd_narrow) the first 64 columns of planes A and B
+rd_vntB		ds.w	64*32
 rd_akey		ds.l	6
 rd_akeynew	ds.l	6
 rd_shA		ds.w	BMAX

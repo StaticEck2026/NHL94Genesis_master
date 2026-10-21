@@ -10,9 +10,13 @@
 ;	loop, at the pitch bands the patch is used at). A key on takes a voice (a free one, else
 ;	the quietest released one, else the oldest) and plays the patch's sample at the note's
 ;	pitch; the rest of the patch's envelope (decay, release at key off) is a volume envelope
-;	stepped each game frame. The PCM sounds are samples made at build time too (pcmrender.py: signed,
-;	at most 11 kHz; one played faster on the Genesis is resampled and played at a longer period).
-;	All audio is 8 bit and at most 11 kHz: the FM samples are rendered at 11025 Hz.
+;	stepped each game frame. The PCM sounds are samples made at build time too (pcmrender.py:
+;	signed, at the game's rates; one played faster than Paula can is resampled and played at a
+;	longer period). All audio is 8 bit; the FM samples are rendered at 20000 Hz.
+;
+;	While a menu song plays (snd_song) there are 8 voices: Paula's first 3, and 5 the CPU mixes
+;	into a ring Paula's fourth plays (snd_mix), each with registers in memory as Paula's (so the
+;	voice code is the same for both: snd_vregs).
 ;
 ;	The Amiga's audio low-pass filter (the "LED" filter, about 3.3 kHz) is on while the game
 ;	runs, as the Genesis model 1's output filter softens its sound; F7 switches it.
@@ -54,6 +58,26 @@ ST_PCM		equ	5
 
 PCM_OWNER	equ	7
 
+NVOICES		equ	8			;voices: Paula's 4, or while a menu song plays Paula's
+						;first 3 and 5 mixed into its fourth (snd_mix)
+;	A mixed voice: its registers, as a Paula voice's (snd_vregs points at them, so the voice
+;	code is the same), then its sound as it plays
+SV_LC		equ	0			;.l
+SV_LEN		equ	4			;.w (words)
+SV_PER		equ	6			;.w
+SV_VOL		equ	8			;.w
+SV_ON		equ	10			;.b playing
+SV_PTR		equ	12			;.l the block playing,
+SV_END		equ	16			;.l its bytes,
+SV_POS		equ	20			;.l the byte playing,
+SV_FRAC		equ	24			;.w its fraction
+SV_SIZE		equ	32
+MXRING		equ	4096			;the mix's ring in chip RAM (bytes, a sample each)
+MXLEAD		equ	832			;samples mixed ahead of where Paula plays it: a frame
+						;(572 at 50 Hz) and some for a late one, so a note
+						;mixed starts some 10 ms after one on Paula's own
+MXMAX		equ	1664			;samples mixed at most at a time
+
 SDMAX		equ	8			;the delay line: game frames (a power of 2)
 SDREC		equ	40			;bytes a frame: the pending commands, $83, $8E, the PCM
 						;address, Z80 RAM $07-$22
@@ -66,8 +90,11 @@ SDREC		equ	40			;bytes a frame: the pending commands, $83, $8E, the PCM
 ;	Start: voices free, Paula quiet.
 snd_init
 	movem.l	d0-d2/a0-a2,-(sp)
+	bsr	snd_mix_tables
+	sf	(snd_mixon).l
+	bsr	snd_vtab			;(Paula's 4 voices)
 	lea	(snd_voices).l,a0
-	moveq	#3,d0
+	moveq	#NVOICES-1,d0
 .v	move.b	#-1,V_OWNER(a0)
 	clr.b	V_STATE(a0)
 	lea	V_SIZE(a0),a0
@@ -224,33 +251,39 @@ snd_play_do
 	; PCM
 	bsr	snd_pcm
 	bra	.rec
-.due	; start the new sounds: their DMA off, then the sample, then on again
+.due	; start the new sounds: their DMA off, then the sample, then on again (a mixed voice
+	; takes it as Paula's do, snd_soft_start)
 	tst.b	d7
 	beq	.nost
-	move.w	d7,DMACON(a6)
+	move.w	d7,d0
+	and.w	(snd_hwmask).l,d0
+	move.w	d0,DMACON(a6)
 	bsr	snd_dmawait
 	lea	(snd_voices).l,a0
-	lea	AUD0LC(a6),a1
+	lea	(snd_vregs).l,a3
 	moveq	#0,d1
-.st	btst	d1,d7
+.st	movea.l	(a3)+,a1
+	btst	d1,d7
 	beq	.nst
 	move.l	V_RENDER(a0),a2
 	move.l	(a2),(a1)			;sample
 	move.w	4(a2),4(a1)			;length (words)
 	clr.w	8(a1)
 .nst	lea	V_SIZE(a0),a0
-	lea	$10(a1),a1
 	addq.w	#1,d1
-	cmpi.w	#4,d1
+	cmp.w	(snd_nvoice).l,d1
 	bne	.st
 	move.w	d7,d0
+	and.w	(snd_hwmask).l,d0
 	ori.w	#$8000,d0
 	move.w	d0,DMACON(a6)
+	bsr	snd_soft_start
 	bsr	snd_dmawait			;the voices have taken the start: now the repeat
 	lea	(snd_voices).l,a0
-	lea	AUD0LC(a6),a1
+	lea	(snd_vregs).l,a3
 	moveq	#0,d1
-.rp	btst	d1,d7
+.rp	movea.l	(a3)+,a1
+	btst	d1,d7
 	beq	.nrp
 	move.l	V_RENDER(a0),a2
 	move.w	8(a2),d0			;loop length
@@ -265,11 +298,40 @@ snd_play_do
 .one	move.l	#fm_silence,(a1)
 	move.w	#1,4(a1)
 .nrp	lea	V_SIZE(a0),a0
-	lea	$10(a1),a1
 	addq.w	#1,d1
-	cmpi.w	#4,d1
+	cmp.w	(snd_nvoice).l,d1
 	bne	.rp
-.nost	bra	snd_envelopes
+.nost	bsr	snd_envelopes
+	tst.b	(snd_mixon).l
+	beq.s	.nm
+	bsr	snd_mix
+.nm	rts
+
+;	(snd_play_do) The mixed voices among d7's take their sample as Paula's voices do when their
+;	DMA is switched on: the block their LC and LEN name, from its start. Keeps all.
+snd_soft_start
+	movem.l	d0-d1/a1,-(sp)
+	move.w	(snd_nhw).l,d1
+.v	cmp.w	(snd_nvoice).l,d1
+	bhs.s	.x
+	btst	d1,d7
+	beq.s	.n
+	lea	(snd_soft).l,a1
+	move.w	d1,d0
+	mulu.w	#SV_SIZE,d0
+	adda.l	d0,a1
+	move.l	SV_LC(a1),SV_PTR(a1)
+	moveq	#0,d0
+	move.w	SV_LEN(a1),d0
+	add.l	d0,d0
+	move.l	d0,SV_END(a1)
+	clr.l	SV_POS(a1)
+	clr.w	SV_FRAC(a1)
+	st	SV_ON(a1)
+.n	addq.w	#1,d1
+	bra.s	.v
+.x	movem.l	(sp)+,d0-d1/a1
+	rts
 
 ;	This game frame's commands (snd_z80_cmd) and the Z80 RAM bytes they use into the delay line.
 snd_dly_push
@@ -344,9 +406,9 @@ snd_chan_voice
 	rts					;N set
 snd_voice_a0
 	ext.w	d2
-	lsl.w	#4,d2
-	lea	AUD0LC(a6,d2.w),a1
-	add.w	d2,d2
+	lea	(snd_vregs).l,a1
+	movea.l	(a1,d2.w*4),a1
+	lsl.w	#5,d2				;(V_SIZE)
 	lea	(snd_voices).l,a0
 	adda.w	d2,a0
 	moveq	#0,d2				;N clear
@@ -476,29 +538,34 @@ snd_keyon
 	rts
 
 ;	A voice for a new sound (d2 = -1 for the PCM sound, it takes the PCM voice if it has one):
-;	a free one, else the quietest released one, else the oldest FM one. d2 = voice number.
-;	The FM channel that had it loses it.
+;	a free one (Paula's first), else the quietest released one, else the oldest FM one. d2 =
+;	voice number. The FM channel that had it loses it.
 snd_alloc
-	movem.l	d0-d1/d3-d5/a0,-(sp)
+	movem.l	d0-d1/d3-d6/a0,-(sp)
+	move.w	(snd_nvoice).l,d6
 	lea	(snd_voices).l,a0
+	moveq	#0,d0				;voice
 	tst.b	d2
-	beq	.nopcm
-	moveq	#3,d0
+	beq	.fr
 .pv	cmpi.b	#PCM_OWNER,V_OWNER(a0)
 	beq	.got
 	lea	V_SIZE(a0),a0
-	dbf	d0,.pv
+	addq.w	#1,d0
+	cmp.w	d6,d0
+	blo	.pv
 	lea	(snd_voices).l,a0
-.nopcm	moveq	#3,d0
+	moveq	#0,d0
 .fr	tst.b	V_STATE(a0)
 	beq	.got
 	lea	V_SIZE(a0),a0
-	dbf	d0,.fr
+	addq.w	#1,d0
+	cmp.w	d6,d0
+	blo	.fr
 	; quietest released
 	lea	(snd_voices).l,a0
 	moveq	#-1,d4				;best
 	moveq	#-1,d5				;its envelope
-	moveq	#3,d0
+	moveq	#0,d0
 .rl	tst.b	V_REL(a0)
 	beq	.nrl
 	cmpi.b	#PCM_OWNER,V_OWNER(a0)
@@ -509,14 +576,16 @@ snd_alloc
 	move.l	d1,d5
 	move.w	d0,d4
 .nrl	lea	V_SIZE(a0),a0
-	dbf	d0,.rl
+	addq.w	#1,d0
+	cmp.w	d6,d0
+	blo	.rl
 	tst.w	d4
 	bpl	.idx
 	; oldest FM voice
 	lea	(snd_voices).l,a0
 	move.w	(snd_age).l,d3
 	moveq	#0,d5				;greatest age
-	moveq	#3,d0
+	moveq	#0,d0
 .ol	cmpi.b	#PCM_OWNER,V_OWNER(a0)
 	beq	.nol
 	move.w	d3,d1
@@ -526,16 +595,15 @@ snd_alloc
 	move.w	d1,d5
 	move.w	d0,d4
 .nol	lea	V_SIZE(a0),a0
-	dbf	d0,.ol
+	addq.w	#1,d0
+	cmp.w	d6,d0
+	blo	.ol
 	tst.w	d4
 	bpl	.idx
-	moveq	#3,d4				;(cannot be: only one PCM voice)
-.idx	moveq	#3,d0
-	sub.w	d4,d0
-	move.w	d0,d2
+	moveq	#0,d4				;(cannot be: only one PCM voice)
+.idx	move.w	d4,d2
 	bra	.take
-.got	moveq	#3,d2
-	sub.w	d0,d2
+.got	move.w	d0,d2
 .take	; the channel playing on it loses it
 	lea	(snd_voices).l,a0
 	move.w	d2,d0
@@ -548,7 +616,7 @@ snd_alloc
 	cmp.b	(a0,d1.w),d2
 	bne	.x
 	move.b	#-1,(a0,d1.w)
-.x	movem.l	(sp)+,d0-d1/d3-d5/a0
+.x	movem.l	(sp)+,d0-d1/d3-d6/a0
 	rts
 
 ;	The PCM channel: start a sound, or follow its rate (0 = stop) and volume.
@@ -608,19 +676,24 @@ snd_pcm
 	bra	.vol
 .run	; the sounding PCM voice
 	lea	(snd_voices).l,a0
-	lea	AUD0LC(a6),a1
-	moveq	#3,d0
+	moveq	#0,d0
 .pv	cmpi.b	#PCM_OWNER,V_OWNER(a0)
 	beq	.on
 	lea	V_SIZE(a0),a0
-	lea	$10(a1),a1
-	dbf	d0,.pv
+	addq.w	#1,d0
+	cmp.w	(snd_nvoice).l,d0
+	blo	.pv
 	bra	.x
-.on	tst.w	d1
+.on	lea	(snd_vregs).l,a1
+	movea.l	(a1,d0.w*4),a1
+	tst.w	d1
 	bne	.rate
 	clr.b	V_STATE(a0)			;stopped
 	move.b	#-1,V_OWNER(a0)
 	clr.w	8(a1)
+	cmp.w	(snd_nhw).l,d0
+	blo	.x
+	sf	SV_ON(a1)			;(a mixed voice: not mixed now)
 	bra	.x
 .rate	bsr	snd_pcm_period
 	move.w	d2,6(a1)
@@ -654,9 +727,10 @@ snd_pcm_period
 ;	Step the voices' envelopes and set their volumes.
 snd_envelopes
 	lea	(snd_voices).l,a0
-	lea	AUD0LC(a6),a1
-	moveq	#3,d6
-.v	moveq	#0,d0
+	lea	(snd_vregs).l,a3
+	moveq	#0,d6				;voice
+.v	movea.l	(a3)+,a1
+	moveq	#0,d0
 	move.b	V_STATE(a0),d0
 	beq	.next
 	cmpi.b	#ST_PCM,d0
@@ -714,23 +788,365 @@ snd_envelopes
 	beq	.free
 	move.w	V_TL(a0),8(a1)
 	bra	.next
-.free	; done: the voice is free (its sample may still loop, silently)
+.free	; done: the voice is free (its sample may still loop, silently; a mixed one is not
+	; mixed now)
 	clr.w	8(a1)
-	clr.b	V_STATE(a0)
+	cmp.w	(snd_nhw).l,d6
+	blo.s	.fh
+	sf	SV_ON(a1)
+.fh	clr.b	V_STATE(a0)
 	moveq	#0,d1
 	move.b	V_OWNER(a0),d1
 	move.b	#-1,V_OWNER(a0)
 	cmpi.b	#PCM_OWNER,d1
 	bhs	.next
 	lea	(snd_chvoice).l,a2
-	moveq	#3,d2
-	sub.w	d6,d2
-	cmp.b	(a2,d1.w),d2
+	cmp.b	(a2,d1.w),d6
 	bne	.next
 	move.b	#-1,(a2,d1.w)
 .next	lea	V_SIZE(a0),a0
+	addq.w	#1,d6
+	cmp.w	(snd_nvoice).l,d6
+	blo	.v
+	rts
+
+;	Each voice's registers (snd_vregs): Paula's 4 voices, or with the mix on (snd_mixon) its
+;	first 3, then the mixed voices' own. snd_nvoice voices are in use, snd_nhw on Paula
+;	(snd_hwmask their DMA bits).
+snd_vtab
+	movem.l	d0-d1/a0-a1,-(sp)
+	lea	(snd_vregs).l,a0
+	lea	(CUSTOM+AUD0LC).l,a1
+	moveq	#4,d1				;Paula's
+	tst.b	(snd_mixon).l
+	beq.s	.n
+	moveq	#3,d1
+.n	move.w	d1,(snd_nhw).l
+	moveq	#0,d0
+.p	move.l	a1,(a0)+
 	lea	$10(a1),a1
-	dbf	d6,.v
+	addq.w	#1,d0
+	cmp.w	d1,d0
+	blo.s	.p
+	lea	(snd_soft).l,a1
+	move.w	d0,d1
+	mulu.w	#SV_SIZE,d1
+	adda.l	d1,a1
+.s	move.l	a1,(a0)+
+	lea	SV_SIZE(a1),a1
+	addq.w	#1,d0
+	cmpi.w	#NVOICES,d0
+	blo.s	.s
+	move.w	#4,(snd_nvoice).l
+	move.w	#$000F,(snd_hwmask).l
+	tst.b	(snd_mixon).l
+	beq.s	.x
+	move.w	#NVOICES,(snd_nvoice).l
+	move.w	#$0007,(snd_hwmask).l
+.x	movem.l	(sp)+,d0-d1/a0-a1
+	rts
+
+;	The game starts sound d0. A menu song ($78-$7A: the title, end of period and scouting
+;	report songs) has up to 6 notes at once besides the drums, which Paula's 4 voices cannot
+;	play (they took over each other's notes: a chord lost notes, a part jumped to another's),
+;	so while one plays 5 more voices are mixed into Paula's fourth (snd_mix); the game's other
+;	songs ($30-$77) play on Paula's 4 again. Keeps all.
+snd_song
+	move.l	d0,-(sp)
+	cmpi.w	#$78,d0
+	bhs.s	.on
+	cmpi.w	#$30,d0
+	blo.s	.x				;(a sound effect: as it is)
+	moveq	#0,d0
+	bra.s	.m
+.on	moveq	#-1,d0
+.m	bsr.s	snd_mixmode
+.x	move.l	(sp)+,d0
+	rts
+
+;	The mix on (d0.b -1) or off (0): every voice made quiet and free, Paula's voice 3 given to
+;	the mix's ring (silent at first) or back. Keeps all.
+snd_mixmode
+	cmp.b	(snd_mixon).l,d0
+	beq	.x
+	movem.l	d0-d1/a0,-(sp)
+	move	sr,-(sp)
+	ori	#$0700,sr
+	move.b	d0,(snd_mixon).l
+	move.w	#$000F,(CUSTOM+DMACON).l
+	lea	(snd_voices).l,a0
+	moveq	#NVOICES-1,d1
+.v	move.b	#-1,V_OWNER(a0)
+	clr.b	V_STATE(a0)
+	lea	V_SIZE(a0),a0
+	dbf	d1,.v
+	lea	(snd_chvoice).l,a0
+	moveq	#7,d1
+.c	move.b	#-1,(a0)+
+	dbf	d1,.c
+	lea	(snd_soft).l,a0
+	moveq	#NVOICES-1,d1
+.s	sf	SV_ON(a0)
+	lea	SV_SIZE(a0),a0
+	dbf	d1,.s
+	lea	(CUSTOM+AUD0LC).l,a0
+	moveq	#3,d1
+.q	clr.w	8(a0)
+	lea	$10(a0),a0
+	dbf	d1,.q
+	bsr	snd_vtab
+	tst.b	(snd_mixon).l
+	beq.s	.r
+	lea	(mx_ring).l,a0
+	move.w	#MXRING/4-1,d1
+.z	clr.l	(a0)+
+	dbf	d1,.z
+	lea	(CUSTOM+AUD0LC+3*$10).l,a0
+	move.l	#mx_ring,(a0)
+	move.w	#MXRING/2,4(a0)
+	move.w	#124,6(a0)
+	move.w	#64,8(a0)
+	bsr	snd_dmawait			;(Paula has seen its DMA off)
+	move.w	#$8008,(CUSTOM+DMACON).l
+	bsr	mx_tod24
+	move.l	d0,(mx_tod).l
+	clr.l	(mx_ccr).l
+	clr.l	(mx_play).l
+	clr.l	(mx_wr).l
+	clr.l	(mx_quiet).l
+.r	move	(sp)+,sr
+	movem.l	(sp)+,d0-d1/a0
+.x	rts
+
+;	The mix (snd_mixon, from each vertical blank's sound work): the mixed voices' samples, at the
+;	rate Paula's voice 3 plays its ring (a period of 124), written up to MXLEAD samples ahead of
+;	where it plays. That is counted from the CIA-B TOD (horizontal syncs: 227 colour clocks on
+;	a PAL display, 227.5 on NTSC), so the ring keeps in step with Paula however the calls come.
+;	Uses d0-d7, a0-a6.
+snd_mix
+	bsr	mx_tod24
+	move.l	d0,d1
+	sub.l	(mx_tod).l,d1
+	andi.l	#$FFFFFF,d1			;lines since the last time
+	move.l	d0,(mx_tod).l
+	cmpi.l	#4096,d1
+	bls.s	.l
+	move.l	#4096,d1			;(a stall)
+.l	move.l	#455,d0				;half colour clocks a line
+	tst.b	(hal_pal).l
+	beq.s	.p
+	move.l	#454,d0
+.p	mulu.l	d0,d1
+	add.l	(mx_ccr).l,d1
+	divul.l	#2*124,d0:d1			;samples played, the rest kept
+	move.l	d0,(mx_ccr).l
+	add.l	d1,(mx_play).l
+	move.l	(mx_play).l,d7			;samples to mix: to MXLEAD past it (4 at a time:
+	addi.l	#MXLEAD,d7			;the ring is written in longs)
+	sub.l	(mx_wr).l,d7
+	andi.l	#-4,d7
+	ble	.x
+	cmpi.l	#MXMAX,d7
+	bls.s	.n
+	move.l	(mx_play).l,d0			;(fallen behind it: from MXMAX before the end)
+	addi.l	#MXLEAD-MXMAX,d0
+	andi.l	#-4,d0
+	move.l	d0,(mx_wr).l
+	move.l	#MXMAX,d7
+.n	moveq	#0,d6				;voices mixed (the first is stored, the others added)
+	lea	(snd_soft).l,a2
+	move.w	(snd_nhw).l,d0
+	mulu.w	#SV_SIZE,d0
+	adda.l	d0,a2
+	moveq	#NVOICES-1,d5
+	sub.w	(snd_nhw).l,d5
+.vo	tst.b	SV_ON(a2)
+	beq.s	.vn
+	bsr	mx_voice
+	addq.w	#1,d6
+.vn	lea	SV_SIZE(a2),a2
+	dbf	d5,.vo
+	tst.w	d6
+	beq.s	.q
+	clr.l	(mx_quiet).l
+	bra.s	.o0
+.q	move.l	(mx_quiet).l,d0			;silence: written until the ring is all silent
+	cmpi.l	#MXRING,d0
+	bhs.s	.adv
+	add.l	d7,(mx_quiet).l
+.o0	; the sums into the ring, clipped: to its end, then from its start
+	move.l	(mx_wr).l,d0
+	andi.l	#MXRING-1,d0
+	lea	(mx_ring).l,a1
+	adda.l	d0,a1
+	move.l	#MXRING,d1
+	sub.l	d0,d1				;bytes to the ring's end
+	move.l	d7,d2
+	cmp.l	d1,d2
+	bls.s	.o1
+	move.l	d1,d2
+.o1	lea	(mx_acc).l,a6
+	lea	(mx_clip+4096).l,a4
+	move.l	d7,d5
+	sub.l	d2,d5				;(the rest, from the start)
+	bsr.s	.cv
+	move.l	d5,d2
+	beq.s	.adv
+	lea	(mx_ring).l,a1
+	bsr.s	.cv
+.adv	add.l	d7,(mx_wr).l
+.x	rts
+.cv	; d2 samples (4 at a time) to a1: the sums at a6, or silence if no voice was mixed
+	lsr.l	#2,d2
+	subq.w	#1,d2
+	tst.w	d6
+	beq.s	.cz
+.cl	move.w	(a6)+,d0
+	asr.w	#3,d0
+	move.b	(a4,d0.w),d3
+	lsl.w	#8,d3
+	move.w	(a6)+,d0
+	asr.w	#3,d0
+	move.b	(a4,d0.w),d3
+	swap	d3
+	move.w	(a6)+,d0
+	asr.w	#3,d0
+	move.b	(a4,d0.w),d3
+	lsl.w	#8,d3
+	move.w	(a6)+,d0
+	asr.w	#3,d0
+	move.b	(a4,d0.w),d3
+	move.l	d3,(a1)+
+	dbf	d2,.cl
+	rts
+.cz	clr.l	(a1)+
+	dbf	d2,.cz
+	rts
+
+;	(snd_mix) Mixed voice a2's next d7 samples into the sums (mx_acc: stored if d6 is 0, else
+;	added) at its period and volume, as Paula plays: its block (SV_PTR, SV_END bytes) to the
+;	end, then the block its registers name then (SV_LC, SV_LEN: the loop, or silence), a run
+;	of samples to each block's end at a time. Keeps d5-d7, a2.
+mx_voice
+	movem.l	d5-d7/a2,-(sp)
+	moveq	#0,d3
+	move.w	SV_PER(a2),d3
+	cmpi.w	#124,d3
+	bhs.s	.p
+	moveq	#124,d3
+.p	move.l	#124<<16,d4
+	divu.l	d3,d4				;the step a sample (16.16, at most 1)
+	move.l	d4,(mx_step).l
+	moveq	#0,d2
+	swap	d4
+	move.w	d4,d2				;(its whole part)
+	swap	d4				;(d4.w: its fraction)
+	moveq	#0,d0
+	move.w	SV_VOL(a2),d0
+	cmpi.w	#64,d0
+	bls.s	.v
+	moveq	#64,d0
+.v	lsl.l	#8,d0
+	add.l	d0,d0
+	lea	(mx_vol).l,a4
+	adda.l	d0,a4				;(sample * volume / 2, by the sample's byte)
+	movea.l	SV_PTR(a2),a0
+	move.l	SV_POS(a2),d0
+	move.w	SV_FRAC(a2),d1
+	move.l	SV_END(a2),d5
+	lea	(mx_acc).l,a6
+	move.w	d6,(mx_add).l
+	moveq	#0,d3				;(the sample's byte: an index 0-255)
+.seg	; samples to the block's end: ((end - pos) << 16 - fraction) / step, rounded up
+	move.l	d5,d6
+	sub.l	d0,d6
+	swap	d6
+	clr.w	d6
+	sub.l	d1,d6
+	add.l	(mx_step).l,d6
+	subq.l	#1,d6
+	divul.l	(mx_step).l,d6
+	cmp.l	d7,d6
+	bls.s	.k
+	move.l	d7,d6
+.k	sub.l	d6,d7				;(left after this run)
+	move.l	d7,(mx_left).l
+	subq.w	#1,d6
+	bmi.s	.e
+	tst.w	(mx_add).l
+	bne.s	.a
+.s	move.b	(a0,d0.l),d3			;the first voice: stored
+	move.w	(a4,d3.w*2),(a6)+
+	add.w	d4,d1
+	addx.l	d2,d0
+	dbf	d6,.s
+	bra.s	.e
+.a	move.b	(a0,d0.l),d3			;the others: added
+	move.w	(a4,d3.w*2),d7
+	add.w	d7,(a6)+
+	add.w	d4,d1
+	addx.l	d2,d0
+	dbf	d6,.a
+.e	move.l	(mx_left).l,d7
+	cmp.l	d5,d0
+	blo.s	.r
+	sub.l	d5,d0				;the block's end: the next, from the registers
+	movea.l	SV_LC(a2),a0
+	moveq	#0,d5
+	move.w	SV_LEN(a2),d5
+	add.l	d5,d5
+.r	tst.l	d7
+	bne.s	.seg
+	move.l	a0,SV_PTR(a2)
+	move.l	d0,SV_POS(a2)
+	move.w	d1,SV_FRAC(a2)
+	move.l	d5,SV_END(a2)
+	movem.l	(sp)+,d5-d7/a2
+	rts
+
+;	d0 = the CIA-B TOD (24 bits). Uses d0.
+mx_tod24
+	moveq	#0,d0
+	move.b	(CIAB_TODHI).l,d0		;(reading it holds the count until TODLO is read)
+	lsl.l	#8,d0
+	move.b	(CIAB_TODMID).l,d0
+	lsl.l	#8,d0
+	move.b	(CIAB_TODLO).l,d0
+	rts
+
+;	The mix's tables: sample * volume / 2 (volumes 0-64, by the sample's byte 0-255, a signed
+;	sample), and a sum / 8 (-4096 to 4095) to a sample, / 4 and clipped.
+snd_mix_tables
+	movem.l	d0-d3/a0,-(sp)
+	lea	(mx_vol).l,a0
+	moveq	#0,d1				;volume
+.tv	moveq	#0,d2
+.ts	move.b	d2,d3
+	ext.w	d3
+	muls.w	d1,d3
+	asr.l	#1,d3
+	move.w	d3,(a0)+
+	addq.w	#1,d2
+	cmpi.w	#256,d2
+	blt.s	.ts
+	addq.w	#1,d1
+	cmpi.w	#64,d1
+	bls.s	.tv
+	lea	(mx_clip).l,a0
+	move.w	#-4096,d2
+.tc	move.w	d2,d3
+	asr.w	#2,d3
+	cmpi.w	#127,d3
+	ble.s	.c1
+	moveq	#127,d3
+.c1	cmpi.w	#-128,d3
+	bge.s	.c2
+	moveq	#-128,d3
+.c2	move.b	d3,(a0)+
+	addq.w	#1,d2
+	cmpi.w	#4096,d2
+	blt.s	.tc
+	movem.l	(sp)+,d0-d3/a0
 	rts
 
 ;	Paula volume for an attenuation of 8n units (n * 0.75 dB)
@@ -747,8 +1163,29 @@ fm_voltab
 	section	sndchip,data_c
 fm_silence	dc.w	0,0
 
+	section	chip,bss_c
+mx_ring		ds.b	MXRING			;(snd_mix)
+
 	section	bss,bss
-snd_voices	ds.b	4*V_SIZE
+snd_voices	ds.b	NVOICES*V_SIZE
+snd_soft	ds.b	NVOICES*SV_SIZE		;the mixed voices (by voice number)
+snd_vregs	ds.l	NVOICES			;each voice's registers (snd_vtab)
+snd_nvoice	ds.w	1
+snd_nhw		ds.w	1
+snd_hwmask	ds.w	1
+mx_tod		ds.l	1			;(snd_mix: the TOD at the last time,
+mx_ccr		ds.l	1			;half colour clocks not a sample yet,
+mx_play		ds.l	1			;samples Paula has played,
+mx_wr		ds.l	1			;written,
+mx_quiet	ds.l	1			;silent in a row)
+mx_step		ds.l	1			;(mx_voice: the step,
+mx_left		ds.l	1			;samples left after the run,
+mx_add		ds.w	1			;0: the first voice, stored)
+mx_acc		ds.w	MXMAX
+mx_vol		ds.w	65*256
+mx_clip		ds.b	8192
+snd_mixon	ds.b	1			;the mix is on (snd_song)
+		even
 snd_pcm_render	ds.l	4
 snd_pcm_addr	ds.l	1
 snd_age		ds.w	1

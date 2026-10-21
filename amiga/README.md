@@ -146,8 +146,6 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
   of the 37 sprites a frame in play, about 9% of the renderer's time).
-- `-DMENUMUSIC=1` plays the menu songs (title, end of period, scouting report), which are off
-  for now: they do not sound right yet.
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
   not listed for repair (nor drawn over by the blits listed for the frame) must match the
   bitmap. It also compares every name table each frame
@@ -223,7 +221,11 @@ The hardware layer:
   blitter some 15k cycles a frame instead of 220k, play about 40% less (harness). A sprite the
   CPU draws (cut by the screen's left margin), a full list or an image written over in the ring
   ends the listing for that frame: all is restored and drawn as it comes. Other
-  screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
+  screens get plane B blitted in at the scroll position. A screen scrolled by lines or cells
+  with all of them alike is drawn as one scrolled whole, and planes 128 cells wide whose screen
+  stays in their first 64 columns as 64 x 32 planes of those (copied each frame): the title
+  screen's picture slides in on a wide plane by lines, then holds still, which the per line
+  fallback drew at some 2 frames a second. Plane A and the window are an overlay
   layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
   of 8 lines, a run the same in the bands below one rectangle; made again when a cell adds a
   column). The cells whose entries or tiles changed (a menu's highlight, a player's portrait)
@@ -233,7 +235,9 @@ The hardware layer:
   (not all 190 KB of image and masks, which took the blitter some 3 frames). Each band of 8
   lines notes when its cells last changed, and a rectangle's cut is known by the latest of its
   bands, so a buffer cuts again only the rectangles over a change, not the whole overlay (the
-  menus are mostly overlay: a full cut takes the blitter some 2 frames). On
+  menus are mostly overlay: a full cut takes the blitter some 2 frames). When only plane A's
+  scroll changed, the bands the window fills are kept and only the others drawn again (the title
+  screen's credits scroll under its picture, which is the window). On
   the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
@@ -297,8 +301,17 @@ The hardware layer:
   model of the YM2612. Each patch has an attack and a loop at each octave band it is used at, so
   every note plays at 14.1 to 28.3 kHz. The synthesis runs at 8 times the sample rate and is low-pass
   filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
-  back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis channels share 4 voices: a new
-  note takes a free voice, else the quietest released one, else the oldest. The PCM sounds
+  back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis
+  channels share 4 voices: a new note takes a free voice, else the quietest released one, else
+  the oldest. A menu song (title, end of period, scouting report) has up to 6 notes at once
+  besides its drums, which took over each other's voices (a fifth of its notes cut another
+  short: chords lost notes, a part jumped to another's pitch), so while one plays Paula's fourth
+  voice plays a ring that the CPU mixes 5 more voices into, each as Paula would play it (its
+  registers in memory: its sample, then the loop it names; at the same 28.6 kHz): 8 voices,
+  3 on Paula. The mix is written a frame and some ahead of where Paula plays, which is counted
+  from the CIA-B TOD (horizontal syncs), so the two keep in step; it takes some 15% of the CPU
+  while extra voices play, on screens that mostly wait. The game's own songs in play go back to
+  Paula's 4 voices. The PCM sounds
   (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`,
   at the game's own rates (6.5 to 12 kHz); the glass, which the game plays at 29 kHz, faster
   than Paula, is resampled to 28.6 kHz and played at a period that keeps its pitch. A frame's
@@ -413,6 +426,7 @@ display, presses keys at given times and takes screenshots. Add `fast_memory = 8
 ## Known limits
 
 - Speed on an unexpanded 68020 (above).
-- Only 4 sound voices for the Genesis' 6, so big chords lose notes. FM sounds are samples, so
+- Only 4 sound voices in play for the Genesis' 6 (the menu songs get 8: 3 on Paula and 5 mixed),
+  so big chords lose notes. FM sounds are samples, so
   notes do not change timbre as they decay, and the LFO, detune and SSG-EG are left out.
 - No 4 way play.
