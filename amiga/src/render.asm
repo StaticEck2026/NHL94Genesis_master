@@ -5684,8 +5684,26 @@ fe_ring
 .i	jsr	(hal_yield).l
 	move	(sp),sr
 	bra.s	.w
-.nb	bsr	rd_waitblit			;(and no blit queued reads an image)
-	move.l	(rd_scsize).l,d0
+	; and no blit queued reads an image (rd_waitblit): the copper needs the level 3 interrupt
+	; at its show markers, so with the level at 3 or more it is lowered meanwhile (at 6 or
+	; more the game's tick is held at INTENA too, as the Genesis holds its vblank: it comes
+	; once the level is back, Opening2 sets $2700 before it clears the vblank code)
+.nb	move	(sp),d0
+	andi.w	#$0700,d0
+	cmpi.w	#$0300,d0
+	blo.s	.wb
+	cmpi.w	#$0600,d0
+	blo.s	.lo
+	move.w	#$2000,(CUSTOM+INTENA).l	;(EXTER off)
+.lo	andi	#$F8FF,sr
+.wb	bsr	rd_waitblit
+	move	(sp),sr
+	move	(sp),d0
+	andi.w	#$0700,d0
+	cmpi.w	#$0600,d0
+	blo.s	.rg
+	move.w	#$A000,(CUSTOM+INTENA).l	;(EXTER back on)
+.rg	move.l	(rd_scsize).l,d0
 	add.l	d0,d0
 	add.l	d0,(rd_scpos).l			;every image's place two laps back: none is found
 	clr.l	(rd_scoff).l

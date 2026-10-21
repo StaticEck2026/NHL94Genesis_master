@@ -191,6 +191,12 @@ The hardware layer:
 
 - `hal.asm`: start-up, interrupt vectors, the 50 / 60 Hz CIA timer that stands in for the Genesis
   vertical blank, and the two contexts (the game, and the renderer it runs while the game waits).
+  A vertical blank that comes while the renderer runs gives the game no tick if the game has
+  its interrupts off then, as the Genesis holds its interrupt (leaving a demo game clears the
+  game's vblank code with its RAM before the next screen sets it, and that screen lets the
+  renderer finish a frame meanwhile). That screen's wait for the blit queue lowers the game's
+  interrupt level meanwhile, as the copper needs the level 3 interrupt at its show markers (the
+  tick held at `INTENA` if the game had its interrupts off).
 - `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
   on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
   loads and saves `NHL94.sav`.

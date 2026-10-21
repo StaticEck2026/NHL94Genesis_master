@@ -254,7 +254,25 @@ hal_int6
 	sf	(hal_ahead).l			;its tick was run early (hal_tick_early): the sound only
 	jsr	(snd_play).l
 	rte
-.nah
+.nah	; the renderer has the CPU while the game has its interrupts off (its sr saved under its
+	; registers, ctx_to_render): no tick now, as the Genesis holds its interrupt then (the
+	; game's vblank code may not be there: Opening2 clears it with the RAM before a screen
+	; sets it again, and the screen lets the renderer finish a frame meanwhile, fe_ring)
+	tst.b	(ctx_cur).l
+	beq.s	.gm
+	movem.l	d0/a0,-(sp)
+	movea.l	(ctx_game_sp).l,a0
+	move.w	15*4(a0),d0
+	andi.w	#$0600,d0
+	cmpi.w	#$0600,d0
+	movem.l	(sp)+,d0/a0			;(the flags stay)
+	bne.s	.gm
+	IFD	BENCH
+	bra	.tp				;(a benchmark build: at the game's next wait)
+	ELSE
+	rte
+	ENDC
+.gm
 	IFD	BENCH
 	; benchmark builds: a tick that comes while the game runs (not waiting since the last
 	; one: a frame that took the renderer more than a vertical blank too) waits for the game's
@@ -303,6 +321,8 @@ hal_int6
 	PEV	'T'				;(statistics: a game tick)
 	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the sound's delay, rd_showdue)
 	jsr	(snd_z80_poll).l
+	tst.l	(VBint).l			;(never a vblank code at 0)
+	beq.s	.post
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
 	pea	(.post).l
 	move	sr,-(sp)
@@ -418,6 +438,8 @@ hal_tick_early
 	beq	.x
 	cmpi.l	#1,(hal_pace).l
 	bne	.x
+	tst.l	(VBint).l			;(no vblank code at 0)
+	beq	.x
 	move.l	d0,-(sp)
 	move.l	(hal_tickvb).l,d0
 	cmp.l	(rd_vblanks).l,d0
@@ -462,6 +484,8 @@ hal_tick_late
 	movem.l	d0-d7/a0-a6,-(sp)
 	jsr	(snd_z80_poll).l
 	movem.l	(sp)+,d0-d7/a0-a6
+	tst.l	(VBint).l			;(never a vblank code at 0)
+	beq.s	.r
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
 	pea	(.r).l
 	move.w	4+2(sp),-(sp)			;(the sr from before)
