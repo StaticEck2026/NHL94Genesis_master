@@ -226,9 +226,14 @@ The hardware layer:
   screens get plane B blitted in at the scroll position. Plane A and the window are an overlay
   layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
   of 8 lines, a run the same in the bands below one rectangle; made again when a cell adds a
-  column). Drawn anew (more than a few of its cells changed), only the bands its cells covered
+  column). The cells whose entries or tiles changed (a menu's highlight, a player's portrait)
+  are drawn again alone; the whole overlay is drawn anew only when more than about half of its
+  cells changed (or the scroll or the window did), and then only the bands its cells covered
   are cleared first: by the CPU for a little (a score box), else their lines by the blitter
-  (not all 190 KB of image and masks, which took the blitter some 3 frames). On
+  (not all 190 KB of image and masks, which took the blitter some 3 frames). Each band of 8
+  lines notes when its cells last changed, and a rectangle's cut is known by the latest of its
+  bands, so a buffer cuts again only the rectangles over a change, not the whole overlay (the
+  menus are mostly overlay: a full cut takes the blitter some 2 frames). On
   the 256 pixel wide screens (the rink) the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
@@ -367,7 +372,11 @@ reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ
 lag one VDP update behind when the game changes it mid frame (text being printed, a mode
 change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles (the instruction running then), which
-`amiga/harness/rdcost.py` sums.
+`amiga/harness/rdcost.py` sums. `NHL_A32=1` reports each instruction that reads or writes an
+address with a top byte (a stock A1200's 68EC020 has 24 address lines and ignores it, a 68030
+or later with fast memory high up does not), and `NHL_BFCHK=1` each bit field instruction on
+memory whose offset register holds 2^20 bits or more either way (the offset is all 32 bits of
+the register: a top word left over moves the field far away).
 `NHL_FIXEDHV=1` gives the game's reads of the beam position (which it uses as random numbers)
 values that depend only on the frame and the read's number in it. `NHL_DETERM=1` does that and
 more, so that every build plays exactly the same game: the renderer's own work takes none of

@@ -176,9 +176,29 @@ static FILE *prof_f;                    /* NHL_PROF: a PC sample each 1000 cycle
 static long long prof_next;             /* instruction that ran then */
 static uint32_t prof_pc, prof_sr, prof_ret;
 static uint32_t pcc_addr[8]; static long long pcc_n[8]; static int pcc_k; static int pcc_from;
+/* NHL_BFCHK=1: a bit field instruction on memory whose offset is in a data register: report
+   (each code address once) an offset of 2^20 bits or more either way, a register with
+   something left in its top word (the offset is all 32 bits of it) */
+static int bfchk = -1;
+static void bf_check(unsigned int pc)
+{
+    static uint32_t seen[256]; static int nseen;
+    pc &= 0xFFFFFF;
+    uint32_t op = rd16(pc);
+    if ((op & 0xF8C0) != 0xE8C0 || (op & 0x38) == 0) return;   /* bitfield, not on a register */
+    uint32_t ext = rd16(pc + 2);
+    if (!(ext & 0x0800)) return;                                  /* offset immediate */
+    int32_t off = (int32_t)m68k_get_reg(NULL, M68K_REG_D0 + ((ext >> 6) & 7));
+    if (off > -(1 << 20) && off < (1 << 20)) return;
+    for (int i = 0; i < nseen; i++) if (seen[i] == pc) return;
+    if (nseen < 256) seen[nseen++] = pc;
+    fprintf(stderr, "bfchk: frame %d pc %06x offset d%d = %08x\n", frame, pc, (ext >> 6) & 7, (uint32_t)off);
+}
 static void det_hook(unsigned int pc)
 {
     det_calls++;
+    if (bfchk < 0) bfchk = getenv("NHL_BFCHK") ? 1 : 0;
+    if (bfchk) bf_check(pc);
     for (int i = 0; i < pcc_k; i++) if ((pc & 0xFFFFFF) == pcc_addr[i] && frame >= pcc_from) pcc_n[i]++;
     if (prof_f) {
         long long now = cycles_total + m68k_cycles_run();
@@ -730,8 +750,23 @@ static inline void chip_access(uint32_t a)
     if (c) m68ki_remaining_cycles -= chipwait;   /* (as the core's own USE_CYCLES) */
 }
 
+/* NHL_A32=1: report accesses whose address has a top byte (a 68EC020, as in a stock A1200, has 24
+   address lines and ignores it, but a 68030 or later with fast RAM at 32 bit addresses does not):
+   each code address once, with the address it used */
+static int a32 = -1;
+static void a32_check(uint32_t a, int w)
+{
+    static uint32_t seen[256]; static int nseen;
+    if (a32 < 0) a32 = getenv("NHL_A32") ? 1 : 0;
+    if (!a32 || !(a >> 24) || in_copper || in_blit) return;
+    uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
+    for (int i = 0; i < nseen; i++) if (seen[i] == pc) return;
+    if (nseen < 256) seen[nseen++] = pc;
+    fprintf(stderr, "a32: frame %d pc %06x %s %08x\n", frame, pc, w ? "writes" : "reads", a);
+}
 unsigned int m68k_read_memory_8(unsigned int a)
 {
+    a32_check(a, 0);
     chip_access(a);
     if (is_io(a)) {
         uint32_t aa = a & 0xFFFFFF;
@@ -740,8 +775,8 @@ unsigned int m68k_read_memory_8(unsigned int a)
     }
     return rd8(a);
 }
-unsigned int m68k_read_memory_16(unsigned int a) { chip_access(a); if (is_io(a)) return io_read(a & 0xFFFFFF, 2) & 0xFFFF; return rd16(a); }
-unsigned int m68k_read_memory_32(unsigned int a) { chip_access(a); if (is_io(a)) return (io_read(a & 0xFFFFFF, 2) << 16) | io_read((a + 2) & 0xFFFFFF, 2); return rd32(a); }
+unsigned int m68k_read_memory_16(unsigned int a) { a32_check(a, 0); chip_access(a); if (is_io(a)) return io_read(a & 0xFFFFFF, 2) & 0xFFFF; return rd16(a); }
+unsigned int m68k_read_memory_32(unsigned int a) { a32_check(a, 0); chip_access(a); if (is_io(a)) return (io_read(a & 0xFFFFFF, 2) << 16) | io_read((a + 2) & 0xFFFFFF, 2); return rd32(a); }
 unsigned int m68k_read_disassembler_8(unsigned int a) { return rd8(a); }
 unsigned int m68k_read_disassembler_16(unsigned int a) { return rd16(a); }
 unsigned int m68k_read_disassembler_32(unsigned int a) { return rd32(a); }
@@ -757,9 +792,9 @@ static void hz_mark(uint32_t a, int words)
     uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
     for (int i = 0; i < words; i++) { wtime[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = t; wpc[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = pc; }
 }
-void m68k_write_memory_8(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
-void m68k_write_memory_16(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); hz_mark(a, 1); }
-void m68k_write_memory_32(unsigned int a, unsigned int v) { chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); hz_mark(a, (a & 1) ? 3 : 2); }
+void m68k_write_memory_8(unsigned int a, unsigned int v) { a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
+void m68k_write_memory_16(unsigned int a, unsigned int v) { a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); hz_mark(a, 1); }
+void m68k_write_memory_32(unsigned int a, unsigned int v) { a32_check(a, 1); chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); hz_mark(a, (a & 1) ? 3 : 2); }
 
 /* Run n cycles in slices, raising the blitter interrupt when a blit's time is up. */
 static int run_cycles(int n)

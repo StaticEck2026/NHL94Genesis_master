@@ -2436,8 +2436,8 @@ rd_rowB_defer
 	lsr.w	#1,d1
 	bftst	d7{d1:1}
 	beq.s	.c				;(not read)
-	move.w	d6,d1
-	lsl.w	#5,d1
+	move.l	d6,d1				;(all 32 bits: a bit field's offset in memory is the
+	lsl.w	#5,d1				;whole register)
 	add.w	d3,d1
 	bftst	(a2){d1:1}
 	bne.s	.c				;(on the screen: drawn now)
@@ -3586,6 +3586,11 @@ rd_ovl_redraw
 	sf	(rd_ovldirty).l
 	st	(rd_ovlrst).l
 	addq.l	#1,(rd_ovlgen).l
+	lea	(rd_ovlbg).l,a0			;(every band's stamp)
+	move.l	(rd_ovlgen).l,d0
+	moveq	#32-1,d1
+.bg	move.l	d0,(a0)+
+	dbf	d1,.bg
 	bsr	rd_waitblit			;(blits queued before may read it)
 	; clear what the cells drawn since the last redraw cover (rd_ovlrows, either priority:
 	; per band of 8 lines its pixels across), the image and both masks: by the CPU if that is
@@ -3752,7 +3757,8 @@ rd_ovl_bandw
 
 ;	Cell d0 at (d1, d2) into the overlay.
 rd_ovl_cell
-	addq.l	#1,(rd_ovlgen).l		;(the blits of it before are not the same)
+	addq.l	#1,(rd_ovlgen).l		;(the blits of it before are not the same: its bands'
+	lea	(rd_ovlbg).l,a0			;stamps, rd_ovlbg)
 	; rows table: this cell's 8 lines extend its rows' extents
 	lea	(rd_ovlrows).l,a5
 	tst.w	d0
@@ -3769,6 +3775,7 @@ rd_ovl_cell
 .clo
 .band	cmpi.w	#31,d3
 	bhi	.nb
+	move.l	(rd_ovlgen).l,(a0,d3.w*4)
 	move.w	d3,d5
 	mulu.w	#48,d5
 	move.w	d1,d6
@@ -3890,11 +3897,45 @@ rd_ovl_cell
 	movea.l	a5,a0
 	adda.l	d3,a0
 	adda.w	d1,a0
+	moveq	#0,d0				;the palette planes: the mask or nothing (d0, d2:
+	lsr.b	#1,d2				;$FF or 0)
+	bcc.s	.p4
+	moveq	#-1,d0
+.p4	neg.b	d2
 	moveq	#7,d1
-.ar	tst.w	d7
+	cmpi.w	#SCRH-8,d7
+	bhi.s	.ar				;(not all of it on the screen)
+.a6	move.b	(a3),d3				;mask
+	move.l	(a2),d6				;p0 p1 p2 p3
+	move.b	d6,3*OSBPR(a1)
+	lsr.l	#8,d6
+	move.b	d6,2*OSBPR(a1)
+	lsr.w	#8,d6
+	move.b	d6,OSBPR(a1)
+	swap	d6
+	move.b	d6,(a1)
+	move.b	d3,d6
+	and.b	d0,d6
+	move.b	d6,4*OSBPR(a1)
+	move.b	d3,d6
+	and.b	d2,d6
+	move.b	d6,5*OSBPR(a1)
+	move.b	d3,(a0)
+	move.b	d3,OSBPR(a0)
+	move.b	d3,2*OSBPR(a0)
+	move.b	d3,3*OSBPR(a0)
+	move.b	d3,4*OSBPR(a0)
+	move.b	d3,5*OSBPR(a0)
+	adda.w	d4,a2
+	adda.w	d5,a3
+	lea	OSROW(a1),a1
+	lea	OSROW(a0),a0
+	dbf	d1,.a6
+	rts
+.ar	tst.w	d7				;(a row at a time: those on the screen)
 	bmi.s	.as
 	cmpi.w	#SCRH,d7
-	bge.s	.done
+	bge	.done
 	move.b	(a3),d3				;mask
 	move.l	(a2),d6				;p0 p1 p2 p3
 	move.b	d6,3*OSBPR(a1)
@@ -3904,16 +3945,12 @@ rd_ovl_cell
 	move.b	d6,OSBPR(a1)
 	swap	d6
 	move.b	d6,(a1)
-	moveq	#0,d6
-	btst	#0,d2
-	beq.s	.a4
 	move.b	d3,d6
-.a4	move.b	d6,4*OSBPR(a1)
-	moveq	#0,d6
-	btst	#1,d2
-	beq.s	.a5
+	and.b	d0,d6
+	move.b	d6,4*OSBPR(a1)
 	move.b	d3,d6
-.a5	move.b	d6,5*OSBPR(a1)
+	and.b	d2,d6
+	move.b	d6,5*OSBPR(a1)
 	move.b	d3,(a0)
 	move.b	d3,OSBPR(a0)
 	move.b	d3,2*OSBPR(a0)
@@ -3951,6 +3988,18 @@ rd_ovl_blit
 	bra	rd_cq_flush			;(the last batch let go)
 .blitrun	; pixels d0 .. d1 of bands d2 .. d2 + d3 - 1
 	bfset	(rd_ovrd).l{d2:d3}		;(read by a blit: rd_ovl_setcell)
+	; its image's key: the last change to its bands (rd_ovlbg), so a buffer that has it as
+	; it is now draws it again only if one of its bands changed (rd_cut_emit)
+	moveq	#0,d6
+	lea	(rd_ovlbg).l,a0
+	lea	(a0,d2.w*4),a0
+	move.w	d3,d4
+	subq.w	#1,d4
+.kg	cmp.l	(a0)+,d6
+	bhs.s	.kn
+	move.l	-4(a0),d6
+.kn	dbf	d4,.kg
+	move.l	d6,(rd_ovlkey).l
 	; lines of the bands on screen
 	subq.w	#1,d2
 	lsl.w	#3,d2				;first line
@@ -4033,7 +4082,7 @@ rd_ovl_blit
 	move.w	d5,d4
 	ror.w	#4,d4				;(BLTCON1: B shift)
 	moveq	#0,d5				;the last word's mask
-	move.l	(rd_ovlgen).l,d6
+	move.l	(rd_ovlkey).l,d6
 	bsr	rd_cut_emit
 	movea.l	(sp)+,a5
 .bx	rts
@@ -4247,50 +4296,142 @@ rd_ovl_setcell
 	lea	(rd_aused).l,a3
 	bfset	(a3){d3:1}
 	TNEED	d3
+	; cleared: a tile with pixels, drawn at a whole byte, stores its image and its priority's
+	; mask (rd_ovl_cell), so only the other mask; an empty one, both masks (the image under
+	; a clear mask is never shown, nor read: rd_hud_byte)
+	move.w	d0,d3
+	andi.w	#$FFF,d3
+	lea	(tp_cls).l,a0
+	tst.b	(a0,d3.w)
+	sne	d7				;(pixels)
 	move.w	d1,d3
 	addi.w	#4*8,d3
 	lsr.w	#3,d3				;byte
+	move.w	d2,d6
+	muls.w	#OSROW,d6
+	ext.l	d3
+	add.l	d3,d6				;(the byte in its first line)
+	lea	(rd_ovlmlo).l,a2		;its priority's mask
+	lea	(rd_ovlmhi).l,a1		;the other
+	tst.w	d0
+	bpl.s	.ot
+	exg	a1,a2
+.ot	adda.l	d6,a1
+	adda.l	d6,a2
 	moveq	#7,d4
 	move.w	d2,d5				;line
 .cl	tst.w	d5
 	bmi.s	.cn
 	cmpi.w	#SCRH,d5
 	bge.s	.cn
-	lea	(rd_ovl).l,a0
-	move.w	d5,d6
-	mulu.w	#OSROW,d6
-	adda.l	d6,a0
-	adda.w	d3,a0
-	clr.b	(a0)
-	clr.b	OSBPR(a0)
-	clr.b	2*OSBPR(a0)
-	clr.b	3*OSBPR(a0)
-	clr.b	4*OSBPR(a0)
-	clr.b	5*OSBPR(a0)
-	lea	(rd_ovlmlo).l,a0
-	move.w	d5,d6
-	mulu.w	#OSROW,d6
-	adda.l	d6,a0
-	adda.w	d3,a0
-	lea	(rd_ovlmhi-rd_ovlmlo).l,a1
-	adda.l	a0,a1				;the high mask
-	moveq	#5,d6
-.cm	clr.b	(a0)
 	clr.b	(a1)
-	lea	OSBPR(a0),a0
-	lea	OSBPR(a1),a1
-	dbf	d6,.cm
-.cn	addq.w	#1,d5
+	clr.b	OSBPR(a1)
+	clr.b	2*OSBPR(a1)
+	clr.b	3*OSBPR(a1)
+	clr.b	4*OSBPR(a1)
+	clr.b	5*OSBPR(a1)
+	tst.b	d7
+	bne.s	.cn
+	clr.b	(a2)
+	clr.b	OSBPR(a2)
+	clr.b	2*OSBPR(a2)
+	clr.b	3*OSBPR(a2)
+	clr.b	4*OSBPR(a2)
+	clr.b	5*OSBPR(a2)
+.cn	lea	OSROW(a1),a1
+	lea	OSROW(a2),a2
+	addq.w	#1,d5
 	dbf	d4,.cl
-	move.w	d0,d3
-	andi.w	#$FFF,d3
-	lea	(tp_cls).l,a0
-	tst.b	(a0,d3.w)
-	beq.s	.x
+	tst.b	d7
+	beq.s	.e
 	bsr	rd_ovl_cell
+	bra.s	.x
+.e	addq.l	#1,(rd_ovlgen).l		;(cleared only: its band's stamp)
+	move.w	d2,d3
+	asr.w	#3,d3
+	addq.w	#1,d3				;(bands from line -8)
+	cmpi.w	#31,d3
+	bhi.s	.x
+	lea	(rd_ovlbg).l,a0
+	move.l	(rd_ovlgen).l,(a0,d3.w*4)
 .x	movem.l	4(sp),d1-d2
 	bsr	rd_hud_cell			;(the HUD sprites)
 	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
+CHGMAX	equ	512				;(rd_buildA: name table longs listed at most, each)
+
+;	(rd_buildA) Tiles the overlay uses were converted again (tc_chg): the name table longs with
+;	a cell of one listed too (rd_chgA, rd_chgW), as if they had changed; d5 = 1 if there were
+;	any, 2 if there is no room. d6 = plane cells across, d7 = down. Uses d0-d4, a0-a2.
+rd_ovl_tilecells
+	moveq	#-1,d0
+	bsr	.tb				;(the tiles as bytes: rd_tcb)
+	lea	(rd_tcb).l,a1
+	lea	(rd_shA).l,a0
+	lea	(rd_chgA).l,a2
+	move.w	(rd_nchgA).l,d3
+	move.w	d6,d4
+	mulu.w	d7,d4
+	bsr	.scan
+	move.w	d3,(rd_nchgA).l
+	cmpi.w	#2,d5
+	beq.s	.x
+	lea	(rd_shW).l,a0
+	lea	(rd_chgW).l,a2
+	move.w	(rd_nchgW).l,d3
+	move.w	(rd_wwidth).l,d4
+	lsl.w	#5,d4				;(32 rows)
+	bsr	.scan
+	move.w	d3,(rd_nchgW).l
+.x	moveq	#0,d0				;(rd_tcb clear again)
+.tb	; the tiles converted that it uses (tc_chg, rd_aused): their bytes in rd_tcb set to d0
+	movem.l	d1-d4/a0-a2,-(sp)
+	move.w	(rd_tcn).l,d4
+	subq.w	#1,d4
+	lea	(rd_tcl).l,a2
+	lea	(rd_tcb).l,a1
+.tl	moveq	#0,d1
+	move.w	(a2)+,d1			;(a long's byte offset)
+	lea	(tc_chg).l,a0
+	move.l	(a0,d1.w),d2
+	lea	(rd_aused).l,a0
+	and.l	(a0,d1.w),d2
+	lsl.l	#3,d1				;(its first tile)
+.tt	tst.l	d2
+	beq.s	.tn
+	bfffo	d2{0:0},d3
+	bfclr	d2{d3:1}
+	add.l	d1,d3
+	move.b	d0,(a1,d3.l)
+	sub.l	d1,d3
+	bra.s	.tt
+.tn	dbf	d4,.tl
+	movem.l	(sp)+,d1-d4/a0-a2
+	rts
+.scan	; d4 cells of a name table's copy a0: the longs with a tile converted listed at a2 (d3 of
+	; them)
+	moveq	#0,d2				;cell
+	subq.w	#1,d4
+.s	move.w	(a0)+,d0
+	andi.w	#$7FF,d0
+	tst.b	(a1,d0.w)
+	beq.s	.n
+	move.w	d2,d1
+	lsr.w	#1,d1				;its long
+	tst.w	d3
+	beq.s	.l
+	cmp.w	-2(a2,d3.w*2),d1
+	beq.s	.n				;(listed already: its other cell)
+.l	cmpi.w	#CHGMAX,d3
+	bhs.s	.full
+	move.w	d1,(a2,d3.w*2)
+	addq.w	#1,d3
+	moveq	#1,d5
+.n	addq.w	#1,d2
+	dbf	d4,.s
+	rts
+.full	moveq	#2,d5
 	rts
 
 rd_buildA
@@ -4423,27 +4564,34 @@ rd_buildA
 	bsr	.cmpd
 	move.w	d3,(rd_nchgW).l
 .cww	st	(rd_ntsync).l			;(the copies are in step from here on)
-	; tiles of these cells converted again? (tc_chg's longs with any: rd_tcl)
+	; tiles of these cells converted again? (tc_chg's longs with any: rd_tcl) Their cells
+	; are listed as changed too (rd_ovl_tilecells: a portrait on the menus)
+	cmpi.w	#2,d5
+	beq.s	.tun
 	move.w	(rd_tcn).l,d0
 	beq.s	.tun
 	subq.w	#1,d0
-	move.l	a2,-(sp)
 	lea	(rd_tcl).l,a2
 	lea	(tc_chg).l,a0
 	lea	(rd_aused).l,a1
 .tu	move.w	(a2)+,d1
-	move.l	(a0,d1.w),-(sp)
-	move.l	(a1,d1.w),d1
-	and.l	(sp)+,d1
-	beq.s	.tu1
-	moveq	#2,d5
-.tu1	dbf	d0,.tu
-	movea.l	(sp)+,a2
+	move.l	(a0,d1.w),d2
+	and.l	(a1,d1.w),d2
+	dbne	d0,.tu
+	beq.s	.tun
+	bsr	rd_ovl_tilecells
 .tun	tst.w	d5
 	beq	.keep
 	cmpi.w	#1,d5
 	bne	.full
-	; a few cells: redraw just those in the overlay (only with whole cell scroll)
+	; some cells: redraw just those in the overlay (only with whole cell scroll), unless that
+	; is more than about half of them (a cell drawn alone, rd_ovl_setcell, costs about 1.5
+	; times one of a full redraw, which also lists them all again)
+	move.w	(rd_nchgA).l,d0
+	add.w	(rd_nchgW).l,d0
+	add.w	d0,d0				;(longs, 2 cells each)
+	cmp.w	(rd_alistn).l,d0
+	bhi	.full
 	move.w	(rd_ax0).l,d0
 	or.w	(rd_ay0).l,d0
 	andi.w	#7,d0
@@ -4500,7 +4648,7 @@ rd_buildA
 	moveq	#1,d1
 	cmpi.w	#2,d5
 	beq.s	.n2
-	cmpi.w	#16,d3
+	cmpi.w	#CHGMAX,d3
 	bhs.s	.nfull
 	move.w	d2,(a2,d3.w*2)
 	addq.w	#1,d3
@@ -8933,8 +9081,8 @@ rd_btr		ds.w	1
 rd_btile	ds.w	1
 rd_blitnoc	ds.w	1
 rd_nchgW	ds.w	1
-rd_chgA		ds.w	16
-rd_chgW		ds.w	16
+rd_chgA		ds.w	CHGMAX
+rd_chgW		ds.w	CHGMAX
 		cnop	0,4
 rd_dbg_key	ds.l	1
 rd_dbg_nta	ds.l	1
@@ -8952,6 +9100,10 @@ rd_ovlrpn	ds.w	1
 rd_ovlrst	ds.b	1				;the rectangles are to be made again
 	even
 rd_ovlgen	ds.l	1				;changed when the overlay changes
+rd_ovlbg	ds.l	32			;its value at each band's last change (bands of 8
+						;lines from line -8)
+rd_ovlkey	ds.l	1			;(rd_ovl_blit)
+rd_tcb		ds.b	2048			;(rd_ovl_tilecells: tiles converted, as bytes)
 rd_oplists	ds.b	(NBUF+1)*OPMAX*OPREC		;blit lists (rd_op_end)
 rd_opold	ds.l	NBUF				;per buffer: the list of its last frame,
 rd_opoldn	ds.w	NBUF				;its blits (-1: not known)
