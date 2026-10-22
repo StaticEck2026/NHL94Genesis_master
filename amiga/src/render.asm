@@ -1965,7 +1965,7 @@ rd_snaptime
 	move.w	(rd_bufi).l,d0
 	lea	(rd_snapvb).l,a0
 	move.l	(hal_tickvb).l,(a0,d0.w*4)	;(the tick that gave the state: its sound is the
-						;frame's commands that tick took, snd_z80_poll)
+						;frame's commands that tick took, snd_frame)
 	movem.l	(sp)+,d0/a0
 	rts
 

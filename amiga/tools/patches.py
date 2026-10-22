@@ -79,29 +79,105 @@ def replace_routine(rel, label, body, table=PRE):
     rule(table, rel, pat, label + '\n' + body.rstrip('\n').replace('\\', '\\\\') + '\n', 1, True)
 
 
+def remove_routine(rel, label, table=PRE):
+    """Remove 'label' and its lines up to the next global label."""
+    pat = r'^%s\b[^\n]*\n(?:(?![A-Za-z_][\w]*\b)[^\n]*\n)*' % re.escape(label)
+    rule(table, rel, pat, '', 1, True)
+
+
 # ---------------------------------------------------------------------------------------------
-# Hardware ports. The Z80 bus and reset registers become words in RAM that always read "bus
-# granted"; the Z80's 8K RAM becomes a buffer that the Amiga sound code (sound.asm) reads, so
-# the 68000 sound driver runs unchanged. The pad ports, the PSG and the SRAM go to the
-# hardware layer too.
-P(j('stubinc', 'ports.inc'), 'IO_CT1_CTRL equ $A10008', 'IO_CT1_CTRL equ hal_padports+8')
-P(j('stubinc', 'ports.inc'), 'IO_CT1_DATA equ $A10002', 'IO_CT1_DATA equ hal_padports+2')
-P(j('stubinc', 'ports.inc'), 'IO_CT2_CTRL equ $A1000A', 'IO_CT2_CTRL equ hal_padports+10')
-P(j('stubinc', 'ports.inc'), 'IO_CT2_DATA equ $A10004', 'IO_CT2_DATA equ hal_padports+4')
-P(j('stubinc', 'ports.inc'), 'IO_Z80BUS equ $A11100', 'IO_Z80BUS equ hal_z80bus')
-P(j('stubinc', 'ports.inc'), 'IO_Z80RES equ $A11200', 'IO_Z80RES equ hal_z80res')
-P(j('stubinc', 'ports.inc'), 'Asound equ $C00011', 'Asound equ hal_psg')
+# Hardware ports. The Amiga has no Z80, PSG or pad ports of the Genesis kind: the code that used
+# them is rewritten below, and their addresses are left undefined so that none is missed.
+for _port in ('IO_CT1_CTRL equ $A10008', 'IO_CT1_DATA equ $A10002', 'IO_CT2_CTRL equ $A1000A',
+              'IO_CT2_DATA equ $A10004', 'IO_Z80BUS equ $A11100', 'IO_Z80RES equ $A11200',
+              'Asound equ $C00011'):
+    P(j('stubinc', 'ports.inc'), _port, ';%s (not on the Amiga)' % _port.split()[0])
 P(j('stubinc', 'ports.inc'), 'HVcount equ $C00008', '\tIFD\tBENCH\nHVcount equ hal_hv\t\t\t\t;(benchmark builds: a number per game frame)\n'
   '\tELSE\nHVcount equ $DFF006\t\t\t\t;Amiga VHPOSR: beam position\n\tENDC')
-P(j('stubinc', 'ram_addrs.inc'), 'Z80_RAM equ $A00000', 'Z80_RAM equ hal_z80ram')
+P(j('stubinc', 'ram_addrs.inc'), 'Z80_RAM equ $A00000', ';Z80_RAM (no Z80 on the Amiga)')
 
 # Native player objects: addframe2 is the renderer's (render.asm hal_addframe2: the same
 # results in fewer steps, and the object noted for the renderer to draw as one image).
 replace_routine('display94.asm', 'addframe2', '\tjmp\t(hal_addframe2).l\n')
 
-# The Z80 program is never run; its two bytes that hold a bank address cannot be relocated.
-P('sound94.asm', 'dc.b	fm_instrument_patches&$FF,((fm_instrument_patches>>8)&$7F)|$80', 'dc.b	0,0')
-P('sound94.asm', 'dc.b	$09,$3E,fm_instrument_patches>>15', 'dc.b	$09,$3E,0')
+# Sound. The 68000 driver's tracks run as they are; what it handed the Z80 it hands sound.asm,
+# which plays it on Paula: the command buffer of key ons and offs, attenuations, frequencies and
+# patches (snd_fm_commands), a PCM sound's start (snd_pcm_play), its rate and its volume
+# (snd_pcm_rate, snd_pcm_vol). The Z80 program, the bus and reset handshakes and the volume
+# tables built in the Z80's RAM are left out.
+replace_routine('sound94.asm', 'UploadCommandBufferToZ80', '\tjmp\t(snd_fm_commands).l\t\t;(sound.asm: Paula)\n')
+remove_routine('sound94.asm', 'z80_bus_release_delay')
+replace_routine('sound94.asm', 'StopPCMChannel', '\tclr.b\t(snd_pcm_rate).l\t\t;(sound.asm: the PCM sound stops)\n\trts\n')
+P('sound94.asm', """	move.l	0(a1,d0.w),d0
+	move.w	#$100,(IO_Z80BUS).l
+.loop
+	btst	#0,(IO_Z80BUS).l
+	bne.s	.loop
+	movea.l	#Z80_RAM,a1
+	move.b	d0,$25(a1)
+	lsr.w	#8,d0
+	move.b	d0,$24(a1)
+	swap	d0
+	move.b	d0,$23(a1)
+	move.b	d1,$28(a1)
+	lsr.w	#8,d1
+	move.b	d1,$27(a1)
+	swap	d1
+	move.b	d1,$26(a1)
+	move.b	#$29,$96(a1)
+	move.b	#0,$97(a1)
+	clr.w	(IO_Z80BUS).l
+""", """	move.l	0(a1,d0.w),d0
+	jsr	(snd_pcm_play).l			;(sound.asm: d0 = the sound's start)
+""")
+P('sound94.asm', """	move.w	#$100,(IO_Z80BUS).l
+.loop
+	btst	#0,(IO_Z80BUS).l
+	bne.s	.loop
+	neg.w	d3
+	addq.w	#8,d3
+	lsr.w	d3,d2
+	move.b	d2,(Z80_RAM+$8E).l
+	clr.w	(IO_Z80BUS).l
+""", """	neg.w	d3
+	addq.w	#8,d3
+	lsr.w	d3,d2
+	move.b	d2,(snd_pcm_rate).l			;(sound.asm)
+""")
+P('sound94.asm', """	move.w	#$100,(IO_Z80BUS).l
+.loop
+	btst	#0,(IO_Z80BUS).l
+	bne.s	.loop
+	lsr.b	#2,d0
+""", """	lsr.b	#2,d0
+""")
+P('sound94.asm', """	move.b	d0,(Z80_RAM+$83).l
+	clr.w	(IO_Z80BUS).l
+""", """	move.b	d0,(snd_pcm_vol).l			;(sound.asm)
+""")
+replace_routine('sound94.asm', 'p_initialZ80', '\tbsr.w\tClearAllTrackAndSFXSlots\n'
+                '\tclr.b\t(music_needs_z80_update).w\n\trts\n')
+P('sound94.asm', r'^Z80_Program_Code\b[^\n]*\n(?:[^\n]*\n)*?\tdc\.b\t\$FF\t[^\n]*\n',
+  ';(the Z80 program: not on the Amiga)\n', 1, regex=True)
+# The pads are read by ReadJoyData (below); the port readers behind it, for 3 button pads and the
+# 4 way play adaptor, are not used.
+for _label in ('ReadPad4Way1', 'ReadPad4Way2', 'ReadPad4Way3', 'ReadPad4Way4', 'ReadPad4WayPort1', 'ReadPad2',
+               'ReadPad1', 'ReadPadA0', 'ReadPad3Button', 'PadDirTable', 'ResetZ80Bus'):
+    remove_routine('sound94.asm', _label)
+for _label in ('ReadJoySwapPad1', 'ReadJoySwapPad2', 'ReadJoySwapPad3', 'ReadJoySwapPad4'):
+    remove_routine('fourway94.asm', _label)
+# The crowd noise was the PSG's (never heard on the Amiga): its level is still worked out (asv).
+P('display94.asm', """	move.b	#$C8,(Asound).l
+	move.b	#1,(Asound).l
+	move.b	(asv).w,d0
+	eori.b	#$F,d0
+	ori.b	#$F0,d0
+	move.b	d0,(Asound).l
+""", """	move.b	(asv).w,d0
+	eori.b	#$F,d0
+	ori.b	#$F0,d0
+""")
+replace_routine('display94.asm', 'KillCrowd', "\trts\t\t\t\t;(the crowd noise was the PSG's)\n")
 
 # The menu songs (title, end of period, scouting report: $78-$7A, the last) have more notes at once
 # than Paula's 4 voices: sound.asm mixes more while one plays (snd_song).
@@ -159,22 +235,6 @@ replace_routine('video94.asm', 'DoDMA', '\tjmp\t(hal_vdp_dma).l\t\t;d0 = words, 
 replace_routine('video94.asm', 'DoDMA_nd2', '\tjmp\t(hal_vdp_copy).l\t\t;vram copy: d0 = bytes, d1 = dest, d2 = source\n')
 replace_routine('video94.asm', 'DoFill', '\tjmp\t(hal_vdp_fill).l\t\t;d0 = words, d1 = vram address, d2 = data\n')
 replace_routine('video94.asm', 'WaitDMA', '\trts\n')
-
-# The emulated Z80 answers at once: the driver posts a command (Z80 RAM $96 = $D1 command
-# buffer, $29 PCM start) and the Amiga sound code takes it before the bus is released.
-P('sound94.asm', """	dbf	d0,.copy
-	clr.w	(IO_Z80BUS).l""", """	dbf	d0,.copy
-	jsr	(snd_z80_cmd).l
-	clr.w	(IO_Z80BUS).l""")
-P('sound94.asm', """	move.b	#0,$97(a1)
-	clr.w	(IO_Z80BUS).l""", """	move.b	#0,$97(a1)
-	jsr	(snd_z80_cmd).l
-	clr.w	(IO_Z80BUS).l""")
-# The Z80 got the PCM start as a 24 bit cartridge address; the Amiga sound code takes all of it.
-P('sound94.asm', """	move.l	0(a1,d0.w),d0
-""", """	move.l	0(a1,d0.w),d0
-	move.l	d0,(snd_pcm_addr).l
-""")
 
 # Tile data written through the data port (not by DMA): tell the renderer's tile cache.
 P('video94.asm', """	movem.l	d0-d4/a0-a2,-(sp)

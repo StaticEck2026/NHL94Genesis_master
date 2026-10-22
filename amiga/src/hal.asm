@@ -138,7 +138,6 @@ hal_game_main
 	dbf	d0,.clr
 	lea	(RAMBASE+$FFF0).l,sp
 	bsr	hal_vdp_init
-	move.b	#$7D,(hal_z80ram+$96).l		;the sound driver's "Z80 idle" handshake
 	jsr	(snd_init).l
 	bsr	hal_set_vectors
 	jsr	(rd_init).l
@@ -332,7 +331,7 @@ hal_int6
 	ENDIF
 	PEV	'T'				;(statistics: a game tick)
 	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the sound's delay, rd_showdue)
-	jsr	(snd_z80_poll).l
+	jsr	(snd_frame).l
 	tst.l	(VBint).l			;(never a vblank code at 0)
 	beq.s	.post
 	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
@@ -494,7 +493,7 @@ hal_tick_late
 	PEV	'T'
 	move.l	(rd_vblanks).l,(hal_tickvb).l
 	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(snd_z80_poll).l
+	jsr	(snd_frame).l
 	movem.l	(sp)+,d0-d7/a0-a6
 	tst.l	(VBint).l			;(never a vblank code at 0)
 	beq.s	.r
@@ -779,12 +778,6 @@ prof_ev		ds.l	PEVMAX			;events: code (top byte), CIA-B TOD
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
 hal_hv		ds.w	1			;(BENCH builds: the game's HVcount)
-hal_padports	ds.w	8
-hal_z80bus	ds.w	1			;written by the bus requests
-hal_zero	ds.w	1			;read by the bus polls: 0 = bus granted
-hal_z80res	ds.w	1
-hal_psg		ds.w	1
-hal_z80ram	ds.b	$2000
 hal_sram	ds.b	$4000			;the save RAM's odd bytes ($2000 bytes)
 ctx_game_sp	ds.l	1
 ctx_rend_sp	ds.l	1

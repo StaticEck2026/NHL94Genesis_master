@@ -2,8 +2,9 @@
 
 This directory builds NHL 94 as an Amiga program from the Genesis disassembly in `src/`. The
 game code is the Genesis 68000 code, converted at build time. A hardware layer written for the
-Amiga stands in for the Genesis video chip, pads, Z80 and sound chip. The Genesis sources are
-not changed, so `main` still rebuilds the cartridge byte for byte.
+Amiga stands in for the Genesis video chip; the game's sound driver plays on Paula, and the
+pads are read by the Amiga's own code. The Genesis sources are not changed, so `main` still
+rebuilds the cartridge byte for byte.
 
 ## Requirements
 
@@ -187,12 +188,15 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   drawn the same in the frame before (the same frame, place, scroll and image in its place of
   the sprite list) takes that blit, its box and its cover again instead of being placed and cut
   anew (about half of them in play).
-- Z80 bus polling, pad port reads and wait loops are rewritten. A wait loop calls `hal_idle`,
-  which runs the renderer while the game waits for its next frame.
+- Wait loops are rewritten: a wait loop calls `hal_idle`, which runs the renderer while the
+  game waits for its next frame.
 - vasm syntax: macros, local labels, `incbin` paths and other small differences.
 
-`amiga/tools/patches.py` makes the few changes that need code written by hand: the sound
-handshake, the pad reader and the save RAM.
+`amiga/tools/patches.py` makes the changes that need code written by hand. The sound driver
+hands its commands to `sound.asm` instead of a Z80: its command buffer, a PCM sound's start,
+rate and volume. The Z80 program, the Z80 bus and reset handshakes, the pad port readers
+(the pads are read by `input.asm`) and the PSG crowd noise are left out, and those ports'
+addresses are left undefined so that no use of them is missed. The save RAM too.
 
 The hardware layer:
 
@@ -312,9 +316,10 @@ The hardware layer:
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.
 - `input.asm`: joysticks, CD32 pads and the keyboard, read as two 3 button pads.
-- `sound.asm`: the four Paula voices in place of the Z80, YM2612 and DAC. The game's own 68000
-  sound driver runs unchanged. `sound.asm` reads the commands the driver writes for the Z80:
-  key on, key off, frequency, volume and patch per FM channel, and the PCM start, rate and volume.
+- `sound.asm`: the game's music and sounds on the four Paula voices. The game's own 68000
+  sound driver runs its tracks as it did and hands `sound.asm` what it handed its Z80 program:
+  key on, key off, frequency, volume and patch per FM channel (its command buffer, read in the
+  game's RAM), and the PCM start, rate and volume. There is no Z80.
   All audio is 8 bit, played as fast as Paula plays (a period of 124: about 28.6 kHz). The 32
   FM patches are rendered to samples at 20000 Hz at build time by `amiga/tools/fmrender.py`, a
   model of the YM2612. Each patch has an attack and a loop at each octave band it is used at, so
@@ -336,8 +341,8 @@ The hardware layer:
   than Paula, is resampled to 28.6 kHz and played at a period that keeps its pitch. A frame's
   picture reaches the screen a few vertical blanks after the game made it (drawn, then queued
   behind the frames before it: 2 to 3 at full speed, 3 with the 25 fps cap), so the sound
-  would come before what it goes with. Each game frame's sound commands, with the Z80 RAM bytes
-  they use, go into a delay line and are carried out that much later; the renderer measures
+  would come before what it goes with. Each game frame's sound commands, with the command
+  buffer's bytes they use, go into a delay line and are carried out that much later; the renderer measures
   the picture's delay at every frame shown, from the game tick that gave the frame its state
   (whose commands are the frame's) to its showing, and half a frame more for the beam to come
   down to the middle of the screen, and keeps the sound's delay at its mean, changing it only
@@ -443,6 +448,13 @@ logs every sprite blit (`NHL_DBGPORT=1`), and `amiga/harness/rstsim.py log` repl
 the words a frame for the sprites and for restoring under them, whole boxes or trimmed, and
 dirty maps of 8 to 1 lines, all on the same frames (builds that differ play differently: the
 game's random numbers depend on its timing).
+
+`amiga/harness/golden.sh record GAME DIR` plays scripted sessions in the harness's
+deterministic mode (attract mode; Start every 120 frames through the menus into a game; a long
+game; a tour of the pause menu's items) and keeps the Amiga screen at many frames (1710 in
+all); `golden.sh check GAME DIR` plays them again with another build and reports every screen
+that is not the same pixel for pixel. A change that should not show (a rewrite of how the game
+gets its picture or sound to the Amiga) is checked against a build from before it this way.
 
 `amiga/tools/uaerun.sh` runs the build in FS-UAE (A1200, AROS ROM by default) on a virtual X
 display, presses keys at given times and takes screenshots. Add `fast_memory = 8192` with

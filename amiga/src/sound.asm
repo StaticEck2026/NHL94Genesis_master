@@ -1,10 +1,11 @@
-;	Sound: stands in for the Genesis Z80 and its YM2612 / DAC with the Amiga's four Paula voices.
+;	Sound: the game's music and effects on the Amiga's four Paula voices.
 ;
-;	The game's 68000 sound driver (sound94.asm) runs unchanged and talks to its Z80 program
-;	through the Z80 RAM (hal_z80ram here). Its 33 byte command buffer (Z80 RAM $02-$22) holds
-;	bit masks of the FM channels to key off, key on, give a new attenuation, a new frequency
-;	and a new patch, then the attenuation, frequency and patch of each channel. A PCM sound is
-;	its start address, Z80 RAM $8E the playback rate (0 = stop) and $83 the volume.
+;	The game's 68000 sound driver (sound94.asm) runs its tracks as it did; what it handed its Z80
+;	program it hands this code (patches.py). Its 33 byte command buffer (Z80_command_buffer, in
+;	the game's RAM) holds bit masks of the FM channels to key off, key on, give a new
+;	attenuation, a new frequency and a new patch, then the attenuation, frequency and patch of
+;	each channel (snd_fm_commands). A PCM sound is its start address (snd_pcm_play), its
+;	playback rate (snd_pcm_rate, 0 = stop) and its volume (snd_pcm_vol).
 ;
 ;	The FM patches are samples made at build time (amiga/tools/fmrender.py: an attack then a
 ;	loop, at the pitch bands the patch is used at). A key on takes a voice (a free one, else
@@ -21,14 +22,13 @@
 ;	The Amiga's audio low-pass filter (the "LED" filter, about 3.3 kHz) is on while the game
 ;	runs, as the Genesis model 1's output filter softens its sound; F7 switches it.
 ;
-;	snd_z80_cmd takes a command from the driver (it is called where the driver hands the Z80
-;	its command); snd_z80_poll, from the game frame interrupt (50 or 60 Hz, hal_hz), does the
-;	work on Paula. The envelope speeds are made for 60 Hz and scaled to the frame rate, so the
+;	snd_fm_commands and snd_pcm_play take the driver's commands; snd_frame, from the game frame
+;	interrupt (50 or 60 Hz, hal_hz), does the work on Paula. The envelope speeds are made for 60 Hz and scaled to the frame rate, so the
 ;	sounds keep their length at 50 Hz (the YM2612's envelopes do not depend on it).
 ;
 ;	The picture of a game frame is on the screen some frames after the game made it (drawn,
 ;	then queued behind the frames before it). So that a shot is heard when it is seen, each
-;	game frame's commands (with the Z80 RAM bytes they use) go into a delay line and are
+;	game frame's commands (with the buffer's bytes they use) go into a delay line and are
 ;	carried out snd_delay game frames later: the renderer keeps that near the picture's mean
 ;	delay (rd_showdue).
 
@@ -79,8 +79,13 @@ MXLEAD		equ	832			;samples mixed ahead of where Paula plays it: a frame
 MXMAX		equ	1664			;samples mixed at most at a time
 
 SDMAX		equ	8			;the delay line: game frames (a power of 2)
-SDREC		equ	40			;bytes a frame: the pending commands, $83, $8E, the PCM
-						;address, Z80 RAM $07-$22
+SDREC		equ	40			;bytes a frame: the pending commands, the PCM volume and
+						;rate and address, the command buffer's channel bytes
+;	the command buffer: each channel's attenuation, frequency, patch
+SCATT		equ	per_channel_attenuation_table-Z80_command_buffer
+SCFRQ		equ	per_channel_frequency_table-Z80_command_buffer
+SCPAT		equ	per_channel_patch_table-Z80_command_buffer
+SCMDSIZE	equ	33
 
 	include	"fm_patches.i"		;the FM patch samples and tables (fmrender.py)
 	include	"pcm.i"			;the PCM samples and their table (pcmrender.py)
@@ -135,42 +140,38 @@ snd_exit
 	bset	#1,(CIAA_PRA).l
 .x	rts
 
-;	The driver has written a command to the Z80 RAM: note what it asks for (snd_z80_poll does
-;	it) and answer as the Z80 does when it is done.
-snd_z80_cmd
+;	The driver's command buffer is ready (UploadCommandBufferToZ80): note what it asks for
+;	(snd_frame does it); key off cancels a key on not yet done. Keeps all.
+snd_fm_commands
 	move	sr,-(sp)
 	ori	#$0700,sr
 	movem.l	d0-d1/a0,-(sp)
-	lea	(hal_z80ram).l,a0
-	move.b	$96(a0),d0
-	cmpi.b	#$D1,d0
-	bne	.npcm
-	; command buffer: key off cancels a key on not yet done
-	move.b	2(a0),d0			;key off
+	lea	(Z80_command_buffer).l,a0
+	move.b	(a0),d0				;key off
 	move.b	d0,d1
 	not.b	d1
 	and.b	d1,(snd_pend_on).l
 	or.b	d0,(snd_pend_off).l
-	move.b	3(a0),d0
+	move.b	1(a0),d0
 	or.b	d0,(snd_pend_on).l
-	move.b	4(a0),d0
+	move.b	2(a0),d0
 	or.b	d0,(snd_pend_att).l
-	move.b	5(a0),d0
+	move.b	3(a0),d0
 	or.b	d0,(snd_pend_frq).l
-	bra	.ack
-.npcm	cmpi.b	#$29,d0
-	bne	.ack
-	st	(snd_pcm_start).l		;start the PCM sound at snd_pcm_addr
-.ack	move.b	#$7D,$96(a0)			;idle
-	clr.b	$97(a0)
 	movem.l	(sp)+,d0-d1/a0
 	move	(sp)+,sr
+	rts
+
+;	The driver starts the PCM sound at d0 (its pcm_sample_table address). Keeps all.
+snd_pcm_play
+	move.l	d0,(snd_pcm_addr).l
+	st	(snd_pcm_start).l
 	rts
 
 ;	Each game frame: carry out the driver's commands of snd_delay frames ago on Paula (more
 ;	than one frame's when the delay has just got shorter, none when longer) and step the
 ;	envelopes.
-snd_z80_poll
+snd_frame
 	movem.l	d0-d7/a0-a6,-(sp)
 	bsr	snd_dly_push
 	bsr.s	snd_play_do
@@ -192,7 +193,7 @@ snd_play
 	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 snd_play_do
-	lea	(snd_z80d).l,a5			;(the Z80 RAM as it was then)
+	lea	(snd_cmdd).l,a5			;(the command buffer as it was then)
 	lea	(CUSTOM).l,a6
 	moveq	#0,d7				;voices to start
 .rec	bsr	snd_dly_pop
@@ -232,7 +233,7 @@ snd_play_do
 	bsr	snd_chan_voice
 	bmi	.natt
 	moveq	#0,d2
-	move.b	7(a5,d1.w),d2			;attenuation (TL, 0.75 dB)
+	move.b	SCATT(a5,d1.w),d2		;attenuation (TL, 0.75 dB)
 	lsl.w	#3,d2
 	move.w	d2,V_TL(a0)
 .natt	addq.w	#1,d1
@@ -333,7 +334,8 @@ snd_soft_start
 .x	movem.l	(sp)+,d0-d1/a1
 	rts
 
-;	This game frame's commands (snd_z80_cmd) and the Z80 RAM bytes they use into the delay line.
+;	This game frame's commands (snd_fm_commands, snd_pcm_play) and the bytes they use into the
+;	delay line.
 snd_dly_push
 	move.w	(snd_dlyw).l,d0
 	andi.w	#SDMAX-1,d0
@@ -344,20 +346,19 @@ snd_dly_push
 	move.b	(snd_pcm_start).l,(a0)+
 	clr.l	(snd_pend_off).l
 	sf	(snd_pcm_start).l
-	lea	(hal_z80ram).l,a1
-	move.b	$83(a1),(a0)+			;PCM volume
-	move.b	$8E(a1),(a0)+			;and rate
+	move.b	(snd_pcm_vol).l,(a0)+
+	move.b	(snd_pcm_rate).l,(a0)+
 	addq.l	#1,a0
 	move.l	(snd_pcm_addr).l,(a0)+
-	addq.l	#7,a1
-	moveq	#$22-7,d0			;attenuations, frequencies, patches
+	lea	(Z80_command_buffer+SCATT).l,a1
+	moveq	#SCMDSIZE-SCATT-1,d0		;attenuations, frequencies, patches
 .c	move.b	(a1)+,(a0)+
 	dbf	d0,.c
 	addq.w	#1,(snd_dlyw).l
 	rts
 
 ;	The next game frame's commands of the delay line, if due: into the pending bytes and
-;	snd_z80d. Z set if none. Uses d0, a0, a1.
+;	snd_cmdd. Z set if none. Uses d0, a0, a1.
 snd_dly_pop
 	move.w	(snd_dlyw).l,d0
 	sub.w	(snd_dlyr).l,d0
@@ -371,13 +372,12 @@ snd_dly_pop
 	adda.w	d0,a0
 	move.l	(a0)+,(snd_pend_off).l
 	move.b	(a0)+,(snd_pcm_start).l
-	lea	(snd_z80d).l,a1
-	move.b	(a0)+,$83(a1)
-	move.b	(a0)+,$8E(a1)
+	move.b	(a0)+,(snd_pcm_vold).l
+	move.b	(a0)+,(snd_pcm_rated).l
 	addq.l	#1,a0
 	move.l	(a0)+,(snd_pcm_addrd).l
-	addq.l	#7,a1
-	moveq	#$22-7,d0
+	lea	(snd_cmdd+SCATT).l,a1
+	moveq	#SCMDSIZE-SCATT-1,d0
 .c	move.b	(a0)+,(a1)+
 	dbf	d0,.c
 	moveq	#1,d0				;(Z clear)
@@ -426,7 +426,7 @@ snd_release
 ;	Voice a0's period for FM channel d1's frequency: d2.
 snd_fm_period
 	movem.l	d0-d1/a2,-(sp)
-	move.w	14(a5,d1.w*2),d0		;block << 11 | fnum (Z80 RAM $0E + 2n)
+	move.w	SCFRQ(a5,d1.w*2),d0		;block << 11 | fnum
 	move.w	d0,d1
 	andi.w	#$07FF,d0
 	rol.w	#5,d1
@@ -486,17 +486,17 @@ snd_keyon
 	addq.w	#1,(snd_age).l
 	move.w	(snd_age).l,V_AGE(a0)
 	moveq	#0,d2
-	move.b	7(a5,d1.w),d2
+	move.b	SCATT(a5,d1.w),d2
 	lsl.w	#3,d2
 	move.w	d2,V_TL(a0)
 	; the patch's render for the note's band
 	moveq	#31,d0
-	and.b	$1C(a5,d1.w),d0		;patch (Z80 RAM $1C + n)
+	and.b	SCPAT(a5,d1.w),d0		;patch
 	mulu.w	#FM_PATCH_SIZE,d0
 	lea	fm_patch_table,a2
 	adda.w	d0,a2
 	move.l	a2,V_PATCH(a0)
-	move.w	14(a5,d1.w*2),d0
+	move.w	SCFRQ(a5,d1.w*2),d0
 	move.w	d0,d2
 	andi.l	#$07FF,d0
 	rol.w	#5,d2
@@ -622,7 +622,7 @@ snd_alloc
 ;	The PCM channel: start a sound, or follow its rate (0 = stop) and volume.
 snd_pcm
 	moveq	#0,d1
-	move.b	$8E(a5),d1			;rate
+	move.b	(snd_pcm_rated).l,d1		;rate
 	tst.b	(snd_pcm_start).l
 	beq	.run
 	sf	(snd_pcm_start).l
@@ -698,7 +698,7 @@ snd_pcm
 .rate	bsr	snd_pcm_period
 	move.w	d2,6(a1)
 .vol	moveq	#0,d1				;volume: 8 / (8 + $1F - v) of full, v = 3-$1F
-	move.b	$83(a5),d1
+	move.b	(snd_pcm_vold).l,d1
 	cmpi.w	#$1F,d1
 	bls	.v1
 	moveq	#$1F,d1
@@ -709,7 +709,7 @@ snd_pcm
 	move.w	d1,V_TL(a0)			;the PCM voice keeps its Paula volume here
 .x	rts
 
-;	d1 = PCM rate (Z80 RAM $8E, steps of 1/256 sample at PCMHZ): d2 = period (times the sound's
+;	d1 = PCM rate (snd_pcm_rate, steps of 1/256 sample at PCMHZ): d2 = period (times the sound's
 ;	factor, for a sample made at a lower rate).
 snd_pcm_period
 	move.l	#(PAULACLK*16/PCMHZ)*16,d2
@@ -1205,6 +1205,10 @@ snd_delay	ds.w	1			;game frames the commands wait (rd_showdue)
 snd_latf	ds.w	1			;the picture's mean delay (8.8, rd_showdue)
 snd_pcm_addrd	ds.l	1			;the delayed snd_pcm_addr
 snd_dly		ds.b	SDMAX*SDREC
-snd_z80d	ds.b	$90			;the delayed Z80 RAM bytes (at their offsets)
+snd_cmdd	ds.b	SCMDSIZE			;the delayed command buffer (its channel bytes)
+snd_pcm_vol	ds.b	1			;the PCM sound's volume (3-$1F),
+snd_pcm_rate	ds.b	1			;its rate (0: stopped)
+snd_pcm_vold	ds.b	1			;(delayed)
+snd_pcm_rated	ds.b	1
 
 	section	game,code

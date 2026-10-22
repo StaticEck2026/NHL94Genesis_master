@@ -192,9 +192,6 @@ def convert_line(code, ctx):
     if args is not None and re.match(r'^(equ|=|set)$', op, re.I):
         return [code]
     op2, sz2, args2, extra = ram_rules(op, sz, args, ctx)
-    # Z80 bus request polls: the bus is always free on the Amiga (writes go to a dummy word).
-    if op2.lower() == 'btst' and args2 and re.search(r'\(IO_Z80BUS\)\.l', args2, re.I):
-        args2 = re.sub(r'\(IO_Z80BUS\)\.l', '(hal_zero).l', args2, flags=re.I)
     # The game's mask 5 or 3 keeps out the Genesis line interrupts. On the Amiga levels 1-5 are
     # the port's own (the blit queue and vertical blank on 3): the game's code lets them in, or
     # the blitter would wait while the game runs.
