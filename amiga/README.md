@@ -21,8 +21,8 @@ rebuilds the cartridge byte for byte.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
-  Genesis), 60 on NTSC. At 50 the game is told it runs on a PAL console (the VDP status), as a
-  PAL Mega Drive's would be: its sound driver then plays the music an extra step every 6th
+  Genesis), 60 on NTSC. At 50 the game is told it runs on a PAL console (`hal_pal50`, where it read
+  the video chip's status), as a PAL Mega Drive's would be: its sound driver then plays the music an extra step every 6th
   frame, so songs keep their tempo, and some of its speeds are scaled. `F8` switches the
   display between 50 and 60 Hz (AGA shows either on any Amiga, if the monitor takes it), and
   the game's rate with it.
@@ -173,8 +173,9 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   (the game keeps RAM pointers as words), which AmigaDOS cannot do, so `RAMBASE` is a hunk of
   its own: `amiga/tools/ramrel.py` lists every place that holds its address, and at start the
   game takes an aligned block (in fast RAM if there is some) and moves those addresses there.
-- Writes to the video chip ports go to the emulated VDP (`vdp.asm`): VRAM, CRAM and VSRAM in
-  memory, and DMA, fills and copies done by the CPU. Writes also mark which tiles changed. The
+- The cells and tiles the game writes to the video chip's memory (VRAM) through its ports,
+  DMA, fills and copies are kept in memory (`vdp.asm`), and the writes mark which tiles
+  changed. The
   players' sprite tiles (`Spritetiles`) are native instead: converted to planar rows in place
   at start, and a DMA from them copies nothing, it only notes where each tile's data is (the
   renderer takes it from there). The test harness rebuilds those tiles from
@@ -196,7 +197,12 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 hands its commands to `sound.asm` instead of a Z80: its command buffer, a PCM sound's start,
 rate and volume. The Z80 program, the Z80 bus and reset handshakes, the pad port readers
 (the pads are read by `input.asm`) and the PSG crowd noise are left out, and those ports'
-addresses are left undefined so that no use of them is missed. The save RAM too.
+addresses are left undefined so that no use of them is missed. The save RAM too. Where the
+game set the video chip's registers, colour RAM and scroll RAM, it sets the picture's layout
+in `display.asm` instead, which the renderer draws from: the 64 colours (the fades step them
+there), each plane's scroll (the title screen's by lines), the screen's width (256 or 320),
+the planes' size, the rows of the window, and at each screen's start (`setVram`) where its
+cells are. A 50 Hz rate is told to the game by `hal_pal50`.
 
 The hardware layer:
 
@@ -211,7 +217,8 @@ The hardware layer:
 - `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
   on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
   loads and saves `NHL94.sav`.
-- `render.asm`: draws the emulated VDP state in 64 colours on 6 interleaved bitplanes. Tiles are
+- `render.asm`: draws the game's cells and tiles (`vdp.asm`) with the layout it set
+  (`display.asm`) in 64 colours on 6 interleaved bitplanes. Tiles are
   cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the
   whole of plane B (512 x 256, its top 224 lines twice for the vertical wrap) and the display
   hardware scrolls it. A rink cell whose entry or tile changes is converted into the bitmap
@@ -289,7 +296,7 @@ The hardware layer:
   screen the harness runs through; its 84 KB buffer is the memory of the fast path's blit lists
   and object image table, which are given up for a frame drawn by it). The copper sets the 64 colours
   and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
-  the VDP registers, scroll and sprite list taken when it starts, with the changed tiles
+  the layout, scroll and sprite list taken when it starts, with the changed tiles
   converted in the same game frame (the game runs several of its frames meanwhile; without it,
   players could be from a later game frame than the rink). With many tiles to convert (a
   screen being set up) the game's frame is let go on after the first 64, so that none is lost
@@ -409,7 +416,9 @@ It plays through the attract mode and into a game by pressing Start. At a few fr
 argument lists others) it compares the Amiga screen, taken from the copper list, with a
 reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ. A screen can
 lag one VDP update behind when the game changes it mid frame (text being printed, a mode
-change). `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
+change). The reference renderer reads a Genesis video chip's registers and scroll table, which
+the game no longer writes (`display.asm`): it is behind in scroll and mode, and `golden.sh`
+(below) is the check now. `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles (the instruction running then), which
 `amiga/harness/rdcost.py` sums. `NHL_A32=1` reports each instruction that reads or writes an
 address with a top byte (a stock A1200's 68EC020 has 24 address lines and ignores it, a 68030
@@ -451,8 +460,8 @@ game's random numbers depend on its timing).
 
 `amiga/harness/golden.sh record GAME DIR` plays scripted sessions in the harness's
 deterministic mode (attract mode; Start every 120 frames through the menus into a game; a long
-game; a tour of the pause menu's items) and keeps the Amiga screen at many frames (1710 in
-all); `golden.sh check GAME DIR` plays them again with another build and reports every screen
+game; a tour of the pause menu's items; the playoff tree and its matchups) and keeps the
+Amiga screen at many frames (2230 in all); `golden.sh check GAME DIR` plays them again with another build and reports every screen
 that is not the same pixel for pixel. A change that should not show (a rewrite of how the game
 gets its picture or sound to the Amiga) is checked against a build from before it this way.
 

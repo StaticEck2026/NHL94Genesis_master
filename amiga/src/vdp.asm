@@ -1,6 +1,7 @@
-;	The Genesis video chip (VDP) as memory. The game's port writes (hal_macros.i) land here:
-;	the registers, VRAM, CRAM and VSRAM are kept in RAM and the renderer (render.asm) draws the
-;	screen from them each frame.
+;	The cells and tiles the game writes as the Genesis wrote its video chip's memory (VRAM),
+;	through its ports (hal_macros.i), DMA, fills and copies: kept here, and the renderer
+;	(render.asm) draws from them. The colours, scroll, screen width and window are the game's
+;	settings in display.asm.
 
 VRAMSIZE	equ	$10000
 SPRTSIZE	equ	frameSprData-Spritetiles	;the players' sprite tiles: planar (rd_init), not sent
@@ -10,15 +11,9 @@ VSLACK		equ	$400			;writes that run past the end of a memory land here
 	section	bss,bss
 	cnop	0,4
 vdp_vram	ds.b	VRAMSIZE+VSLACK
-vdp_cram	ds.w	64			;9-bit Genesis colours, ----bbb-ggg-rrr-
-		ds.b	VSLACK
-vdp_vsram	ds.w	40
-		ds.b	VSLACK
-vdp_dummy	ds.b	VSLACK			;target of commands we do not emulate
-vdp_regs	ds.b	32
+vdp_dummy	ds.b	VSLACK			;target of commands for other than VRAM (none)
 vdp_pending	ds.w	1			;first word of a split address command waiting
 vdp_first	ds.w	1
-vdp_cramgen	ds.l	1			;bumped on every CRAM change the renderer must pick up
 vdp_wmap	ds.l	64			;per 32 byte block of VRAM: a data port write began there
 vdp_tsrc	ds.l	2048			;per tile: the address in the program its data was sent
 						;from by a DMA, 0 if it was written otherwise
@@ -26,9 +21,6 @@ hal_vdp_ptr	ds.l	1			;address the next data port access uses
 hal_ctl_tmp	ds.l	1			;control word / long being written
 
 	section	game,code
-
-hal_vdp_status	dc.w	$3400			;status port: NTSC (bit 0 clear; set at 50 Hz,
-						;hal_set_rate), no DMA busy (bit 1)
 
 ;	Control port word write. hal_ctl_tmp = the word. Keeps every register and the flags.
 hal_vdpctl_w
@@ -40,11 +32,9 @@ hal_vdpctl_w
 	move.w	d0,d1
 	andi.w	#$C000,d1
 	cmpi.w	#$8000,d1
-	beq	.reg
+	beq	.x				;(a register: none is written, display.asm)
 	move.w	d0,(vdp_first).l		;first half of an address command
 	move.w	#1,(vdp_pending).l
-	bra	.x
-.reg	bsr	vdp_regwrite
 	bra	.x
 .second	clr.w	(vdp_pending).l
 	swap	d0
@@ -65,15 +55,10 @@ hal_vdpctl_l
 	andi.w	#$C000,d1
 	cmpi.w	#$8000,d1
 	bne	.cmd
-	swap	d0				;two register writes in one long (or a register, then
-	bsr	vdp_regwrite			;the first half of a command)
-	swap	d0
-	move.w	d0,d1
-	andi.w	#$C000,d1
+	move.w	d0,d1				;(no register is written: display.asm) a register, then
+	andi.w	#$C000,d1			;the first half of a command?
 	cmpi.w	#$8000,d1
-	bne	.half
-	bsr	vdp_regwrite
-	bra	.x
+	beq	.x
 .half	move.w	d0,(vdp_first).l
 	move.w	#1,(vdp_pending).l
 	bra	.x
@@ -81,22 +66,10 @@ hal_vdpctl_l
 .x	movem.l	(sp)+,d0-d1
 	rtr
 
-;	d0.w = $8rvv: register r = vv
-vdp_regwrite
-	addq.l	#1,(hal_vdp_gen).l		;the renderer draws again
-	move.l	a0,-(sp)
-	move.w	d0,d1
-	lsr.w	#8,d1
-	andi.w	#$1F,d1
-	lea	(vdp_regs).l,a0
-	move.b	d0,(a0,d1.w)
-	movea.l	(sp)+,a0
-	rts
-
 ;	d0.l = address command: CD1-0 in bits 31-30, A13-0 in bits 29-16, CD5-2 in bits 7-4,
 ;	A15-14 in bits 1-0. Points hal_vdp_ptr at the memory and address it selects.
 vdp_command
-	addq.l	#1,(hal_vdp_gen).l
+	addq.l	#1,(ds_gen).l
 	movem.l	d2/a0,-(sp)
 	move.l	d0,d1
 	swap	d1
@@ -117,15 +90,7 @@ vdp_command
 	or.w	d0,d2				;d2 = CD3-0
 	cmpi.w	#1,d2
 	bls	.vram				;0 read, 1 write
-	cmpi.w	#3,d2
-	beq	.cram
-	cmpi.w	#8,d2
-	beq	.cram
-	cmpi.w	#4,d2
-	beq	.vsram
-	cmpi.w	#5,d2
-	beq	.vsram
-	lea	(vdp_dummy).l,a0
+	lea	(vdp_dummy).l,a0		;(colours and scroll: display.asm)
 	bra	.set
 .vram	lea	(vdp_vram).l,a0
 	bclr	#31,d1
@@ -138,14 +103,6 @@ vdp_command
 	bfset	(vdp_wmap).l{d2:1}
 .vr	adda.l	d1,a0
 	bra	.set
-.cram	andi.w	#$7F,d1
-	lea	(vdp_cram).l,a0
-	adda.w	d1,a0
-	addq.l	#1,(vdp_cramgen).l
-	bra	.set
-.vsram	andi.w	#$7F,d1
-	lea	(vdp_vsram).l,a0
-	adda.w	d1,a0
 .set	move.l	a0,(hal_vdp_ptr).l
 	movem.l	(sp)+,d2/a0
 	rts
@@ -166,7 +123,7 @@ hal_vdp_dma
 	move.w	d1,-(sp)
 	andi.w	#31,(sp)+			;(whole tiles)
 	bne.s	.cp
-	addq.l	#1,(hal_vdp_gen).l
+	addq.l	#1,(ds_gen).l
 	rts
 .cp
 	IFD	STATS
@@ -181,7 +138,7 @@ hal_vdp_dma
 .st	movem.l	(sp)+,d0
 	ENDC
 	movem.l	d0-d4/a0-a2,-(sp)
-	addq.l	#1,(hal_vdp_gen).l
+	addq.l	#1,(ds_gen).l
 	lea	(vdp_vram).l,a1
 	andi.l	#$FFFF,d1
 	adda.l	d1,a1
@@ -319,7 +276,7 @@ hal_vdp_fill
 .x	movem.l	(sp)+,d0-d1/a0
 	rts
 
-;	Clear the VDP memories and registers.
+;	Clear VRAM.
 hal_vdp_init
 	movem.l	d0/a0,-(sp)
 	lea	(vdp_vram).l,a0
@@ -327,10 +284,6 @@ hal_vdp_init
 .c	clr.l	(a0)+
 	subq.l	#1,d0
 	bpl	.c
-	lea	(vdp_cram).l,a0
-	move.w	#(128+VSLACK+80+VSLACK+VSLACK+32)/4-1,d0
-.c2	clr.l	(a0)+
-	dbf	d0,.c2
 	clr.w	(vdp_pending).l
 	move.l	#vdp_dummy,(hal_vdp_ptr).l
 	movem.l	(sp)+,d0/a0

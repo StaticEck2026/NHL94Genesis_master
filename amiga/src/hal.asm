@@ -67,16 +67,16 @@ hal_header
 ;	underflow). Keeps all but d0.
 hal_set_rate
 	move.l	d1,-(sp)
-	; the game takes a 50 Hz rate for a PAL console's (the VDP status's PAL bit, read at its
-	; start): its sound driver then runs the music an extra step every 6th frame (PALflag),
-	; so songs keep their tempo, and some of its speeds are scaled (PalMode); F8 changes
-	; them with the rate
-	bclr	#0,(hal_vdp_status+1).l
+	; the game takes a 50 Hz rate for a PAL console's (hal_pal50, read at its start): its
+	; sound driver then runs the music an extra step every 6th frame (PALflag), so songs
+	; keep their tempo, and some of its speeds are scaled (PalMode); F8 changes them with
+	; the rate
+	clr.w	(hal_pal50).l
 	bclr	#0,(PALflag).l
 	clr.w	(PalMode).l
 	cmpi.w	#50,(hal_hz).l
 	bne.s	.ntsc
-	bset	#0,(hal_vdp_status+1).l
+	move.w	#1,(hal_pal50).l
 	bset	#0,(PALflag).l
 	move.w	#1,(PalMode).l
 .ntsc	move.l	#CIA_CLOCK,d0
@@ -98,11 +98,12 @@ hal_set_rate
 	rts
 
 ;	Debug block, read by the test harness:
-;	+0  vdp_regs  +4 vdp_vram  +8 vdp_cram  +12 vdp_vsram  +16 exception info (16 longs)
+;	+0  the renderer's registers (rd_regs)  +4 vdp_vram  +8 colours (ds_pal)  +12 vertical scroll
+;	(rd_vs)  +16 exception info (16 longs)
 ;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
 ;	+80 chip buffers (the harness' blitter statistics by kind)
 hal_debug
-	dc.l	vdp_regs,vdp_vram,vdp_cram,vdp_vsram,hal_exc_info,hal_frames,hal_padstate
+	dc.l	rd_regs,vdp_vram,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
 	dc.l	rd_count,chunky
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
@@ -739,6 +740,8 @@ hal_pace	dc.l	RDPACE			;1: a new frame each game tick if there is time for it
 						;each shown for 2 vertical blanks at least (a steady 25
 						;or 30 a second); F6
 hal_hz		dc.w	0			;game frames a second (0: from the display)
+hal_pal50	dc.w	0			;bit 0: the game runs at 50 Hz (a PAL console's rate: the
+						;game reads it at its start, hal_set_rate)
 
 	section	bss,bss
 	cnop	0,4

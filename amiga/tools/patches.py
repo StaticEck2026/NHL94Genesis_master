@@ -243,10 +243,77 @@ P('video94.asm', """	movem.l	d0-d4/a0-a2,-(sp)
 	jsr	(hal_vdp_dirty).l		;d0 = words, d1 = vram address
 	exg	d1,d0
 	movea.l	a0,a2""")
-P('video94.asm', """	move.l	#0,(a0)					;playfield 1/2
-	move.w	(sp)+,(disflags).w""", """	move.l	#0,(a0)					;playfield 1/2
-	jsr	(hal_vdp_dirty_all).l		;all of VRAM was cleared
-	move.w	(sp)+,(disflags).w""")
+
+# ---------------------------------------------------------------------------------------------
+# The picture's layout: colours, scroll, screen width, plane size and window are set in
+# display.asm's state (the renderer draws from it), where the Genesis wrote its video chip's
+# registers, colour RAM and scroll RAM. The cells and tiles are still written to VRAM.
+P('hockey94.asm', '\tmove.w\t(Vctrl).l,d0\n', '\tmove.w\t(hal_pal50).l,d0\t\t\t;(hal.asm: bit 0 set at 50 Hz)\n')
+_NOWIN = '\tsf\t(ds_win).l\t\t\t;(display.asm: no window)\n\taddq.l\t#1,(ds_gen).l\n'
+P('hockey94.asm', '.hor\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_WINY,Vctrl-Vdata(a0)\n',
+  '.hor\n' + _NOWIN)
+P('hockey94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\t;playfield 3 width\n'
+  '\tmove.w\t#VDPR_WINY+$1C,Vctrl-Vdata(a0)\t;playfield 3 height\n',
+  '\tmove.b\t#$1C,(ds_win).l\t\t;(display.asm: the window, 28 rows)\n\taddq.l\t#1,(ds_gen).l\n')
+P('penalty94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\t;window H position 0\n'
+  '\tmove.w\t#VDPR_WINY,Vctrl-Vdata(a0)\t;window V position 0\n', _NOWIN)
+P('setup94.asm', '\tmovea.l\t#Vctrl,a0\n\tmove.w\t#VDPR_WINY+$02,(a0)\n',
+  '\tmove.b\t#$02,(ds_win).l\t\t;(display.asm: the window, 2 rows)\n\taddq.l\t#1,(ds_gen).l\n')
+P('title94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_WINY+$17,Vctrl-Vdata(a0)\n'
+  '\tmove.w\t#VDPR_MODE3+$03,Vctrl-Vdata(a0)\n',
+  '\tmove.b\t#$17,(ds_win).l\t\t;(display.asm: the window, 23 rows; scrolled by lines)\n'
+  '\tst\t(ds_lines).l\n\taddq.l\t#1,(ds_gen).l\n')
+P('title94.asm', '\tmove.w\t(VSCRLPM).w,d1\n\tmove.w\t#$1C0,d0\n\tjsr\t(DoDMA).l\n\tmovea.l\t#Vdata,a0\n'
+  '\tmove.l\t#VSRAM_W,Vctrl-Vdata(a0)\n\tmove.w\t(Vscroll).w,(a0)\n',
+  '\tjsr\t(ds_hlines).l\t\t\t;(display.asm: each line\'s scroll)\n'
+  '\tmove.w\t(Vscroll).w,(ds_vs).l\t\t;(plane A\'s vertical scroll)\n')
+P('data94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_WINY+$06,Vctrl-Vdata(a0)\n'
+  '\tmove.w\t#VDPR_AUTOINC+$02,Vctrl-Vdata(a0)\n\tmove.l\t#CRAM_W+($20<<16),Vctrl-Vdata(a0)\t;cram write $20 (92 $C0060000)\n',
+  '\tmove.b\t#$06,(ds_win).l\t\t;(display.asm: the window, 6 rows; colours 16-31)\n'
+  '\taddq.l\t#1,(ds_gen).l\n\tmovea.l\t#ds_pal+$20,a0\n')
+P('data94.asm', '.pal\n\tmove.l\t(a1)+,(a0)\n\tdbf\td0,.pal\n', '.pal\n\tmove.l\t(a1)+,(a0)+\n\tdbf\td0,.pal\n'
+  '\taddq.l\t#1,(ds_palgen).l\n')
+# (plane B's vertical scroll in the stats screens)
+for _rel, _n in (('stats94.asm', 5), ('period94.asm', 1)):
+    P(_rel, r'\tmovea\.l\t#Vdata,a0\n\tmove\.l\t#VSRAM_W\+\(2<<16\),Vctrl-Vdata\(a0\)\n'
+      r'(\t[^\n]*\n\tadd\.w\t\(VertLineScrolling\)\.w,d0\n)\tmove\.w\td0,\(a0\)\n',
+      r"\1\tmove.w\td0,(ds_vs+2).l\t\t;(display.asm: plane B's vertical scroll)\n\taddq.l\t#1,(ds_gen).l\n",
+      _n, regex=True)
+# (the stats screens: 320 pixels across, unscrolled; then back to the rink's 256)
+for _rel, _call in (('stats94.asm', 'bsr.w\tVmaddr'), ('cards94.asm', 'jsr\t(Vmaddr).l')):
+    P(_rel, '\tmove.w\t#VDPR_MODE4+$81,Vctrl-Vdata(a0)\n\tmove.w\t#6,(Map3col1).w\n\tmove.w\t#VDPR_HSCROLL,Vctrl-Vdata(a0)\n'
+      '\tclr.w\td0\n\t%s\n\tmove.l\t#0,(a0)\n' % _call,
+      '\tst\t(ds_wide).l\t\t\t;(display.asm: 320 pixels across, unscrolled)\n\tclr.l\t(ds_hs).l\n'
+      '\taddq.l\t#1,(ds_gen).l\n\tmove.w\t#6,(Map3col1).w\n\tclr.w\td0\n\t%s\n\tmove.l\t#0,(a0)\n' % _call)
+P('stats94.asm', '\tlsr.b\t#2,d0\n\tmove.w\td0,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_MODE4,Vctrl-Vdata(a0)\n',
+  '\tlsr.b\t#2,d0\n\tsf\t(ds_wide).l\t\t\t;(display.asm: 256 pixels across, unscrolled)\n\tclr.l\t(ds_hs).l\n'
+  '\taddq.l\t#1,(ds_gen).l\n')
+# (the game's: plane B's scroll; the playoff tree's: plane A's)
+P('display94.asm', '\tmove.w\t(Hscroll).w,(a0)\n\tmove.l\t#VSRAM_W+(2<<16),Vctrl-Vdata(a0)\t;vsram write, address 2\n'
+  '\tmove.w\t(Vscroll).w,(a0)\n',
+  '\tmove.w\t(Hscroll).w,(a0)\n\tmove.w\t(Hscroll).w,(ds_hs+2).l\t\t;(display.asm: plane B\'s scroll)\n'
+  '\tmove.w\t(Vscroll).w,(ds_vs+2).l\n\taddq.l\t#1,(ds_gen).l\n')
+P('setup94.asm', '\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(a0)\n',
+  '\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(a0)\n\tmove.w\td0,(ds_hs).l\t\t\t;(display.asm: plane A\'s scroll)\n'
+  '\taddq.l\t#1,(ds_gen).l\n')
+# (setVram: VRAM cleared, then the screen's layout from disflags, Map1col1, VmMAP1-3, VSPRITES)
+P('video94.asm', '\tmove.w\t#VDPR_AUTOINC+$02,(Vctrl).l\n', '')
+P('video94.asm', r'\tmove\.w\t#\$8C00,d0[^\n]*\n(?:[^\n]*\n)*?\tmove\.l\t#0,\(a0\)\t+;playfield 1/2\n',
+  '\tjsr\t(hal_vdp_dirty_all).l\t\t;all of VRAM was cleared\n\tjsr\t(ds_setup).l\t\t\t;(display.asm: the screen\'s layout)\n',
+  1, regex=True)
+# (colours: the fade steps and the copy of palfadenew)
+P('video94.asm', '\tmovea.l\t#Vdata,a0\n\tclr.w\td6\n.top\n\tmove.w\td3,d2\n\tmove.w\td6,d0\n\tswap\td0\n\tmove.w\t#$20,d0\n'
+  '\tmove.l\td0,Vctrl-Vdata(a0)\n\tmove.w\t(a0),d7\n',
+  '\tmovea.l\t#ds_pal,a0\t\t\t;(display.asm: the colours)\n\tclr.w\td6\n.top\n\tmove.w\td3,d2\n\tmove.w\t(a0,d6.w),d7\n')
+P('video94.asm', '\tmove.l\t#$C000,d0\n\tmove.b\td6,d0\n\tswap\td0\n\tmove.l\td0,Vctrl-Vdata(a0)\n\tmove.w\td7,(a0)\n'
+  '.next\n\taddq.w\t#2,d6\n\tcmp.w\t#$80,d6\n\tbne.s\t.top\n\trts\n',
+  '\tmove.w\td7,(a0,d6.w)\n.next\n\taddq.w\t#2,d6\n\tcmp.w\t#$80,d6\n\tbne.s\t.top\n\taddq.l\t#1,(ds_palgen).l\n\trts\n')
+P('video94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.l\t#CRAM_W,Vctrl-Vdata(a0)\n\tmoveq\t#$1F,d0\n.0\n\tmove.l\t(a1)+,(a0)\n\tdbf\td0,.0\n',
+  '\tjsr\t(ds_colours).l\t\t\t;(display.asm)\n')
+P('sram94.asm', '\tmove.l\t#CRAM_W,(Vctrl).l\t\t;cram write 0: the background colour\n\tmove.w\td0,d1\n\tand.w\td3,d1\n'
+  '\tmove.w\td1,(Vdata).l\n',
+  '\tmove.w\td0,d1\n\tand.w\td3,d1\n\tmove.w\td1,(ds_pal).l\t\t\t;(display.asm: the backdrop colour)\n'
+  '\taddq.l\t#1,(ds_palgen).l\n')
 
 # The animated crowd in the stands (two sprite frames, showcrowd) is left out: in play it is
 # about a tenth of the renderer's time. The penalty box players are still drawn. CROWD=1 keeps it.

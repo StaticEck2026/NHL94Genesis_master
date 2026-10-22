@@ -1,5 +1,5 @@
-;	Renderer: draws the emulated Genesis VDP (vdp.asm) on the AGA display, 6 bitplanes
-;	(the 64 CRAM colours), interleaved, double buffered.
+;	Renderer: draws the game's cells and tiles (vdp.asm) with the layout it set (display.asm)
+;	on the AGA display, 6 bitplanes (the 64 colours), interleaved, triple buffered.
 ;
 ;	Fast path (full screen scroll, the game screens):
 ;	  * tiles are kept converted to planar form (tile cache, both horizontal orientations), and
@@ -114,7 +114,7 @@ rd_brow0	ds.w	1			;buffer row of screen line 0
 rd_scroll	ds.w	1			;scroll mode this frame
 rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
-rd_regs		ds.b	32			;the VDP registers (rd_snapshot)
+rd_regs		ds.b	32			;the layout as video chip register values (rd_regs_make)
 rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	8*SCSLOTS		;sprite image cache (rd_sc_get)
@@ -142,8 +142,7 @@ rd_shownvb	ds.l	NBUF			;per buffer: rd_vblanks when its copper list was set
 rd_lastframe	ds.l	1
 rd_lastgen	ds.l	2
 rd_count	ds.l	1			;frames drawn
-rd_palgen	ds.l	1			;the CRAM changes and registers the colours are of
-rd_palkey	ds.l	1
+rd_palgen	ds.l	1			;the colour changes (ds_palgen) rd_colours are of
 rd_colgen	ds.l	1			;changed when rd_colours change
 rd_copgen	ds.l	2*NBUF			;per buffer: rd_colgen, rd_hudgen its copper list's
 						;colours are of
@@ -360,7 +359,7 @@ rd_init
 ;	longer hold the data a DMA sent, vdp_tsrc).
 hal_vdp_dirty
 	movem.l	d0-d2/a0-a1,-(sp)
-	addq.l	#1,(hal_vdp_gen).l
+	addq.l	#1,(ds_gen).l
 	andi.l	#$FFFF,d0
 	beq	.x
 	andi.l	#$FFFF,d1
@@ -386,7 +385,7 @@ hal_vdp_dirty
 hal_vdp_dirty_all
 rd_dirty_all
 	movem.l	d0/a0,-(sp)
-	addq.l	#1,(hal_vdp_gen).l
+	addq.l	#1,(ds_gen).l
 	lea	(tc_dirty).l,a0
 	moveq	#63,d0
 .c	move.l	#-1,(a0)+
@@ -666,12 +665,12 @@ rd_rev8
 	dc.b	$0F,$8F,$4F,$CF,$2F,$AF,$6F,$EF,$1F,$9F,$5F,$DF,$3F,$BF,$7F,$FF
 
 ;	------------------------------------------------------------------------------------------
-;	One frame into the back buffer, then shown. Skipped when nothing in the VDP changed for two
-;	frames.
+;	One frame into the back buffer, then shown. Skipped when nothing changed for two frames (the
+;	layout, cells, tiles and colours: ds_gen, ds_palgen).
 rd_frame
 	movem.l	d0-d7/a0-a6,-(sp)
-	move.l	(hal_vdp_gen).l,d0
-	add.l	(vdp_cramgen).l,d0
+	move.l	(ds_gen).l,d0
+	add.l	(ds_palgen).l,d0
 	cmp.l	(rd_lastgen).l,d0
 	bne	.changed
 	cmp.l	(rd_lastgen+4).l,d0
@@ -3440,63 +3439,40 @@ rd_blitrect
 	rts
 
 ;	------------------------------------------------------------------------------------------
-;	The VDP state that places the picture, taken at once (no game frame can run in between):
-;	the registers, the plane A / B scroll, the sprite list. A frame takes the game several of
-;	its frames to draw; drawn from this, its planes and sprites are all of the same one.
+;	The state that places the picture, taken at once (no game frame can run in between): the
+;	layout (display.asm, as rd_regs), the plane A / B scroll, the sprite list. A frame takes
+;	the game several of its frames to draw; drawn from this, its planes and sprites are all of
+;	the same one.
 rd_snapshot
 	move	sr,-(sp)
 	ori	#$0700,sr
-	lea	(vdp_regs).l,a0
-	lea	(rd_regs).l,a1
-	moveq	#32/4-1,d0
-.r	move.l	(a0)+,(a1)+
-	dbf	d0,.r
-	move.l	(vdp_vsram).l,(rd_vs).l		;full screen vertical scroll: A, B
-	moveq	#0,d0
-	move.b	(rd_regs+13).l,d0
-	andi.w	#$3F,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0
-	lea	(vdp_vram).l,a0
-	move.l	(a0,d0.l),(rd_hs).l		;full screen horizontal scroll: A, B
-	; scrolled by lines or cells, but all of them alike (the title screen once its picture
-	; has slid in): as the whole screen (rd_hsuni), not the per line fallback
+	bsr	rd_regs_make
+	move.l	(ds_vs).l,(rd_vs).l		;full screen vertical scroll: A, B
+	move.l	(ds_hs).l,(rd_hs).l		;full screen horizontal scroll: A, B
+	; scrolled by lines, but all of them alike (the title screen once its picture has slid
+	; in): as the whole screen (rd_hsuni), not the per line fallback
 	sf	(rd_hsuni).l
 	sf	(rd_hslb).l
-	move.b	(rd_regs+11).l,d1
-	andi.w	#3,d1
+	tst.b	(ds_lines).l
 	beq.s	.hu
-	adda.l	d0,a0
+	lea	(ds_hs).l,a0
 	move.l	(a0),d2
-	moveq	#4,d3				;(lines, mode 3: a long each)
 	move.w	#SCRH-1,d1
-	btst	#0,(rd_regs+11).l
-	bne.s	.hl
-	moveq	#32,d3				;(cells, mode 2: a long each 8 lines)
-	moveq	#SCRH/8-1,d1
-.hl	cmp.l	(a0),d2
+.hl	cmp.l	(a0)+,d2
 	bne.s	.hb
-	adda.l	d3,a0
 	dbf	d1,.hl
 	st	(rd_hsuni).l
 	bra.s	.hu
 .hb	; plane A's all alike, B's not (the title screen's logos sliding in): B's each line
 	; (rd_hsb), and as the whole screen's the last line's (rd_bline)
-	lea	(vdp_vram).l,a0
-	adda.l	d0,a0
+	lea	(ds_hs).l,a0
 	lea	(rd_hsb).l,a1
 	swap	d2				;(plane A's)
-	moveq	#0,d3				;line
-.hbl	move.w	d3,d1
-	btst	#0,(rd_regs+11).l
-	bne.s	.hbe
-	andi.w	#$F8,d1				;(cells: its cell row's)
-.hbe	cmp.w	(a0,d1.w*4),d2
+	move.w	#SCRH-1,d3
+.hbl	cmp.w	(a0)+,d2
 	bne.s	.hu
-	move.w	2(a0,d1.w*4),(a1)+
-	addq.w	#1,d3
-	cmpi.w	#SCRH,d3
-	blo.s	.hbl
+	move.w	(a0)+,(a1)+
+	dbf	d3,.hbl
 	move.w	-2(a1),(rd_hs+2).l
 	st	(rd_hslb).l
 .hu	; planes 128 cells wide by 32 (the title screen's, for its picture to slide in) whose
@@ -3565,6 +3541,49 @@ rd_snapshot
 .nk	bsr	rd_collect_sprites
 	bsr	rd_obj_mark
 	move	(sp)+,sr
+	rts
+
+;	The layout (display.asm) as the values of the Genesis video chip's registers the renderer
+;	decodes (rd_regs): 2 plane A's cells (address / $400), 3 the window's (/ $400), 4 plane
+;	B's (/ $2000), 5 the sprite list (/ $200), 11 scrolled by lines (3) or whole (0), 12
+;	320 pixels across ($81) or 256 (0), 16 planes 128 x 32 ($03) or 64 x 32 ($01), 17 and 18
+;	the window (rows from the top). Uses d0/a1.
+rd_regs_make
+	lea	(rd_regs).l,a1
+	clr.l	(a1)
+	clr.l	4(a1)
+	clr.l	8(a1)
+	clr.l	12(a1)
+	clr.l	16(a1)
+	move.w	(ds_nta).l,d0
+	lsr.w	#8,d0
+	lsr.b	#2,d0
+	andi.b	#$38,d0
+	move.b	d0,2(a1)
+	move.w	(ds_ntw).l,d0
+	lsr.w	#8,d0
+	lsr.b	#2,d0
+	andi.b	#$3E,d0
+	move.b	d0,3(a1)
+	move.w	(ds_ntb).l,d0
+	rol.w	#3,d0
+	andi.b	#7,d0
+	move.b	d0,4(a1)
+	move.w	(ds_sat).l,d0
+	lsr.w	#8,d0
+	lsr.b	#1,d0
+	move.b	d0,5(a1)
+	tst.b	(ds_lines).l
+	beq.s	.l
+	move.b	#$03,11(a1)
+.l	tst.b	(ds_wide).l
+	beq.s	.w
+	move.b	#$81,12(a1)
+.w	move.b	#$01,16(a1)
+	tst.b	(ds_big).l
+	beq.s	.b
+	move.b	#$03,16(a1)
+.b	move.b	(ds_win).l,18(a1)
 	rts
 
 ;	The sprite list, followed from sprite 0 through the links.
@@ -8836,7 +8855,6 @@ rd_sh		ds.w	1
 rd_sor		ds.w	1
 rd_c2pw		ds.w	1
 rd_c2py		ds.w	1
-hal_vdp_gen	ds.l	1
 
 	section	game,code
 
@@ -8905,25 +8923,15 @@ rd_line
 	move.w	d7,d0
 	mulu.w	#CHPITCH,d0
 	adda.l	d0,a6
-	lea	(vdp_regs).l,a5
-	moveq	#0,d0
-	move.b	13(a5),d0
-	andi.w	#$3F,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0				;hscroll table
-	move.b	11(a5),d1
-	andi.w	#3,d1
-	beq	.hsdone
-	move.w	d7,d2
-	cmpi.w	#2,d1
-	bne	.hsline
-	andi.w	#$FFF8,d2
-.hsline	andi.l	#$FFFF,d2
-	lsl.l	#2,d2
-	add.l	d2,d0
-.hsdone	lea	(vdp_vram).l,a0
-	andi.l	#$FFFF,d0
-	move.l	(a0,d0.l),d6			;A scroll : B scroll
+	lea	(rd_regs).l,a5
+	lea	(ds_hs).l,a0			;the whole screen's scroll, or this line's
+	btst	#0,11(a5)
+	beq.s	.hsdone
+	move.w	d7,d0
+	lsl.w	#2,d0
+	adda.w	d0,a0
+.hsdone	move.l	(a0),d6				;A scroll : B scroll
+	lea	(vdp_vram).l,a0
 	moveq	#0,d0
 	move.b	4(a5),d0
 	andi.w	#7,d0
@@ -9045,7 +9053,7 @@ rd_plane
 	btst	#5,d4
 	beq	.ha
 	moveq	#7,d3
-.ha	lea	(vdp_vsram).l,a1
+.ha	lea	(ds_vs).l,a1
 	move.w	(a1,d2.w),d2
 	add.w	d7,d2
 	moveq	#3,d4
@@ -9364,22 +9372,16 @@ rd_c2p
 	rts
 
 ;	==========================================================================================
-;	Colours: CRAM ----bbb-ggg-rrr- to Amiga $0RGB. 0, 16, 32 and 48 all show the backdrop.
+;	Colours: the game's ----bbb-ggg-rrr- (display.asm) to Amiga $0RGB. 0, 16, 32 and 48 all
+;	show the backdrop, colour 0.
 rd_palette
-	; the same colours as last time? (CRAM, backdrop colour, display on)
-	move.l	(vdp_cramgen).l,d0
-	move.w	(vdp_regs).l,d1			;registers 0, 1
-	swap	d1
-	move.b	(vdp_regs+7).l,d1
+	move.l	(ds_palgen).l,d0		;the same colours as last time?
 	cmp.l	(rd_palgen).l,d0
-	bne.s	.new
-	cmp.l	(rd_palkey).l,d1
 	beq	.on
-.new	move.l	d0,(rd_palgen).l
+	move.l	d0,(rd_palgen).l
 	addq.l	#1,(rd_colgen).l
-	move.l	d1,(rd_palkey).l
 	movem.l	a3-a4,-(sp)
-	lea	(vdp_cram).l,a0
+	lea	(ds_pal).l,a0
 	lea	(rd_colours).l,a1
 	lea	(rd_colourslo).l,a2
 	lea	(rd_palh).l,a3
@@ -9397,26 +9399,14 @@ rd_palette
 	dbf	d0,.c
 	movem.l	(sp)+,a3-a4
 	; colour 0 of each palette line is the backdrop colour
-	moveq	#0,d0
-	move.b	(vdp_regs+7).l,d0
-	andi.w	#$3F,d0
 	lea	(rd_colours).l,a1
 	bsr.s	.bd
 	lea	(rd_colourslo).l,a1
-	bsr.s	.bd
-	btst	#6,(vdp_regs+1).l
-	bne	.on
-	lea	(rd_colours).l,a1		;display off: black
-	moveq	#63,d0
-.off	clr.l	(a1)+				;(both tables)
-	dbf	d0,.off
-.on	rts
-.bd	move.w	(a1,d0.w*2),d1
-	move.w	d1,(a1)
+.bd	move.w	(a1),d1
 	move.w	d1,32(a1)
 	move.w	d1,64(a1)
 	move.w	d1,96(a1)
-	rts
+.on	rts
 
 ;	Genesis colour d1 (CRAM: ----BBB-GGG-RRR-) -> AGA 24 bit colour: d2 = high nibbles ($0RGB),
 ;	d4 = low nibbles. The 8 levels are those the Genesis puts out (its DAC and video encoder
