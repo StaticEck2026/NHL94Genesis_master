@@ -4,9 +4,10 @@
 # with the Amiga screen saved at many frames. "record" keeps them in DIR as the reference;
 # "check" plays them again and reports each frame whose screen is not the same, pixel for pixel.
 # Sessions: attract (no input), menus (Start every 120 frames: title, setup, into a game, pauses),
-# game (Start until the game begins, then play), tour (in a game, each item of the pause menu).
+# game (Start until the game begins, then play), tour (in a game, each item of the pause menu),
+# playoffs (the setup screen set to the playoffs: the playoff tree, paged, then the matchups).
 MODE=$1; GAME=$2; DIR=$3; shift 3
-SESSIONS=${*:-attract menus game tour}
+SESSIONS=${*:-attract menus game tour playoffs}
 cd "$(dirname "$0")/../.." || exit 1
 pads() {    # "from step to": Start pressed for 10 frames every step frames
     P=""; for f in $(seq "$1" "$2" "$3"); do P="$P$f:80,$((f+10)):0,"; done; echo "${P%,}"
@@ -27,6 +28,7 @@ session() { # name: frames, shot step, pads
     menus)   echo "6000 20 $(pads 700 120 3000)" ;;
     game)    echo "16000 40 $(pads 700 120 1180)" ;;
     tour)    echo "14200 20 $(tour)" ;;
+    playoffs) echo "5200 10 700:80,710:0,2000:8,2006:0,2300:80,2310:0,2900:8,2906:0,3400:80,3410:0,3800:8,3806:0,4000:8,4006:0,4300:4,4306:0,4700:80,4710:0" ;;
     *)       echo "" ;;
     esac
 }
