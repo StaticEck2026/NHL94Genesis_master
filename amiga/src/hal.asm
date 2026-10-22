@@ -795,8 +795,8 @@ hal_vbtick	ds.b	1			;the game ticks come from the vertical blank
 hal_vbreq	ds.b	1			;(one asked for)
 hal_swpend	ds.b	1			;a context switch waits for an interrupt handler's end
 		cnop	0,4
-rend_stack	ds.b	16384
-rend_stack_top
+rend_stack	ds.b	4096			;(the most it held in long runs of the harness: some
+rend_stack_top					;360 bytes; a game tick switches to the game's stack)
 
 	section	chip,bss_c
 	IFD	MEMBENCH

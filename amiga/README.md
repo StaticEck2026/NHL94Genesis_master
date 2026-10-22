@@ -9,7 +9,7 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 
 - An Amiga with the AGA chipset (A1200, A4000, CD32 with a keyboard and fast RAM, or an emulator).
 - A 68020 or better. The renderer uses 68020 instructions.
-- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.7 MB of any memory (fast
+- 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.6 MB of any memory (fast
   RAM where there is some: its code, its data and the Genesis RAM window) and about 1.6 MB of
   chip RAM (and up to 256 KB more for sprite images if it is free: fewer are built again), so
   it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
@@ -281,7 +281,9 @@ The hardware layer:
   blitted back over what was drawn under them (found by moving the screen cells something low
   was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
   without waiting. A chunky renderer with
-  chunky-to-planar conversion covers line scroll and cell scroll. The copper sets the 64 colours
+  chunky-to-planar conversion covers line scroll and cell scroll (it is not needed by any
+  screen the harness runs through; its 84 KB buffer is the memory of the fast path's blit lists
+  and object image table, which are given up for a frame drawn by it). The copper sets the 64 colours
   and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
   the VDP registers, scroll and sprite list taken when it starts, with the changed tiles
   converted in the same game frame (the game runs several of its frames meanwhile; without it,

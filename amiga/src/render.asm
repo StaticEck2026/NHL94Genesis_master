@@ -80,7 +80,6 @@ rd_pftab	ds.l	256			;the same for the flipped tile
 rd_nibtab	ds.w	256			;chunky fallback: byte -> 2 pixel bytes
 rd_revtab	ds.w	256			;the same, swapped
 rd_attr		ds.l	8			;chunky fallback: pixel OR value by entry bits 15-13
-chunky		ds.b	CHPITCH*SCRH
 shB		ds.w	BMAX			;plane B name table as drawn in bmB
 rd_tlhead	ds.w	2048			;per tile: the first cell of plane B with it + 1 (0: none)
 rd_tlnext	ds.w	BMAX			;per cell: the next with its tile + 1
@@ -747,9 +746,22 @@ rd_frame
 	clr.w	(rd_brow0).l
 	bsr	rd_vsync
 	bsr	rd_chunky
+	bsr	rd_octab_clr			;(its buffer was the object image table's)
 .shown	bsr	rd_show
 	addq.l	#1,(rd_count).l
 .skip	movem.l	(sp)+,d0-d7/a0-a6
+	rts
+
+;	The object image table emptied (no image found in it: its memory was the chunky fallback's
+;	buffer). Uses d0/a0.
+rd_octab_clr
+	lea	(rd_octab).l,a0
+	move.w	#8*OBJSLOTS/4-1,d0
+.c	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	clr.l	(a0)+
+	dbf	d0,.c
 	rts
 
 ;	d0 = plane cells across, d1 = down (a5 = regs). Keeps the rest.
@@ -9913,7 +9925,17 @@ rd_ovlbg	ds.l	32			;its value at each band's last change (bands of 8
 						;lines from line -8)
 rd_ovlkey	ds.l	1			;(rd_ovl_blit)
 rd_tcb		ds.b	2048			;(rd_ovl_tilecells: tiles converted, as bytes)
+	cnop	0,4
+;	The chunky fallback's buffer (rd_chunky) is the memory of the blit lists and the object
+;	image table, which only the fast path uses: the lists are not known after a chunky frame
+;	(rd_op_invall) and the table is emptied after one (rd_octab_clr).
+chunky
 rd_oplists	ds.b	(NBUF+1)*OPMAX*OPREC		;blit lists (rd_op_end)
+rd_octab	ds.l	8*OBJSLOTS		;object images: $10000 + key, 0, ring place, image, box (4
+						;words), offset from the first sprite (x, y), cells across, down
+	IFLT	(NBUF+1)*OPMAX*OPREC+8*OBJSLOTS*4-CHPITCH*SCRH
+	FAIL	"the chunky buffer is larger than the tables it shares"
+	ENDC
 rd_opold	ds.l	NBUF				;per buffer: the list of its last frame,
 rd_opoldn	ds.w	NBUF				;its blits (-1: not known)
 rd_opnew	ds.l	1				;the list being made
@@ -9982,8 +10004,6 @@ rd_opc		ds.b	12*OBJPC		;per sprite: its tiles' source in Spritetiles (long),
 						;the first's (x, y words)
 rd_oscr		ds.b	56*64			;the image being built: lines of 7 rows of 8 bytes
 rd_opbuf	ds.b	20*32			;a sprite's lines unpacked (rd_obj_piece)
-rd_octab	ds.l	8*OBJSLOTS		;object images: $10000 + key, 0, ring place, image, box (4
-						;words), offset from the first sprite (x, y), cells across, down
 rd_r0		ds.w	1
 rd_r1		ds.w	1
 		cnop	0,4
