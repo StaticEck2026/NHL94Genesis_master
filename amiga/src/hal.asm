@@ -781,7 +781,7 @@ prof_ev		ds.l	PEVMAX			;events: code (top byte), CIA-B TOD
 	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
 hal_hv		ds.w	1			;(BENCH builds: the game's HVcount)
-hal_sram	ds.b	$4000			;the save RAM's odd bytes ($2000 bytes)
+hal_sram	ds.b	$2000			;the save RAM (the cartridge's battery RAM)
 ctx_game_sp	ds.l	1
 ctx_rend_sp	ds.l	1
 ctx_cur		ds.b	1			;0 game, -1 renderer running

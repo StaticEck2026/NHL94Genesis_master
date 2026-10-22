@@ -227,8 +227,49 @@ replace_routine('fourway94.asm', 'Detect4WayPlay', '''\tmove.w\t#0,(FourWayPlay)
 \trts
 ''')
 
-# Save RAM: the cartridge SRAM ($200000, odd bytes) is a buffer the loader fills from disk.
-P('sram94.asm', '#$200000', '#hal_sram', None)
+# Save RAM: the cartridge's battery RAM (its $2000 bytes the odd bytes at $200000) is a buffer
+# of $2000 bytes (hal_sram), read from and written to the save file (os.asm). The power-on tests
+# of the battery RAM (Start+A+C or Start+B+C held) are left out.
+replace_routine('sram94.asm', 'InitSaveRAM', '''\tmove.l\t#VBcount,(VBint).l
+\tmove\t#$2500,sr
+\tclr.w\t(ValidSRAM).w\t\t\t;good until checked
+\tmoveq\t#0,d0
+\tmove.l\t#$2000,d1
+\tmovea.l\t#M68K_RAM,a0
+\tbsr.w\tReadSRAM\t\t\t;the save RAM to RAM
+\tbsr.w\tValidateSRAM
+\ttst.w\t(ValidSRAM).w
+\tbpl.w\t.ex
+\tbsr.w\tClearSRAM
+\tmoveq\t#0,d0
+\tmove.l\t#$2000,d1
+\tmovea.l\t#M68K_RAM,a0
+\tbsr.w\tReadSRAM
+\tbsr.w\tValidateSRAM
+.ex
+\trts
+''')
+remove_routine('sram94.asm', 'SRAMWaitVblank')
+replace_routine('sram94.asm', 'WriteSRAM', '''\tmovem.l\td0-d1/a0-a1,-(sp)\t\t;d1 bytes from a0 to save RAM byte d0
+\tmovea.l\t#hal_sram,a1
+\tadda.l\td0,a1
+\tsubq.l\t#1,d1
+.loop
+\tmove.b\t(a0)+,(a1)+
+\tdbf\td1,.loop
+\tmovem.l\t(sp)+,d0-d1/a0-a1
+\trts
+''')
+replace_routine('sram94.asm', 'ReadSRAM', '''\tmovem.l\td0-d1/a0-a1,-(sp)\t\t;d1 bytes from save RAM byte d0 to a0
+\tmovea.l\t#hal_sram,a1
+\tadda.l\td0,a1
+\tsubq.l\t#1,d1
+.loop
+\tmove.b\t(a1)+,(a0)+
+\tdbf\td1,.loop
+\tmovem.l\t(sp)+,d0-d1/a0-a1
+\trts
+''')
 
 # Video memory (vmem.asm): the game's tiles and cell maps, at the addresses it gives them. Its
 # Vmaddr returns a pointer to where an address's data goes (the converter makes its data port
@@ -323,10 +364,6 @@ P('video94.asm', '\tmove.l\t#$C000,d0\n\tmove.b\td6,d0\n\tswap\td0\n\tmove.l\td0
   '\tmove.w\td7,(a0,d6.w)\n.next\n\taddq.w\t#2,d6\n\tcmp.w\t#$80,d6\n\tbne.s\t.top\n\taddq.l\t#1,(ds_palgen).l\n\trts\n')
 P('video94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.l\t#CRAM_W,Vctrl-Vdata(a0)\n\tmoveq\t#$1F,d0\n.0\n\tmove.l\t(a1)+,(a0)\n\tdbf\td0,.0\n',
   '\tjsr\t(ds_colours).l\t\t\t;(display.asm)\n')
-P('sram94.asm', '\tmove.l\t#CRAM_W,(Vctrl).l\t\t;cram write 0: the background colour\n\tmove.w\td0,d1\n\tand.w\td3,d1\n'
-  '\tmove.w\td1,(Vdata).l\n',
-  '\tmove.w\td0,d1\n\tand.w\td3,d1\n\tmove.w\td1,(ds_pal).l\t\t\t;(display.asm: the backdrop colour)\n'
-  '\taddq.l\t#1,(ds_palgen).l\n')
 
 # The animated crowd in the stands (two sprite frames, showcrowd) is left out: in play it is
 # about a tenth of the renderer's time. The penalty box players are still drawn. CROWD=1 keeps it.

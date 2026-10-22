@@ -307,7 +307,7 @@ hal_exit
 
 	include	"request.i"
 
-;	The save file holds the cartridge's battery RAM ($2000 bytes, in the odd bytes of hal_sram).
+;	The save file holds the save RAM (hal_sram: the cartridge's battery RAM, $2000 bytes).
 os_load_sram
 	movem.l	d1-d4/a0-a1/a6,-(sp)
 	movea.l	(os_dos).l,a6
@@ -323,10 +323,9 @@ os_load_sram
 	cmpi.l	#$2000,d0
 	bne	.cl
 	lea	(os_iobuf).l,a0
-	lea	(hal_sram+1).l,a1
-	move.w	#$1FFF,d0
-.cp	move.b	(a0)+,(a1)
-	addq.l	#2,a1
+	lea	(hal_sram).l,a1
+	move.w	#$2000/4-1,d0
+.cp	move.l	(a0)+,(a1)+
 	dbf	d0,.cp
 	st	(os_sramok).l
 .cl	move.l	d4,d1
@@ -336,11 +335,10 @@ os_load_sram
 
 os_save_sram
 	movem.l	d1-d4/a0-a1/a6,-(sp)
-	lea	(hal_sram+1).l,a0
+	lea	(hal_sram).l,a0
 	lea	(os_iobuf).l,a1
-	move.w	#$1FFF,d0
-.cp	move.b	(a0),(a1)+
-	addq.l	#2,a0
+	move.w	#$2000/4-1,d0
+.cp	move.l	(a0)+,(a1)+
 	dbf	d0,.cp
 	movea.l	(os_dos).l,a6
 	move.l	#os_savename,d1

@@ -201,12 +201,16 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 hands its commands to `sound.asm` instead of a Z80: its command buffer, a PCM sound's start,
 rate and volume. The Z80 program, the Z80 bus and reset handshakes, the pad port readers
 (the pads are read by `input.asm`) and the PSG crowd noise are left out, and those ports'
-addresses are left undefined so that no use of them is missed. The save RAM too. Where the
-game set the video chip's registers, colour RAM and scroll RAM, it sets the picture's layout
-in `display.asm` instead, which the renderer draws from: the 64 colours (the fades step them
-there), each plane's scroll (the title screen's by lines), the screen's width (256 or 320),
-the planes' size, the rows of the window, and at each screen's start (`setVram`) where its
-cells are. A 50 Hz rate is told to the game by `hal_pal50`.
+addresses are left undefined so that no use of them is missed. The save RAM (the cartridge's
+battery RAM, the odd bytes of a 16 KB range) is a plain buffer of its 8 KB, read from and
+written to `NHL94.sav`; the battery RAM's power-on tests (Start+A+C or Start+B+C held) are
+left out. Where the game set the video chip's registers, colour RAM and scroll RAM, it sets
+the picture's layout in `display.asm` instead, which the renderer draws from: the 64 colours
+(the fades step them there), each plane's scroll (the title screen's by lines), the screen's
+width (256 or 320), the planes' size, the rows of the window, at each screen's start
+(`setVram`) where its cells are, and the sprite list. A 50 Hz rate is told to the game by
+`hal_pal50`. The cartridge's header, vectors, start-up code and ROM checksum are not part of
+the build: `hal.asm` starts the game.
 
 The hardware layer:
 
