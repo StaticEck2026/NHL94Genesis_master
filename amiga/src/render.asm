@@ -110,7 +110,15 @@ rd_brow0	ds.w	1			;buffer row of screen line 0
 rd_scroll	ds.w	1			;scroll mode this frame
 rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
-rd_regs		ds.b	32			;the layout as video chip register values (rd_regs_make)
+rd_layout					;the layout this frame is drawn with (rd_snapshot: display.asm's)
+rd_lnta		ds.l	1			;where plane A's, plane B's and the window's cells are in
+rd_lntb		ds.l	1			;video memory
+rd_lntw		ds.l	1
+rd_lcw		ds.w	1			;plane cells across (64, 128; 32 down)
+rd_lwide	ds.b	1			;the screen 320 pixels across (else 256)
+rd_llines	ds.b	1			;scrolled by lines (ds_hs)
+rd_lwin		ds.b	1			;rows of the window from the top
+	even
 rd_hs		ds.l	1			;its plane A, B horizontal scroll
 rd_vs		ds.l	1			;and vertical scroll
 rd_sctab	ds.l	8*SCSLOTS		;sprite image cache (rd_sc_get)
@@ -660,11 +668,9 @@ rd_frame
 	bsr	rd_palette			;(the colours of the same tick: a tick may have come
 	bsr	rd_decode_dirty			;since they were looked at above)
 	move.w	#$A000,(CUSTOM+INTENA).l
-	lea	(rd_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1
-	move.b	12(a5),d2
-	andi.b	#$81,d2
+	tst.b	(rd_lwide).l
 	beq	.h32
 	move.w	#320,d0
 	moveq	#41,d1
@@ -673,8 +679,7 @@ rd_frame
 	; scrolled by lines that are not all alike: plane B's rows that differ drawn line by line
 	; over the rest (rd_bline); (if it cannot, or plane A's lines differ, which no screen of
 	; the game has, as scrolled like the first line)
-	move.b	11(a5),d0
-	andi.b	#3,d0
+	tst.b	(rd_llines).l
 	beq.s	.hw
 	tst.b	(rd_hsuni).l
 	bne.s	.hw
@@ -691,26 +696,11 @@ rd_frame
 .skip	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
-;	d0 = plane cells across, d1 = down (a5 = regs). Keeps the rest.
+;	d0 = plane cells across, d1 = down. Keeps the rest.
 rd_planesize
-	move.b	16(a5),d1
-	moveq	#32,d0
-	btst	#0,d1
-	beq	.w
-	moveq	#64,d0
-	btst	#1,d1
-	beq	.w
-	move.w	#128,d0
-.w	lsr.b	#4,d1
-	btst	#0,d1
-	bne	.h1
+	moveq	#0,d0
+	move.w	(rd_lcw).l,d0
 	moveq	#32,d1
-	rts
-.h1	btst	#1,d1
-	bne	.h2
-	moveq	#64,d1
-	rts
-.h2	move.w	#128,d1
 	rts
 
 ;	Plane B scrolled by lines (rd_hslb) on 128 x 32 planes drawn as 64 x 32 (rd_narrow): drawn
@@ -732,13 +722,8 @@ rd_bline
 	dbf	d0,.kc
 .k	clr.l	(rd_blfr).l
 	clr.l	(rd_blsrn).l
-	moveq	#0,d0
-	move.b	(rd_regs+4).l,d0
-	andi.w	#7,d0
-	swap	d0
-	lsr.l	#3,d0
 	lea	(vm_data).l,a3
-	adda.l	d0,a3				;B's name table (128 x 32)
+	adda.l	(rd_lntb).l,a3			;B's name table (128 x 32)
 	lea	(rd_hsb).l,a4
 	moveq	#0,d7				;the rows with a line scrolled otherwise
 	moveq	#0,d5				;line
@@ -2086,15 +2071,10 @@ rd_ntfail
 
 ;	Bring the plane B bitmap up to date with the name table and the tiles.
 rd_updateB
-	lea	(rd_regs).l,a5
 	bsr	rd_planesize
 	move.w	d0,(rd_cw).l
 	move.w	d1,(rd_ch).l
-	moveq	#0,d2
-	move.b	4(a5),d2
-	andi.w	#7,d2
-	lsl.l	#8,d2
-	lsl.l	#5,d2				;name table address
+	move.l	(rd_lntb).l,d2			;name table address
 	tst.b	(rd_narrow).l
 	beq.s	.nar
 	move.l	#rd_vntB,d2			;(a wide plane's first 64 columns: its copy, as an
@@ -3368,13 +3348,13 @@ rd_blitrect
 
 ;	------------------------------------------------------------------------------------------
 ;	The state that places the picture, taken at once (no game frame can run in between): the
-;	layout (display.asm, as rd_regs), the plane A / B scroll, the sprite list. A frame takes
+;	layout (display.asm, as rd_layout), the plane A / B scroll, the sprite list. A frame takes
 ;	the game several of its frames to draw; drawn from this, its planes and sprites are all of
 ;	the same one.
 rd_snapshot
 	move	sr,-(sp)
 	ori	#$0700,sr
-	bsr	rd_regs_make
+	bsr	rd_layout_take
 	move.l	(ds_vs).l,(rd_vs).l		;full screen vertical scroll: A, B
 	move.l	(ds_hs).l,(rd_hs).l		;full screen horizontal scroll: A, B
 	; scrolled by lines, but all of them alike (the title screen once its picture has slid
@@ -3408,23 +3388,16 @@ rd_snapshot
 	; not by the per line fallback: plane B's first 64 columns, if its screen stays in them,
 	; and plane A's 64 from the first it shows (wrapping round), its scroll made that one's
 	sf	(rd_narrow).l
-	move.b	(rd_regs+16).l,d1
-	move.b	d1,(rd_reg16).l
-	andi.b	#$33,d1
-	cmpi.b	#$03,d1
+	cmpi.w	#128,(rd_lcw).l
 	bne	.nn
-	move.b	(rd_regs+11).l,d1
-	btst	#2,d1
-	bne	.nn				;(column scroll)
-	andi.b	#3,d1
+	tst.b	(rd_llines).l
 	beq.s	.nu
 	tst.b	(rd_hsuni).l
 	bne.s	.nu
 	tst.b	(rd_hslb).l
 	beq	.nn
 .nu	move.w	#512-8-320,d2			;(the first pixel across at most)
-	move.b	(rd_regs+12).l,d1
-	andi.b	#$81,d1
+	tst.b	(rd_lwide).l
 	bne.s	.nw
 	move.w	#512-8-256,d2
 .nw	move.w	(rd_hs+2).l,d1			;B
@@ -3433,11 +3406,7 @@ rd_snapshot
 	cmp.w	d2,d1
 	bhi	.nn
 	lea	(vm_data).l,a0
-	moveq	#0,d1
-	move.b	(rd_regs+4).l,d1
-	andi.w	#7,d1
-	lsl.l	#8,d1
-	lsl.l	#5,d1
+	move.l	(rd_lntb).l,d1
 	lea	(a0,d1.l),a1			;B's name table
 	lea	(rd_vntB).l,a2
 	moveq	#0,d3				;(from column 0)
@@ -3450,15 +3419,11 @@ rd_snapshot
 	neg.w	d1
 	move.w	d1,(rd_hs).l			;(the scroll in the copy)
 	lsr.w	#3,d3
-	moveq	#0,d1
-	move.b	(rd_regs+2).l,d1
-	andi.w	#$38,d1
-	lsl.l	#8,d1
-	lsl.l	#2,d1
+	move.l	(rd_lnta).l,d1
 	lea	(a0,d1.l),a1			;A's
 	lea	(rd_vntA).l,a2
 	bsr.s	.nc
-	move.b	#$01,(rd_regs+16).l		;(as 64 x 32)
+	move.w	#64,(rd_lcw).l			;(as 64 x 32)
 	st	(rd_narrow).l
 	bra.s	.nn
 .nc	moveq	#32-1,d1			;each row's 64 entries from column d3 (wrapping round)
@@ -3493,51 +3458,37 @@ rd_snapshot
 	move	(sp)+,sr
 	rts
 
-;	The layout (display.asm) as the values of the Genesis video chip's registers the renderer
-;	decodes (rd_regs): 2 plane A's cells (address / $400), 3 the window's (/ $400), 4 plane
-;	B's (/ $2000), 11 scrolled by lines (3) or whole (0), 12
-;	320 pixels across ($81) or 256 (0), 16 planes 128 x 32 ($03) or 64 x 32 ($01), 17 and 18
-;	the window (rows from the top). Uses d0/a1.
-rd_regs_make
-	lea	(rd_regs).l,a1
-	clr.l	(a1)
-	clr.l	4(a1)
-	clr.l	8(a1)
-	clr.l	12(a1)
-	clr.l	16(a1)
-	move.w	(ds_nta).l,d0
-	lsr.w	#8,d0
-	lsr.b	#2,d0
-	andi.b	#$38,d0
-	move.b	d0,2(a1)
-	move.w	(ds_ntw).l,d0
-	lsr.w	#8,d0
-	lsr.b	#2,d0
-	andi.b	#$3E,d0
-	move.b	d0,3(a1)
-	move.w	(ds_ntb).l,d0
-	rol.w	#3,d0
-	andi.b	#7,d0
-	move.b	d0,4(a1)
-	tst.b	(ds_lines).l
-	beq.s	.l
-	move.b	#$03,11(a1)
-.l	tst.b	(ds_wide).l
-	beq.s	.w
-	move.b	#$81,12(a1)
-.w	move.b	#$01,16(a1)
+;	The layout (display.asm) this frame is drawn with (rd_layout). The cells' places are
+;	those the planes' sizes allow: planes and the window of a screen 256 wide from multiples of
+;	$2000 and $800, the window of one 320 wide from a multiple of $1000. Uses d0.
+rd_layout_take
+	move.b	(ds_wide).l,(rd_lwide).l
+	move.b	(ds_lines).l,(rd_llines).l
+	move.b	(ds_win).l,(rd_lwin).l
+	moveq	#64,d0
 	tst.b	(ds_big).l
-	beq.s	.b
-	move.b	#$03,16(a1)
-.b	move.b	(ds_win).l,18(a1)
+	beq.s	.s
+	move.w	#128,d0
+.s	move.w	d0,(rd_lcw).l
+	moveq	#0,d0
+	move.w	(ds_nta).l,d0
+	andi.w	#$E000,d0
+	move.l	d0,(rd_lnta).l
+	move.w	(ds_ntb).l,d0
+	andi.w	#$E000,d0
+	move.l	d0,(rd_lntb).l
+	move.w	(ds_ntw).l,d0
+	andi.w	#$F800,d0
+	tst.b	(ds_wide).l
+	beq.s	.w
+	andi.w	#$F000,d0
+.w	move.l	d0,(rd_lntw).l
 	rts
 
 ;	The sprite list, followed from sprite 0 through the links.
 rd_collect_sprites
-	lea	(rd_regs).l,a5
 	moveq	#64,d6				;(at most: 64 on a screen 256 wide, 80 on one 320)
-	move.b	12(a5),d1
-	andi.b	#$81,d1
+	tst.b	(rd_lwide).l
 	beq.s	.32
 	moveq	#80,d6
 .32	lea	(ds_spr).l,a0			;(display.asm)
@@ -5115,55 +5066,26 @@ rd_ovl_tilecells
 	rts
 
 rd_buildA
-	lea	(rd_regs).l,a5
 	lea	(rd_akeynew).l,a3
-	; window rows (screen cells) and columns
-	move.b	18(a5),d0
-	move.w	d0,d1
-	andi.w	#$1F,d1
-	moveq	#0,d2
-	move.w	d1,d3
-	tst.b	d0
-	bpl	.top
-	move.w	d1,d2
-	moveq	#28,d3
-.top	move.w	d2,(rd_wy0).l
-	move.w	d3,(rd_wy1).l
-	move.b	17(a5),d0
-	move.w	d0,d1
-	andi.w	#$1F,d1
-	add.w	d1,d1
-	moveq	#0,d2
-	move.w	d1,d3
-	tst.b	d0
-	bpl	.left
-	move.w	d1,d2
-	moveq	#41,d3
-.left	move.w	d2,(rd_wx0).l
-	move.w	d3,(rd_wx1).l
-	move.w	17(a5),(a3)+			;key: window registers
-	; window name table
+	; window rows (screen cells: from the top) and columns (none: the window is whole rows)
 	moveq	#0,d0
-	move.b	3(a5),d0
+	move.b	(rd_lwin).l,d0
+	clr.w	(rd_wy0).l
+	move.w	d0,(rd_wy1).l
+	clr.w	(rd_wx0).l
+	clr.w	(rd_wx1).l
+	move.w	d0,(a3)+			;key: window rows
+	; window name table
+	move.l	(rd_lntw).l,d0
 	moveq	#32,d6
-	move.b	12(a5),d1
-	andi.b	#$81,d1
-	beq	.w32
-	andi.w	#$3C,d0
+	tst.b	(rd_lwide).l
+	beq.s	.wb
 	moveq	#64,d6
-	bra	.wb
-.w32	andi.w	#$3E,d0
-.wb	lsl.l	#8,d0
-	lsl.l	#2,d0
-	move.w	d6,(rd_wwidth).l
+.wb	move.w	d6,(rd_wwidth).l
 	move.l	d0,(rd_wbase).l
 	move.l	d0,(a3)+			;key: window base
 	; plane A name table and scroll
-	moveq	#0,d0
-	move.b	2(a5),d0
-	andi.w	#$38,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0
+	move.l	(rd_lnta).l,d0
 	tst.b	(rd_narrow).l
 	beq.s	.nar
 	move.l	#rd_vntA,d0			;(a wide plane's first 64 columns: rd_snapshot)
@@ -9418,7 +9340,6 @@ rd_fpsc		ds.l	1
 rd_hsuni	ds.b	1			;(rd_snapshot) scrolled by lines or cells, all alike
 rd_narrow	ds.b	1			;(rd_snapshot) planes 128 wide drawn as 64 (rd_vntA, B)
 rd_hslb		ds.b	1			;(rd_snapshot) plane B scrolled by lines, A alike (rd_hsb)
-rd_reg16	ds.b	1			;(rd_snapshot) register 16 (rd_narrow sets rd_regs' to 64 x 32)
 rd_bltch	ds.b	1			;(rd_decode_dirty) a tile of rd_bline's rows changed
 rd_bllow	ds.b	1			;(rd_bline)
 rd_wchg		ds.b	1			;(rd_buildA) the window's name table changed

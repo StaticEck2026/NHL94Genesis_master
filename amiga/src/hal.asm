@@ -98,12 +98,12 @@ hal_set_rate
 	rts
 
 ;	Debug block, read by the test harness:
-;	+0  the renderer's registers (rd_regs)  +4 vm_data  +8 colours (ds_pal)  +12 vertical scroll
+;	+0  the layout a frame is drawn with (rd_layout)  +4 vm_data  +8 colours (ds_pal)  +12 vertical scroll
 ;	(rd_vs)  +16 exception info (16 longs)
 ;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
 ;	+80 chip buffers (the harness' blitter statistics by kind)
 hal_debug
-	dc.l	rd_regs,vm_data,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
+	dc.l	rd_layout,vm_data,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
 	dc.l	rd_count,0
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
