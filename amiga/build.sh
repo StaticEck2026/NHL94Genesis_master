@@ -68,3 +68,22 @@ if command -v "$XDFTOOL" >/dev/null 2>&1; then
 else
   echo "(no xdftool: nhl94.hdf and nhl94.adf not made; pip install amitools)"
 fi
+# An LHA archive to unpack onto a hard drive: a drawer NHL94 (the launcher, its icon and the
+# game) and the drawer's icon, level 1 headers, -lh5-. Needs an lha that makes archives, as LHa
+# for UNIX does (LHA=its path: the lha of lhasa only unpacks).
+LHA=${LHA:-lha}
+rm -rf lhastage ../nhl94.lha ../nhl94-b*.lha
+mkdir -p lhastage/NHL94
+cp ../NHL94 ../NHL94.info ../nhl94.game lhastage/NHL94/
+chmod 755 lhastage/NHL94/NHL94 lhastage/NHL94/nhl94.game
+chmod 644 lhastage/NHL94/NHL94.info
+python3 ../../../amiga/tools/mkicon.py lhastage/NHL94.info drawer
+if (cd lhastage && "$LHA" -ao51q2 ../../nhl94.lha NHL94.info NHL94/NHL94 NHL94/NHL94.info NHL94/nhl94.game) \
+    >/dev/null 2>&1 && [ -f ../nhl94.lha ]; then
+  cp ../nhl94.lha ../nhl94-b$BUILDNO.lha
+  ls -l ../nhl94.lha ../nhl94-b$BUILDNO.lha
+else
+  rm -f ../nhl94.lha
+  echo "(no lha that makes archives: nhl94.lha not made; LHA=the path of LHa for UNIX)"
+fi
+rm -rf lhastage

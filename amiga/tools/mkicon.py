@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Write the Workbench tool icon of the launcher (NHL94.info): a 4 colour (Workbench 2+
-palette: grey, black, white, blue) puck and stick with "NHL 94".
+palette: grey, black, white, blue) puck and stick with "NHL 94". With "drawer", the same
+picture as the icon of a drawer (the drawer the LHA archive unpacks to).
 
-Usage: mkicon.py out.info
+Usage: mkicon.py out.info [drawer]
 """
 import struct, sys
 
@@ -54,11 +55,22 @@ def planes():
 
 
 def main():
+    drawer = len(sys.argv) > 2 and sys.argv[2] == 'drawer'
     gadget = struct.pack('>IhhhhHHHIIIIIHI', 0, 0, 0, W, H + 1, 4, 3, 1, 1, 0, 0, 0, 0, 0, 1)
-    obj = struct.pack('>HH', 0xE310, 1) + gadget + struct.pack('>BBIIiiIII', 3, 0, 0, 0,
-                                                               -0x80000000, -0x80000000, 0, 0, 16384)
+    obj = struct.pack('>HH', 0xE310, 1) + gadget + struct.pack('>BBIIiiIII', 2 if drawer else 3, 0, 0, 0,
+                                                               -0x80000000, -0x80000000, 1 if drawer else 0,
+                                                               0, 0 if drawer else 16384)
     image = struct.pack('>hhhhhIBBI', 0, 0, W, H, 2, 1, 3, 0, 0)
-    open(sys.argv[1], 'wb').write(obj + image + planes())
+    if drawer:
+        # its window (an old NewWindow: place, size, default pens, no flags, minimum and maximum
+        # size, the Workbench screen) and where it shows its contents; after the image, as icons
+        # of revision 1 have it: show the default (icons), view by default
+        window = struct.pack('>hhhhBBIIIIIIIhhHHH', 50, 50, 320, 120, 255, 255, 0, 0, 0, 0, 0, 0, 0,
+                             90, 40, 0xFFFF, 0xFFFF, 1)
+        dd = window + struct.pack('>ii', 0, 0)
+        open(sys.argv[1], 'wb').write(obj + dd + image + planes() + struct.pack('>IH', 0, 0))
+    else:
+        open(sys.argv[1], 'wb').write(obj + image + planes())
 
 
 if __name__ == '__main__':
