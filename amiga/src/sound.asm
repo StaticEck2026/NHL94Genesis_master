@@ -470,7 +470,7 @@ snd_rate
 	divu.l	#5,d2				;(50 Hz)
 .x	rts
 
-;	Key on FM channel d1 (patch, frequency and attenuation from the Z80 RAM). d7 |= its voice.
+;	Key on FM channel d1 (patch, frequency and attenuation from the command buffer). d7 |= its voice.
 snd_keyon
 	movem.l	d0-d1,-(sp)
 	bsr	snd_chan_voice

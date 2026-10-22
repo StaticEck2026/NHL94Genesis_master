@@ -1,10 +1,13 @@
 # NHL 94 for the Amiga 1200 (AGA)
 
 This directory builds NHL 94 as an Amiga program from the Genesis disassembly in `src/`. The
-game code is the Genesis 68000 code, converted at build time. A hardware layer written for the
-Amiga stands in for the Genesis video chip; the game's sound driver plays on Paula, and the
-pads are read by the Amiga's own code. The Genesis sources are not changed, so `main` still
-rebuilds the cartridge byte for byte.
+game code is the Genesis 68000 code, converted at build time; nothing of the Genesis is
+emulated. Where the game drove the Genesis hardware it calls Amiga code instead: it sets its
+picture's colours, scroll, screen width and window in `display.asm`, writes its tiles and cell
+maps to its video memory through a pointer (`vmem.asm`) and hands over its sprite list, and
+the renderer draws that with the blitter, the copper and hardware sprites; its sound driver's
+commands play on Paula; the pads and the save file are read by the Amiga's own code. The
+Genesis sources are not changed, so `main` still rebuilds the cartridge byte for byte.
 
 ## Requirements
 

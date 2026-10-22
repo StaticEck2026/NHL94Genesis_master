@@ -11,8 +11,9 @@ run as is:
     address, amiga/src/amiga.i). Genesis code addresses RAM with sign-extended 16-bit
     addresses, which only work at the top of the address space; the rules below turn
     those into 32-bit forms while keeping the low 16 bits of every address unchanged;
-  * hardware: video chip, Z80, sound chip and pad ports go to the Amiga hardware layer
-    (amiga/src/*.asm), either by generic rules or by the per-site patches in patches.py.
+  * hardware: the game's uses of the Genesis video chip, Z80, sound chips and pad ports are
+    rewritten for the Amiga (amiga/src/*.asm), by the per-site patches in patches.py and by
+    the rule below for its writes through Vmaddr's pointer; a port use left over stops it.
 
 Usage: convert.py <outdir>
 """
@@ -214,7 +215,7 @@ def convert_line(code, ctx):
 
 PORT_RETURNERS = {'vmaddr': 'a0', 'xymmap': None, 'xyvmmap': 'a0'}
 BRANCH = re.compile(r'^(bra|bsr|jmp|jsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo)|db[a-z]+)$', re.I)
-vdp_report = []
+vmem_report = []
 
 
 def _target(args):
@@ -223,21 +224,22 @@ def _target(args):
     return t
 
 
-def vdp_pass(rel, lines):
-    """Rewrite VDP port accesses. lines: list of (code, comment). Returns new list.
+def vmem_pass(rel, lines):
+    """Rewrite the data port writes through Vmaddr's pointer. lines: list of (code, comment).
+    Returns the new list.
 
     Iterates to a fixed point so backward branches and local subroutines (bsr .x) see the
     register state of every path into them."""
     labin = {}
     for _ in range(6):
         before = repr(sorted((k, sorted(v.items())) for k, v in labin.items()))
-        res = _vdp_once(rel, lines, labin, False)
+        res = _vmem_once(rel, lines, labin, False)
         if repr(sorted((k, sorted(v.items())) for k, v in labin.items())) == before:
             break
-    return _vdp_once(rel, lines, labin, True)
+    return _vmem_once(rel, lines, labin, True)
 
 
-def _vdp_once(rel, lines, labin, final):
+def _vmem_once(rel, lines, labin, final):
     state = {}            # reg -> 'data' / 'ctrl'
     routine = ''
     out = []
@@ -280,7 +282,7 @@ def _vdp_once(rel, lines, labin, final):
                     ops[0] = '(%s)+' % mr.group(1)
                     new = op + sz + '\t' + ','.join(o.strip() for o in ops)
             if new and final:
-                vdp_report.append('%s: %s  ->  %s' % (ctx, body, new))
+                vmem_report.append('%s: %s  ->  %s' % (ctx, body, new))
         # state updates
         if op in ('movea', 'lea', 'move') and len(ops) == 2:
             s0, d0 = ops[0].strip().lower(), ops[1].strip().lower()
@@ -333,7 +335,7 @@ def _vdp_once(rel, lines, labin, final):
 WAITOPS = ('cmp', 'cmpi', 'tst', 'btst')
 
 
-IDLE_SKIP = {'sound94.asm'}     # its loops are Z80 bus waits inside the vblank code
+IDLE_SKIP = {'sound94.asm'}     # its loops are the sound driver's own, in the vblank code
 
 
 def idle_pass(rel, lines):
@@ -399,7 +401,7 @@ def convert_file(rel, text, out):
             split.append((ln, None))
         else:
             split.append(split_comment(ln))
-    split = vdp_pass(rel, [(c, m) if m is not None else (c, '') for c, m in split])
+    split = vmem_pass(rel, [(c, m) if m is not None else (c, '') for c, m in split])
     lines = [c + m for c, m in split]
     res = []
     for i, ln in enumerate(lines):
@@ -441,7 +443,7 @@ def main():
                 fh.write(text)
     patches.finish()
     with open(os.path.join(out, 'convert_report.txt'), 'w') as fh:
-        fh.write('\n'.join(report) + '\n\n' + '\n'.join(vdp_report) + '\n\nidle:\n' + '\n'.join(idle_report) + '\n')
+        fh.write('\n'.join(report) + '\n\n' + '\n'.join(vmem_report) + '\n\nidle:\n' + '\n'.join(idle_report) + '\n')
 
 
 if __name__ == '__main__':

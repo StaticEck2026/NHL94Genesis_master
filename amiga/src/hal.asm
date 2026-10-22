@@ -1,5 +1,5 @@
-;	Amiga hardware layer: entry point, the Genesis vertical blank on a CIA timer, the stand-ins
-;	for the Genesis ports (pads, Z80 bus, sound RAM, save RAM) and the exception trap.
+;	Amiga hardware layer: entry point, the game's frame tick (its vertical blank) on a CIA
+;	timer or the display's vertical blank, the save RAM and the exception trap.
 ;
 ;	The code hunk starts with a small header so tools can find the entry points:
 ;	  +0  bra.w  _start            AmigaDOS entry (takes over the machine)
@@ -117,15 +117,15 @@ hal_debug
 	dc.l	ctx_cur				;+128
 	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full ;+132: the renderer's wait loops
 	dc.l	ctx_to_game,hal_idle_no		;+148: the renderer gives way, the game idles
-	dc.l	Spritetiles,SPRTSIZE		;+156: the players' sprite tiles (planar, not in VRAM)
-	dc.l	vm_tsrc			;+164: each VRAM tile's DMA source
+	dc.l	Spritetiles,SPRTSIZE		;+156: the players' sprite tiles (planar, not in video memory)
+	dc.l	vm_tsrc			;+164: where each tile's data was loaded from
 	dc.l	game_code_end			;+168: the converted game's code ends
 	dc.b	'SCX1'				;+172: the sprite image ring's second part: its
 	dc.l	rd_scx				;address, then bytes (the harness may give one)
 	dc.b	'ERL1'				;+180: hal_tick_early's switch (the harness turns
 	dc.l	hal_early			;it off unless asked: NHL_EARLY=1)
 
-;	Game entry with interrupts off and the machine ours. Sets up the vectors and the VDP, starts
+;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
 hal_game_main
 	move	#$2700,sr
