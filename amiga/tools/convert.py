@@ -25,7 +25,7 @@ sys.path.insert(0, HERE)
 import patches  # noqa: E402
 
 # Files the Amiga build does not use: the cartridge vectors and header, Sega's hardware init.
-SKIP = {'main94.asm', os.path.join('sega', 'SegaInit.asm'), os.path.join('sega', 'SegaIDTable94.asm')}
+SKIP = {'main94.asm', 'checksum94.asm', os.path.join('sega', 'SegaInit.asm'), os.path.join('sega', 'SegaIDTable94.asm')}
 
 REGS = {'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'sp', 'pc',
         'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7'}
@@ -206,10 +206,11 @@ def convert_line(code, ctx):
 
 
 # ---------------------------------------------------------------------------------------------
-# Video chip ports. The Amiga keeps the VDP's memories (VRAM, CRAM, VSRAM) and registers in RAM
-# (amiga/src/vdp.asm). A control port write sets the address as before, and the hardware layer
-# returns a pointer into the memory it selects; data port writes become (An)+ stores through
-# that pointer. A forward data-flow pass finds the address registers that hold a port.
+# Video memory. The game's Vmaddr (and xyVmMap through it) returns in a0 a pointer to where the
+# data for a video memory address goes (amiga/src/vmem.asm): the writes the game made through
+# the data port at a0 become (a0)+ stores. A forward data-flow pass finds the address registers
+# that hold such a pointer. Any other access to the video chip's ports is an error: the
+# patches (patches.py) give each of the game's a native form.
 
 PORT_RETURNERS = {'vmaddr': 'a0', 'xymmap': None, 'xyvmmap': 'a0'}
 BRANCH = re.compile(r'^(bra|bsr|jmp|jsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo)|db[a-z]+)$', re.I)
@@ -262,25 +263,19 @@ def _vdp_once(rel, lines, labin, final):
             src = ops[0].strip() if len(ops) == 2 else None
             dl = dst.lower()
             mctl = re.match(r'^vctrl\s*-\s*vdata\s*\((a[0-7])\)$', dl)
-            if mctl and src is not None:
-                new = 'VCTL%s\t%s,%s' % (sz.upper()[1:] or 'W', src, mctl.group(1))
-            elif dl in ('(vctrl).l', 'vctrl') and src is not None:
-                new = 'VCTL%s\t%s' % (sz.upper()[1:] or 'W', src)
-            elif dl in ('(vdata).l', 'vdata') and src is not None:
-                new = 'VDATA%s\t%s' % (sz.upper()[1:] or 'W', src)
-            else:
-                mr = re.match(r'^\((a[0-7])\)$', dl)
-                if mr and state.get(mr.group(1)) == 'data':
-                    ops[-1] = '(%s)+' % mr.group(1)
-                    new = op + sz + '\t' + ','.join(o.strip() for o in ops)
-                elif mr and state.get(mr.group(1)) == 'ctrl' and src is not None:
-                    new = 'VCTL%s\t%s' % (sz.upper()[1:] or 'W', src)
+            if mctl or dl in ('(vctrl).l', 'vctrl', '(vdata).l', 'vdata'):
+                raise SystemExit('%s: a video chip port access (%s): give it a native form (patches.py)' % (ctx, body))
+            mr = re.match(r'^\((a[0-7])\)$', dl)
+            if mr and state.get(mr.group(1)) == 'data':
+                ops[-1] = '(%s)+' % mr.group(1)
+                new = op + sz + '\t' + ','.join(o.strip() for o in ops)
+            elif mr and state.get(mr.group(1)) == 'ctrl':
+                raise SystemExit('%s: a video chip port access (%s): give it a native form (patches.py)' % (ctx, body))
             if new is None and src is not None:
                 sl = src.lower()
                 mr = re.match(r'^\((a[0-7])\)$', sl)
-                if sl in ('(vctrl).l',):
-                    ops[0] = '(hal_vdp_status).l'
-                    new = op + sz + '\t' + ','.join(o.strip() for o in ops)
+                if sl in ('(vctrl).l', '(vdata).l'):
+                    raise SystemExit('%s: a video chip port access (%s): give it a native form (patches.py)' % (ctx, body))
                 elif mr and state.get(mr.group(1)) == 'data':
                     ops[0] = '(%s)+' % mr.group(1)
                     new = op + sz + '\t' + ','.join(o.strip() for o in ops)

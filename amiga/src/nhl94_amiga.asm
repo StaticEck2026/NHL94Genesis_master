@@ -6,7 +6,6 @@
 	include	"stubinc/ports.inc"
 	include	"stubinc/equals.inc"
 	include	"stubinc/ram_addrs.inc"
-	include	"hal_macros.i"
 	include	"macros/genesis.mac"
 
 	; the hunks, in this order (amiga/build.sh names them for ramrel.py)
@@ -26,7 +25,7 @@ RAMBASE		ds.l	1			;the Genesis RAM window: moved at start (ram_relocate)
 	include	"hal.asm"
 	include	"os.asm"
 	include	"input.asm"
-	include	"vdp.asm"
+	include	"vmem.asm"
 
 game_code						;(the converted game from here: the harness tells
 						;its beam position reads from ours)

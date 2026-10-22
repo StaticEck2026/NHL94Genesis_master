@@ -98,12 +98,12 @@ hal_set_rate
 	rts
 
 ;	Debug block, read by the test harness:
-;	+0  the renderer's registers (rd_regs)  +4 vdp_vram  +8 colours (ds_pal)  +12 vertical scroll
+;	+0  the renderer's registers (rd_regs)  +4 vm_data  +8 colours (ds_pal)  +12 vertical scroll
 ;	(rd_vs)  +16 exception info (16 longs)
 ;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
 ;	+80 chip buffers (the harness' blitter statistics by kind)
 hal_debug
-	dc.l	rd_regs,vdp_vram,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
+	dc.l	rd_regs,vm_data,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
 	dc.l	rd_count,0
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
@@ -118,7 +118,7 @@ hal_debug
 	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full ;+132: the renderer's wait loops
 	dc.l	ctx_to_game,hal_idle_no		;+148: the renderer gives way, the game idles
 	dc.l	Spritetiles,SPRTSIZE		;+156: the players' sprite tiles (planar, not in VRAM)
-	dc.l	vdp_tsrc			;+164: each VRAM tile's DMA source
+	dc.l	vm_tsrc			;+164: each VRAM tile's DMA source
 	dc.l	game_code_end			;+168: the converted game's code ends
 	dc.b	'SCX1'				;+172: the sprite image ring's second part: its
 	dc.l	rd_scx				;address, then bytes (the harness may give one)
@@ -138,7 +138,7 @@ hal_game_main
 .clr	clr.l	(a0)+
 	dbf	d0,.clr
 	lea	(RAMBASE+$FFF0).l,sp
-	bsr	hal_vdp_init
+	bsr	vm_init
 	jsr	(snd_init).l
 	bsr	hal_set_vectors
 	jsr	(rd_init).l

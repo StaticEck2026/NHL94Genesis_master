@@ -230,24 +230,30 @@ replace_routine('fourway94.asm', 'Detect4WayPlay', '''\tmove.w\t#0,(FourWayPlay)
 # Save RAM: the cartridge SRAM ($200000, odd bytes) is a buffer the loader fills from disk.
 P('sram94.asm', '#$200000', '#hal_sram', None)
 
-# Video chip DMA and fills: done by the hardware layer on the emulated VDP memories.
-replace_routine('video94.asm', 'DoDMA', '\tjmp\t(hal_vdp_dma).l\t\t;d0 = words, d1 = vram address, a0 = source\n')
-replace_routine('video94.asm', 'DoDMA_nd2', '\tjmp\t(hal_vdp_copy).l\t\t;vram copy: d0 = bytes, d1 = dest, d2 = source\n')
-replace_routine('video94.asm', 'DoFill', '\tjmp\t(hal_vdp_fill).l\t\t;d0 = words, d1 = vram address, d2 = data\n')
+# Video memory (vmem.asm): the game's tiles and cell maps, at the addresses it gives them. Its
+# Vmaddr returns a pointer to where an address's data goes (the converter makes its data port
+# writes stores through it); its DMA, fill and copy routines are copies there. The video chip's
+# ports are left undefined, so that no use of them is missed.
+P(j('stubinc', 'ports.inc'), 'Vdata equ $C00000', ';Vdata (no video chip ports on the Amiga)')
+P(j('stubinc', 'ports.inc'), 'Vctrl equ Vdata+4', ';Vctrl')
+replace_routine('video94.asm', 'Vmaddr', '\tjmp\t(vm_at).l\t\t;d0 = address: a0 = where its data goes\n')
+replace_routine('video94.asm', 'DoDMA', '\tjmp\t(vm_load).l\t\t;d0 = words, d1 = address, a0 = source\n')
+replace_routine('video94.asm', 'DoDMA_nd2', '\tjmp\t(vm_copy).l\t\t;d0 = bytes, d1 = destination, d2 = source\n')
+replace_routine('video94.asm', 'DoFill', '\tjmp\t(vm_fill).l\t\t;d0 = words, d1 = address, d2 = data\n')
 replace_routine('video94.asm', 'WaitDMA', '\trts\n')
 
-# Tile data written through the data port (not by DMA): tell the renderer's tile cache.
+# Tile data written through Vmaddr's pointer (not loaded): tell the renderer's tile cache.
 P('video94.asm', """	movem.l	d0-d4/a0-a2,-(sp)
 	exg	d1,d0
 	movea.l	a0,a2""", """	movem.l	d0-d4/a0-a2,-(sp)
-	jsr	(hal_vdp_dirty).l		;d0 = words, d1 = vram address
+	jsr	(vm_dirty).l		;d0 = words, d1 = address
 	exg	d1,d0
 	movea.l	a0,a2""")
 
 # ---------------------------------------------------------------------------------------------
 # The picture's layout: colours, scroll, screen width, plane size and window are set in
 # display.asm's state (the renderer draws from it), where the Genesis wrote its video chip's
-# registers, colour RAM and scroll RAM. The cells and tiles are still written to VRAM.
+# registers, colour RAM and scroll RAM.
 P('hockey94.asm', '\tmove.w\t(Vctrl).l,d0\n', '\tmove.w\t(hal_pal50).l,d0\t\t\t;(hal.asm: bit 0 set at 50 Hz)\n')
 _NOWIN = '\tsf\t(ds_win).l\t\t\t;(display.asm: no window)\n\taddq.l\t#1,(ds_gen).l\n'
 P('hockey94.asm', '.hor\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_WINY,Vctrl-Vdata(a0)\n',
@@ -284,22 +290,21 @@ for _rel, _call in (('stats94.asm', 'bsr.w\tVmaddr'), ('cards94.asm', 'jsr\t(Vma
     P(_rel, '\tmove.w\t#VDPR_MODE4+$81,Vctrl-Vdata(a0)\n\tmove.w\t#6,(Map3col1).w\n\tmove.w\t#VDPR_HSCROLL,Vctrl-Vdata(a0)\n'
       '\tclr.w\td0\n\t%s\n\tmove.l\t#0,(a0)\n' % _call,
       '\tst\t(ds_wide).l\t\t\t;(display.asm: 320 pixels across, unscrolled)\n\tclr.l\t(ds_hs).l\n'
-      '\taddq.l\t#1,(ds_gen).l\n\tmove.w\t#6,(Map3col1).w\n\tclr.w\td0\n\t%s\n\tmove.l\t#0,(a0)\n' % _call)
-P('stats94.asm', '\tlsr.b\t#2,d0\n\tmove.w\td0,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_MODE4,Vctrl-Vdata(a0)\n',
-  '\tlsr.b\t#2,d0\n\tsf\t(ds_wide).l\t\t\t;(display.asm: 256 pixels across, unscrolled)\n\tclr.l\t(ds_hs).l\n'
+      '\taddq.l\t#1,(ds_gen).l\n\tmove.w\t#6,(Map3col1).w\n')
+P('stats94.asm', '\tmove.w\t(VSCRLPM).w,d0\n\tbsr.w\tVmaddr\n\tmove.l\t#0,(a0)\n\tmove.w\t#$8D00,d0\n'
+  '\tmove.b\t(VSCRLPM).w,d0\n\tlsr.b\t#2,d0\n\tmove.w\td0,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_MODE4,Vctrl-Vdata(a0)\n',
+  '\tsf\t(ds_wide).l\t\t\t;(display.asm: 256 pixels across, unscrolled)\n\tclr.l\t(ds_hs).l\n'
   '\taddq.l\t#1,(ds_gen).l\n')
 # (the game's: plane B's scroll; the playoff tree's: plane A's)
-P('display94.asm', '\tmove.w\t(Hscroll).w,(a0)\n\tmove.l\t#VSRAM_W+(2<<16),Vctrl-Vdata(a0)\t;vsram write, address 2\n'
-  '\tmove.w\t(Vscroll).w,(a0)\n',
-  '\tmove.w\t(Hscroll).w,(a0)\n\tmove.w\t(Hscroll).w,(ds_hs+2).l\t\t;(display.asm: plane B\'s scroll)\n'
-  '\tmove.w\t(Vscroll).w,(ds_vs+2).l\n\taddq.l\t#1,(ds_gen).l\n')
-P('setup94.asm', '\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(a0)\n',
-  '\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(a0)\n\tmove.w\td0,(ds_hs).l\t\t\t;(display.asm: plane A\'s scroll)\n'
+replace_routine('display94.asm', 'SetScroll2', '\tmove.w\t(Hscroll).w,(ds_hs+2).l\t\t;(display.asm: plane B\'s scroll)\n'
+                '\tmove.w\t(Vscroll).w,(ds_vs+2).l\n\taddq.l\t#1,(ds_gen).l\n\trts\n')
+P('setup94.asm', '\tmove.w\t(VSCRLPM).w,d0\n\tbsr.w\tVmaddr\n\tmove.w\t#$FEA0,d0\n\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(a0)\n',
+  '\tmove.w\t#$FEA0,d0\n\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(ds_hs).l\t\t\t;(display.asm: plane A\'s scroll)\n'
   '\taddq.l\t#1,(ds_gen).l\n')
 # (setVram: VRAM cleared, then the screen's layout from disflags, Map1col1, VmMAP1-3, VSPRITES)
 P('video94.asm', '\tmove.w\t#VDPR_AUTOINC+$02,(Vctrl).l\n', '')
 P('video94.asm', r'\tmove\.w\t#\$8C00,d0[^\n]*\n(?:[^\n]*\n)*?\tmove\.l\t#0,\(a0\)\t+;playfield 1/2\n',
-  '\tjsr\t(hal_vdp_dirty_all).l\t\t;all of VRAM was cleared\n\tjsr\t(ds_setup).l\t\t\t;(display.asm: the screen\'s layout)\n',
+  '\tjsr\t(vm_dirty_all).l\t\t;all of VRAM was cleared\n\tjsr\t(ds_setup).l\t\t\t;(display.asm: the screen\'s layout)\n',
   1, regex=True)
 # (colours: the fade steps and the copy of palfadenew)
 P('video94.asm', '\tmovea.l\t#Vdata,a0\n\tclr.w\td6\n.top\n\tmove.w\td3,d2\n\tmove.w\td6,d0\n\tswap\td0\n\tmove.w\t#$20,d0\n'

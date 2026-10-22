@@ -159,7 +159,7 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
   not listed for repair (nor drawn over by the blits listed for the frame) must match the
   bitmap. It also compares every name table each frame
-  and fails if one changed that the write marks said could not have (or, written only by DMA,
+  and fails if one changed that the write marks said could not have (or, written only by loads,
   fills and copies, outside the blocks they marked). The test harness reports the first
   failure.
 
@@ -173,11 +173,15 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   (the game keeps RAM pointers as words), which AmigaDOS cannot do, so `RAMBASE` is a hunk of
   its own: `amiga/tools/ramrel.py` lists every place that holds its address, and at start the
   game takes an aligned block (in fast RAM if there is some) and moves those addresses there.
-- The cells and tiles the game writes to the video chip's memory (VRAM) through its ports,
-  DMA, fills and copies are kept in memory (`vdp.asm`), and the writes mark which tiles
-  changed. The
-  players' sprite tiles (`Spritetiles`) are native instead: converted to planar rows in place
-  at start, and a DMA from them copies nothing, it only notes where each tile's data is (the
+- The game's video memory, its tiles and cell maps (the planes, the window, the sprite list)
+  at the addresses it gives them, is a block of memory (`vmem.asm`). There is no video chip:
+  the game's `Vmaddr` returns a pointer to where an address's data goes, and its writes
+  through the video chip's data port become stores through that pointer (the converter
+  follows the registers that hold it); its DMA, fill and copy routines are copies there,
+  which mark the tiles they change. The video chip's ports are left undefined, and the
+  converter stops at any use of them, so that none is missed. The
+  players' sprite tiles (`Spritetiles`) are native: converted to planar rows in place
+  at start, and a load from them copies nothing, it only notes where each tile's data is (the
   renderer takes it from there). The test harness rebuilds those tiles from
   `Extracted/NHL94/Graphics/Spritetiles.bin` for its reference renderer. The players are native
   objects too: `addframe2`, which writes a player's frame as a few sprites in a row of the
@@ -217,7 +221,7 @@ The hardware layer:
 - `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
   on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
   loads and saves `NHL94.sav`.
-- `render.asm`: draws the game's cells and tiles (`vdp.asm`) with the layout it set
+- `render.asm`: draws the game's cells and tiles (`vmem.asm`) with the layout it set
   (`display.asm`) in 64 colours on 6 interleaved bitplanes. Tiles are
   cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the
   whole of plane B (512 x 256, its top 224 lines twice for the vertical wrap) and the display
@@ -277,8 +281,8 @@ The hardware layer:
   Sprites are blits of images kept in a cache in chip RAM, built once from the tiles (in fast
   memory, then copied in longs; rows without a spare word for the shift: the blit reads past
   the row and its last word mask clears what it read). An image
-  whose tiles a DMA sent from consecutive addresses of the program (the players' animation
-  frames: the VDP layer notes each tile's source address) is found by that address, size,
+  whose tiles were loaded from consecutive addresses of the program (the players' animation
+  frames: `vmem.asm` notes each tile's source address) is found by that address, size,
   flips and palette, so a frame sent again, or the same frame on another player of the team,
   is not built again; other images are used until a tile of theirs changes. The images go
   round a ring of chip RAM: 256 KB in the program, and a second part of up to 256 KB more
@@ -314,10 +318,10 @@ The hardware layer:
   into the sound's delay line then and are played from vertical blanks as ever. The game's own
   interrupt masks (5, 3: the Genesis line interrupt) are lowered to 0 in conversion, so the
   blit queue is fed while the game's code runs. The renderer only reads which name tables the
-  game may have written (DMA, fills and copies mark the blocks they change, data port writes
-  the block they begin in) and compares only those with its copies: a table written by a
-  data port write all of it, one written only by DMA, fills and copies only the 32 byte blocks
-  they changed (the game clock's 5 words: 8 longs compared instead of 1024).
+  game may have written (loads, fills and copies mark the blocks they change, writes through
+  `Vmaddr`'s pointer the block they begin in) and compares only those with its copies: a table
+  written through the pointer all of it, one written only by loads, fills and copies only the
+  32 byte blocks they changed (the game clock's 5 words: 8 longs compared instead of 1024).
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.
@@ -401,7 +405,7 @@ move that starts it), with the pc of that write and of the queueing: what a queu
 has to stay as it was until it has run, a vertical blank's restart included. (A cookie cut's
 last word of a row, whose mask is 0, is not reported: what it reads is never used.) Game ticks
 are run before their vertical blank (hal_tick_early) only with `NHL_EARLY=1`: the reference
-picture is the VDP at the frame's end, which could then be part way into the next game frame.
+picture is the game's at the frame's end, which could then be part way into the next game frame.
 
 ## Testing without an Amiga
 

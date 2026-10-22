@@ -1,9 +1,9 @@
-;	Renderer: draws the game's cells and tiles (vdp.asm) with the layout it set (display.asm)
+;	Renderer: draws the game's cells and tiles (vmem.asm) with the layout it set (display.asm)
 ;	on the AGA display, 6 bitplanes (the 64 colours), interleaved, triple buffered.
 ;
 ;	Fast path (full screen scroll, the game screens):
 ;	  * tiles are kept converted to planar form (tile cache, both horizontal orientations), and
-;	    converted again when their VRAM changes (hal_vdp_dirty);
+;	    converted again when their data changes (vm_dirty);
 ;	  * plane B is kept as a planar bitmap of its whole name table, redrawn only where an entry
 ;	    or its tile changed;
 ;	  * scroll mode (a 64 x 32 cell plane B, the rink): each screen buffer holds all of plane B
@@ -144,7 +144,7 @@ rd_copgen	ds.l	2*NBUF			;per buffer: rd_colgen, rd_hudgen its copper list's
 						;colours are of
 rd_colours	ds.w	64			;high nibbles of the 24 bit colours ($0RGB)
 rd_colourslo	ds.w	64			;and the low nibbles
-rd_pall		ds.l	256			;a CRAM word's low byte (green, red), its high (blue):
+rd_pall		ds.l	256			;a colour word's low byte (green, red), its high (blue):
 rd_palh		ds.l	16			;their part of rd_colours (high word), rd_colourslo (low)
 rd_mode		ds.w	1
 rd_clipx0	ds.w	1
@@ -269,7 +269,7 @@ rd_init
 	lea	32(a0),a0
 	dbf	d1,.sc
 	; the players' sprite tiles (Spritetiles) to planar rows in place, as the tile cache holds
-	; them (tp_pl): DMAs from them only note where each tile's data is (vdp_tsrc, hal_vdp_dma)
+	; them (tp_pl): loads from them only note where each tile's data is (vm_tsrc, vm_load)
 	; and the tile cache copies it from here (rd_decode_tile). Once.
 	tst.b	(rd_sprnat).l
 	bne.s	.sn
@@ -313,9 +313,9 @@ rd_init
 ;	------------------------------------------------------------------------------------------
 ;	Tile cache.
 
-;	VRAM d1 (address), d0 (words) changed: convert the tiles it covers again (and they no
-;	longer hold the data a DMA sent, vdp_tsrc).
-hal_vdp_dirty
+;	Video memory d1 (address), d0 (words) changed: convert the tiles it covers again (and
+;	they no longer hold the data a load sent, vm_tsrc).
+vm_dirty
 	movem.l	d0-d2/a0-a1,-(sp)
 	addq.l	#1,(ds_gen).l
 	andi.l	#$FFFF,d0
@@ -330,7 +330,7 @@ hal_vdp_dirty
 	bls	.ok
 	move.l	#2047,d0
 .ok	lea	(tc_dirty).l,a0
-	lea	(vdp_tsrc).l,a1
+	lea	(vm_tsrc).l,a1
 .loop	cmp.l	d0,d1
 	bhi	.x
 	bfset	(a0){d1:1}
@@ -340,7 +340,7 @@ hal_vdp_dirty
 .x	movem.l	(sp)+,d0-d2/a0-a1
 	rts
 
-hal_vdp_dirty_all
+vm_dirty_all
 rd_dirty_all
 	movem.l	d0/a0,-(sp)
 	addq.l	#1,(ds_gen).l
@@ -348,7 +348,7 @@ rd_dirty_all
 	moveq	#63,d0
 .c	move.l	#-1,(a0)+
 	dbf	d0,.c
-	lea	(vdp_tsrc).l,a0
+	lea	(vm_tsrc).l,a0
 	move.w	#2048-1,d0
 .s	clr.l	(a0)+
 	dbf	d0,.s
@@ -447,20 +447,20 @@ rd_tiles_need
 .x	movem.l	(sp)+,d0-d7/a0-a6
 	rts
 
-;	Convert tile d0. Uses d0-d4/a0-a3/a5/a6. A tile a DMA sent from the players' sprite tiles
-;	(Spritetiles, planar already: rd_init) is copied from there; VRAM does not hold it.
+;	Convert tile d0. Uses d0-d4/a0-a3/a5/a6. A tile loaded from the players' sprite tiles
+;	(Spritetiles, planar already: rd_init) is copied from there; video memory does not hold it.
 rd_decode_tile
 	lea	(rd_tchg).l,a0
 	move.l	(rd_count).l,(a0,d0.l*4)	;(the sprite image cache sees it)
-	lea	(vdp_tsrc).l,a0
+	lea	(vm_tsrc).l,a0
 	move.l	(a0,d0.l*4),d1
 	subi.l	#Spritetiles,d1
 	cmpi.l	#SPRTSIZE,d1
 	blo	.nat
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	move.l	d0,d1
 	lsl.l	#5,d1
-	adda.l	d1,a0				;VRAM tile
+	adda.l	d1,a0				;the tile's data
 	lea	(tp_pl).l,a1
 	adda.l	d1,a1				;normal planes (32 bytes a tile)
 	lea	$800*32(a1),a2			;flipped
@@ -737,7 +737,7 @@ rd_bline
 	andi.w	#7,d0
 	swap	d0
 	lsr.l	#3,d0
-	lea	(vdp_vram).l,a3
+	lea	(vm_data).l,a3
 	adda.l	d0,a3				;B's name table (128 x 32)
 	lea	(rd_hsb).l,a4
 	moveq	#0,d7				;the rows with a line scrolled otherwise
@@ -1945,14 +1945,14 @@ rd_bq_int
 	bne	ctx_to_game
 .r	rte
 ;	------------------------------------------------------------------------------------------
-;	Can the name table at VRAM d0 (32 byte aligned), d1 bytes long, have changed since it was
-;	last compared with its copy? Only if a DMA, fill or copy changed its blocks (tc_chg) or a
-;	data port write began in one (vdp_wmap: cleared here), or the copies are not in step
-;	(rd_ntsync). d0.b = $FF if so, else 0 (and the flags). rd_ntfull: a data port write or the
-;	copies not in step (all of it to compare; else only the blocks of tc_chg: a DMA, fill or
+;	Can the name table at video memory d0 (32 byte aligned), d1 bytes long, have changed since
+;	it was last compared with its copy? Only if a load, fill or copy changed its blocks (tc_chg)
+;	or a write through Vmaddr began in one (vm_wmap: cleared here), or the copies are not in step
+;	(rd_ntsync). d0.b = $FF if so, else 0 (and the flags). rd_ntfull: a write through Vmaddr or the
+;	copies not in step (all of it to compare; else only the blocks of tc_chg: a load, fill or
 ;	copy marks each it writes). Uses d0-d4/a0-a1.
 rd_ntwritten
-	cmpi.l	#VRAMSIZE,d0
+	cmpi.l	#VMSIZE,d0
 	blo.s	.v
 	st	(rd_ntfull).l			;(a copy, rd_narrow: compared all through)
 	moveq	#-1,d0
@@ -1963,10 +1963,10 @@ rd_ntwritten
 	lsr.l	#5,d1				;blocks
 	moveq	#0,d2
 	sf	(rd_ntfull).l
-	lea	(vdp_wmap).l,a0
+	lea	(vm_wmap).l,a0
 	lea	(tc_chg).l,a1
 	move	sr,-(sp)
-	ori	#$0700,sr			;(the game sets vdp_wmap bits)
+	ori	#$0700,sr			;(the game sets vm_wmap bits)
 .l	moveq	#32,d3
 	cmp.l	d3,d1
 	bhs.s	.w
@@ -2036,11 +2036,11 @@ rd_ntnext
 .no	ori	#1,ccr
 	rts
 
-;	The name table at a0 (in vdp_vram), d7 + 1 longs: its blocks for rd_ntnext. Keeps all.
+;	The name table at a0 (in vm_data), d7 + 1 longs: its blocks for rd_ntnext. Keeps all.
 rd_ntblocks
 	movem.l	d0-d1,-(sp)
 	move.l	a0,d0
-	subi.l	#vdp_vram,d0
+	subi.l	#vm_data,d0
 	lsr.l	#5,d0
 	move.l	d0,(rd_ntb).l
 	move.l	d0,(rd_ntb+8).l
@@ -2062,7 +2062,7 @@ rd_ntblkchk
 	movem.l	d0-d1,-(sp)
 	move.l	a0,d1
 	subq.l	#4,d1
-	subi.l	#vdp_vram,d1
+	subi.l	#vm_data,d1
 	lsr.l	#5,d1
 	bftst	(tc_chg).l{d1:1}
 	bne.s	.ok
@@ -2098,8 +2098,8 @@ rd_updateB
 	tst.b	(rd_narrow).l
 	beq.s	.nar
 	move.l	#rd_vntB,d2			;(a wide plane's first 64 columns: its copy, as an
-	sub.l	#vdp_vram,d2			;offset from VRAM, rd_snapshot)
-.nar	lea	(vdp_vram).l,a0
+	sub.l	#vm_data,d2			;offset in video memory, rd_snapshot)
+.nar	lea	(vm_data).l,a0
 	adda.l	d2,a0				;a0 = name table
 	movem.l	d0-d2/a0,-(sp)
 	mulu.w	d0,d1
@@ -2182,7 +2182,7 @@ rd_updateB
 	subq.w	#1,d7				;longs - 1
 	sf	(rd_ntblkm).l
 	IFND	VERIFY
-	tst.b	(rd_ntfull).l			;(only blocks a DMA, fill or copy wrote: those)
+	tst.b	(rd_ntfull).l			;(only blocks a load, fill or copy wrote: those)
 	bne.s	.f
 	st	(rd_ntblkm).l
 	bsr	rd_ntblocks
@@ -2219,11 +2219,11 @@ rd_updateB
 	moveq	#1,d0
 	bsr	rd_ntfail
 	move.l	(sp)+,d0
-.vok	tst.b	(rd_ntfull).l			;(a DMA's block?)
+.vok	tst.b	(rd_ntfull).l			;(a load's block?)
 	bne.s	.vk2
 	movem.l	d0/d1,-(sp)
 	move.l	(rd_tmp).l,d1
-	subi.l	#vdp_vram,d1
+	subi.l	#vm_data,d1
 	add.l	d0,d1
 	add.l	d0,d1
 	lsr.l	#5,d1
@@ -3432,7 +3432,7 @@ rd_snapshot
 	andi.w	#1023,d1
 	cmp.w	d2,d1
 	bhi	.nn
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	moveq	#0,d1
 	move.b	(rd_regs+4).l,d1
 	andi.w	#7,d1
@@ -3551,7 +3551,7 @@ rd_collect_sprites
 .32	andi.w	#$7F,d0
 .b	lsl.l	#8,d0
 	add.l	d0,d0
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	adda.l	d0,a0
 	lea	(rd_sprites).l,a1
 	moveq	#0,d1
@@ -5179,7 +5179,7 @@ rd_buildA
 	tst.b	(rd_narrow).l
 	beq.s	.nar
 	move.l	#rd_vntA,d0			;(a wide plane's first 64 columns: rd_snapshot)
-	sub.l	#vdp_vram,d0
+	sub.l	#vm_data,d0
 .nar	move.l	d0,(rd_abase).l
 	move.l	d0,(a3)+			;key: A base
 	move.w	(rd_cw).l,d6
@@ -5227,7 +5227,7 @@ rd_buildA
 	beq	.caw				;not written to: as it was
 	ENDC
 	move.b	#2,(rd_nttab).l
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	adda.l	(rd_abase).l,a0
 	lea	(rd_shA).l,a1
 	lea	(rd_chgA).l,a2
@@ -5250,7 +5250,7 @@ rd_buildA
 	beq	.cww
 	ENDC
 	move.b	#3,(rd_nttab).l
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	adda.l	(rd_wbase).l,a0
 	lea	(rd_shW).l,a1
 	lea	(rd_chgW).l,a2
@@ -5295,7 +5295,7 @@ rd_buildA
 	bne	.full
 	bsr	rd_ovl_cells_changed
 	bra	.keep
-.cmpd	; the same, only the blocks a DMA, fill or copy wrote if no more can have changed
+.cmpd	; the same, only the blocks a load, fill or copy wrote if no more can have changed
 	; (rd_ntfull)
 	IFND	VERIFY
 	tst.b	(rd_ntfull).l
@@ -5418,7 +5418,7 @@ rd_buildA
 	blo.s	.pc
 .pp	move.l	d2,(rd_ovlpart).l
 .fa	; rebuild, the copies as drawn (a compare skipped while the key changed left them behind)
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	adda.l	(rd_abase).l,a0
 	lea	(rd_shA).l,a1
 	move.w	d6,d0
@@ -5427,7 +5427,7 @@ rd_buildA
 	subq.w	#1,d0
 .cpa	move.l	(a0)+,(a1)+
 	dbf	d0,.cpa
-	lea	(vdp_vram).l,a0
+	lea	(vm_data).l,a0
 	adda.l	(rd_wbase).l,a0
 	lea	(rd_shW).l,a1
 	move.w	(rd_wwidth).l,d0
@@ -5457,7 +5457,7 @@ rd_buildA
 	dbf	d0,.uc
 	lea	(rd_alist).l,a2
 	lea	(rd_aused).l,a3
-	lea	(vdp_vram).l,a4
+	lea	(vm_data).l,a4
 	adda.l	(rd_wbase).l,a4
 	; window cells
 	moveq	#0,d5
@@ -5485,7 +5485,7 @@ rd_buildA
 	divu.w	#6,d0
 	move.w	d0,(rd_alistw).l		;(the window's cells)
 .acells	; plane A cells outside the window
-	lea	(vdp_vram).l,a4
+	lea	(vm_data).l,a4
 	adda.l	(rd_abase).l,a4
 	moveq	#0,d5
 .ar	moveq	#0,d4
@@ -6350,13 +6350,13 @@ rd_sc_get
 .xm	rts
 .nomemo
 	movem.l	d4-d6/a0/a4,-(sp)
-	; its tiles hold data a DMA sent from consecutive addresses of the program (vdp_tsrc):
+	; its tiles hold data loaded from consecutive addresses of the program (vm_tsrc):
 	; then the key is that address (and size, flips, palette: d5), so a frame of animation
 	; sent again, or the same frame on another player, is found whatever its tiles
 	moveq	#0,d5				;(0: the key is the tiles)
 	move.w	d0,d1
 	andi.w	#$7FF,d1
-	lea	(vdp_tsrc).l,a0
+	lea	(vm_tsrc).l,a0
 	move.l	(a0,d1.w*4),d3
 	beq.s	.tkey
 	move.l	d3,d4
@@ -6795,7 +6795,7 @@ hal_addframe2
 	move.w	d3,d0
 	add.w	VRchar(a3),d0
 	lsl.w	#5,d0
-	move.w	d0,(a5)+			;VRAM
+	move.w	d0,(a5)+			;address
 .n	move.b	d3,VRoffs(a3,d5.w)
 	move.w	d2,d6
 	move.w	d1,d4
@@ -6881,7 +6881,7 @@ hal_addframe2
 	tst.w	attribute(a3)			;(the flags the game's leaves)
 	rts
 
-;	The sprite table is sent to VRAM (hal_vdp_dma): its objects with it; the next table's from
+;	The sprite table is sent to video memory (vm_load): its objects with it; the next table's from
 ;	none. Keeps everything.
 rd_obj_publish
 	movem.l	d0/a0-a1,-(sp)
@@ -7112,7 +7112,7 @@ rd_obj_gather
 	andi.w	#$1FF,d0
 	move.w	d0,(rd_ox0).l
 	lea	(rd_opc).l,a1
-	lea	(vdp_tsrc).l,a3
+	lea	(vm_tsrc).l,a3
 	movea.l	a5,a0
 	move.w	(rd_on).l,d7
 	subq.w	#1,d7
@@ -8841,7 +8841,7 @@ rd_palette
 	move.w	d1,96(a1)
 .on	rts
 
-;	Genesis colour d1 (CRAM: ----BBB-GGG-RRR-) -> AGA 24 bit colour: d2 = high nibbles ($0RGB),
+;	Genesis colour d1 (----BBB-GGG-RRR-) -> AGA 24 bit colour: d2 = high nibbles ($0RGB),
 ;	d4 = low nibbles. The 8 levels are those the Genesis puts out (its DAC and video encoder
 ;	compress the scale: measured 0, 52, 87, 116, 144, 172, 206, 255), not a straight line.
 rd_gen2amiga
