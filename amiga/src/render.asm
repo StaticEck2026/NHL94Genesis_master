@@ -17,8 +17,9 @@
 ;	Plane B's transparent pixels keep their palette bits and show the backdrop: colours 0, 16,
 ;	32 and 48 are all set to the backdrop colour (rd_palette).
 ;
-;	Fallback (line or cell scroll, per column vertical scroll, very large planes): the frame is
-;	drawn per line in a chunky buffer and converted to planar (rd_chunky).
+;	Line scroll (the title screen's): drawn as a whole screen's scroll when the lines are all
+;	alike, else plane B's rows that differ line by line over it (rd_bline). Planes 128 cells
+;	wide: drawn as 64 cell copies (rd_narrow).
 
 SBPR		equ	72			;screen bytes per plane row: 32 pixel margin, plane B's 512, 32
 SROW		equ	SBPR*6			;interleaved row of the 6 planes
@@ -39,8 +40,6 @@ HUDX		equ	$A0			;sprite horizontal position of screen x 0 (H32)
 OSBPR		equ	48			;the overlay: 32 pixel margin, 320, 32 margin
 OSROW		equ	OSBPR*6
 NPLANES		equ	6
-CHPITCH		equ	384			;chunky fallback: bytes per line
-CHLEFT		equ	32			;screen x 0 is at this offset
 BMAX		equ	2048			;largest plane B (cells) the fast path keeps as a bitmap
 SCARENA		equ	$40000			;sprite image cache: bytes of images (the ring's first part;
 						;a second, rd_scx, in the chip memory left at the start)
@@ -77,9 +76,6 @@ rd_tcn		ds.w	1			;its longs with a bit set (rd_decode_dirty): how many,
 rd_tcl		ds.w	64			;their byte offsets
 rd_ptab		ds.l	256			;byte (2 pixels) -> its bits in the 4 plane bytes
 rd_pftab	ds.l	256			;the same for the flipped tile
-rd_nibtab	ds.w	256			;chunky fallback: byte -> 2 pixel bytes
-rd_revtab	ds.w	256			;the same, swapped
-rd_attr		ds.l	8			;chunky fallback: pixel OR value by entry bits 15-13
 shB		ds.w	BMAX			;plane B name table as drawn in bmB
 rd_tlhead	ds.w	2048			;per tile: the first cell of plane B with it + 1 (0: none)
 rd_tlnext	ds.w	BMAX			;per cell: the next with its tile + 1
@@ -156,7 +152,6 @@ rd_clipx1	ds.w	1
 rd_pass		ds.w	1			;0 low priority pass, $8000 high
 rd_tmp		ds.l	8
 rd_cellpri	ds.w	1
-rd_rowbuf	ds.l	2
 mkB		ds.b	BMAX*8			;plane B high priority mask (for the CPU: fast memory)
 
 	section	chip,bss_c
@@ -234,43 +229,6 @@ rd_init
 	addq.w	#1,d0
 	cmpi.w	#256,d0
 	bne	.pt
-	; chunky tables
-	lea	(rd_nibtab).l,a0
-	lea	(rd_revtab).l,a1
-	moveq	#0,d0
-.nt	move.w	d0,d1
-	lsr.w	#4,d1
-	move.w	d0,d2
-	andi.w	#$F,d2
-	move.w	d1,d3
-	lsl.w	#8,d3
-	or.w	d2,d3
-	move.w	d3,(a0)+
-	move.w	d2,d3
-	lsl.w	#8,d3
-	or.w	d1,d3
-	move.w	d3,(a1)+
-	addq.w	#1,d0
-	cmpi.w	#256,d0
-	bne	.nt
-	lea	(rd_attr).l,a0
-	moveq	#0,d0
-.at	move.l	d0,d1
-	andi.l	#3,d1
-	lsl.l	#4,d1
-	btst	#2,d0
-	beq	.np
-	ori.l	#$40,d1
-.np	move.l	d1,d2
-	lsl.l	#8,d2
-	or.l	d2,d1
-	move.l	d1,d2
-	swap	d2
-	or.l	d2,d1
-	move.l	d1,(a0)+
-	addq.w	#1,d0
-	cmpi.w	#8,d0
-	bne	.at
 	bsr	rd_dirty_all
 	lea	(rd_screens).l,a0
 	move.l	a0,(rd_back).l
@@ -712,55 +670,25 @@ rd_frame
 	moveq	#41,d1
 .h32	move.w	d0,(rd_w).l
 	move.w	d1,(rd_cells).l
-	; fast path?
+	; scrolled by lines that are not all alike: plane B's rows that differ drawn line by line
+	; over the rest (rd_bline); (if it cannot, or plane A's lines differ, which no screen of
+	; the game has, as scrolled like the first line)
 	move.b	11(a5),d0
-	btst	#2,d0
-	bne	.chunky				;column vscroll
 	andi.b	#3,d0
 	beq.s	.hw
 	tst.b	(rd_hsuni).l
 	bne.s	.hw
 	tst.b	(rd_hslb).l
-	beq	.chunky				;line / cell scroll (not all alike)
+	beq.s	.hw
 	bsr	rd_bline
-	beq	.chunky				;(plane B's lines scrolled otherwise show some of it)
-.hw
-	bsr	rd_planesize			;d0 = cells across, d1 = down
+.hw	bsr	rd_planesize			;d0 = cells across, d1 = down
 	mulu.w	d1,d0
 	cmpi.l	#BMAX,d0
-	bhi	.chunky
+	bhi.s	.skip				;(planes too big for the bitmap: none of the game's)
 	bsr	rd_fast
-	bra	.shown
-.chunky	tst.b	(rd_narrow).l
-	beq.s	.cw
-	move.b	(rd_reg16).l,(rd_regs+16).l	;(the planes as they are: rd_bline)
-	sf	(rd_narrow).l
-.cw	moveq	#-1,d0
-	bsr	rd_op_invall			;(the buffers drawn otherwise)
-	sf	(rd_ntsync).l			;(name table writes are not followed meanwhile)
-	bsr	rd_hud_off
-	move.l	d0,(rd_Bkey).l			;plane B bitmap no longer matches (all redrawn and
-						;restored on the way back)
-	move.w	#SCRX*8,(rd_xorg).l
-	clr.w	(rd_brow0).l
-	bsr	rd_vsync
-	bsr	rd_chunky
-	bsr	rd_octab_clr			;(its buffer was the object image table's)
-.shown	bsr	rd_show
+	bsr	rd_show
 	addq.l	#1,(rd_count).l
 .skip	movem.l	(sp)+,d0-d7/a0-a6
-	rts
-
-;	The object image table emptied (no image found in it: its memory was the chunky fallback's
-;	buffer). Uses d0/a0.
-rd_octab_clr
-	lea	(rd_octab).l,a0
-	move.w	#8*OBJSLOTS/4-1,d0
-.c	clr.l	(a0)+
-	clr.l	(a0)+
-	clr.l	(a0)+
-	clr.l	(a0)+
-	dbf	d0,.c
 	rts
 
 ;	d0 = plane cells across, d1 = down (a5 = regs). Keeps the rest.
@@ -3475,9 +3403,10 @@ rd_snapshot
 	dbf	d3,.hbl
 	move.w	-2(a1),(rd_hs+2).l
 	st	(rd_hslb).l
-.hu	; planes 128 cells wide by 32 (the title screen's, for its picture to slide in) whose
-	; screen stays in their first 64 columns: drawn as 64 x 32 planes of those, copied here
-	; (rd_vntA, rd_vntB: rd_narrow), not by the per line fallback
+.hu	; planes 128 cells wide by 32 (the title screen's, for its picture to slide in; the
+	; playoff tree's): drawn as 64 x 32 planes, copied here (rd_vntA, rd_vntB: rd_narrow),
+	; not by the per line fallback: plane B's first 64 columns, if its screen stays in them,
+	; and plane A's 64 from the first it shows (wrapping round), its scroll made that one's
 	sf	(rd_narrow).l
 	move.b	(rd_regs+16).l,d1
 	move.b	d1,(rd_reg16).l
@@ -3498,12 +3427,7 @@ rd_snapshot
 	andi.b	#$81,d1
 	bne.s	.nw
 	move.w	#512-8-256,d2
-.nw	move.w	(rd_hs).l,d1			;A
-	neg.w	d1
-	andi.w	#1023,d1
-	cmp.w	d2,d1
-	bhi	.nn
-	move.w	(rd_hs+2).l,d1			;B
+.nw	move.w	(rd_hs+2).l,d1			;B
 	neg.w	d1
 	andi.w	#1023,d1
 	cmp.w	d2,d1
@@ -3516,7 +3440,16 @@ rd_snapshot
 	lsl.l	#5,d1
 	lea	(a0,d1.l),a1			;B's name table
 	lea	(rd_vntB).l,a2
+	moveq	#0,d3				;(from column 0)
 	bsr.s	.nc
+	move.w	(rd_hs).l,d3			;A: its first column shown
+	neg.w	d3
+	andi.w	#1023,d3
+	moveq	#7,d1
+	and.w	d3,d1
+	neg.w	d1
+	move.w	d1,(rd_hs).l			;(the scroll in the copy)
+	lsr.w	#3,d3
 	moveq	#0,d1
 	move.b	(rd_regs+2).l,d1
 	andi.w	#$38,d1
@@ -3528,13 +3461,30 @@ rd_snapshot
 	move.b	#$01,(rd_regs+16).l		;(as 64 x 32)
 	st	(rd_narrow).l
 	bra.s	.nn
-.nc	moveq	#32-1,d1			;(each row's first 64 entries)
-.ncr	moveq	#64/2-1,d2
-.ncl	move.l	(a1)+,(a2)+
-	dbf	d2,.ncl
-	lea	128(a1),a1
+.nc	moveq	#32-1,d1			;each row's 64 entries from column d3 (wrapping round)
+.ncr	lea	(a1,d3.w*2),a3
+	move.w	#128,d4
+	sub.w	d3,d4				;(entries to the row's end)
+	cmpi.w	#64,d4
+	bls.s	.nc1
+	moveq	#64,d4
+.nc1	moveq	#64,d5
+	sub.w	d4,d5				;(then from its start)
+	bsr.s	.ncw
+	movea.l	a1,a3
+	move.w	d5,d4
+	bsr.s	.ncw
+	lea	256(a1),a1
 	dbf	d1,.ncr
 	rts
+.ncw	lsr.w	#1,d4				;d4 entries from a3
+	bcc.s	.ncl0
+	move.w	(a3)+,(a2)+
+.ncl0	subq.w	#1,d4
+	bmi.s	.ncx
+.ncl	move.l	(a3)+,(a2)+
+	dbf	d4,.ncl
+.ncx	rts
 .nn	tst.b	(rd_narrow).l
 	bne.s	.nk
 	sf	(rd_hslb).l			;(rd_bline draws from the copies)
@@ -8851,525 +8801,8 @@ rd_bmrp		ds.l	1			;this frame's (rd_bmrd_age)
 rd_ovrd		ds.l	3			;the overlay's bands of 8 lines (from line -8) blits read,
 						;queued in this frame, the one before, the one before that
 	even
-rd_sh		ds.w	1
-rd_sor		ds.w	1
-rd_c2pw		ds.w	1
-rd_c2py		ds.w	1
 
 	section	game,code
-
-;	==========================================================================================
-;	Fallback: per line into the chunky buffer (bits 0-5 CRAM index, 6 plane priority, 7 sprite),
-;	then chunky to planar. Tiles are read straight from VRAM.
-rd_chunky
-	moveq	#0,d7
-.line	bsr	rd_line
-	addq.w	#1,d7
-	cmpi.w	#SCRH,d7
-	bne	.line
-	bsr	rd_sprites_chunky
-	bra	rd_c2p
-
-;	Row d6 (0-7) of tile d0 (tile | hflip << 11) as 8 pixel bytes in rd_rowbuf; d3 = 0 if the
-;	row is transparent, 1 if opaque, 2 mixed. Keeps all other registers.
-rd_row8
-	movem.l	d0-d2/a0-a1,-(sp)
-	move.l	d0,d1
-	andi.l	#$7FF,d1
-	lsl.l	#5,d1
-	moveq	#0,d2
-	move.w	d6,d2
-	lsl.w	#2,d2
-	add.l	d2,d1
-	lea	(vdp_vram).l,a0
-	move.l	(a0,d1.l),d1			;8 nibbles
-	moveq	#0,d3
-	tst.l	d1
-	beq	.cls
-	move.l	d1,d2
-	andi.l	#$77777777,d2
-	addi.l	#$77777777,d2
-	or.l	d1,d2
-	andi.l	#$88888888,d2
-	moveq	#2,d3
-	cmpi.l	#$88888888,d2
-	bne	.cls
-	moveq	#1,d3
-.cls	lea	(rd_rowbuf).l,a1
-	lea	(rd_nibtab).l,a0
-	btst	#11,d0
-	beq	.n
-	lea	(rd_revtab).l,a0
-	; flipped: bytes in reverse order through the swapped table
-	moveq	#0,d2
-	moveq	#3,d0
-.f	move.b	d1,d2
-	move.w	(a0,d2.w*2),(a1)+
-	lsr.l	#8,d1
-	dbf	d0,.f
-	bra	.x
-.n	moveq	#0,d2
-	moveq	#3,d0
-.nl	rol.l	#8,d1
-	move.b	d1,d2
-	move.w	(a0,d2.w*2),(a1)+
-	dbf	d0,.nl
-.x	movem.l	(sp)+,d0-d2/a0-a1
-	rts
-
-;	One line, d7 = y: plane B, then plane A or the window.
-rd_line
-	lea	(chunky).l,a6
-	move.w	d7,d0
-	mulu.w	#CHPITCH,d0
-	adda.l	d0,a6
-	lea	(rd_regs).l,a5
-	lea	(ds_hs).l,a0			;the whole screen's scroll, or this line's
-	btst	#0,11(a5)
-	beq.s	.hsdone
-	move.w	d7,d0
-	lsl.w	#2,d0
-	adda.w	d0,a0
-.hsdone	move.l	(a0),d6				;A scroll : B scroll
-	lea	(vdp_vram).l,a0
-	moveq	#0,d0
-	move.b	4(a5),d0
-	andi.w	#7,d0
-	lsl.l	#8,d0
-	lsl.l	#5,d0
-	move.w	d6,d1
-	moveq	#2,d2
-	moveq	#0,d3
-	bsr	rd_plane
-	move.b	18(a5),d0
-	move.b	d0,d1
-	andi.w	#$1F,d1
-	lsl.w	#3,d1
-	tst.b	d0
-	bmi	.down
-	cmp.w	d1,d7
-	blt	rd_winline
-	bra	.hwin
-.down	cmp.w	d1,d7
-	bge	rd_winline
-.hwin	move.b	17(a5),d0
-	andi.w	#$1F,d0
-	bne	rd_line_split
-	tst.b	17(a5)
-	bmi	rd_winline
-	moveq	#0,d0
-	move.b	2(a5),d0
-	andi.w	#$38,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0
-	swap	d6
-	move.w	d6,d1
-	moveq	#0,d2
-	moveq	#1,d3
-	bra	rd_plane
-
-rd_winline
-	bsr	rd_winbase
-	moveq	#-1,d1
-	moveq	#1,d3
-	bra	rd_plane
-
-rd_winbase
-	moveq	#0,d0
-	move.b	3(a5),d0
-	move.b	12(a5),d1
-	andi.b	#$81,d1
-	beq	.32
-	andi.w	#$3C,d0
-	bra	.b
-.32	andi.w	#$3E,d0
-.b	lsl.l	#8,d0
-	lsl.l	#2,d0
-	rts
-
-rd_line_split
-	lsl.w	#4,d0
-	move.w	d0,-(sp)
-	tst.b	17(a5)
-	bmi	.right
-	move.w	(sp),(rd_clipx0).l
-	move.w	(rd_w).l,(rd_clipx1).l
-	bsr	.drawA
-	clr.w	(rd_clipx0).l
-	move.w	(sp)+,(rd_clipx1).l
-	bra	.win
-.right	clr.w	(rd_clipx0).l
-	move.w	(sp),(rd_clipx1).l
-	bsr	.drawA
-	move.w	(sp)+,(rd_clipx0).l
-	move.w	(rd_w).l,(rd_clipx1).l
-.win	bsr	rd_winbase
-	moveq	#-1,d1
-	moveq	#2,d3
-	bra	rd_plane
-.drawA	moveq	#0,d0
-	move.b	2(a5),d0
-	andi.w	#$38,d0
-	lsl.l	#8,d0
-	lsl.l	#2,d0
-	move.l	d6,d1
-	swap	d1
-	moveq	#0,d2
-	moveq	#2,d3
-	bra	rd_plane
-
-;	One plane line into the chunky line a6. d0 = name table, d1 = hscroll (-1: window),
-;	d2 = vsram byte offset, d3 = 0 opaque, 1 transparent, 2 transparent and clipped,
-;	d7 = y, a5 = regs. Keeps d6, d7, a5, a6.
-rd_plane
-	movem.l	d6-d7/a5-a6,-(sp)
-	lea	(vdp_vram).l,a0
-	adda.l	d0,a0
-	move.w	d3,(rd_mode).l
-	cmpi.w	#-1,d1
-	bne	.scrolled
-	move.w	(rd_cells).l,d4
-	moveq	#5,d5
-	cmpi.w	#41,d4
-	bne	.w32
-	moveq	#6,d5
-.w32	moveq	#0,d1
-	move.w	d7,d2
-	move.w	#$FFFF,d3
-	bra	.go
-.scrolled
-	move.b	16(a5),d4
-	moveq	#5,d5
-	btst	#0,d4
-	beq	.wa
-	moveq	#6,d5
-	btst	#1,d4
-	beq	.wa
-	moveq	#7,d5
-.wa	moveq	#5,d3
-	btst	#4,d4
-	beq	.ha
-	moveq	#6,d3
-	btst	#5,d4
-	beq	.ha
-	moveq	#7,d3
-.ha	lea	(ds_vs).l,a1
-	move.w	(a1,d2.w),d2
-	add.w	d7,d2
-	moveq	#3,d4
-	add.w	d3,d4
-	moveq	#0,d0
-	bset	d4,d0
-	subq.w	#1,d0
-	and.w	d0,d2
-	neg.w	d1
-	moveq	#3,d4
-	add.w	d5,d4
-	moveq	#0,d3
-	bset	d4,d3
-	subq.w	#1,d3
-.go	and.w	d3,d1
-	move.w	d2,d0
-	lsr.w	#3,d0
-	lsl.w	d5,d0
-	add.w	d0,d0
-	lea	(a0,d0.w),a1			;row of entries
-	andi.w	#7,d2				;line in tile
-	move.w	d2,(rd_tline).l
-	move.w	d1,d0
-	andi.w	#7,d0
-	lea	CHLEFT(a6),a2
-	suba.w	d0,a2
-	lsr.w	#3,d1
-	moveq	#1,d0
-	lsl.w	d5,d0
-	subq.w	#1,d0
-	move.w	d0,d5				;cell mask
-	move.w	(rd_cells).l,d4
-	subq.w	#1,d4
-	lea	(rd_attr).l,a4
-	lea	(rd_rowbuf).l,a3
-.tile	move.w	d1,d0
-	add.w	d0,d0
-	move.w	(a1,d0.w),d0
-	move.w	d0,d6
-	rol.w	#3,d6
-	andi.w	#7,d6
-	move.l	(a4,d6.w*4),d7			;palette / priority bits
-	move.w	(rd_tline).l,d6
-	btst	#12,d0
-	beq	.nv
-	eori.w	#7,d6
-.nv	andi.l	#$FFF,d0
-	bsr	rd_row8				;rd_rowbuf, d3 = class
-	tst.w	(rd_mode).l
-	bne	.trans
-	; opaque layer: transparent pixels keep the palette (backdrop), never the priority
-	cmpi.b	#1,d3
-	beq	.ofast
-	btst	#6,d7
-	beq	.ofast
-	movea.l	a3,a0
-	moveq	#7,d6
-.opix	move.b	(a0)+,d3
-	beq	.oz
-	or.b	d7,d3
-	move.b	d3,(a2)+
-	dbf	d6,.opix
-	bra	.next
-.oz	move.b	d7,d3
-	andi.b	#$30,d3
-	move.b	d3,(a2)+
-	dbf	d6,.opix
-	bra	.next
-.ofast	move.l	(a3),d6
-	or.l	d7,d6
-	move.l	d6,(a2)+
-	move.l	4(a3),d6
-	or.l	d7,d6
-	move.l	d6,(a2)+
-	bra	.next
-.trans	tst.b	d3
-	bne	.tdraw
-	addq.l	#8,a2
-	bra	.next
-.tdraw	movem.l	d1/d4,-(sp)
-	move.l	a2,d1
-	sub.l	a6,d1
-	subi.w	#CHLEFT,d1			;screen x
-	movea.l	a3,a0
-	moveq	#7,d4
-.tp	move.b	(a0)+,d3
-	beq	.tn
-	cmpi.w	#2,(rd_mode).l
-	bne	.tnc
-	cmp.w	(rd_clipx0).l,d1
-	blt	.tn
-	cmp.w	(rd_clipx1).l,d1
-	bge	.tn
-.tnc	btst	#6,d7
-	bne	.tw
-	btst	#6,(a2)
-	bne	.tn
-.tw	or.b	d7,d3
-	move.b	d3,(a2)
-.tn	addq.l	#1,a2
-	addq.w	#1,d1
-	dbf	d4,.tp
-	movem.l	(sp)+,d1/d4
-.next	addq.w	#1,d1
-	and.w	d5,d1
-	dbf	d4,.tile
-	movem.l	(sp)+,d6-d7/a5-a6
-	rts
-
-;	Sprites into the chunky buffer, last first (the list from rd_snapshot).
-rd_sprites_chunky
-	move.w	(rd_spn).l,d5
-	lea	(rd_sprites).l,a1
-	move.w	d5,d0
-	lsl.w	#3,d0
-	adda.w	d0,a1
-	subq.w	#1,d5
-	bmi	.x
-.each	subq.l	#8,a1
-	movem.l	d5/a1,-(sp)
-	bsr	rd_sprite_chunky
-	movem.l	(sp)+,d5/a1
-	dbf	d5,.each
-.x	rts
-
-rd_sprite_chunky
-	move.w	(a1),d0
-	andi.w	#$3FF,d0
-	subi.w	#128,d0
-	move.b	2(a1),d1
-	moveq	#3,d2
-	and.w	d1,d2
-	addq.w	#1,d2
-	lsr.b	#2,d1
-	andi.w	#3,d1
-	addq.w	#1,d1
-	move.w	4(a1),d3
-	move.w	6(a1),d4
-	andi.w	#$1FF,d4
-	subi.w	#128,d4
-	cmpi.w	#SCRH,d0
-	bge	.out
-	move.w	d2,d5
-	lsl.w	#3,d5
-	add.w	d0,d5
-	ble	.out
-	cmp.w	(rd_w).l,d4
-	bge	.out
-	move.w	d1,d5
-	lsl.w	#3,d5
-	add.w	d4,d5
-	ble	.out
-	move.w	d3,d5
-	rol.w	#3,d5
-	andi.w	#3,d5
-	lsl.w	#4,d5
-	ori.w	#$80,d5
-	move.w	d5,(rd_sor).l
-	move.w	d2,d5
-	lsl.w	#3,d5
-	subq.w	#1,d5
-	move.w	d5,(rd_sh).l
-	move.w	d1,(rd_scw).l
-	move.w	d2,(rd_sch).l
-	move.w	d0,(rd_sy).l
-	move.w	d4,(rd_sx).l
-	move.w	d3,(rd_sat).l
-	moveq	#0,d6
-.row	move.w	(rd_sy).l,d0
-	add.w	d6,d0
-	bmi	.nrow
-	cmpi.w	#SCRH,d0
-	bge	.out
-	lea	(chunky).l,a2
-	mulu.w	#CHPITCH,d0
-	adda.l	d0,a2
-	move.w	(rd_sx).l,d0
-	lea	CHLEFT(a2,d0.w),a2
-	move.w	d6,d7
-	move.w	(rd_sat).l,d3
-	btst	#12,d3
-	beq	.nvf
-	move.w	(rd_sh).l,d7
-	sub.w	d6,d7
-.nvf	moveq	#0,d1
-.col	move.w	d1,d0
-	btst	#11,d3
-	beq	.nhf
-	move.w	(rd_scw).l,d0
-	subq.w	#1,d0
-	sub.w	d1,d0
-.nhf	mulu.w	(rd_sch).l,d0
-	move.w	d7,d2
-	lsr.w	#3,d2
-	add.w	d2,d0
-	add.w	d3,d0
-	andi.l	#$7FF,d0
-	btst	#11,d3
-	beq	.nf2
-	bset	#11,d0
-.nf2	move.l	d6,-(sp)
-	move.w	d7,d6
-	andi.w	#7,d6
-	move.l	d3,-(sp)
-	bsr	rd_row8
-	tst.b	d3
-	movem.l	(sp)+,d3
-	movem.l	(sp)+,d6
-	beq	.ncol
-	lea	(rd_rowbuf).l,a0
-	move.w	(rd_sx).l,d0
-	move.w	d1,d2
-	lsl.w	#3,d2
-	add.w	d2,d0
-	movea.l	a2,a3
-	adda.w	d2,a3
-	moveq	#7,d4
-.px	move.b	(a0)+,d2
-	beq	.pn
-	tst.w	d0
-	bmi	.pn
-	cmp.w	(rd_w).l,d0
-	bge	.pn
-	btst	#15,d3
-	bne	.pw
-	btst	#6,(a3)
-	bne	.pn
-.pw	or.b	(rd_sor+1).l,d2
-	move.b	(a3),d5
-	andi.b	#$40,d5
-	or.b	d5,d2
-	btst	#15,d3
-	beq	.pw2
-	ori.b	#$40,d2
-.pw2	move.b	d2,(a3)
-.pn	addq.l	#1,a3
-	addq.w	#1,d0
-	dbf	d4,.px
-.ncol	addq.w	#1,d1
-	cmp.w	(rd_scw).l,d1
-	blt	.col
-.nrow	addq.w	#1,d6
-	cmp.w	(rd_sh).l,d6
-	ble	.row
-.out	rts
-
-;	Chunky to planar, 16 pixels at a time into the 6 interleaved planes of the back buffer.
-MERGE	MACRO					;\1 = a, \2 = b, \3 = shift, \4 = mask
-	move.l	\1,d4
-	lsr.l	#\3,d4
-	eor.l	\2,d4
-	and.l	\4,d4
-	eor.l	d4,\2
-	lsl.l	#\3,d4
-	eor.l	d4,\1
-	ENDM
-
-MERGE16	MACRO
-	move.l	\1,d4
-	swap	d4
-	eor.l	\2,d4
-	and.l	#$0000FFFF,d4
-	eor.l	d4,\2
-	swap	d4
-	eor.l	d4,\1
-	ENDM
-
-rd_c2p
-	lea	(chunky+CHLEFT).l,a0
-	movea.l	(rd_back).l,a1
-	addq.l	#SCRX,a1
-	move.w	(rd_w).l,d0
-	lsr.w	#4,d0
-	subq.w	#1,d0
-	move.w	d0,(rd_c2pw).l
-	move.l	#$00FF00FF,d5
-	move.l	#$0F0F0F0F,d6
-	move.l	#$33333333,d7
-	move.w	#SCRH-1,(rd_c2py).l
-.y	movea.l	a0,a2
-	movea.l	a1,a3
-	move.w	(rd_c2pw).l,a4
-.x	movem.l	(a2)+,d0-d3
-	andi.l	#$3F3F3F3F,d0
-	andi.l	#$3F3F3F3F,d1
-	andi.l	#$3F3F3F3F,d2
-	andi.l	#$3F3F3F3F,d3
-	MERGE	d2,d0,8,d5
-	MERGE	d3,d1,8,d5
-	MERGE	d1,d0,4,d6
-	MERGE	d3,d2,4,d6
-	MERGE16	d0,d1
-	MERGE16	d2,d3
-	MERGE	d0,d1,2,d7
-	MERGE	d2,d3,2,d7
-	MERGE	d2,d0,1,#$55555555
-	MERGE	d3,d1,1,#$55555555
-	move.w	d2,4*SBPR(a3)
-	move.w	d0,5*SBPR(a3)
-	swap	d2
-	swap	d0
-	swap	d3
-	swap	d1
-	move.w	d2,(a3)
-	move.w	d0,SBPR(a3)
-	move.w	d3,2*SBPR(a3)
-	move.w	d1,3*SBPR(a3)
-	addq.l	#2,a3
-	subq.w	#1,a4
-	move.w	a4,d4
-	bpl	.x
-	lea	CHPITCH(a0),a0
-	lea	SROW(a1),a1
-	subq.w	#1,(rd_c2py).l
-	bpl	.y
-	rts
 
 ;	==========================================================================================
 ;	Colours: the game's ----bbb-ggg-rrr- (display.asm) to Amiga $0RGB. 0, 16, 32 and 48 all
@@ -9822,7 +9255,6 @@ rd_show
 	rts
 
 	section	bss,bss
-rd_tline	ds.w	1
 rd_hudspt	ds.l	8			;the sprites' data in rd_hudm (rd_sprnull: none)
 rd_hudgen	ds.l	1			;(changed when its sprites or their colours change, not a
 						;cell's bytes: the copper lists' HUD parts, rd_show)
@@ -9916,16 +9348,9 @@ rd_ovlbg	ds.l	32			;its value at each band's last change (bands of 8
 rd_ovlkey	ds.l	1			;(rd_ovl_blit)
 rd_tcb		ds.b	2048			;(rd_ovl_tilecells: tiles converted, as bytes)
 	cnop	0,4
-;	The chunky fallback's buffer (rd_chunky) is the memory of the blit lists and the object
-;	image table, which only the fast path uses: the lists are not known after a chunky frame
-;	(rd_op_invall) and the table is emptied after one (rd_octab_clr).
-chunky
 rd_oplists	ds.b	(NBUF+1)*OPMAX*OPREC		;blit lists (rd_op_end)
 rd_octab	ds.l	8*OBJSLOTS		;object images: $10000 + key, 0, ring place, image, box (4
 						;words), offset from the first sprite (x, y), cells across, down
-	IFLT	(NBUF+1)*OPMAX*OPREC+8*OBJSLOTS*4-CHPITCH*SCRH
-	FAIL	"the chunky buffer is larger than the tables it shares"
-	ENDC
 rd_opold	ds.l	NBUF				;per buffer: the list of its last frame,
 rd_opoldn	ds.w	NBUF				;its blits (-1: not known)
 rd_opnew	ds.l	1				;the list being made

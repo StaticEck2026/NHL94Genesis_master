@@ -104,7 +104,7 @@ hal_set_rate
 ;	+80 chip buffers (the harness' blitter statistics by kind)
 hal_debug
 	dc.l	rd_regs,vdp_vram,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
-	dc.l	rd_count,chunky
+	dc.l	rd_count,0
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows

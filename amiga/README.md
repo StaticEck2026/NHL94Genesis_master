@@ -242,15 +242,17 @@ The hardware layer:
   CPU draws (cut by the screen's left margin), a full list or an image written over in the ring
   ends the listing for that frame: all is restored and drawn as it comes. Other
   screens get plane B blitted in at the scroll position. A screen scrolled by lines or cells
-  with all of them alike is drawn as one scrolled whole, and planes 128 cells wide whose screen
-  stays in their first 64 columns as 64 x 32 planes of those (copied each frame). One with
+  with all of them alike is drawn as one scrolled whole, and planes 128 cells wide as 64 x 32
+  planes (copied each frame): plane B's first 64 columns, if its screen stays in them, and
+  plane A's 64 from the first it shows (the playoff tree's, paged across). One with
   plane A's lines alike and plane B's not is drawn as scrolled all like B's last line, with the
   rows of the lines scrolled otherwise drawn empty; those rows' pixels, which must all be of
   high priority, are blitted over the low priority layers a line at a time at each line's own
   scroll, from an image of the row kept in the sprite image ring (made when one of its lines
   shows some of it), as listed blits, so a line that did not move is not drawn again. The
   title screen's logos slide in that way (its plane B by lines over the picture, which is the
-  window), which the per line fallback drew at about a frame a second.
+  window), which a per line renderer drew at about a frame a second (it is gone: no screen
+  of the game needs it).
   Plane A and the window are an overlay
   layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
   of 8 lines, a run the same in the bands below one rectangle; made again when a cell adds a
@@ -291,10 +293,7 @@ The hardware layer:
   whole sprites, and of what is restored), and plane B's high priority cells are
   blitted back over what was drawn under them (found by moving the screen cells something low
   was drawn on to plane columns and ANDing them with a bitmap of those cells); the CPU queues a whole frame for the blitter
-  without waiting. A chunky renderer with
-  chunky-to-planar conversion covers line scroll and cell scroll (it is not needed by any
-  screen the harness runs through; its 84 KB buffer is the memory of the fast path's blit lists
-  and object image table, which are given up for a frame drawn by it). The copper sets the 64 colours
+  without waiting. The copper sets the 64 colours
   and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
   the layout, scroll and sprite list taken when it starts, with the changed tiles
   converted in the same game frame (the game runs several of its frames meanwhile; without it,

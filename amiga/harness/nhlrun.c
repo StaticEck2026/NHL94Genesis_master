@@ -176,6 +176,7 @@ static FILE *prof_f;                    /* NHL_PROF: a PC sample each 1000 cycle
 static long long prof_next;             /* instruction that ran then */
 static uint32_t prof_pc, prof_sr, prof_ret;
 static uint32_t pcc_addr[8]; static long long pcc_n[8]; static int pcc_k; static int pcc_from;
+static uint32_t cl_addr[16]; static int cl_k; static FILE *cl_f;    /* NHL_CALLLOG */
 /* NHL_BFCHK=1: a bit field instruction on memory whose offset is in a data register: report
    (each code address once) an offset of 2^20 bits or more either way, a register with
    something left in its top word (the offset is all 32 bits of it) */
@@ -200,6 +201,12 @@ static void det_hook(unsigned int pc)
     if (bfchk < 0) bfchk = getenv("NHL_BFCHK") ? 1 : 0;
     if (bfchk) bf_check(pc);
     for (int i = 0; i < pcc_k; i++) if ((pc & 0xFFFFFF) == pcc_addr[i] && frame >= pcc_from) pcc_n[i]++;
+    for (int i = 0; i < cl_k; i++) if ((pc & 0xFFFFFF) == cl_addr[i]) {
+        uint32_t sp = m68k_get_reg(NULL, M68K_REG_SP);
+        fprintf(cl_f, "%d %06x d0=%08x d1=%08x d2=%08x a0=%08x a1=%08x ret=%06x %06x\n", frame, pc & 0xFFFFFF,
+                m68k_get_reg(NULL, M68K_REG_D0), m68k_get_reg(NULL, M68K_REG_D1), m68k_get_reg(NULL, M68K_REG_D2),
+                m68k_get_reg(NULL, M68K_REG_A0), m68k_get_reg(NULL, M68K_REG_A1), rd32(sp) & 0xFFFFFF, rd32(sp + 4) & 0xFFFFFF);
+    }
     if (prof_f) {
         long long now = cycles_total + m68k_cycles_run();
         if (!prof_next) prof_next = now;
@@ -1040,6 +1047,15 @@ int main(int argc, char **argv)
     wr32(4, entry);
     m68k_pulse_reset();
     m68k_set_instr_hook_callback(det_hook);         /* (after init, which clears it) */
+    if (getenv("NHL_CALLLOG")) {        /* NHL_CALLLOG=file:addr,addr...: each time one runs, its
+                                           registers and the return addresses on the stack */
+        char fn[256], *q = getenv("NHL_CALLLOG"), *c = strchr(q, ':');
+        if (c && c - q < 255) {
+            memcpy(fn, q, c - q); fn[c - q] = 0;
+            cl_f = fopen(fn, "w");
+            for (q = c; *q && cl_k < 16; ) { q++; cl_addr[cl_k++] = strtoul(q, &q, 16); }
+        }
+    }
     if (getenv("NHL_PCCOUNT")) {        /* NHL_PCCOUNT=from:addr,addr...: how often each runs from frame from */
         char *q = getenv("NHL_PCCOUNT");
         pcc_from = strtol(q, &q, 10);
@@ -1142,31 +1158,6 @@ int main(int argc, char **argv)
             snprintf(name, sizeof name, "%s/shot_%05d.png", outdir, frame);
             vdpref_png(name, mem + (vdpregs & 0xFFFFFF), ref_vram(vram), mem + (cram & 0xFFFFFF),
                        mem + (vsram & 0xFFFFFF));
-            if (getenv("NHL_DIFF")) {
-                static uint8_t idx[320 * 240];
-                static int pairs[256][256];
-                memset(pairs, 0, sizeof pairs);
-                vdpref_index = idx;
-                static uint8_t tmp[320 * 240 * 3];
-                int w, h;
-                vdpref_render(tmp, &w, &h, mem + (vdpregs & 0xFFFFFF), ref_vram(vram),
-                              mem + (cram & 0xFFFFFF), mem + (vsram & 0xFFFFFF));
-                vdpref_index = NULL;
-                uint32_t ch = rd32(dbg + 32);
-                int bad = 0;
-                for (int y = 0; y < h; y++)
-                    for (int x = 0; x < w; x++) {
-                        int r = idx[y * w + x] & 0x3F, a = rd8(ch + y * 384 + 32 + x);
-                        int a6 = a & 0x3F;
-                        if ((r & 15) == 0) r &= 0x30;
-                        if ((a6 & 15) == 0) a6 &= 0x30;
-                        if (r != a6 && !((r & 15) == 0 && (a6 & 15) == 0)) { bad++; pairs[r][a]++; }
-                    }
-                printf("frame %d: %d pixels differ\n", frame, bad);
-                for (int i = 0; i < 64; i++)
-                    for (int j = 0; j < 256; j++)
-                        if (pairs[i][j] > 20) printf("  ref %02x ami %02x x%d\n", i, j, pairs[i][j]);
-            }
             if (getenv("NHL_BMB")) {
                 uint32_t bm = rd32(dbg + 36), cw = rd16(rd32(dbg + 40)), chh = rd16(rd32(dbg + 40) + 2);
                 uint32_t cols = rd32(dbg + 44);
