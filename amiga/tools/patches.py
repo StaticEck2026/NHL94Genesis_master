@@ -301,7 +301,15 @@ replace_routine('display94.asm', 'SetScroll2', '\tmove.w\t(Hscroll).w,(ds_hs+2).
 P('setup94.asm', '\tmove.w\t(VSCRLPM).w,d0\n\tbsr.w\tVmaddr\n\tmove.w\t#$FEA0,d0\n\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(a0)\n',
   '\tmove.w\t#$FEA0,d0\n\tadd.w\t(DispAttribCtr).w,d0\n\tmove.w\td0,(ds_hs).l\t\t\t;(display.asm: plane A\'s scroll)\n'
   '\taddq.l\t#1,(ds_gen).l\n')
-# (setVram: VRAM cleared, then the screen's layout from disflags, Map1col1, VmMAP1-3, VSPRITES)
+# (the sprite list: handed over, not copied into video memory)
+_SPR = '\tjsr\t(ds_sprites).l\t\t\t;(display.asm: the sprite list, d0 words at a0)\n'
+P('display94.asm', '\tmove.w\t(VSPRITES).w,d1\n\tbsr.w\tDoDMA\ndodmalist', _SPR + 'dodmalist')
+P('title94.asm', '\tmove.w\t(VSPRITES).w,d1\n\tjsr\t(DoDMA).l\n', _SPR)
+P('setup94.asm', '\tmove.w\t(VSPRITES).w,d1\n\tbsr.w\tDoDMA\n', _SPR)
+for _rel, _call in (('stats94.asm', 'bsr.w\tVmaddr'), ('cards94.asm', 'jsr\t(Vmaddr).l')):
+    P(_rel, '\tmove.w\t(VSPRITES).w,d0\n\t%s\n\tmove.l\t#0,(a0)\n' % _call,
+      '\tclr.l\t(ds_spr).l\t\t\t;(display.asm: no sprites)\n\taddq.l\t#1,(ds_gen).l\n')
+# (setVram: VRAM cleared, then the screen's layout from disflags, Map1col1, VmMAP1-3)
 P('video94.asm', '\tmove.w\t#VDPR_AUTOINC+$02,(Vctrl).l\n', '')
 P('video94.asm', r'\tmove\.w\t#\$8C00,d0[^\n]*\n(?:[^\n]*\n)*?\tmove\.l\t#0,\(a0\)\t+;playfield 1/2\n',
   '\tjsr\t(vm_dirty_all).l\t\t;all of VRAM was cleared\n\tjsr\t(ds_setup).l\t\t\t;(display.asm: the screen\'s layout)\n',

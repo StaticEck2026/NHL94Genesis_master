@@ -43,7 +43,6 @@ for S in $SESSIONS; do
     rm -f "${OUT:?}"/*.png
     NHL_DETERM=1 amiga/harness/nhlrun -c 8000000 -f "$F" -S "$STEP" -p "$P" -o "$OUT" "$GAME" \
         > "$OUT/run.txt" 2>&1 || { echo "$S: the run failed"; tail -3 "$OUT/run.txt"; bad=1; continue; }
-    rm -f "${OUT:?}"/shot_*.png         # (the reference renderer's: only the Amiga screens count)
     if [ "$MODE" = check ]; then
         python3 - "$DIR/$S" "$OUT" "$S" <<'EOF' || bad=1
 import sys, glob, os

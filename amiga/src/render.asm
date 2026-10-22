@@ -3495,7 +3495,7 @@ rd_snapshot
 
 ;	The layout (display.asm) as the values of the Genesis video chip's registers the renderer
 ;	decodes (rd_regs): 2 plane A's cells (address / $400), 3 the window's (/ $400), 4 plane
-;	B's (/ $2000), 5 the sprite list (/ $200), 11 scrolled by lines (3) or whole (0), 12
+;	B's (/ $2000), 11 scrolled by lines (3) or whole (0), 12
 ;	320 pixels across ($81) or 256 (0), 16 planes 128 x 32 ($03) or 64 x 32 ($01), 17 and 18
 ;	the window (rows from the top). Uses d0/a1.
 rd_regs_make
@@ -3519,10 +3519,6 @@ rd_regs_make
 	rol.w	#3,d0
 	andi.b	#7,d0
 	move.b	d0,4(a1)
-	move.w	(ds_sat).l,d0
-	lsr.w	#8,d0
-	lsr.b	#1,d0
-	move.b	d0,5(a1)
 	tst.b	(ds_lines).l
 	beq.s	.l
 	move.b	#$03,11(a1)
@@ -3539,20 +3535,12 @@ rd_regs_make
 ;	The sprite list, followed from sprite 0 through the links.
 rd_collect_sprites
 	lea	(rd_regs).l,a5
-	moveq	#0,d0
-	move.b	5(a5),d0
-	moveq	#64,d6
+	moveq	#64,d6				;(at most: 64 on a screen 256 wide, 80 on one 320)
 	move.b	12(a5),d1
 	andi.b	#$81,d1
-	beq	.32
-	andi.w	#$7E,d0
+	beq.s	.32
 	moveq	#80,d6
-	bra	.b
-.32	andi.w	#$7F,d0
-.b	lsl.l	#8,d0
-	add.l	d0,d0
-	lea	(vm_data).l,a0
-	adda.l	d0,a0
+.32	lea	(ds_spr).l,a0			;(display.asm)
 	lea	(rd_sprites).l,a1
 	moveq	#0,d1
 	moveq	#0,d5
@@ -6881,7 +6869,7 @@ hal_addframe2
 	tst.w	attribute(a3)			;(the flags the game's leaves)
 	rts
 
-;	The sprite table is sent to video memory (vm_load): its objects with it; the next table's from
+;	The sprite list is sent (ds_sprites): its objects with it; the next list's from
 ;	none. Keeps everything.
 rd_obj_publish
 	movem.l	d0/a0-a1,-(sp)

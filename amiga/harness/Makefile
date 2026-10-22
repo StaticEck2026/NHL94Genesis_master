@@ -5,8 +5,8 @@ CFLAGS = -O2 -g -Wall -I$(MUSASHI)
 CORE = -DM68K_INSTRUCTION_HOOK=M68K_OPT_ON -DM68K_EMULATE_INT_ACK=M68K_OPT_ON -O2 -I$(MUSASHI) -w
 OBJS = m68kcpu.o m68kops.o m68kdasm.o softfloat.o
 
-nhlrun: nhlrun.c vdpref.c vdpref.h $(OBJS)
-	$(CC) $(CFLAGS) -DNHL_HOOK -o $@ nhlrun.c vdpref.c $(OBJS) -lz -lm
+nhlrun: nhlrun.c png.c png.h $(OBJS)
+	$(CC) $(CFLAGS) -DNHL_HOOK -o $@ nhlrun.c png.c $(OBJS) -lz -lm
 
 m68kcpu.o: $(MUSASHI)/m68kcpu.c
 	$(CC) $(CORE) -c -o $@ $<

@@ -1,5 +1,5 @@
-;	The game's video memory: its tiles and its cell maps (the planes, the window, the sprite
-;	list), in its own formats and at the addresses it gives them, as its graphics routines
+;	The game's video memory: its tiles and its cell maps (the planes, the window), in its own
+;	formats and at the addresses it gives them, as its graphics routines
 ;	write them (vm_at: Vmaddr; vm_load, vm_copy, vm_fill: its DoDMA, DoDMA_nd2, DoFill). The
 ;	renderer (render.asm) draws from them: a tile changed is converted to planar again
 ;	(vm_dirty), a map written to is compared with its copy (vm_wmap). The colours, scroll,
@@ -38,10 +38,6 @@ vm_at
 ;	(vm_tsrc_note marks those whose source changed).
 vm_load
 	bsr	vm_tsrc_note
-	cmpa.l	#Satt,a0			;the sprite table: its objects go with it (rd_obj_publish)
-	bne.s	.ns
-	jsr	(rd_obj_publish).l
-.ns
 	cmpa.l	#Spritetiles,a0
 	blo.s	.cp
 	cmpa.l	#Spritetiles+SPRTSIZE,a0

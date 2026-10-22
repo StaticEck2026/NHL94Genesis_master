@@ -3,25 +3,25 @@
  *
  * A Musashi 68020 core runs the hunk executable with just enough of the Amiga around it for the
  * hardware layer: the CIA-B timer interrupt (the Genesis vblank, level 6), the beam counter and
- * the custom chip writes. The emulated VDP memories are drawn with a reference Genesis renderer
- * (vdpref.c) and saved as PNG, so screens can be checked without an Amiga emulator.
+ * the custom chips the hardware layer and the renderer use (blitter, copper list, Paula). The
+ * screen the copper list shows is saved as PNG, so screens can be checked without an Amiga
+ * emulator (golden.sh: against those of an earlier build).
  *
  * nhlrun [options] nhl94.game
  *   -f N          run N frames (default 600)
- *   -s a,b,c      save shot_<frame>.png at these frames
- *   -S N          save a shot every N frames
+ *   -s a,b,c      save the screen (ami_<frame>.png) at these frames
+ *   -S N          save it every N frames
  *   -p F:MASK,..  from frame F hold pad bits MASK (hex, pad2<<8|pad1, active high:
  *                 1 up 2 down 4 left 8 right 10 B 20 C 40 A 80 Start)
  *   -o DIR        output directory (default .)
  *   -c CYCLES     CPU cycles per frame (default 233000, a 14 MHz 68020 at 60 Hz)
- *   -r FILE       also dump the raw VDP state at the end (regs, vram, cram, vsram)
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include "m68k.h"
-#include "vdpref.h"
+#include "png.h"
 
 #define MEMSIZE 0x1000000
 static uint8_t *mem;
@@ -308,33 +308,6 @@ static void blitkind_print(unsigned frames)
         fprintf(stderr, "  %-22s %5.1f%%  %7.0f cycles a frame drawn, %6.1f blits, %7.0f words\n", bk[i].key,
                 100.0 * bk[i].time / tot, (double)bk[i].time / frames, (double)bk[i].n / frames,
                 (double)bk[i].words / frames);
-}
-
-/* The reference renderer's VRAM: the game's, with the tiles a DMA sent from the players' sprite
-   tiles (planar in the program, not copied to VRAM: the debug block from +156) taken from the
-   original data (Extracted/NHL94/Graphics/Spritetiles.bin). */
-static uint8_t *ref_vram(uint32_t vram)
-{
-    static uint8_t v[0x10000], *orig; static long olen = -1;
-    memcpy(v, mem + (vram & 0xFFFFFF), sizeof v);
-    if (olen < 0) {
-        FILE *f = fopen("Extracted/NHL94/Graphics/Spritetiles.bin", "rb");
-        olen = 0;
-        if (f) {
-            fseek(f, 0, SEEK_END); olen = ftell(f); fseek(f, 0, SEEK_SET); orig = malloc(olen);
-            if (fread(orig, 1, olen, f) != (size_t)olen) olen = 0;
-            fclose(f);
-        } else
-            fprintf(stderr, "harness: no Spritetiles.bin: the reference sprites will be wrong\n");
-    }
-    uint32_t st = rd32(dbg + 156), sz = rd32(dbg + 160), ts = rd32(dbg + 164);
-    int np = 0;
-    for (int t = 0; t < 2048; t++) {
-        uint32_t s = rd32(ts + 4 * t) - st;
-        if (s < sz && (long)s + 32 <= olen) { memcpy(v + 32 * t, orig + s, 32); np++; }
-    }
-    if (getenv("NHL_REFLOG")) fprintf(stderr, "ref_vram: spritetiles %06x size %x tsrc %06x olen %ld: %d tiles\n", st, sz, ts, olen, np);
-    return v;
 }
 
 static void do_blit(int h, int w)
@@ -980,7 +953,7 @@ static void dump_exception(void)
 int main(int argc, char **argv)
 {
     int frames = 600, every = 0, ncyc = 233000;
-    const char *outdir = ".", *exe = NULL, *rawfile = NULL;
+    const char *outdir = ".", *exe = NULL;
     int shots[256], nshots = 0;
     if (getenv("NHL_WATCH")) watch_addr = strtoul(getenv("NHL_WATCH"), NULL, 16) & 0xFFFFFE;
     for (int i = 1; i < argc; i++) {
@@ -988,7 +961,6 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "-S")) every = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-c")) harness_ncyc = ncyc = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-o")) outdir = argv[++i];
-        else if (!strcmp(argv[i], "-r")) rawfile = argv[++i];
         else if (!strcmp(argv[i], "-p")) parse_pads(argv[++i]);
         else if (!strcmp(argv[i], "-s")) {
             char *s = argv[++i];
@@ -1065,7 +1037,7 @@ int main(int argc, char **argv)
     m68k_set_reg(M68K_REG_PC, entry);
     m68k_set_reg(M68K_REG_SR, 0x2700);
     m68k_set_reg(M68K_REG_SP, 0x1000);
-    uint32_t vdpregs = rd32(dbg), vram = rd32(dbg + 4), cram = rd32(dbg + 8), vsram = rd32(dbg + 12);
+    uint32_t vdpregs = rd32(dbg), vram = rd32(dbg + 4);
     uint32_t padstate = rd32(dbg + 24);
     if (getenv("NHL_VWLOG")) {
         unsigned lo, hi;
@@ -1111,29 +1083,6 @@ int main(int argc, char **argv)
             vwn = 0;
         }
         aud_frame();
-        if (getenv("NHL_VDPLOG")) {         /* mode, plane size, plane B scroll */
-            uint8_t *r = mem + (vdpregs & 0xFFFFFF);
-            uint32_t hs = (r[13] & 0x3F) << 10;
-            {   /* sprites by x: on the 256 screen, in a 32 pixel margin, further out */
-                uint32_t sat = (r[5] & 0x7F) << 9;
-                int on = 0, margin = 0, far = 0, n = 0, link = 0;
-                do {
-                    uint32_t e = vram + sat + link * 8;
-                    int y = rd16(e) & 0x3FF, x = rd16(e + 6) & 0x1FF, w = ((rd8(e + 2) >> 2) & 3) * 8 + 8;
-                    if (y >= 128 - 32 && y < 128 + 224) {
-                        if (x + w > 128 && x < 128 + 256) on++;
-                        else if (x + w > 128 - 32 && x < 128 + 288) margin++;
-                        else far++;
-                    }
-                    link = rd8(e + 3) & 0x7F;
-                } while (link && ++n < 80);
-                if (getenv("NHL_SPRLOG")) printf("frame %d: sprites on %d margin %d far %d\n", frame, on, margin, far);
-            }
-            int black = 1;
-            for (int c = 0; c < 64; c++) if (rd16(cram + 2 * c) & 0xEEE) black = 0;
-            printf("frame %d: black %d r1 %02x r2 %02x r3 %02x r4 %02x r5 %02x r13 %02x r11 %02x r12 %02x r16 %02x r17 %02x r18 %02x hscrollB %d vscrollB %d\n", frame, black, r[1], r[2], r[3], r[4], r[5], r[13], r[11], r[12], r[16], r[17], r[18],
-                   (int16_t)rd16(vram + hs + 2), (int16_t)rd16(vsram + 2));
-        }
         if (det || getenv("NHL_FIXEDHV")) { /* (the same game every build: no vertical blank lost
                                                while one before it waits, interrupts off; and the
                                                renderer not given the game's time when the game
@@ -1155,9 +1104,6 @@ int main(int argc, char **argv)
         for (int k = 0; k < nshots; k++) if (shots[k] == frame) shot = 1;
         if (shot) {
             char name[512];
-            snprintf(name, sizeof name, "%s/shot_%05d.png", outdir, frame);
-            vdpref_png(name, mem + (vdpregs & 0xFFFFFF), ref_vram(vram), mem + (cram & 0xFFFFFF),
-                       mem + (vsram & 0xFFFFFF));
             if (getenv("NHL_BMB")) {
                 uint32_t bm = rd32(dbg + 36), cw = rd16(rd32(dbg + 40)), chh = rd16(rd32(dbg + 40) + 2);
                 uint32_t cols = rd32(dbg + 44);
@@ -1179,8 +1125,6 @@ int main(int argc, char **argv)
             }
             snprintf(name, sizeof name, "%s/ami_%05d.png", outdir, frame);
             if (cop1lc) amiga_png(name);
-            if (getenv("NHL_STATS"))
-                vdpref_stats(frame, mem + (vdpregs & 0xFFFFFF), mem + (vram & 0xFFFFFF), mem + (vsram & 0xFFFFFF));
         }
     }
     if (cop_restarts) fprintf(stderr, "copper restarts (NHL_COPSTRESS): %ld\n", cop_restarts);
@@ -1240,14 +1184,6 @@ int main(int argc, char **argv)
         fwrite(mem + (rd32(dbg + 60) & 0xFFFFFF), 1, 288 * 224, f);
         fwrite(mem + (rd32(dbg + 64) & 0xFFFFFF), 1, 48 * 224 * 2, f);
         fwrite(mem + (rd32(dbg + 68) & 0xFFFFFF), 1, 256, f);
-        fclose(f);
-    }
-    if (rawfile) {
-        FILE *f = fopen(rawfile, "wb");
-        fwrite(mem + (vdpregs & 0xFFFFFF), 1, 32, f);
-        fwrite(mem + (vram & 0xFFFFFF), 1, 0x10000, f);
-        fwrite(mem + (cram & 0xFFFFFF), 1, 128, f);
-        fwrite(mem + (vsram & 0xFFFFFF), 1, 80, f);
         fclose(f);
     }
     return red_screen ? 2 : 0;

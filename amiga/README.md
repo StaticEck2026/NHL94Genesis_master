@@ -413,15 +413,12 @@ picture is the game's at the frame's end, which could then be part way into the 
 enough of the Amiga custom chips (blitter, copper list, Paula):
 
     make -C amiga/harness MUSASHI=/path/to/Musashi
-    amiga/harness/regress.sh /tmp/shots
+    amiga/harness/nhlrun -c 8000000 -f 3000 -S 100 -p 700:80,710:0 -o /tmp/shots output/amiga/nhl94.game
 
-It plays through the attract mode and into a game by pressing Start. At a few frames (a second
-argument lists others) it compares the Amiga screen, taken from the copper list, with a
-reference Genesis renderer (`vdpref.c`) and prints any frame whose pixels differ. A screen can
-lag one VDP update behind when the game changes it mid frame (text being printed, a mode
-change). The reference renderer reads a Genesis video chip's registers and scroll table, which
-the game no longer writes (`display.asm`): it is behind in scroll and mode, and `golden.sh`
-(below) is the check now. `NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
+runs 3000 frames, presses Start at frame 700 (`-p`: from a frame, the pads' bits held) and
+saves the Amiga screen, taken from the copper list, every 100 frames (`-S`; `-s` lists frames)
+as `ami_<frame>.png`. `golden.sh` (below) checks a build's screens against an earlier one's.
+`NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
 `NHL_PROF=file` writes a PC sample every 1000 cycles (the instruction running then), which
 `amiga/harness/rdcost.py` sums. `NHL_A32=1` reports each instruction that reads or writes an
 address with a top byte (a stock A1200's 68EC020 has 24 address lines and ignores it, a 68030
