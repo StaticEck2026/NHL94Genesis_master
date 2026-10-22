@@ -998,6 +998,15 @@ int main(int argc, char **argv)
     uint32_t code = load_hunks(exe);
     if (rd32(code + 4) != 0x4E483934) { fprintf(stderr, "no NH94 header\n"); return 1; }
     uint32_t entry = rd32(code + 8);
+    if (getenv("NHL_POKE")) {           /* NHL_POKE=addr:word,..: words written once loaded (hex) */
+        char *q = getenv("NHL_POKE");
+        while (*q) {
+            uint32_t a = strtoul(q, &q, 16), v = 0;
+            if (*q == ':') v = strtoul(q + 1, &q, 16);
+            wr16(a, v);
+            if (*q == ',') q++; else break;
+        }
+    }
     dbg = rd32(code + 12);
     /* 'ERL1': game ticks run before their vertical blank when the game waits and the renderer
        is done (hal_tick_early) only with NHL_EARLY=1: the reference picture is the VDP at the
@@ -1057,7 +1066,7 @@ int main(int argc, char **argv)
         if (getenv("NHL_DRAWLOG")) {        /* frames drawn so far, each frame (which ticks are drawn) */
             static FILE *df;
             if (!df) df = fopen(getenv("NHL_DRAWLOG"), "w");
-            fprintf(df, "%d %u\n", frame, rd32(rd32(dbg + 28)));
+            fprintf(df, "%d %u %u\n", frame, rd32(rd32(dbg + 28)), rd32(rd32(dbg + 20)));
         }
         if (getenv("NHL_RAMDUMP")) {        /* NHL_RAMDUMP=file:from:to: the Genesis RAM, each frame */
             static FILE *rf; char fn[256]; int f0 = 0, f1 = 0;
@@ -1118,6 +1127,9 @@ int main(int argc, char **argv)
             if (k && getenv("NHL_DETLOG")) fprintf(stderr, "det frame %d: %d k cycles more for the interrupts\n", frame, k);
             wr16(rd32(dbg + 124), 0);
         }
+        if (irq6_pending && getenv("NHL_TICKLOSS"))   /* the last tick still waits: this one is lost */
+            fprintf(stderr, "tickloss: frame %d pc %06x sr %04x intena %04x\n", frame,
+                    m68k_get_reg(NULL, M68K_REG_PC) & 0xFFFFFF, m68k_get_reg(NULL, M68K_REG_SR), intena);
         irq6_pending = 1;
         vb_irq = 1;
         update_irq();

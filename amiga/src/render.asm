@@ -130,11 +130,11 @@ rd_bp1		ds.w	1
 rd_scpos	ds.l	1			;bytes written to its ring so far
 rd_scoff	ds.l	1			;the ring's place there (rd_scpos less its laps)
 rd_scsize	ds.l	1			;its bytes: rd_scs0 + rd_scxsz
-rd_scx		ds.l	1			;its second part (set before rd_init: os.asm, the harness)
+rd_scx		ds.l	1			;its second part (set before rd_init: os.asm, the harness),
+rd_scxsz	ds.l	1			;and its bytes (0: none) (the harness: the long after)
 fe_held		ds.b	1			;the window of fe_open is held
-fe_cur		ds.b	1			;the screen whose pictures are in it (0: none)
+fe_cur		ds.b	1			;the screens whose pictures are in it (bit n: screen n)
 	even
-rd_scxsz	ds.l	1			;and its bytes (0: none)
 rd_scmin	ds.l	2			;its oldest image used in this frame, in the one before
 rd_tchg		ds.l	2048			;frame each tile was last converted in
 rd_vblanks	ds.l	1			;vertical blanks (level 3 interrupt)
@@ -400,9 +400,15 @@ rd_dirty_all
 	rts
 
 ;	Convert every dirty tile; tc_chg = the tiles converted (rd_tcn, rd_tcl: its longs with any).
-;	d0 = 0 if none. (rd_frame holds
-;	the game's tick meanwhile: the game, which sets the bits, cannot run.)
+;	d0 = 0 if none. rd_frame holds the game's tick meanwhile, so the tiles are those of the
+;	sprite list it took; with many to convert (a screen being set up) the tick is let go on
+;	after the first DECHOLD, so that none is lost (the game, which sets the bits, may then run:
+;	each long is taken and cleared at once, and a tile it changes again is converted in the
+;	next frame).
+DECHOLD	equ	64
 rd_decode_dirty
+	move.l	d2,-(sp)
+	moveq	#DECHOLD,d2			;(tiles to convert before the tick is let go on)
 	lea	(tc_chg).l,a3			;(clear but where it had bits: rd_tcl)
 	lea	(rd_tcl).l,a0
 	move.w	(rd_tcn).l,d0
@@ -417,14 +423,22 @@ rd_decode_dirty
 .sc	tst.l	(a4)+
 	dbne	d5,.sc
 	beq	.x				;(no more)
+	move	sr,-(sp)
+	ori	#$0700,sr
 	move.l	-(a4),d6			;a long with bits
 	clr.l	(a4)+
+	move	(sp)+,sr
 	moveq	#63,d7
 	sub.w	d5,d7
 	move.w	d7,d1
 	lsl.w	#2,d1
 	move.l	d6,(a3,d1.w)
-	move.w	(rd_tcn).l,d0			;(the long noted)
+	lea	(rd_bltiles).l,a0		;(a tile of rd_bline's rows)
+	move.l	(a0,d1.w),d0
+	and.l	d6,d0
+	beq.s	.nbl
+	st	(rd_bltch).l
+.nbl	move.w	(rd_tcn).l,d0			;(the long noted)
 	lea	(rd_tcl).l,a0
 	move.w	d1,(a0,d0.w*2)
 	addq.w	#1,(rd_tcn).l
@@ -444,13 +458,17 @@ rd_decode_dirty
 	move.l	(rd_count).l,(a0,d0.l*4)	;(the sprite image cache sees it)
 	bra.s	.nb
 .now	bfclr	(tc_pend).l{d0:1}
-	movem.l	d3/d5/a3,-(sp)
+	subq.w	#1,d2
+	bne.s	.held
+	move.w	#$A000,(CUSTOM+INTENA).l	;(the tick let go on)
+.held	movem.l	d2-d3/d5/a3,-(sp)
 	bsr	rd_decode_tile
-	movem.l	(sp)+,d3/d5/a3
+	movem.l	(sp)+,d2-d3/d5/a3
 .nb	tst.l	d6
 	bne.s	.bit
 	dbf	d5,.sc
 .x	move.l	d3,d0
+	move.l	(sp)+,d2
 	rts
 
 ;	Tiles d0 (0-2047) to d0 + d1 - 1 (wrapping round): those waiting (tc_pend) converted. Keeps
@@ -682,10 +700,10 @@ rd_frame
 	move.l	#$7FFFFFFF,(rd_scmin).l		;are done)
 	move.w	#$2000,(CUSTOM+INTENA).l	;the sprite list and the tiles of one game tick: no
 	bsr	rd_snapshot			;tick in between (level 6 held; the blit queue and the
-	bsr	rd_decode_dirty			;vertical blank go on)
-	bsr	rd_snaptime
+	bsr	rd_snaptime			;vertical blank go on; but rd_decode_dirty)
 	bsr	rd_palette			;(the colours of the same tick: a tick may have come
-	move.w	#$A000,(CUSTOM+INTENA).l	;since they were looked at above)
+	bsr	rd_decode_dirty			;since they were looked at above)
+	move.w	#$A000,(CUSTOM+INTENA).l
 	lea	(rd_regs).l,a5
 	move.w	#256,d0
 	moveq	#33,d1
@@ -703,7 +721,11 @@ rd_frame
 	andi.b	#3,d0
 	beq.s	.hw
 	tst.b	(rd_hsuni).l
+	bne.s	.hw
+	tst.b	(rd_hslb).l
 	beq	.chunky				;line / cell scroll (not all alike)
+	bsr	rd_bline
+	beq	.chunky				;(plane B's lines scrolled otherwise show some of it)
 .hw
 	bsr	rd_planesize			;d0 = cells across, d1 = down
 	mulu.w	d1,d0
@@ -711,7 +733,11 @@ rd_frame
 	bhi	.chunky
 	bsr	rd_fast
 	bra	.shown
-.chunky	moveq	#-1,d0
+.chunky	tst.b	(rd_narrow).l
+	beq.s	.cw
+	move.b	(rd_reg16).l,(rd_regs+16).l	;(the planes as they are: rd_bline)
+	sf	(rd_narrow).l
+.cw	moveq	#-1,d0
 	bsr	rd_op_invall			;(the buffers drawn otherwise)
 	sf	(rd_ntsync).l			;(name table writes are not followed meanwhile)
 	bsr	rd_hud_off
@@ -747,6 +773,517 @@ rd_planesize
 	rts
 .h2	move.w	#128,d1
 	rts
+
+;	Plane B scrolled by lines (rd_hslb) on 128 x 32 planes drawn as 64 x 32 (rd_narrow): drawn
+;	as scrolled all like the last line (rd_hs), with the rows that have a line scrolled
+;	otherwise drawn empty (rd_vntB); the pixels of those rows, all of high priority, are drawn
+;	over the low priority layers line by line, each line at its own scroll (rd_bstrips), from
+;	an image of the row in the sprite image ring (rd_blst). The title screen's logos sliding
+;	in. Z set if not so (a row with low priority pixels, or too wide, or none with an empty
+;	cell: the per line fallback). Uses d0-d7/a0-a4.
+rd_bline
+	tst.b	(rd_bltch).l
+	beq.s	.k
+	sf	(rd_bltch).l			;(a tile of the rows changed: their masks and images
+	clr.l	(rd_blok).l			;made again)
+	clr.l	(rd_blsb).l
+	lea	(rd_bltiles).l,a0
+	moveq	#64-1,d0
+.kc	clr.l	(a0)+
+	dbf	d0,.kc
+.k	clr.l	(rd_blfr).l
+	clr.l	(rd_blsrn).l
+	moveq	#0,d0
+	move.b	(rd_regs+4).l,d0
+	andi.w	#7,d0
+	swap	d0
+	lsr.l	#3,d0
+	lea	(vdp_vram).l,a3
+	adda.l	d0,a3				;B's name table (128 x 32)
+	lea	(rd_hsb).l,a4
+	moveq	#0,d7				;the rows with a line scrolled otherwise
+	moveq	#0,d5				;line
+.l1	move.w	(a4,d5.w*2),d1
+	cmp.w	(rd_hs+2).l,d1
+	beq.s	.n1
+	bsr	.row
+	bset	d4,d7
+.n1	addq.w	#1,d5
+	cmpi.w	#SCRH,d5
+	blo.s	.l1
+	moveq	#0,d6				;(an empty cell's entry found)
+	moveq	#0,d4				;row
+.r	btst	d4,d7
+	beq	.rn
+	bsr	.mask
+	move.l	(rd_bllo).l,d0
+	btst	d4,d0
+	bne	.no				;(low priority pixels)
+	tst.b	d6
+	bne.s	.e
+	moveq	#0,d1				;an empty cell: its entry for the rows drawn empty
+.ef	bftst	(a2){d1:1}
+	beq.s	.eg
+	addq.w	#1,d1
+	cmpi.w	#128,d1
+	blo.s	.ef
+	bra.s	.e
+.eg	st	d6
+	move.w	d4,d0
+	lsl.w	#7,d0
+	add.w	d1,d0
+	move.w	(a3,d0.w*2),(rd_blent).l
+.e	move.l	(a2),d0
+	or.l	4(a2),d0
+	or.l	8(a2),d0
+	or.l	12(a2),d0
+	beq.s	.rn				;(nothing to draw of it)
+	bsr	.seen
+	beq.s	.rn				;(none of its lines shows any)
+	bsr	.strip
+	beq	.no
+	move.l	(rd_blsrn).l,d0
+	bset	d4,d0
+	move.l	d0,(rd_blsrn).l
+.rn	addq.w	#1,d4
+	cmpi.w	#32,d4
+	blo	.r
+	tst.b	d6
+	beq	.no
+	lea	(rd_vntB).l,a0			;the rows drawn empty
+	move.w	(rd_blent).l,d0
+	move.w	d0,d1
+	swap	d0
+	move.w	d1,d0
+	moveq	#0,d4
+.h	btst	d4,d7
+	beq.s	.hn
+	move.w	d4,d1
+	lsl.w	#7,d1
+	lea	(a0,d1.w),a1
+	moveq	#64/2-1,d1
+.hf	move.l	d0,(a1)+
+	dbf	d1,.hf
+.hn	addq.w	#1,d4
+	cmpi.w	#32,d4
+	blo.s	.h
+	move.l	(rd_blsrn).l,(rd_blsr).l
+	moveq	#1,d0
+	rts
+.no	clr.l	(rd_blsr).l
+	moveq	#0,d0
+	rts
+;	d4 = the row of line d5. Keeps the rest.
+.row	move.w	(rd_vs+2).l,d4
+	add.w	d5,d4
+	lsr.w	#3,d4
+	andi.w	#31,d4
+	rts
+;	a2 = row d4's mask (rd_blmask: its cells whose tile has pixels; rd_bllo: it has some of
+;	low priority), made again if its entries changed. Uses d0, d3.
+.mask	lea	(rd_blmask).l,a2
+	move.w	d4,d0
+	lsl.w	#4,d0
+	adda.w	d0,a2
+	move.l	(rd_blfr).l,d3
+	btst	d4,d3
+	bne	.mq				;(looked at in this frame)
+	bset	d4,d3
+	move.l	d3,(rd_blfr).l
+	movem.l	d1-d2/a0-a1/a4,-(sp)
+	move.w	d4,d0
+	lsl.w	#8,d0
+	lea	(a3,d0.w),a0			;its entries
+	lea	(rd_blcopy).l,a1
+	adda.w	d0,a1				;those it was made from
+	move.l	(rd_blok).l,d3
+	btst	d4,d3
+	beq.s	.mk
+	movem.l	a0-a1,-(sp)
+	moveq	#64-1,d0
+.mc	cmpm.l	(a0)+,(a1)+
+	dbne	d0,.mc
+	movem.l	(sp)+,a0-a1			;(the flags stay)
+	beq	.mx
+.mk	move.l	(rd_blsb).l,d0			;(its image made again too)
+	bclr	d4,d0
+	move.l	d0,(rd_blsb).l
+	sf	(rd_bllow).l
+	lea	(tp_cls).l,a4
+	clr.l	(a2)
+	clr.l	4(a2)
+	clr.l	8(a2)
+	clr.l	12(a2)
+	moveq	#0,d2				;cell
+	move.l	d4,-(sp)
+	move.w	(a0),d4				;(the entry before: d4 high word, its pixels: low word;
+	not.w	d4				;not the first's)
+	swap	d4
+.mm	move.w	(a0)+,d1
+	move.w	d1,(a1)+
+	swap	d4
+	cmp.w	d4,d1
+	beq.s	.ms				;(as the cell before)
+	move.w	d1,d4
+	swap	d4
+	moveq	#0,d0
+	move.w	d1,d0
+	andi.w	#$7FF,d0
+	bfset	(rd_bltiles).l{d0:1}		;(a tile of the rows: rd_decode_dirty)
+	bftst	(tc_pend).l{d0:1}
+	beq.s	.mp
+	move.l	d1,-(sp)
+	moveq	#1,d1
+	bsr	rd_tiles_need			;(converted now: its class)
+	move.l	(sp)+,d1
+.mp	clr.w	d4
+	tst.b	(a4,d0.w)
+	beq.s	.me
+	move.w	#1,d4
+	tst.w	d1
+	bmi.s	.mb
+	st	(rd_bllow).l
+	bra.s	.mb
+.ms	swap	d4
+	tst.w	d4
+	beq.s	.me
+.mb	bfset	(a2){d2:1}
+.me	addq.w	#1,d2
+	cmpi.w	#128,d2
+	blo.s	.mm
+	move.l	(sp)+,d4
+	lea	(rd_blcf).l,a4			;its first column with pixels, and columns to the last
+	clr.l	(a4,d4.w*4)
+	moveq	#0,d1
+.f1	bftst	(a2){d1:1}
+	bne.s	.f2
+	addq.w	#1,d1
+	cmpi.w	#128,d1
+	blo.s	.f1
+	bra.s	.f4				;(none)
+.f2	move.l	#127,d2
+.f3	bftst	(a2){d2:1}
+	bne.s	.f5
+	subq.w	#1,d2
+	bra.s	.f3
+.f5	sub.w	d1,d2
+	addq.w	#1,d2
+	move.w	d1,(a4,d4.w*4)
+	move.w	d2,2(a4,d4.w*4)
+.f4	move.l	(rd_bllo).l,d0
+	bclr	d4,d0
+	tst.b	(rd_bllow).l
+	beq.s	.ml
+	bset	d4,d0
+.ml	move.l	d0,(rd_bllo).l
+	move.l	(rd_blok).l,d3
+	bset	d4,d3
+	move.l	d3,(rd_blok).l
+.mx	movem.l	(sp)+,d1-d2/a0-a1/a4
+.mq	rts
+;	Z set if no line of row d4 (its mask a2) shows a column with pixels. Uses d0-d3.
+.seen	movem.l	d5/a4,-(sp)
+	lea	(rd_blcf).l,a4
+	move.w	(a4,d4.w*4),d1			;the first column with pixels
+	move.w	2(a4,d4.w*4),d2			;columns to the last
+	lea	(rd_hsb).l,a4
+	lsl.w	#3,d1				;their plane x
+	lsl.w	#3,d2				;and pixels
+	moveq	#7,d3				;the lines of the row
+.vl	move.w	d4,d5
+	lsl.w	#3,d5
+	add.w	d3,d5
+	sub.w	(rd_vs+2).l,d5
+	andi.w	#255,d5				;(its screen line)
+	cmpi.w	#SCRH,d5
+	bhs.s	.vn
+	move.w	(a4,d5.w*2),d0			;(rd_hsb)
+	add.w	d1,d0
+	andi.w	#1023,d0			;screen x of the first
+	cmp.w	(rd_w).l,d0
+	blo.s	.vy
+	add.w	d2,d0
+	cmpi.w	#1024,d0
+	bhi.s	.vy				;(from the left)
+.vn	dbf	d3,.vl
+	movem.l	(sp)+,d5/a4
+	moveq	#0,d0
+	rts
+.vy	movem.l	(sp)+,d5/a4
+	moveq	#1,d0
+	rts
+;	Row d4's image (its mask a2) in the ring, made if it is not there. Z set if the row is
+;	too wide (it could show twice). Uses d0-d3, a0-a1.
+.strip	movem.l	d4-d7/a2-a4,-(sp)
+	lea	(rd_blst).l,a4
+	move.w	d4,d0
+	lsl.w	#4,d0
+	adda.w	d0,a4				;its record
+	move.l	(rd_blsb).l,d0
+	btst	d4,d0
+	beq.s	.sb
+	move.l	(rd_scpos).l,d0
+	sub.l	(a4),d0
+	cmp.l	(rd_scsize).l,d0
+	bls	.sok				;(still in the ring)
+.sb	lea	(rd_blcf).l,a0
+	move.w	(a0,d4.w*4),d1			;the first column with pixels
+	move.w	2(a0,d4.w*4),d2			;columns to the last
+	cmpi.w	#(1024-320)/8,d2
+	bhi	.sno
+	move.w	d1,8(a4)
+	move.w	d2,10(a4)
+	addq.w	#1,d2
+	andi.w	#$FFFE,d2
+	addq.w	#2,d2				;bytes a plane row (and the word the shift goes into)
+	move.w	d2,12(a4)
+	mulu.w	#NPLANES*8,d2			;the image's bytes (the mask's: as many after it)
+	move.l	d2,-(sp)
+	move.l	d2,d1
+	add.l	d1,d1
+	bsr	rd_sc_alloc			;d2 = its place, a2 = its address
+	move.l	d2,(a4)
+	move.l	a2,4(a4)
+	move.l	(sp)+,d2
+	movea.l	a2,a0
+	move.l	d2,d0
+	lsr.l	#1,d0				;(longs of both)
+	subq.l	#1,d0
+.sc	clr.l	(a0)+
+	dbf	d0,.sc
+	move.l	(sp),d4				;(the row)
+	movea.l	4(a4),a0
+	move.w	12(a4),d3
+	moveq	#0,d5				;cell
+.scl	move.w	8(a4),d0
+	add.w	d5,d0
+	andi.w	#127,d0
+	move.w	d4,d1
+	lsl.w	#7,d1
+	add.w	d1,d0
+	move.w	(a3,d0.w*2),d0			;its entry
+	bsr	rd_blcell
+	addq.w	#1,d5
+	cmp.w	10(a4),d5
+	blo.s	.scl
+	move.l	(rd_blsb).l,d0
+	bset	d4,d0
+	move.l	d0,(rd_blsb).l
+.sok	movem.l	(sp)+,d4-d7/a2-a4
+	moveq	#1,d0
+	rts
+.sno	movem.l	(sp)+,d4-d7/a2-a4
+	moveq	#0,d0
+	rts
+
+;	Cell entry d0 into a row's image (rd_bline) at a0 + d5: d3 bytes a plane row, its mask
+;	(in each plane's place) d2 bytes on. Keeps all.
+rd_blcell
+	movem.l	d0-d7/a0-a5,-(sp)
+	lea	(a0,d5.w),a0
+	lea	(a0,d2.l),a4			;(the mask)
+	move.w	d0,d1
+	andi.l	#$FFF,d1			;tile and horizontal flip
+	lea	(tp_pl).l,a1
+	move.l	d1,d6
+	lsl.l	#5,d6
+	adda.l	d6,a1				;its rows' planes 0-3
+	lea	(tp_mk).l,a2
+	lsl.l	#3,d1
+	adda.l	d1,a2				;its rows' mask
+	moveq	#4,d6
+	moveq	#1,d7
+	btst	#12,d0
+	beq.s	.nv
+	lea	28(a1),a1			;(vertical flip: the last row first)
+	addq.l	#7,a2
+	moveq	#-4,d6
+	moveq	#-1,d7
+.nv	moveq	#0,d4				;palette planes
+	btst	#13,d0
+	beq.s	.p0
+	moveq	#-1,d4
+.p0	moveq	#0,d5
+	btst	#14,d0
+	beq.s	.p1
+	moveq	#-1,d5
+.p1	move.w	d3,d0
+	add.w	d0,d0
+	add.w	d3,d0				;3 plane rows on
+	lea	(a0,d0.w),a3
+	lea	(a4,d0.w),a5
+	move.w	d3,d2
+	mulu.w	#NPLANES,d2			;bytes a line
+	moveq	#7,d1
+.row	move.b	(a1),(a0)
+	move.b	1(a1),(a0,d3.w)
+	move.b	2(a1),(a0,d3.w*2)
+	move.b	3(a1),(a3)
+	move.b	d4,(a3,d3.w)
+	move.b	d5,(a3,d3.w*2)
+	move.b	(a2),d0
+	move.b	d0,(a4)
+	move.b	d0,(a4,d3.w)
+	move.b	d0,(a4,d3.w*2)
+	move.b	d0,(a5)
+	move.b	d0,(a5,d3.w)
+	move.b	d0,(a5,d3.w*2)
+	adda.w	d6,a1
+	adda.w	d7,a2
+	adda.w	d2,a0
+	adda.w	d2,a3
+	adda.w	d2,a4
+	adda.w	d2,a5
+	dbf	d1,.row
+	movem.l	(sp)+,d0-d7/a0-a5
+	rts
+
+;	The rows of plane B rd_bline drew empty that have pixels (rd_blsr): each line from its
+;	row's image at the line's own scroll (lines of a row alike: one blit), over the low
+;	priority layers as plane B's high priority pixels are. Keeps all.
+rd_bstrips
+	tst.b	(rd_hslb).l
+	beq	.x
+	tst.l	(rd_blsr).l
+	beq	.x
+	movem.l	d0-d7/a0-a6,-(sp)
+	lea	(rd_hsb).l,a4
+	moveq	#0,d7				;line
+.l	move.w	(rd_vs+2).l,d0
+	add.w	d7,d0
+	move.w	d0,d1
+	lsr.w	#3,d0
+	andi.w	#31,d0				;its row
+	move.l	(rd_blsr).l,d2
+	btst	d0,d2
+	beq.s	.n1
+	andi.w	#7,d1				;its line in the row
+	move.w	(a4,d7.w*2),d2			;its scroll
+	moveq	#1,d3				;(the next lines of the row scrolled alike: the same blit)
+.m	move.w	d7,d4
+	add.w	d3,d4
+	cmpi.w	#SCRH,d4
+	bhs.s	.me
+	cmp.w	(a4,d4.w*2),d2
+	bne.s	.me
+	move.w	d1,d4
+	add.w	d3,d4
+	cmpi.w	#8,d4
+	bhs.s	.me
+	addq.w	#1,d3
+	bra.s	.m
+.me	movem.l	d3/d7/a4,-(sp)
+	bsr.s	.blit
+	movem.l	(sp)+,d3/d7/a4
+	add.w	d3,d7
+	bra.s	.e
+.n1	addq.w	#1,d7
+.e	cmpi.w	#SCRH,d7
+	blo.s	.l
+	bsr	rd_cq_flush
+	movem.l	(sp)+,d0-d7/a0-a6
+.x	rts
+;	Row d0's lines d1 .. d1 + d3 - 1, scrolled d2, at screen line d7.
+.blit	movea.w	d1,a5				;(its line in the row)
+	lea	(rd_blst).l,a6
+	lsl.w	#4,d0
+	adda.w	d0,a6				;the row's image
+	move.w	8(a6),d4
+	lsl.w	#3,d4
+	add.w	d2,d4
+	andi.w	#1023,d4			;the screen x of its first pixel
+	move.w	10(a6),d5
+	lsl.w	#3,d5				;its pixels across
+	cmp.w	(rd_w).l,d4
+	blo.s	.on
+	subi.w	#1024,d4
+	move.w	d4,d0
+	add.w	d5,d0
+	ble	.bx				;(not on the screen)
+.on	add.w	(rd_xorg).l,d4			;its buffer x
+	moveq	#0,d6				;its pixels left out (whole words)
+	tst.w	d4
+	bpl.s	.c1
+	move.w	d4,d6
+	neg.w	d6
+	addi.w	#15,d6
+	andi.w	#$FFF0,d6
+	add.w	d6,d4
+.c1	moveq	#15,d2
+	and.w	d4,d2
+	ror.w	#4,d2				;the shift (BLTCON1)
+	lsr.w	#4,d4				;its first word in the buffer
+	sub.w	d6,d5
+	addi.w	#15,d5
+	lsr.w	#4,d5
+	addq.w	#1,d5				;words (the word the shift goes into)
+	moveq	#SBPR/2,d0
+	sub.w	d4,d0				;(as far as the buffer's row)
+	ble	.bx
+	cmp.w	d0,d5
+	bls.s	.c2
+	move.w	d0,d5
+.c2	; its box in the dirty map: columns of plane x (buffer x - 32)
+	move.w	d4,d0
+	subq.w	#2,d0
+	bpl.s	.b0
+	moveq	#0,d0
+.b0	move.w	d4,d1
+	add.w	d5,d1
+	subq.w	#3,d1				;the last
+	cmpi.w	#31,d1
+	ble.s	.b1
+	moveq	#31,d1
+.b1	sub.w	d0,d1
+	bmi	.bx				;(in the margins only)
+	addq.w	#1,d1
+	move.b	d0,(rd_opbox+2).l
+	move.b	d1,(rd_opbox+3).l
+	move.w	(rd_brow0).l,d0
+	add.w	d7,d0				;buffer line
+	move.w	d0,d1
+	add.w	d3,d1
+	subq.w	#1,d1
+	asr.w	#DLS,d0
+	asr.w	#DLS,d1
+	sub.w	d0,d1
+	move.b	d0,(rd_opbox).l
+	move.b	d1,(rd_opbox+1).l
+	; the blit: A the mask, B the image, C = D the buffer
+	movea.l	(rd_back).l,a0
+	move.w	d7,d0
+	mulu.w	#SROW,d0
+	adda.l	d0,a0
+	lea	(a0,d4.w*2),a0
+	move.w	12(a6),d0			;bytes a plane row
+	move.w	a5,d1				;(its line in the row)
+	movea.l	4(a6),a1
+	move.w	d0,d4
+	mulu.w	#NPLANES*8,d4			;(the image's bytes)
+	lea	(a1,d4.l),a2
+	mulu.w	#NPLANES,d1
+	mulu.w	d0,d1
+	lsr.w	#3,d6
+	add.w	d6,d1
+	adda.l	d1,a1
+	adda.l	d1,a2
+	move.w	d5,d1
+	add.w	d1,d1
+	sub.w	d1,d0				;A, B modulo
+	moveq	#SBPR,d1
+	sub.w	d5,d1
+	sub.w	d5,d1				;C, D modulo
+	move.w	d2,d4				;shift
+	move.w	d3,d2
+	mulu.w	#NPLANES,d2			;lines
+	move.w	d5,d3				;words
+	moveq	#0,d5				;(the last word's mask: the shift's word)
+	move.l	(a6),d6				;which image
+	cmp.l	(rd_scmin).l,d6
+	bge.s	.sm
+	move.l	d6,(rd_scmin).l
+.sm	bra	rd_cut_emit
+.bx	rts
 
 ;	==========================================================================================
 ;	Fast path
@@ -787,6 +1324,7 @@ rd_fast
 	bsr	rd_ovl_blit			;waits for it)
 	bsr	rd_sprites_planar
 	bsr	rd_fixups
+	bsr	rd_bstrips
 	move.w	#$8000,(rd_pass).l
 	tst.w	(rd_hudon).l
 	bne.s	.hs				;(the high priority overlay is the HUD sprites)
@@ -1799,7 +2337,16 @@ rd_updateB
 	beq	.next
 .draw	move.w	d0,(a1)
 	clr.w	(rd_hiBok).l
-	movem.l	d4-d7/a0-a2,-(sp)
+	cmpi.w	#64,(rd_cw).l			;(64 across: as its changed cells, a row at a time
+	bne.s	.dc				;when near the screen, rd_bpend_run)
+	move.w	d5,d1
+	lsl.w	#6,d1
+	add.w	d4,d1
+	exg	d0,d1
+	bsr	rd_bp_add
+	exg	d0,d1
+	bra.s	.next
+.dc	movem.l	d4-d7/a0-a2,-(sp)
 	bsr	rd_cellB
 	movem.l	(sp)+,d4-d7/a0-a2
 .next	addq.l	#2,a1
@@ -2903,6 +3450,7 @@ rd_snapshot
 	; scrolled by lines or cells, but all of them alike (the title screen once its picture
 	; has slid in): as the whole screen (rd_hsuni), not the per line fallback
 	sf	(rd_hsuni).l
+	sf	(rd_hslb).l
 	move.b	(rd_regs+11).l,d1
 	andi.w	#3,d1
 	beq.s	.hu
@@ -2915,15 +3463,36 @@ rd_snapshot
 	moveq	#32,d3				;(cells, mode 2: a long each 8 lines)
 	moveq	#SCRH/8-1,d1
 .hl	cmp.l	(a0),d2
-	bne.s	.hu
+	bne.s	.hb
 	adda.l	d3,a0
 	dbf	d1,.hl
 	st	(rd_hsuni).l
+	bra.s	.hu
+.hb	; plane A's all alike, B's not (the title screen's logos sliding in): B's each line
+	; (rd_hsb), and as the whole screen's the last line's (rd_bline)
+	lea	(vdp_vram).l,a0
+	adda.l	d0,a0
+	lea	(rd_hsb).l,a1
+	swap	d2				;(plane A's)
+	moveq	#0,d3				;line
+.hbl	move.w	d3,d1
+	btst	#0,(rd_regs+11).l
+	bne.s	.hbe
+	andi.w	#$F8,d1				;(cells: its cell row's)
+.hbe	cmp.w	(a0,d1.w*4),d2
+	bne.s	.hu
+	move.w	2(a0,d1.w*4),(a1)+
+	addq.w	#1,d3
+	cmpi.w	#SCRH,d3
+	blo.s	.hbl
+	move.w	-2(a1),(rd_hs+2).l
+	st	(rd_hslb).l
 .hu	; planes 128 cells wide by 32 (the title screen's, for its picture to slide in) whose
 	; screen stays in their first 64 columns: drawn as 64 x 32 planes of those, copied here
 	; (rd_vntA, rd_vntB: rd_narrow), not by the per line fallback
 	sf	(rd_narrow).l
 	move.b	(rd_regs+16).l,d1
+	move.b	d1,(rd_reg16).l
 	andi.b	#$33,d1
 	cmpi.b	#$03,d1
 	bne	.nn
@@ -2933,6 +3502,8 @@ rd_snapshot
 	andi.b	#3,d1
 	beq.s	.nu
 	tst.b	(rd_hsuni).l
+	bne.s	.nu
+	tst.b	(rd_hslb).l
 	beq	.nn
 .nu	move.w	#512-8-320,d2			;(the first pixel across at most)
 	move.b	(rd_regs+12).l,d1
@@ -2976,7 +3547,10 @@ rd_snapshot
 	lea	128(a1),a1
 	dbf	d1,.ncr
 	rts
-.nn	bsr	rd_collect_sprites
+.nn	tst.b	(rd_narrow).l
+	bne.s	.nk
+	sf	(rd_hslb).l			;(rd_bline draws from the copies)
+.nk	bsr	rd_collect_sprites
 	bsr	rd_obj_mark
 	move	(sp)+,sr
 	rts
@@ -5988,8 +6562,9 @@ rd_sc_alloc
 
 ;	------------------------------------------------------------------------------------------
 ;	The pictures of the EA Sports, title and game setup screens (fe.i, fepack.py) are kept
-;	deflated: when a screen begins (patches.py), fe_open inflates its pictures into the window
-;	FEWIN, the top of the sprite image ring's first part, which the ring leaves alone while the
+;	deflated: when a screen begins (patches.py), fe_open inflates its pictures into their place
+;	in the window FEWIN (the EA Sports screen's: all three's) if they are not there yet. The
+;	window is the top of the sprite image ring's first part, which the ring leaves alone while the
 ;	window is held (rd_scs0); a game's start gives the window back (fe_close). The ring changes
 ;	size only with no frame half drawn (the renderer is let finish one) and every image in it
 ;	dropped. Keeps all.
@@ -6006,22 +6581,35 @@ fe_open_setup
 	move.l	d0,-(sp)
 	moveq	#3,d0
 fe_open
-	cmp.b	(fe_cur).l,d0
-	beq.s	.x				;(there already)
+	btst	d0,(fe_cur).l
+	bne.s	.x				;(there already)
 	movem.l	d1/a0-a1,-(sp)
 	tst.b	(fe_held).l
 	bne.s	.h
 	move.l	#SCARENA-FEWSIZE,d1
 	bsr	fe_ring
 	st	(fe_held).l
-.h	lea	(fe_table-8).l,a0
-	movea.l	(a0,d0.w*8),a0			;its block
-	lea	(FEWIN).l,a1
-	bsr	inflate
-	move.b	d0,(fe_cur).l
-	movem.l	(sp)+,d1/a0-a1
+.h	cmpi.w	#1,d0
+	bne.s	.one
+	moveq	#FESCREENS,d0			;(the EA Sports screen's: all three, a wait at the start
+.all	bsr.s	.inf				;rather than one at each screen)
+	subq.w	#1,d0
+	bne.s	.all
+	bra.s	.d
+.one	bsr.s	.inf
+.d	movem.l	(sp)+,d1/a0-a1
 .x	move.l	(sp)+,d0
 	rts
+.inf	bset	d0,(fe_cur).l
+	bne.s	.r				;(there already)
+	lea	(fe_table-8).l,a0
+	lea	(a0,d0.w*8),a0
+	movea.l	(a0)+,a1
+	exg	a0,a1				;its block
+	movea.l	(a1),a1
+	adda.l	#FEWIN,a1			;its place
+	bsr	inflate
+.r	rts
 fe_close
 	move.l	d0,-(sp)			;(a game: the sound on Paula's 4 voices, snd_song)
 	moveq	#0,d0
@@ -9406,6 +9994,10 @@ rd_fpsc		ds.l	1
 		cnop	0,4
 rd_hsuni	ds.b	1			;(rd_snapshot) scrolled by lines or cells, all alike
 rd_narrow	ds.b	1			;(rd_snapshot) planes 128 wide drawn as 64 (rd_vntA, B)
+rd_hslb		ds.b	1			;(rd_snapshot) plane B scrolled by lines, A alike (rd_hsb)
+rd_reg16	ds.b	1			;(rd_snapshot) register 16 (rd_narrow sets rd_regs' to 64 x 32)
+rd_bltch	ds.b	1			;(rd_decode_dirty) a tile of rd_bline's rows changed
+rd_bllow	ds.b	1			;(rd_bline)
 rd_wchg		ds.b	1			;(rd_buildA) the window's name table changed
 	even
 rd_ovlpart	ds.l	1			;the bands rd_ovl_redraw draws again (bit n: band n),
@@ -9414,6 +10006,20 @@ rd_alistw	ds.w	1			;the window's cells in rd_alist (the first)
 	cnop	0,4
 rd_vntA		ds.w	64*32			;(rd_narrow) the first 64 columns of planes A and B
 rd_vntB		ds.w	64*32
+rd_hsb		ds.w	SCRH			;(rd_hslb) plane B's scroll each line
+rd_blent	ds.w	1			;(rd_bline) an empty cell's entry
+rd_blok		ds.l	1			;the rows of plane B whose rd_blmask is made,
+rd_blfr		ds.l	1			;those looked at in this frame
+rd_blmask	ds.l	32*4			;per row: its cells whose tile has pixels,
+rd_blcopy	ds.w	32*128			;its entries that was made from
+rd_blcf		ds.w	2*32			;per row: its first column with pixels, columns to the last
+rd_bllo		ds.l	1			;the rows with low priority pixels,
+rd_blsb		ds.l	1			;those whose image (rd_blst) is made,
+rd_blsr		ds.l	1			;those rd_bstrips draws (rd_blsrn: being found)
+rd_blsrn	ds.l	1
+rd_bltiles	ds.l	64			;the tiles of the rows (rd_decode_dirty)
+rd_blst		ds.l	4*32			;per row its image: its place in the sprite image ring,
+						;address, first column, columns, bytes a plane row
 rd_akey		ds.l	6
 rd_akeynew	ds.l	6
 rd_shA		ds.w	BMAX

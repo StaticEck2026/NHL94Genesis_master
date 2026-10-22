@@ -67,7 +67,19 @@ hal_header
 ;	underflow). Keeps all but d0.
 hal_set_rate
 	move.l	d1,-(sp)
-	move.l	#CIA_CLOCK,d0
+	; the game takes a 50 Hz rate for a PAL console's (the VDP status's PAL bit, read at its
+	; start): its sound driver then runs the music an extra step every 6th frame (PALflag),
+	; so songs keep their tempo, and some of its speeds are scaled (PalMode); F8 changes
+	; them with the rate
+	bclr	#0,(hal_vdp_status+1).l
+	bclr	#0,(PALflag).l
+	clr.w	(PalMode).l
+	cmpi.w	#50,(hal_hz).l
+	bne.s	.ntsc
+	bset	#0,(hal_vdp_status+1).l
+	bset	#0,(PALflag).l
+	move.w	#1,(PalMode).l
+.ntsc	move.l	#CIA_CLOCK,d0
 	tst.b	(hal_palclk).l
 	bne.s	.p
 	move.l	#CIA_CLOCK_NTSC,d0

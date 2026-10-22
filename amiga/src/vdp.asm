@@ -27,7 +27,8 @@ hal_ctl_tmp	ds.l	1			;control word / long being written
 
 	section	game,code
 
-hal_vdp_status	dc.w	$3400			;status port: NTSC (bit 0 clear), no DMA busy (bit 1)
+hal_vdp_status	dc.w	$3400			;status port: NTSC (bit 0 clear; set at 50 Hz,
+						;hal_set_rate), no DMA busy (bit 1)
 
 ;	Control port word write. hal_ctl_tmp = the word. Keeps every register and the flags.
 hal_vdpctl_w

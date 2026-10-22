@@ -20,8 +20,11 @@ not changed, so `main` still rebuilds the cartridge byte for byte.
 - Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
-  Genesis), 60 on NTSC. `F8` switches the display between 50 and 60 Hz (AGA shows either on any
-  Amiga, if the monitor takes it), and the game's rate with it.
+  Genesis), 60 on NTSC. At 50 the game is told it runs on a PAL console (the VDP status), as a
+  PAL Mega Drive's would be: its sound driver then plays the music an extra step every 6th
+  frame, so songs keep their tempo, and some of its speeds are scaled. `F8` switches the
+  display between 50 and 60 Hz (AGA shows either on any Amiga, if the monitor takes it), and
+  the game's rate with it.
 
 Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
 `-DBENCH=1` build), the screen is updated as often as there is time for, up to every vertical
@@ -229,9 +232,15 @@ The hardware layer:
   ends the listing for that frame: all is restored and drawn as it comes. Other
   screens get plane B blitted in at the scroll position. A screen scrolled by lines or cells
   with all of them alike is drawn as one scrolled whole, and planes 128 cells wide whose screen
-  stays in their first 64 columns as 64 x 32 planes of those (copied each frame): the title
-  screen's picture slides in on a wide plane by lines, then holds still, which the per line
-  fallback drew at some 2 frames a second. Plane A and the window are an overlay
+  stays in their first 64 columns as 64 x 32 planes of those (copied each frame). One with
+  plane A's lines alike and plane B's not is drawn as scrolled all like B's last line, with the
+  rows of the lines scrolled otherwise drawn empty; those rows' pixels, which must all be of
+  high priority, are blitted over the low priority layers a line at a time at each line's own
+  scroll, from an image of the row kept in the sprite image ring (made when one of its lines
+  shows some of it), as listed blits, so a line that did not move is not drawn again. The
+  title screen's logos slide in that way (its plane B by lines over the picture, which is the
+  window), which the per line fallback drew at about a frame a second.
+  Plane A and the window are an overlay
   layer with masks, cut into the screen as rectangles (runs of columns with cells in each band
   of 8 lines, a run the same in the bands below one rectangle; made again when a cell adds a
   column). The cells whose entries or tiles changed (a menu's highlight, a player's portrait)
@@ -276,7 +285,9 @@ The hardware layer:
   and the display window, and frames are triple buffered. A frame is drawn from a snapshot of
   the VDP registers, scroll and sprite list taken when it starts, with the changed tiles
   converted in the same game frame (the game runs several of its frames meanwhile; without it,
-  players could be from a later game frame than the rink). A frame's copper list is handed
+  players could be from a later game frame than the rink). With many tiles to convert (a
+  screen being set up) the game's frame is let go on after the first 64, so that none is lost
+  (its music would stall). A frame's copper list is handed
   over by a marker queued after its blits (the copper stops there and calls the level 3
   interrupt) and set at the first vertical blank that keeps the frame before on the screen for 2,
   so the CPU goes on to the next frame while the blitter finishes. A new frame is begun every
@@ -332,9 +343,11 @@ The hardware layer:
 - The pictures of the EA Sports, title and game setup screens (44 KB) are not kept in the
   program: `amiga/tools/fepack.py` deflates each screen's into a block (19 KB in all), and when
   the screen begins (`fe_open`, called where the game's code for the screen begins) its block
-  is inflated into a window at the top of the sprite image cache, which the cache leaves alone
-  while the window is held (the cache emptied, with no frame half drawn, each time it changes
-  size). A game's start gives the window back (`fe_close`); the screen shown again inflates its
+  is inflated into its place in a window at the top of the sprite image cache if it is not
+  there yet, all three at the EA Sports screen (one wait at the start, none between the
+  screens after: an inflate holds the game's frames off), which the cache leaves alone while
+  the window is held (the cache emptied, with no frame half drawn, each time it changes
+  size). A game's start gives the window back (`fe_close`); a screen shown again inflates its
   pictures again. The game's own copies of the PCM sounds (77 KB) are left out too: only their
   addresses are used, the sounds are played from their samples in chip RAM.
 - `stub.asm`: the launcher. It runs `NHL94.pak` when it is there (the floppy): it reads the
@@ -409,6 +422,10 @@ interrupt acknowledge callback for it. With `NHL_DETBLIT=1` as well, blits take 
 (the CPU's work and the blitter's overlap, as on the Amiga; a wait of the renderer for the
 blitter ends the blit at once), but the game's course is no longer the same for every build:
 the renderer's waits for a free buffer then end frames at other points.
+`NHL_DRAWLOG=file` writes each frame's count of frames drawn and of game frames run;
+`NHL_TICKLOSS=1` reports each game frame lost (its timer interrupt came while the one before
+still waited: the game held them off too long). `NHL_POKE=addr:word,...` writes words once
+the program is loaded (hex), e.g. `hal_hz` = 50 to run as on a PAL Amiga.
 `amiga/harness/playcost.sh [from] [end]` uses it: Start is pressed only until the game
 begins, then the renderer's harness cycles per frame drawn are counted over uninterrupted
 play, by routine, to compare builds; it prints a fingerprint of the game at the end, which is
