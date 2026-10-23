@@ -377,8 +377,10 @@ hal_int6
 	beq.s	.rte
 	st	(hal_swpend).l
 	rte
-.none	addq.l	#1,(hal_int6x).l		;(not a tick: the crash report counts them)
-	move.l	(sp)+,d0
+.none	andi.b	#3,d0				;(not a tick, nor CIA-B's timers: another source of
+	bne.s	.nc				;level 6, which the crash report counts)
+	addq.l	#1,(hal_int6x).l
+.nc	move.l	(sp)+,d0
 	rte
 
 ;	------------------------------------------------------------------------------------------
@@ -731,7 +733,8 @@ hal_ipl0	ds.l	1			;the game's waits (hal_idle) and the renderer's loops: the
 						;code outside interrupts runs (cr_watch)
 hal_intx	ds.l	1			;interrupts not used (hal_int_ignore),
 hal_intxv	ds.w	2			;the last's vector word and INTREQR
-hal_int6x	ds.l	1			;level 6 calls that were not a game tick
+hal_int6x	ds.l	1			;level 6 calls from neither CIA-B's timers nor the
+						;vertical blank's tick
 hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1

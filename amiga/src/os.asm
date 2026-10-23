@@ -1,5 +1,6 @@
-;	AmigaDOS side: checks the machine, loads the save file, takes the machine over and runs the
-;	game; on exit (Esc) gives the machine back to the OS and writes the save file.
+;	AmigaDOS side: checks the machine, loads the save file, stops the floppy motors, takes the
+;	machine over and runs the game; on exit (Esc) gives the machine back to the OS and writes the
+;	save file.
 ;
 ;	The Genesis work RAM window is a 64K aligned block taken at start, in fast memory if there is
 ;	some; ram_relocate moves the program's references to it there.
@@ -18,6 +19,13 @@ EXEC_Supervisor		equ	-30
 EXEC_CacheControl	equ	-648
 EXEC_OpenResource	equ	-498
 EXEC_CacheClearU	equ	-636
+EXEC_OpenDevice		equ	-444
+EXEC_CloseDevice	equ	-450
+EXEC_DoIO		equ	-456
+EXEC_CreateIORequest	equ	-654
+EXEC_DeleteIORequest	equ	-660
+EXEC_CreateMsgPort	equ	-666
+EXEC_DeleteMsgPort	equ	-672
 GFX_LoadView		equ	-222
 GFX_WaitTOF		equ	-270
 GFX_OwnBlitter		equ	-456
@@ -160,6 +168,7 @@ _start
 	move.l	#CACRF_EnableI|CACRF_EnableD,d1
 	jsr	EXEC_CacheControl(a6)
 	move.l	d0,(os_cacr).l
+	bsr	os_motors
 	; take the display and the blitter
 	movea.l	(os_gfx).l,a6
 	move.l	$22(a6),(os_view).l		;ActiView
@@ -306,6 +315,47 @@ hal_exit
 	rte					;returns from Supervisor()
 
 	include	"request.i"
+
+;	The floppy drives' motors off: the file system stops one a second or two after its last
+;	read, and the game takes the machine before then (it has just read the save file), which
+;	would leave a drive started from spinning all game. TD_MOTOR 0 to each trackdisk unit
+;	there is.
+os_motors
+	movem.l	d0-d4/a0-a1/a6,-(sp)
+	movea.l	(os_exec).l,a6
+	jsr	EXEC_CreateMsgPort(a6)
+	move.l	d0,d3
+	beq.s	.x
+	movea.l	d0,a0
+	moveq	#56,d0				;(an IOExtTD)
+	jsr	EXEC_CreateIORequest(a6)
+	move.l	d0,d2
+	beq.s	.np
+	moveq	#0,d4				;the unit
+.u	lea	(.tdname,pc),a0
+	move.l	d4,d0
+	movea.l	d2,a1
+	moveq	#0,d1
+	jsr	EXEC_OpenDevice(a6)
+	tst.b	d0
+	bne.s	.n				;(no such drive)
+	movea.l	d2,a1
+	move.w	#9,28(a1)			;io_Command: TD_MOTOR
+	clr.l	36(a1)				;io_Length 0: off
+	jsr	EXEC_DoIO(a6)
+	movea.l	d2,a1
+	jsr	EXEC_CloseDevice(a6)
+.n	addq.l	#1,d4
+	cmpi.l	#4,d4
+	blo.s	.u
+	movea.l	d2,a0
+	jsr	EXEC_DeleteIORequest(a6)
+.np	movea.l	d3,a0
+	jsr	EXEC_DeleteMsgPort(a6)
+.x	movem.l	(sp)+,d0-d4/a0-a1/a6
+	rts
+.tdname	dc.b	'trackdisk.device',0
+	even
 
 ;	The save file holds the save RAM (hal_sram: the cartridge's battery RAM, $2000 bytes).
 os_load_sram

@@ -85,15 +85,15 @@ directory.
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
 
-If the game stops on a CPU exception, no game frame has run for 10 seconds (stuck), only
-interrupts have run for 10 seconds (one that never stops asking), or the game goes on but no
-picture has been drawn for 10 seconds (the renderer stuck), it shows a crash report on a dark
-red screen: the build, what went wrong, the code address (the renderer's when the picture
-stopped), the registers, the stack, the CPU, where the program and its RAM are, the code the
-last game frames interrupted, the interrupts counted, and the state of the renderer's blit
-queue. A photo of it says where to look (the build's `output/amiga/nhl94.lst` gives the code's
-names: its addresses are the code address less the `Code` address). The Amiga must then be
-reset.
+If the game stops on a CPU exception, no game frame has run for 10 seconds (stuck), an
+interrupt never stops asking (only interrupts have run for 10 seconds, or more than 10000 the
+game does not use came in that time), or the game goes on but no picture has been drawn for 10
+seconds (the renderer stuck), it shows a crash report on a dark red screen: the build, what
+went wrong, the code address (the renderer's when the picture stopped), the registers, the
+stack, the CPU and its cache settings, where the program and its RAM are, the code the last
+game frames interrupted, the interrupts counted, and the state of the renderer's blit queue. A
+photo of it says where to look (the build's `output/amiga/nhl94.lst` gives the code's names:
+its addresses are the code address less the `Code` address). The Amiga must then be reset.
 
 ### Controls
 
@@ -250,7 +250,8 @@ The hardware layer:
   take the CPU from the game for good.
 - `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
   on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
-  loads and saves `NHL94.sav`.
+  loads and saves `NHL94.sav`; stops the floppy motors first (the file system stops one a
+  second or two after its last read, and the game would take the machine before then).
 - `render.asm`: draws the game's cells and tiles (`vmem.asm`) with the layout it set
   (`display.asm`) in 64 colours on 6 interleaved bitplanes. Tiles are
   cached in planar form. Plane B is kept as a bitmap. On the rink each screen buffer holds the

@@ -23,6 +23,8 @@ cr_vpos		ds.l	1			;VPOSR, VHPOSR,
 cr_intreq	ds.w	1			;INTREQR, DMACONR when it stopped
 cr_dmacon	ds.w	1
 cr_intena	ds.w	1			;and INTENAR
+cr_busy		ds.b	1			;(the report is being drawn: cr_nested)
+cr_nest		ds.b	1
 cr_why		ds.w	1			;the vector, or -1: no game frame for 10 seconds, -2: no
 						;picture drawn for 10 seconds while the game changed it,
 						;-3: ticks but no code outside interrupts for 10 seconds
@@ -30,9 +32,11 @@ cr_col		ds.w	1			;the cursor: column, text row
 cr_row		ds.w	1
 cr_wdn		ds.w	1			;(cr_watch: vertical blanks with no game tick,
 cr_rdn		ds.w	1			;and with no picture drawn, one due,
-cr_mn		ds.w	1			;and ticks with no code outside interrupts run)
+cr_mn		ds.w	1			;and ticks with no code outside interrupts run,
+cr_xn		ds.w	1			;and vertical blanks since cr_x0 was taken)
 	cnop	0,4
-cr_ipl0		ds.l	1			;(cr_watch: hal_ipl0 at its last look)
+cr_ipl0		ds.l	1			;(cr_watch: hal_ipl0 at its last look,
+cr_x0		ds.l	1			;and the interrupts not used counted then)
 		ds.b	2048
 cr_stack					;(its own stack: the game's may be the trouble)
 
@@ -40,13 +44,26 @@ cr_stack					;(its own stack: the game's may be the trouble)
 
 ;	A vertical blank (level 3, rd_bq_int): the report if no game tick has run for 10 seconds,
 ;	the ticks go on but neither the game's code outside them nor the renderer has run for 10
-;	seconds (hal_ipl0: an interrupt that never stops asking takes the CPU), or no picture has
-;	been drawn for 10 seconds while the game changed it (ds_gen), a0 = the level 3 exception
-;	frame (d0-d1/a0-a1 saved under it). Uses d0.
+;	seconds (hal_ipl0: an interrupt that never stops asking takes the CPU), more than 10000
+;	interrupts the game does not use came in 10 seconds (the same, the code creeping on
+;	between them), or no picture has been drawn for 10 seconds while the game changed it
+;	(ds_gen), a0 = the level 3 exception frame (d0-d1/a0-a1 saved under it). Uses d0.
 cr_watch
 	tst.b	(hal_amiga).l			;(the test harness watches itself)
 	beq	.x
-	move.l	(hal_frames).l,d0
+	; interrupts the game does not use, more than 10000 in 10 seconds: one that never stops
+	; asking, even if the code outside interrupts still creeps on between them
+	addq.w	#1,(cr_xn).l
+	cmpi.w	#10*50,(cr_xn).l		;(vertical blanks: 50 or 60 a second)
+	blo.s	.xw
+	clr.w	(cr_xn).l
+	move.l	(hal_intx).l,d0
+	add.l	(hal_int6x).l,d0
+	sub.l	(cr_x0).l,d0
+	cmpi.l	#10000,d0
+	bhi	.main
+	add.l	d0,(cr_x0).l
+.xw	move.l	(hal_frames).l,d0
 	cmp.l	(cr_ticks).l,d0
 	beq.s	.same
 	move.l	d0,(cr_ticks).l
@@ -120,6 +137,8 @@ cr_hw	move.l	(CUSTOM+$004).l,(cr_vpos).l	;VPOSR, VHPOSR
 
 ;	The report: d0 = the vector of the exception, a0 = its frame, the registers in hal_exc_regs.
 cr_show
+	tst.b	(cr_busy).l
+	bne	cr_nested
 	bsr	cr_hw
 	lea	(hal_exc_regs).l,a1
 	lea	(cr_regs).l,a2
@@ -128,6 +147,7 @@ cr_show
 	dbf	d1,.c
 cr_show2
 	move	#$2700,sr
+	st	(cr_busy).l
 	move.w	d0,(cr_why).l
 	move.l	a0,(cr_frame).l
 	move.w	#$0F00,(CUSTOM+$180).l		;red (the test harness stops at this)
@@ -166,6 +186,37 @@ cr_show2
 	dc.l	$01080000,$010A0000		;modulos
 	dc.l	$01800600,$01820FFF		;colours
 	dc.l	0
+
+;	An exception while the report is drawn: the rest of it is not drawn, but this one's vector,
+;	frame and where the report had got to, on the last row (cr_putc does not fault: it drew
+;	what is above). d0 = the vector, a0 = its frame.
+cr_nested
+	lea	(cr_stack).l,sp
+	addq.b	#1,(cr_nest).l
+	cmpi.b	#1,(cr_nest).l
+	bne.s	.hang				;(a fault in this too)
+	move.l	a0,a2
+	move.w	d0,d2
+	move.w	#27,(cr_row).l
+	clr.w	(cr_col).l
+	lea	(.tn,pc),a0
+	bsr	cr_puts
+	moveq	#0,d0
+	move.w	d2,d0
+	moveq	#2,d1
+	bsr	cr_hex
+	moveq	#' ',d0
+	bsr	cr_putc
+	moveq	#6-1,d3
+.f	move.l	(a2)+,d0
+	moveq	#8,d1
+	bsr	cr_hex
+	moveq	#' ',d0
+	bsr	cr_putc
+	dbf	d3,.f
+.hang	bra.s	.hang
+.tn	dc.b	'Fault in the report: vector $',0
+	even
 
 ;	cr_font = the ROM's topaz 8 from graphics.library's font list (or its default font if that is
 ;	8 or 9 lines high and not proportional), 0 if neither.
@@ -272,6 +323,11 @@ cr_text
 	bne.s	.g
 	lea	(.tgame,pc),a0
 .g	bsr	cr_puts
+	lea	(.tcacr,pc),a0			;(the caches: a 68060 started from a floppy has no
+	bsr	cr_puts				;68060.library to set them)
+	movec	cacr,d0
+	moveq	#8,d1
+	bsr	cr_hex
 	; the program and the CPU
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
@@ -293,7 +349,7 @@ cr_text
 	bsr	cr_hex
 	lea	(.tcpu,pc),a0
 	bsr	cr_puts
-	movea.l	(4).w,a0
+	movea.l	(os_exec).l,a0			;(not (4).w: an MMU may guard page 0, its handler gone)
 	move.w	$128(a0),d2			;AttnFlags
 	lea	(.t060,pc),a0
 	btst	#7,d2
@@ -465,7 +521,7 @@ cr_text
 .t0	dc.b	' stopped. Please photograph this screen and send it.',0
 .tfrz	dc.b	'No game frame for 10 seconds: it is stuck (the code below is where)',0
 .tpic	dc.b	'No picture drawn for 10 seconds while the game runs (the renderer is where)',0
-.tmain	dc.b	'Only interrupts have run for 10 seconds: one never stops (the code below)',0
+.tmain	dc.b	'An interrupt that never stops has the CPU (10 seconds; the code below)',0
 .texc	dc.b	'CPU exception',0
 .tvn	dc.b	' (vector $',0
 .tvec	dc.b	2,'Bus error / access fault',0,3,'Address error',0,4,'Illegal instruction',0
@@ -475,6 +531,7 @@ cr_text
 	dc.b	60,'Unimplemented effective address',0,61,'Unimplemented integer instruction',0
 	dc.b	0
 .tpc	dc.b	'PC ',0
+.tcacr	dc.b	'   CACR ',0
 .tsr	dc.b	'   SR ',0
 .tfmt	dc.b	'   frame format ',0
 .tgame	dc.b	'   in the game',0
@@ -541,7 +598,7 @@ CRS	MACRO
 	dc.w	-1
 	CRS	8,'other ints',hal_intx
 	CRS	8,'last',hal_intxv
-	CRS	8,'level 6 not ticks',hal_int6x
+	CRS	8,'level 6 others',hal_int6x
 	CRS	8,'main',hal_ipl0
 	dc.w	0
 
