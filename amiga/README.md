@@ -85,12 +85,15 @@ directory.
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
 
-If the game stops on a CPU exception, or no game frame has run for 10 seconds (stuck), it shows
-a crash report on a dark red screen: the build, what went wrong, the code address, the
-registers, the stack, the CPU, where the program and its RAM are, and the code the last game
-frames interrupted. A photo of it says where to look (the build's `output/amiga/nhl94.lst`
-gives the code's names: its addresses are the code address less the `Code` address). The
-Amiga must then be reset.
+If the game stops on a CPU exception, no game frame has run for 10 seconds (stuck), only
+interrupts have run for 10 seconds (one that never stops asking), or the game goes on but no
+picture has been drawn for 10 seconds (the renderer stuck), it shows a crash report on a dark
+red screen: the build, what went wrong, the code address (the renderer's when the picture
+stopped), the registers, the stack, the CPU, where the program and its RAM are, the code the
+last game frames interrupted, the interrupts counted, and the state of the renderer's blit
+queue. A photo of it says where to look (the build's `output/amiga/nhl94.lst` gives the code's
+names: its addresses are the code address less the `Code` address). The Amiga must then be
+reset.
 
 ### Controls
 
@@ -132,7 +135,9 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 `VASMFLAGS`:
 
 - `-DCRASHTEST=n` tests the crash report (below): `n` seconds into the game an illegal
-  instruction (`-DCRASHKIND=1`), or the game stuck with no game frame (`-DCRASHKIND=2`).
+  instruction (`-DCRASHKIND=1`), the game stuck with no game frame (`-DCRASHKIND=2`), the
+  renderer stuck while the game goes on (`-DCRASHKIND=3`), or an interrupt that never stops
+  asking (`-DCRASHKIND=4`).
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
 - `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
   exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
@@ -239,7 +244,10 @@ The hardware layer:
   game's vblank code with its RAM before the next screen sets it, and that screen lets the
   renderer finish a frame meanwhile). That screen's wait for the blit queue lowers the game's
   interrupt level meanwhile, as the copper needs the level 3 interrupt at its show markers (the
-  tick held at `INTENA` if the game had its interrupts off).
+  tick held at `INTENA` if the game had its interrupts off). Only levels 3 (the vertical blank,
+  the blit queue's shows) and 6 (the game's tick) are on: level 2 is shared with the IDE port,
+  the PCMCIA slot and expansion cards, and one of those asking with no driver to answer would
+  take the CPU from the game for good.
 - `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
   on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
   loads and saves `NHL94.sav`.
@@ -347,7 +355,8 @@ The hardware layer:
   The colours are AGA 24 bit colours (each written as high then low nibbles) at the levels the
   Genesis puts out, which are not a straight line from 0 to 255; Extra Half-Brite is switched
   off so all 64 registers are used.
-- `input.asm`: joysticks, CD32 pads and the keyboard, read as two 3 button pads.
+- `input.asm`: joysticks, CD32 pads and the keyboard, read as two 3 button pads. The keyboard
+  is read at each vertical blank (CIA-A's serial port flag), not by its interrupt.
 - `sound.asm`: the game's music and sounds on the four Paula voices. The game's own 68000
   sound driver runs its tracks as it did and hands `sound.asm` what it handed its Z80 program:
   key on, key off, frequency, volume and patch per FM channel (its command buffer, read in the

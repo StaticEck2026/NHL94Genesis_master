@@ -1,8 +1,11 @@
-;	The crash report: when the game stops on a CPU exception (hal_exception) or no game frame has
-;	run for 10 seconds (cr_watch, from the vertical blank), the screen shows what is needed to
-;	find why, for a photo: the exception, the code address and registers, the stack, the CPU,
-;	where the program is, and the code the last game ticks interrupted. It is drawn with the
-;	ROM's topaz 8 (graphics.library's font list). The machine must be reset after it.
+;	The crash report: when the game stops on a CPU exception (hal_exception), no game frame has
+;	run for 10 seconds, only interrupts have run for 10 seconds, or the game has changed the
+;	picture but none has been drawn for 10 seconds (cr_watch, from the vertical blank), the
+;	screen shows what is needed to find why, for a photo: the exception, the code address and
+;	registers (the renderer's if the picture stopped), the stack, the CPU, where the program
+;	is, the code the last game ticks interrupted, the interrupts counted, and the state of the
+;	renderer's blit queue and shows. It is drawn with the ROM's topaz 8 (graphics.library's
+;	font list). The machine must be reset after it.
 
 CR_ROWB		equ	80			;bytes a line: 640 pixels, one bitplane
 CR_LH		equ	9			;lines a text row
@@ -14,42 +17,110 @@ cr_regs		ds.l	16			;d0-d7/a0-a7 when it stopped
 cr_frame	ds.l	1			;its exception frame
 cr_font		ds.l	1			;topaz 8 (0: none: no text)
 cr_ticks	ds.l	1			;(cr_watch: the game ticks at its last look)
-cr_why		ds.w	1			;the vector, or -1: no game frame for 10 seconds
+cr_rdc		ds.l	1			;(cr_watch: frames drawn at its last look,
+cr_rdgen	ds.l	1			;and ds_gen when that changed)
+cr_vpos		ds.l	1			;VPOSR, VHPOSR,
+cr_intreq	ds.w	1			;INTREQR, DMACONR when it stopped
+cr_dmacon	ds.w	1
+cr_intena	ds.w	1			;and INTENAR
+cr_why		ds.w	1			;the vector, or -1: no game frame for 10 seconds, -2: no
+						;picture drawn for 10 seconds while the game changed it,
+						;-3: ticks but no code outside interrupts for 10 seconds
 cr_col		ds.w	1			;the cursor: column, text row
 cr_row		ds.w	1
-cr_wdn		ds.w	1			;(cr_watch: vertical blanks with no game tick)
+cr_wdn		ds.w	1			;(cr_watch: vertical blanks with no game tick,
+cr_rdn		ds.w	1			;and with no picture drawn, one due,
+cr_mn		ds.w	1			;and ticks with no code outside interrupts run)
+	cnop	0,4
+cr_ipl0		ds.l	1			;(cr_watch: hal_ipl0 at its last look)
 		ds.b	2048
 cr_stack					;(its own stack: the game's may be the trouble)
 
 	section	game,code
 
-;	A vertical blank (level 3, rd_bq_int): if no game tick has run for 10 seconds, the report,
-;	a0 = the level 3 exception frame (d0-d1/a0-a1 saved under it). Uses d0.
+;	A vertical blank (level 3, rd_bq_int): the report if no game tick has run for 10 seconds,
+;	the ticks go on but neither the game's code outside them nor the renderer has run for 10
+;	seconds (hal_ipl0: an interrupt that never stops asking takes the CPU), or no picture has
+;	been drawn for 10 seconds while the game changed it (ds_gen), a0 = the level 3 exception
+;	frame (d0-d1/a0-a1 saved under it). Uses d0.
 cr_watch
 	tst.b	(hal_amiga).l			;(the test harness watches itself)
-	beq.s	.x
+	beq	.x
 	move.l	(hal_frames).l,d0
 	cmp.l	(cr_ticks).l,d0
 	beq.s	.same
 	move.l	d0,(cr_ticks).l
 	clr.w	(cr_wdn).l
-.x	rts
+	move.l	(hal_ipl0).l,d0			;a tick: the code outside the interrupts since?
+	cmp.l	(cr_ipl0).l,d0
+	beq.s	.msame
+	move.l	d0,(cr_ipl0).l
+	clr.w	(cr_mn).l
+	bra.s	.pic
+.msame	addq.w	#1,(cr_mn).l
+	cmpi.w	#10*50,(cr_mn).l		;(ticks: 50 or 60 a second)
+	bhs	.main
+	bra.s	.pic
 .same	addq.w	#1,(cr_wdn).l
 	cmpi.w	#10*60,(cr_wdn).l
+	bhs	.game
+.pic	move.l	(rd_count).l,d0
+	cmp.l	(cr_rdc).l,d0
+	beq.s	.psame
+	move.l	d0,(cr_rdc).l
+	move.l	(ds_gen).l,(cr_rdgen).l
+	clr.w	(cr_rdn).l
+.x	rts
+.psame	move.l	(ds_gen).l,d0
+	cmp.l	(cr_rdgen).l,d0
+	beq.s	.x				;(nothing new to draw)
+	addq.w	#1,(cr_rdn).l
+	cmpi.w	#10*60,(cr_rdn).l
 	blo.s	.x
+	; the picture stopped: where the renderer is (this interrupt's frame if it was running,
+	; else its context, saved under its frame: ctx_to_game)
 	move	#$2700,sr
-	movem.l	d0-d7/a0-a7,(cr_regs).l
+	bsr	cr_hw
+	tst.b	(ctx_cur).l
+	bne.s	.rhere
+	movea.l	(ctx_rend_sp).l,a1
+	lea	(cr_regs).l,a2
+	moveq	#15-1,d0
+.rc	move.l	(a1)+,(a2)+
+	dbf	d0,.rc
+	movea.l	a1,a0				;its frame
+	lea	8(a0),a1
+	move.l	a1,(a2)				;(a7)
+	moveq	#-2,d0
+	bra	cr_show2
+.rhere	moveq	#-2,d0
+	bra.s	.regs
+.main	move	#$2700,sr
+	bsr	cr_hw
+	moveq	#-3,d0
+	bra.s	.regs
+.game	move	#$2700,sr
+	bsr	cr_hw
+	moveq	#-1,d0
+.regs	movem.l	d0-d7/a0-a7,(cr_regs).l
 	move.l	-16(a0),(cr_regs).l		;(d0, d1, a0, a1 as they were: saved under the frame)
 	move.l	-12(a0),(cr_regs+4).l
 	move.l	-8(a0),(cr_regs+8*4).l
 	move.l	-4(a0),(cr_regs+9*4).l
 	lea	8(a0),a1
 	move.l	a1,(cr_regs+15*4).l		;(a7 before the interrupt)
-	moveq	#-1,d0
 	bra.s	cr_show2
+
+;	The custom chips' state as it stopped (before cr_show2 turns DMA off). Keeps all.
+cr_hw	move.l	(CUSTOM+$004).l,(cr_vpos).l	;VPOSR, VHPOSR
+	move.w	(CUSTOM+INTREQR).l,(cr_intreq).l
+	move.w	(CUSTOM+DMACONR).l,(cr_dmacon).l
+	move.w	(CUSTOM+INTENAR).l,(cr_intena).l
+	rts
 
 ;	The report: d0 = the vector of the exception, a0 = its frame, the registers in hal_exc_regs.
 cr_show
+	bsr	cr_hw
 	lea	(hal_exc_regs).l,a1
 	lea	(cr_regs).l,a2
 	moveq	#16-1,d1
@@ -144,7 +215,13 @@ cr_text
 	move.w	(cr_why).l,d0
 	bpl.s	.ex
 	lea	(.tfrz,pc),a0
-	bsr	cr_puts
+	addq.w	#1,d0
+	beq.s	.fz
+	lea	(.tpic,pc),a0
+	addq.w	#1,d0
+	beq.s	.fz
+	lea	(.tmain,pc),a0
+.fz	bsr	cr_puts
 	bra.s	.w1
 .ex	lea	(.tvec,pc),a0
 .vn	move.b	(a0)+,d1			;the names: vector, text, 0
@@ -188,10 +265,12 @@ cr_text
 	lsr.b	#4,d0
 	moveq	#1,d1
 	bsr	cr_hex
-	lea	(.tgame,pc),a0
-	tst.b	(ctx_cur).l
-	beq.s	.g
 	lea	(.trend,pc),a0
+	cmpi.w	#-2,(cr_why).l			;(the picture stopped: the renderer's)
+	beq.s	.g
+	tst.b	(ctx_cur).l
+	bne.s	.g
+	lea	(.tgame,pc),a0
 .g	bsr	cr_puts
 	; the program and the CPU
 	addq.w	#1,(cr_row).l
@@ -236,7 +315,7 @@ cr_text
 	moveq	#')',d0
 	bsr	cr_putc
 	; registers
-	move.w	#5,(cr_row).l
+	move.w	#4,(cr_row).l
 	lea	(cr_regs).l,a2
 	moveq	#'D',d3
 	bsr	.regs
@@ -259,7 +338,7 @@ cr_text
 	moveq	#2-1,d3
 	bsr	.longs
 	; counts
-	addq.w	#2,(cr_row).l
+	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.tcnt,pc),a0
 	bsr	cr_puts
@@ -276,10 +355,82 @@ cr_text
 	move.l	(rd_vblanks).l,d0
 	moveq	#8,d1
 	bsr	cr_hex
+	; the renderer's blit queue and shows
+	addq.w	#1,(cr_row).l
+	clr.w	(cr_col).l
+	lea	(.tstate,pc),a2
+.st	move.w	(a2)+,d2			;digits (0: the table's end; -1: a new row)
+	beq.s	.ste
+	bpl.s	.st1
+	addq.w	#1,(cr_row).l
+	clr.w	(cr_col).l
+	bra.s	.st
+.st1	movea.l	a2,a0				;its name
+.sn	tst.b	(a2)+
+	bne.s	.sn
+	move.l	a2,d0
+	addq.l	#1,d0
+	andi.w	#-2,d0
+	movea.l	d0,a2
+	movea.l	(a2)+,a1			;its address
+	bsr	cr_puts
+	moveq	#' ',d0
+	bsr	cr_putc
+	moveq	#0,d0
+	move.w	d2,d1
+	cmpi.w	#2,d2
+	bne.s	.s4
+	move.b	(a1),d0
+	bra.s	.sp
+.s4	cmpi.w	#4,d2
+	bne.s	.s8
+	move.w	(a1),d0
+	bra.s	.sp
+.s8	move.l	(a1),d0
+.sp	bsr	cr_hex
+	addq.w	#2,(cr_col).l
+	bra.s	.st
+.ste	; the copper ring where the copper stops, the show taken last and the next queued
+	addq.w	#1,(cr_row).l
+	clr.w	(cr_col).l
+	lea	(.tring,pc),a0
+	bsr	cr_puts
+	movea.l	(rd_cqwp).l,a2
+	subq.l	#8,a2
+	moveq	#6-1,d4
+.rg	move.l	(a2)+,d0
+	moveq	#8,d1
+	bsr	cr_hex
+	addq.w	#1,(cr_col).l
+	dbf	d4,.rg
+	addq.w	#1,(cr_row).l
+	clr.w	(cr_col).l
+	lea	(.tmark,pc),a0
+	moveq	#-1,d2
+	bsr	.show
+	lea	(.tmnx,pc),a0
+	moveq	#0,d2
+	bsr	.show
 	addq.w	#2,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.treset,pc),a0
 	bra	cr_puts
+.show	bsr	cr_puts				;show marker rd_cqmh + d2 (its place, where the copper
+	add.w	(rd_cqmh).l,d2			;goes on, its copper list, its buffer)
+	andi.w	#7,d2
+	lsl.w	#4,d2
+	lea	(rd_cqmq).l,a2
+	adda.w	d2,a2
+	moveq	#3-1,d4
+.mk	move.l	(a2)+,d0
+	moveq	#8,d1
+	bsr	cr_hex
+	addq.w	#1,(cr_col).l
+	dbf	d4,.mk
+	moveq	#0,d0
+	move.w	(a2),d0
+	moveq	#2,d1
+	bra	cr_hex
 .regs	moveq	#0,d4				;d3 = 'D' or 'A', a2 = its 8 registers: two rows of 4
 .r	move.w	d4,d0
 	andi.w	#3,d0
@@ -313,6 +464,8 @@ cr_text
 	rts
 .t0	dc.b	' stopped. Please photograph this screen and send it.',0
 .tfrz	dc.b	'No game frame for 10 seconds: it is stuck (the code below is where)',0
+.tpic	dc.b	'No picture drawn for 10 seconds while the game runs (the renderer is where)',0
+.tmain	dc.b	'Only interrupts have run for 10 seconds: one never stops (the code below)',0
 .texc	dc.b	'CPU exception',0
 .tvn	dc.b	' (vector $',0
 .tvec	dc.b	2,'Bus error / access fault',0,3,'Address error',0,4,'Illegal instruction',0
@@ -341,7 +494,56 @@ cr_text
 .tfrm	dc.b	'   frames drawn ',0
 .tvb	dc.b	'   vertical blanks ',0
 .treset	dc.b	'The Amiga must be reset.',0
+.tring	dc.b	'Ring at the stop: ',0
+.tmark	dc.b	'Shows: last ',0
+.tmnx	dc.b	'  next ',0
 	even
+;	digits, name, (even) address; -1 a new row, 0 the end
+CRS	MACRO
+	dc.w	\1
+	dc.b	\2,0
+	even
+	dc.l	\3
+	ENDM
+.tstate	CRS	4,'INTREQ',cr_intreq
+	CRS	4,'INTENA',cr_intena
+	CRS	4,'DMACON',cr_dmacon
+	CRS	8,'VPOS',cr_vpos
+	CRS	2,'ctx',ctx_cur
+	CRS	2,'busy',rd_busy
+	CRS	4,'bufi',rd_bufi
+	dc.w	-1
+	CRS	2,'idle',rd_cqidle
+	CRS	2,'batch',rd_cqbat
+	CRS	8,'ring',rd_cqring
+	CRS	8,'stop',rd_cqwp
+	CRS	8,'done',rd_cqdp
+	CRS	4,'free',rd_cqfree
+	dc.w	-1
+	CRS	4,'marks',rd_cqmh
+	CRS	4,'to',rd_cqmt
+	CRS	8,'show',rd_showcop
+	CRS	4,'its buffer',rd_showbuf
+	CRS	2,'held',rd_bqhold
+	CRS	8,'set at',rd_lastset
+	dc.w	-1
+	CRS	8,'shown at',rd_shownvb
+	CRS	8,'',rd_shownvb+4
+	CRS	8,'',rd_shownvb+8
+	CRS	8,'last frame',rd_lastframe
+	CRS	8,'pace',hal_pace
+	dc.w	-1
+	CRS	8,'states from',rd_snapvb
+	CRS	8,'',rd_snapvb+4
+	CRS	8,'',rd_snapvb+8
+	CRS	2,'ahead',hal_ahead
+	CRS	8,'tick at',hal_tickvb
+	dc.w	-1
+	CRS	8,'other ints',hal_intx
+	CRS	8,'last',hal_intxv
+	CRS	8,'level 6 not ticks',hal_int6x
+	CRS	8,'main',hal_ipl0
+	dc.w	0
 
 ;	The text at a0 (0 ended) at the cursor. Keeps all but a0.
 cr_puts	move.l	d0,-(sp)

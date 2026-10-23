@@ -37,16 +37,15 @@ PB_START equ	7
 
 	section	game,code
 
-;	Keyboard interrupt on (level 2, CIA-A serial port).
+;	The keyboard (CIA-A's serial port), read at each vertical blank (hal_kbd_poll), not by
+;	its interrupt: level 2 (PORTS) is shared with the IDE port, the PCMCIA slot and expansion
+;	cards, and one of those left asking with no driver to answer it would take the CPU from
+;	the game and the renderer for good. CIA-A's interrupts off; its flags still say a key came.
 hal_kbd_init
-	lea	(hal_vectors).l,a0
-	lea	hal_int2(pc),a1
-	move.l	a1,$68(a0)
-	tst.b	(CIAA_ICR).l			;clear
-	move.b	#$88,(CIAA_ICR).l		;serial port interrupt on
+	move.b	#$7F,(CIAA_ICR).l		;CIA-A interrupts off
+	tst.b	(CIAA_ICR).l			;(its flags cleared)
 	andi.b	#$BF,(CIAA_CRA).l		;serial port input
-	move.w	#$0008,(CUSTOM+INTREQ).l
-	move.w	#$8008,(CUSTOM+INTENA).l	;PORTS
+	st	(hal_kbdon).l
 	rts
 
 hal_kbd_exit
@@ -56,10 +55,13 @@ hal_kbd_exit
 	move.b	d0,(CIAA_ICR).l
 	rts
 
-;	Level 2: a key code from the keyboard.
-hal_int2
-	movem.l	d0-d1/a0,-(sp)
-	move.b	(CIAA_ICR).l,d0
+;	A vertical blank (rd_bq_int): a key code from the keyboard, if one came. Keeps all.
+hal_kbd_poll
+	tst.b	(hal_kbdon).l
+	bne.s	.on
+	rts
+.on	movem.l	d0-d1/a0,-(sp)
+	move.b	(CIAA_ICR).l,d0			;(reading clears its flags)
 	btst	#3,d0
 	beq	.x
 	move.b	(CIAA_SDR).l,d0
@@ -120,10 +122,8 @@ hal_int2
 	move.b	(CUSTOM+$006).l,d0
 	dbf	d1,.w
 	andi.b	#$BF,(CIAA_CRA).l		;back to input
-.x	move.w	#$0008,(CUSTOM+INTREQ).l
-	move.w	#$0008,(CUSTOM+INTREQ).l
-	movem.l	(sp)+,d0-d1/a0
-	rte
+.x	movem.l	(sp)+,d0-d1/a0
+	rts
 
 ;	The two pads: d0 = pad 1, d1 = pad 2, as the Genesis reads them (active low: bit 7 Start,
 ;	6 A, 5 C, 4 B, 3 right, 2 left, 1 down, 0 up). Called by the game's vblank code.
@@ -525,6 +525,7 @@ hal_p1mouse	ds.b	1			;port 1 has a mouse (hal_readpads)
 
 hal_quit	ds.b	1
 hal_fpsshow	ds.b	1
+hal_kbdon	ds.b	1			;the keyboard is read (hal_kbd_init: not in the harness)
 		even
 
 	section	game,code

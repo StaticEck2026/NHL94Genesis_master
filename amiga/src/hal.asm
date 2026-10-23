@@ -209,25 +209,29 @@ hal_start_timer
 							;COPER (level 3: the blit queue's shows)
 	rts
 
+;	The code a game tick interrupts, from its exception frame at a0: its pc to hal_pcring (the
+;	crash report), its sr and the context after them (hal_int6, or rd_bq_int when the vertical
+;	blank gives the ticks). Uses d0-d1, a0.
+hal_pcnote
+	moveq	#0,d1
+	move.w	(a0)+,d1			;sr
+	swap	d1
+	move.b	(ctx_cur).l,d1
+	move.l	(a0),d0				;pc
+	lea	(hal_pcring).l,a0
+	move.l	d1,64(a0)			;last: sr, context
+	move.w	(hal_pcpos).l,d1
+	move.l	d0,(a0,d1.w)
+	addq.w	#4,d1
+	andi.w	#63,d1
+	move.w	d1,(hal_pcpos).l
+	rts
+
 ;	Level 6. The CIA-B timer is the Genesis vertical blank: count it and run the game's handler
 ;	through the VBint vector, as VBjsr does on the cartridge. The handler ends in rte, so it is
 ;	given a frame that returns here; then, if the renderer was running while the game waited
 ;	for this vblank (hal_idle), the game gets the CPU back at once.
 hal_int6
-	movem.l	d0/a0,-(sp)			;sample the interrupted pc (watchdog)
-	lea	(hal_pcring).l,a0
-	move.w	(hal_pcpos).l,d0
-	move.l	10(sp),(a0,d0.w)		;pc
-	move.w	8(sp),d0			;sr
-	swap	d0
-	move.b	(ctx_cur).l,d0
-	move.w	(hal_pcpos).l,-(sp)
-	move.l	d0,64(a0)			;last: sr, context
-	move.w	(sp)+,d0
-	addq.w	#4,d0
-	andi.w	#63,d0
-	move.w	d0,(hal_pcpos).l
-	movem.l	(sp)+,d0/a0
 	move.l	d0,-(sp)
 	move.b	(CIAB_ICR).l,d0			;reading acknowledges
 	move.w	#$2000,(CUSTOM+INTREQ).l
@@ -261,6 +265,10 @@ hal_int6
 	beq	.none
 	tst.b	(hal_vbtick).l
 	bne	.none				;(the vertical blank gives the ticks)
+	movem.l	d1/a0,-(sp)
+	lea	12(sp),a0
+	bsr	hal_pcnote			;(the vertical blank notes its own ticks)
+	movem.l	(sp)+,d1/a0
 	bra.s	.tick
 .vb	sf	(hal_vbreq).l
 .tick	move.l	(sp)+,d0
@@ -369,7 +377,8 @@ hal_int6
 	beq.s	.rte
 	st	(hal_swpend).l
 	rte
-.none	move.l	(sp)+,d0
+.none	addq.l	#1,(hal_int6x).l		;(not a tick: the crash report counts them)
+	move.l	(sp)+,d0
 	rte
 
 ;	------------------------------------------------------------------------------------------
@@ -380,22 +389,29 @@ hal_int6
 
 hal_idle
 	IFD	CRASHTEST			;(a test of the crash report: CRASHTEST seconds in,
-	cmpi.l	#CRASHTEST*50,(hal_frames).l	;an exception, or CRASHKIND 2: stuck with no tick)
-	blo.s	.ct
+	IFNE	CRASHKIND-3			;CRASHKIND 1: an exception, 2: stuck with no tick, 3:
+	cmpi.l	#CRASHTEST*50,(hal_frames).l	;the renderer stuck (rd_frame), 4: an interrupt that
+	blo.s	.ct				;never stops asking (level 1: SOFT, the blit queue's)
 	IFEQ	CRASHKIND-1
 	illegal
-	ELSE
+	ENDC
+	IFEQ	CRASHKIND-2
 	move.w	#$2000,(CUSTOM+INTENA).l
 	move	#$2000,sr
 .fz	bra.s	.fz
 	ENDC
+	IFEQ	CRASHKIND-4
+	move.w	#$8004,(CUSTOM+INTENA).l
+	ENDC
 .ct
+	ENDC
 	ENDC
 	move.l	d0,-(sp)
 	move	sr,d0
 	andi.w	#$0700,d0
 	cmpi.w	#$0600,d0
 	bhs	.no				;called from interrupt code: never switch there
+	addq.l	#1,(hal_ipl0).l			;(the game's code runs: cr_watch)
 	IFD	BENCH
 	st	(hal_idled).l			;(the game waits)
 	tst.b	(hal_tickpend).l
@@ -610,6 +626,7 @@ prof_event
 
 ;	The renderer's loop: draw each new frame, then give the CPU back.
 rend_main
+	addq.l	#1,(hal_ipl0).l			;(the renderer runs: cr_watch)
 	move.l	(hal_frames).l,d0
 	sub.l	(rd_lastframe).l,d0
 	cmp.l	(hal_pace).l,d0
@@ -662,8 +679,13 @@ hal_display_init
 	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
 	rts
 
+;	An interrupt the game does not use (none is on at INTENA: a spurious one, level 7): counted
+;	for the crash report, its vector and INTREQR kept. INTREQ is left alone: SOFT and DSKBLK are
+;	the blit queue's copper state (rd_bq_go), VERTB, COPER and EXTER calls still to come.
 hal_int_ignore
-	move.w	#$3FFF,(CUSTOM+INTREQ).l
+	addq.l	#1,(hal_intx).l
+	move.w	6(sp),(hal_intxv).l		;format, vector
+	move.w	(CUSTOM+$01E).l,(hal_intxv+2).l	;INTREQR
 	rte
 
 ;	Any other exception: keep the frame and registers for the debugger, then hang.
@@ -704,6 +726,12 @@ hal_yielding	ds.b	1			;(BENCH: the game in hal_yield)
 hal_tickpend	ds.b	1			;(BENCH: ticks put off)
 	even
 hal_pcpos	ds.w	1
+	cnop	0,4
+hal_ipl0	ds.l	1			;the game's waits (hal_idle) and the renderer's loops: the
+						;code outside interrupts runs (cr_watch)
+hal_intx	ds.l	1			;interrupts not used (hal_int_ignore),
+hal_intxv	ds.w	2			;the last's vector word and INTREQR
+hal_int6x	ds.l	1			;level 6 calls that were not a game tick
 hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1

@@ -643,6 +643,14 @@ rd_rev8
 ;	One frame into the back buffer, then shown. Skipped when nothing changed for two frames (the
 ;	layout, cells, tiles and colours: ds_gen, ds_palgen).
 rd_frame
+	IFD	CRASHTEST			;(CRASHKIND 3: the renderer stuck, the game going on)
+	IFEQ	CRASHKIND-3
+	cmpi.l	#CRASHTEST*50,(hal_frames).l
+	blo.s	.ct
+.fz	bra.s	.fz
+.ct
+	ENDC
+	ENDC
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	(ds_gen).l,d0
 	add.l	(ds_palgen).l,d0
@@ -1891,7 +1899,7 @@ rd_snaptime
 	rts
 
 ;	Level 3: the copper at a show marker (COPER: rd_cq_mark), or a vertical blank (counted:
-;	rd_vsync).
+;	rd_vsync; the keyboard read).
 rd_bq_int
 	movem.l	d0-d1/a0-a1,-(sp)
 	IFD	PROFILE
@@ -1916,15 +1924,18 @@ rd_bq_int
 	bsr	cr_watch			;(crash.asm: no game tick for 10 seconds)
 	tst.b	(hal_vbtick).l
 	beq.s	.nt
+	lea	18(sp),a0
+	jsr	(hal_pcnote).l			;(the code the game's tick interrupts)
 	st	(hal_vbreq).l
 	move.w	#$A000,(CUSTOM+INTREQ).l	;the game's tick (level 6)
 .nt	bsr	rd_showdue
 	tst.b	(rd_bqhold).l
-	beq.s	.x
+	beq.s	.kb
 	tst.l	(rd_showcop).l
-	bne.s	.x
+	bne.s	.kb
 	sf	(rd_bqhold).l			;the copper goes on with the next show
 	bsr	rd_cq_mark
+.kb	jsr	(hal_kbd_poll).l		;(input.asm: a key)
 .x	addq.l	#2,sp
 	movem.l	(sp)+,d0-d1/a0-a1
 	tst.b	(hal_swpend).l			;a game tick came in a handler: switch now, unless
