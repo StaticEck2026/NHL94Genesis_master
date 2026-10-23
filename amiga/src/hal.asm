@@ -125,6 +125,8 @@ hal_debug
 	dc.b	'ERL1'				;+180: hal_tick_early's switch (the harness turns
 	dc.l	hal_early			;it off unless asked: NHL_EARLY=1)
 	dc.l	rd_scr1,rd_scr2,BUFSIZE		;+188: the other screen buffers, their size
+	dc.b	'WIN1'				;+200: the Genesis RAM window the harness gives
+	dc.l	hal_hwin
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -132,7 +134,7 @@ hal_game_main
 	move	#$2700,sr
 	tst.b	(hal_amiga).l
 	bne	.win				;started from AmigaDOS: the window is in place
-	lea	($C00000).l,a0			;the test harness: a fixed one
+	movea.l	(hal_hwin).l,a0			;the test harness: the one it gives
 	bsr	ram_relocate
 .win	lea	(RAMBASE).l,a0			;clear the Genesis work RAM
 	move.w	#$10000/4-1,d0
@@ -324,13 +326,6 @@ hal_int6
 .pr	PACCT	1
 .pg
 	ENDC
-	IFD	WATCHDOG			;(debug builds: the game's screen can rightly stay
-	addq.w	#1,(hal_wd).l			; the same for a long time)
-	cmpi.w	#240,(hal_wd).l
-	bne	.nowd
-	jsr	(hal_watchdog).l
-.nowd
-	ENDIF
 	PEV	'T'				;(statistics: a game tick)
 	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the sound's delay, rd_showdue)
 	jsr	(snd_frame).l
@@ -384,6 +379,18 @@ hal_int6
 ;	movem, swap stacks, movem, rte.
 
 hal_idle
+	IFD	CRASHTEST			;(a test of the crash report: CRASHTEST seconds in,
+	cmpi.l	#CRASHTEST*50,(hal_frames).l	;an exception, or CRASHKIND 2: stuck with no tick)
+	blo.s	.ct
+	IFEQ	CRASHKIND-1
+	illegal
+	ELSE
+	move.w	#$2000,(CUSTOM+INTENA).l
+	move	#$2000,sr
+.fz	bra.s	.fz
+	ENDC
+.ct
+	ENDC
 	move.l	d0,-(sp)
 	move	sr,d0
 	andi.w	#$0700,d0
@@ -655,72 +662,6 @@ hal_display_init
 	move.w	#$83E0,(CUSTOM+DMACON).l	;DMA, bitplanes, copper, blitter, sprites (the HUD)
 	rts
 
-;	No frame drawn for 4 seconds (-DWATCHDOG=1 builds): a black and white debug screen with the
-;	code base, the last 16 interrupted pcs and the last sr / context, in hex.
-	IFD	WATCHDOG
-hal_watchdog
-	movem.l	d0-d2/a0-a2,-(sp)
-	lea	(hal_dbgscr).l,a0
-	move.w	#40*200/4-1,d0
-.c	clr.l	(a0)+
-	dbf	d0,.c
-	lea	(hal_dbgscr+40*8+2).l,a0
-	lea	hal_header(pc),a1
-	move.l	a1,d0
-	bsr	hal_hex8
-	lea	(hal_dbgscr+40*20+2).l,a0
-	lea	(hal_pcring).l,a2
-	moveq	#16,d2
-.l	move.l	(a2)+,d0
-	bsr	hal_hex8
-	lea	40*9(a0),a0
-	dbf	d2,.l
-	; copper: 1 plane, white on black
-	lea	(hal_dbgcop).l,a0
-	move.l	#$008E2C81,(a0)+
-	move.l	#$00902CC1,(a0)+
-	move.l	#$00920038,(a0)+
-	move.l	#$009400D0,(a0)+
-	move.l	#$01001200,(a0)+
-	move.l	#$01020000,(a0)+
-	move.l	#$01080000,(a0)+
-	move.l	#$01FC0000,(a0)+
-	move.l	#$01060C00,(a0)+
-	move.l	#$01800000,(a0)+
-	move.l	#$01820FFF,(a0)+
-	move.l	#hal_dbgscr,d0
-	move.w	#$00E0,(a0)+
-	swap	d0
-	move.w	d0,(a0)+
-	move.w	#$00E2,(a0)+
-	swap	d0
-	move.w	d0,(a0)+
-	move.l	#$FFFFFFFE,(a0)+
-	move.l	#hal_dbgcop,(CUSTOM+$080).l
-	movem.l	(sp)+,d0-d2/a0-a2
-	rts
-
-;	d0 as 8 hex digits at byte a0 of the debug screen (40 bytes a row). Keeps a0.
-hal_hex8
-	movem.l	d0-d4/a0-a3,-(sp)
-	moveq	#7,d4
-.d	rol.l	#4,d0
-	moveq	#15,d1
-	and.w	d0,d1
-	lea	(rd_font).l,a1
-	mulu.w	#5,d1
-	adda.w	d1,a1
-	movea.l	a0,a2
-	moveq	#4,d2
-.r	move.b	(a1)+,(a2)
-	lea	40(a2),a2
-	dbf	d2,.r
-	addq.l	#1,a0
-	dbf	d4,.d
-	movem.l	(sp)+,d0-d4/a0-a3
-	rts
-	ENDIF
-
 hal_int_ignore
 	move.w	#$3FFF,(CUSTOM+INTREQ).l
 	rte
@@ -733,14 +674,18 @@ hal_exception
 	move.l	4(sp),(hal_exc_info+4).l	;pc low, format/vector
 	move.l	8(sp),(hal_exc_info+8).l
 	move.l	12(sp),(hal_exc_info+12).l
-	move.w	#$F00,(CUSTOM+$180).l
-.hang	bra	.hang
+	move.w	6(sp),d0
+	andi.w	#$0FFF,d0
+	lsr.w	#2,d0				;the vector
+	movea.l	sp,a0
+	bra	cr_show				;(crash.asm: the report)
 
 hal_pace	dc.l	RDPACE			;1: a new frame each game tick if there is time for it
 						;(50 or 60 a second), or 2: every 2 game ticks at most,
 						;each shown for 2 vertical blanks at least (a steady 25
 						;or 30 a second); F6
 hal_hz		dc.w	0			;game frames a second (0: from the display)
+hal_hwin	dc.l	$C00000				;(the test harness' Genesis RAM window)
 hal_pal50	dc.w	0			;bit 0: the game runs at 50 Hz (a PAL console's rate: the
 						;game reads it at its start, hal_set_rate)
 
@@ -759,7 +704,6 @@ hal_yielding	ds.b	1			;(BENCH: the game in hal_yield)
 hal_tickpend	ds.b	1			;(BENCH: ticks put off)
 	even
 hal_pcpos	ds.w	1
-hal_wd		ds.w	1
 hal_starve	ds.w	1
 	IFD	PROFILE
 prof_pos	ds.l	1
@@ -801,9 +745,5 @@ mb_chip		ds.b	2048
 mb_blt		ds.b	128*64
 	ENDC
 hal_copempty	ds.l	4+16
-	IFD	WATCHDOG
-hal_dbgcop	ds.l	20
-hal_dbgscr	ds.b	40*200
-	ENDIF
 
 	section	game,code

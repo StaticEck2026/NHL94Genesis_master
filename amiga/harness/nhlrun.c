@@ -197,6 +197,7 @@ static void bf_check(unsigned int pc)
 }
 static void det_hook(unsigned int pc)
 {
+    pc &= 0xFFFFFF;                     /* (NHL_HIGH: the code at $40000000 up) */
     det_calls++;
     if (bfchk < 0) bfchk = getenv("NHL_BFCHK") ? 1 : 0;
     if (bfchk) bf_check(pc);
@@ -739,6 +740,13 @@ static int is_io(uint32_t a) { a &= 0xFFFFFF; return (a >= 0xBF0000 && a < 0xC00
    chip memory shows in the renderer's cycles as on the Amiga) */
 extern int m68ki_remaining_cycles;
 static uint32_t chip_lo[8], chip_hi[8]; static int nchip, chipwait = -1;
+/* NHL_HIGH=1: the program's hunks other than chip, and the Genesis RAM window, at $40000000 up
+   (fast RAM of an accelerator board: the CPU sees all 32 address bits); kept at the same place in
+   the harness' 16 MB. Each access to that memory through its 24 bit address (a top byte lost),
+   or at another address with a top byte, is reported once per code address. */
+#define HIGHBASE 0x40000000
+static int high;
+static uint32_t fast_lo[16], fast_hi[16]; static int nfast;
 static inline void chip_access(uint32_t a)
 {
     if (chipwait < 0) chipwait = getenv("NHL_CHIPWAIT") ? atoi(getenv("NHL_CHIPWAIT")) : 0;
@@ -753,9 +761,37 @@ static inline void chip_access(uint32_t a)
    address lines and ignores it, but a 68030 or later with fast RAM at 32 bit addresses does not):
    each code address once, with the address it used */
 static int a32 = -1;
+static void high_check(uint32_t a, int w)
+{
+    static uint32_t seen[256]; static int nseen;
+    uint32_t p = a & 0xFFFFFF, top = a >> 24;
+    int in = 0;
+    for (int i = 0; i < nfast && !in; i++) in = p >= fast_lo[i] && p < fast_hi[i];
+    if (top == HIGHBASE >> 24 ? in : top == 0 ? !in : 0) return;
+    uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
+    for (int i = 0; i < nseen; i++) if (seen[i] == pc) return;
+    if (nseen < 256) seen[nseen++] = pc;
+    fprintf(stderr, "high: frame %d pc %08x %s %08x (%s)\n", frame, pc, w ? "writes" : "reads", a,
+            top == 0 ? "fast memory through its 24 bit address" : "an address with a top byte");
+}
+/* NHL_LOWMEM=1: report CPU accesses to the first 4 KB (exec's vectors and ExecBase at 4: an MMU
+   tool such as MuForce on a 68040 / 060 board makes them faults), each code address once */
+static int lowmem = -1;
+static void low_check(uint32_t a, int w)
+{
+    static uint32_t seen[256]; static int nseen;
+    if (lowmem < 0) lowmem = getenv("NHL_LOWMEM") ? 1 : 0;
+    if (!lowmem || a >= 0x1000 || in_copper || in_blit || frame < 2) return;
+    uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
+    for (int i = 0; i < nseen; i++) if (seen[i] == pc) return;
+    if (nseen < 256) seen[nseen++] = pc;
+    fprintf(stderr, "lowmem: frame %d pc %08x %s %08x\n", frame, pc, w ? "writes" : "reads", a);
+}
 static void a32_check(uint32_t a, int w)
 {
     static uint32_t seen[256]; static int nseen;
+    low_check(a, w);
+    if (high && !in_copper && !in_blit) { high_check(a, w); return; }
     if (a32 < 0) a32 = getenv("NHL_A32") ? 1 : 0;
     if (!a32 || !(a >> 24) || in_copper || in_blit) return;
     uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
@@ -856,6 +892,9 @@ static uint32_t load_hunks(const char *path)
         base[i] = addr;
         if ((be32(p) & 0xC0000000) == 0x40000000 && nchip < 8) {     /* MEMF_CHIP */
             chip_lo[nchip] = addr; chip_hi[nchip] = addr + sz; nchip++;
+        } else if (high && nfast < 15) {
+            base[i] = addr | HIGHBASE;
+            fast_lo[nfast] = addr; fast_hi[nfast] = addr + sz; nfast++;
         }
         if (getenv("NHL_AUDLOG")) fprintf(stderr, "hunk %d at %06x\n", i, addr);
         addr = (addr + sz + 0x1000) & ~0xFFF;
@@ -868,7 +907,7 @@ static uint32_t load_hunks(const char *path)
         if (t == 0x3E9 || t == 0x3EA) {       /* CODE / DATA */
             uint32_t len = be32(p) * 4;
             p += 4;
-            memcpy(mem + base[h], p, len);
+            memcpy(mem + (base[h] & 0xFFFFFF), p, len);
             p += len;
         } else if (t == 0x3EB) {              /* BSS */
             p += 4;
@@ -980,6 +1019,7 @@ int main(int argc, char **argv)
         } else exe = argv[i];
     }
     if (!exe) { fprintf(stderr, "usage: nhlrun [options] nhl94.game\n"); return 1; }
+    high = getenv("NHL_HIGH") != NULL;
     mem = calloc(1, MEMSIZE + 16);
     uint32_t code = load_hunks(exe);
     if (rd32(code + 4) != 0x4E483934) { fprintf(stderr, "no NH94 header\n"); return 1; }
@@ -999,6 +1039,10 @@ int main(int argc, char **argv)
        frame's end, which is then part way through the next game frame at times */
     if (rd32(dbg + 180) == 0x45524C31 && !(getenv("NHL_EARLY") && atoi(getenv("NHL_EARLY"))))
         wr8(rd32(dbg + 184), 0);
+    if (high && rd32(dbg + 200) == 0x57494E31) {     /* 'WIN1': the Genesis RAM window */
+        wr32(rd32(dbg + 204), HIGHBASE | 0xC00000);
+        fast_lo[nfast] = 0xC00000; fast_hi[nfast] = 0xC10000; nfast++;
+    }
     if (rd32(dbg + 172) == 0x53435831) {  /* 'SCX1': the sprite image ring's second part, as the
                                              launcher takes it from the chip memory left
                                              (NHL_SCX=bytes, default 256K; 0: none) */

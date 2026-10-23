@@ -85,6 +85,13 @@ directory.
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
 
+If the game stops on a CPU exception, or no game frame has run for 10 seconds (stuck), it shows
+a crash report on a dark red screen: the build, what went wrong, the code address, the
+registers, the stack, the CPU, where the program and its RAM are, and the code the last game
+frames interrupted. A photo of it says where to look (the build's `output/amiga/nhl94.lst`
+gives the code's names: its addresses are the code address less the `Code` address). The
+Amiga must then be reset.
+
 ### Controls
 
 | | Player 1 (joystick port 2) | Player 2 (joystick port 1) |
@@ -124,8 +131,8 @@ vasm (`vasmm68k_mot`, Motorola syntax; on the `PATH`, in `$VASM`, or at `/opt/am
 writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94.info`. With
 `VASMFLAGS`:
 
-- `-DWATCHDOG=1` shows a debug screen (the last interrupted program counters) when no frame has
-  been drawn for 4 seconds.
+- `-DCRASHTEST=n` tests the crash report (below): `n` seconds into the game an illegal
+  instruction (`-DCRASHKIND=1`), or the game stuck with no game frame (`-DCRASHKIND=2`).
 - `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
 - `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
   exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
@@ -439,7 +446,11 @@ as `ami_<frame>.png`. `golden.sh` (below) checks a build's screens against an ea
 address with a top byte (a stock A1200's 68EC020 has 24 address lines and ignores it, a 68030
 or later with fast memory high up does not), and `NHL_BFCHK=1` each bit field instruction on
 memory whose offset register holds 2^20 bits or more either way (the offset is all 32 bits of
-the register: a top word left over moves the field far away).
+the register: a top word left over moves the field far away). `NHL_HIGH=1` puts the program's
+hunks other than chip RAM and the Genesis RAM window at $40000000 up, as an accelerator board's
+fast RAM is, and reports each access to that memory through its 24 bit address (a top byte
+lost) or at another address with a top byte; `NHL_LOWMEM=1` reports accesses to the first 4 KB,
+which an MMU tool on a 68040 or 68060 board makes faults.
 `NHL_FIXEDHV=1` gives the game's reads of the beam position (which it uses as random numbers)
 values that depend only on the frame and the read's number in it. `NHL_DETERM=1` does that and
 more, so that every build plays exactly the same game: the renderer's own work takes none of

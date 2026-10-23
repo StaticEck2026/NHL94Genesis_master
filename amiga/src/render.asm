@@ -1912,6 +1912,8 @@ rd_bq_int
 	move.w	#$0020,(CUSTOM+INTREQ).l
 	PEV	'B'				;(statistics: a vertical blank)
 	addq.l	#1,(rd_vblanks).l
+	lea	18(sp),a0			;(its frame, the registers saved under it: cr_watch)
+	bsr	cr_watch			;(crash.asm: no game tick for 10 seconds)
 	tst.b	(hal_vbtick).l
 	beq.s	.nt
 	st	(hal_vbreq).l
@@ -8895,7 +8897,6 @@ COPMOVE	MACRO
 	ENDM
 
 rd_show
-	clr.w	(hal_wd).l
 	tst.b	(hal_fpsshow).l
 	beq	.nofps
 	bsr	rd_fps
