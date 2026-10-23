@@ -15,8 +15,8 @@ Genesis sources are not changed, so `main` still rebuilds the cartridge byte for
 - A 68020 or better. The renderer uses 68020 instructions.
 - 2 MB of chip RAM and at least 2 MB of fast RAM. The game takes about 1.6 MB of any memory (fast
   RAM where there is some: its code, its data and the Genesis RAM window) and about 1.6 MB of
-  chip RAM (and up to 256 KB more for sprite images if it is free: fewer are built again), so
-  it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
+  chip RAM, in parts of up to about 450 KB (and up to 256 KB more for sprite images if it is
+  free: fewer are built again), so it does not fit in a stock 2 MB A1200. The launcher loads it a part at a time
   (each part's compressed bytes, then the next), so that is about the most it takes. Kickstart
   leaves nearly all of 2 MB of fast RAM free, so it should fit there (not tested: the tests here
   use the AROS ROM, which keeps some 0.7 MB of the fast RAM for itself, so with it the game needs
@@ -44,6 +44,14 @@ Copy `output/amiga/NHL94`, `NHL94.info` and `nhl94.game` into the same directory
 from a Shell, or double click its icon. `NHL94` is a small launcher that loads `nhl94.game`. The
 game takes over the machine and gives it back when you quit. If it cannot run (no AGA, no 68020,
 not enough memory, `nhl94.game` missing), a requester says why.
+
+A Workbench screen with many colours and backdrop pictures holds much of the 2 MB of chip RAM.
+If the game does not fit, the launcher has the system free what it can (unused libraries,
+devices and fonts) and then closes the Workbench screen, which frees its bitmaps and pictures,
+and tries again; the Workbench opens again when you quit. The Workbench screen cannot close
+while other programs have windows on it (a Shell, a clock): if the game still does not fit, the
+requester says how much chip RAM it takes and how much is free. Quit those programs, or start
+the game from a startup-sequence (as the hard drive image and the floppy do).
 
 In an emulator, use the hard drive image `output/amiga/nhl94.hdf`. The build makes it when
 `xdftool` is installed (`pip install amitools`). It boots straight into the game.

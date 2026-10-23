@@ -273,16 +273,23 @@ static unsigned bk_frames0;
 static uint32_t scx_lo, scx_hi;          /* the ring's second part (NHL_SCX) */
 static char bk_region(uint32_t a)
 {
-    static const char names[] = "SBMcCOFhLH";     /* in their order in the chip section */
+    static const char names[] = "SBMcCOFhLH";     /* (the regions of st[] below) */
     uint32_t st[10];
     if (!a) return '-';
     if (a >= scx_lo && a < scx_hi) return 'c';
+    for (int k = 0; k < 3; k++) {       /* the screen buffers: hunks of their own */
+        uint32_t s = k ? rd32(dbg + 184 + 4 * k) : rd32(dbg + 80);
+        if (a >= s && a < s + rd32(dbg + 196)) return 'S';
+    }
     st[0] = rd32(dbg + 80); st[1] = rd32(dbg + 36); st[2] = rd32(dbg + 84); st[3] = rd32(dbg + 100);
     st[4] = rd32(dbg + 88); st[5] = rd32(dbg + 60); st[6] = rd32(dbg + 92); st[7] = rd32(dbg + 104);
     st[8] = rd32(dbg + 64); st[9] = rd32(dbg + 96);
-    for (int i = 9; i >= 0; i--)
-        if (a >= st[i] && (i < 9 || a < st[9] + 288 * 224)) return names[i];
-    return '?';
+    if (a >= st[4] && a < st[4] + 0x40000) return 'C';     /* the sprite image ring: its own hunk */
+    int best = -1;                      /* the others: the nearest start below */
+    for (int i = 1; i < 10; i++)
+        if (i != 4 && a >= st[i] && (best < 0 || st[i] > st[best])) best = i;
+    if (best < 0 || (best == 9 && a >= st[9] + 288 * 224)) return '?';
+    return names[best];
 }
 static void blitkind_add(uint16_t con0, uint32_t a, uint32_t b, uint32_t c, uint32_t d, long long words,
                          long long t)

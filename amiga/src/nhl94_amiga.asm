@@ -14,6 +14,14 @@
 bss_start
 	section	chip,bss_c
 chip_start
+	section	scr0,bss_c			;(the screen buffers and the sprite image ring: render.asm)
+scr0_start
+	section	scr1,bss_c
+scr1_start
+	section	scr2,bss_c
+scr2_start
+	section	ring,bss_c
+ring_start
 	section	sndchip,data_c
 sndchip_start
 	section	ramwin,bss

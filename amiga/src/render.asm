@@ -162,14 +162,23 @@ rd_tmp		ds.l	8
 rd_cellpri	ds.w	1
 mkB		ds.b	BMAX*8			;plane B high priority mask (for the CPU: fast memory)
 
+	IFNE	NBUF-3
+	FAIL	"rd_scr0-2: a screen buffer each"
+	ENDC
+	section	scr0,bss_c			;the screen buffers and the sprite image ring: hunks of
+rd_scr0		ds.b	BUFSIZE			;their own, so that the chip RAM they take need not be
+	section	scr1,bss_c			;one block (the game loaded from a Workbench whose screen
+rd_scr1		ds.b	BUFSIZE			;was open)
+	section	scr2,bss_c
+rd_scr2		ds.b	BUFSIZE
+	section	ring,bss_c
+rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 	section	chip,bss_c
 	cnop	0,8
-rd_screens	ds.b	BUFSIZE*NBUF
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 mkB6		ds.b	BMAX*48			;its high priority mask in each plane's place (blitter)
 rd_cop		ds.l	NBUF*256			;a copper list per buffer
 rd_cqbuf	ds.b	2*CQI			;the copper's blit ring (rd_cq_init)
-rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_fpsimg	ds.w	5*NPLANES*NBUF		;the frame rate digits (rd_fps), per buffer
 	cnop	0,8
@@ -238,7 +247,7 @@ rd_init
 	cmpi.w	#256,d0
 	bne	.pt
 	bsr	rd_dirty_all
-	lea	(rd_screens).l,a0
+	lea	(rd_scr0).l,a0
 	move.l	a0,(rd_back).l
 	move.l	a0,(rd_buf).l
 	clr.w	(rd_bufi).l
@@ -9149,9 +9158,7 @@ rd_show
 	blo.s	.nb
 	moveq	#0,d1
 .nb	move.w	d1,(rd_bufi).l
-	move.l	d1,d0
-	mulu.l	#BUFSIZE,d0
-	add.l	#rd_screens,d0
+	move.l	(rd_scrs,pc,d1.w*4),d0
 	move.l	d0,(rd_buf).l
 	move.l	d0,(rd_back).l
 	move.w	d1,d0
@@ -9163,6 +9170,8 @@ rd_show
 	add.l	#rd_cop,d0
 	move.l	d0,(rd_backcop).l
 	rts
+
+rd_scrs		dc.l	rd_scr0,rd_scr1,rd_scr2	;the screen buffers
 
 	section	bss,bss
 rd_hudspt	ds.l	8			;the sprites' data in rd_hudm (rd_sprnull: none)

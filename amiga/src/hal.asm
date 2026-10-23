@@ -109,7 +109,7 @@ hal_debug
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
 	dc.l	rd_dbg_key,rd_vfail
-	dc.l	rd_screens,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
+	dc.l	rd_scr0,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
 	dc.l	RAMBASE				;+108: the Genesis RAM window
 	dc.l	game_code			;+112: the converted game's code
 	dc.l	rd_lastframe,rd_busy		;+116: the renderer's pacing
@@ -124,6 +124,7 @@ hal_debug
 	dc.l	rd_scx				;address, then bytes (the harness may give one)
 	dc.b	'ERL1'				;+180: hal_tick_early's switch (the harness turns
 	dc.l	hal_early			;it off unless asked: NHL_EARLY=1)
+	dc.l	rd_scr1,rd_scr2,BUFSIZE		;+188: the other screen buffers, their size
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
 ;	the game frame timer and jumps to the cartridge's cold start.

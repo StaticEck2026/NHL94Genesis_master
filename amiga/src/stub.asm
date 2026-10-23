@@ -1,6 +1,9 @@
 ;	NHL94: the launcher. Loads NHL94.game and runs it; started from the Workbench, it takes the
 ;	Workbench message. What goes wrong is said in a requester (request.i). Assembled for the
-;	68000, so that it can say so on any Amiga.
+;	68000, so that it can say so on any Amiga. If there is not the memory to load the game, the
+;	system is asked to free what it can (unused libraries, devices and fonts) and the Workbench
+;	screen is closed (its bitmaps and pictures take chip RAM), each time loading it again; the
+;	Workbench opens again when the game ends.
 ;	On the floppy the game is NHL94.pak (amiga/tools/pack.py: its hunks deflate compressed),
 ;	which the launcher loads itself when it is there.
 
@@ -14,6 +17,7 @@ EXEC_OpenLibrary	equ	-552
 EXEC_CloseLibrary	equ	-414
 EXEC_AllocMem		equ	-198
 EXEC_FreeMem		equ	-210
+EXEC_AvailMem		equ	-216
 EXEC_CacheClearU	equ	-636
 DOS_Open		equ	-30
 DOS_Close		equ	-36
@@ -23,6 +27,11 @@ DOS_LoadSeg		equ	-150
 DOS_Lock		equ	-84
 DOS_UnLock		equ	-90
 DOS_UnLoadSeg		equ	-156
+INT_CloseWorkBench	equ	-78
+INT_OpenWorkBench	equ	-210
+MEMF_CHIP		equ	2
+MEMF_FAST		equ	4
+MEMF_LARGEST		equ	$20000
 
 	section	stub,code
 start
@@ -51,26 +60,28 @@ start
 	move.l	d0,dosbase
 	beq	.nodos
 	movea.l	d0,a6
-	bsr	pakload
-	tst.l	d0
-	bmi.s	.say				;(a0: why not)
-	move.l	d0,seglist
+	bsr	loadgame
 	bne	.run
-	move.l	#gamename,d1
-	jsr	DOS_LoadSeg(a6)
-	move.l	d0,seglist
+	lea	(msgmem,pc),a1
+	cmpa.l	a1,a0
+	bne.s	.say
+	; not enough memory: what the system can free freed, then the Workbench screen closed
+	bsr	flushmem
+	bsr	loadgame
 	bne	.run
-	; there but not loaded: not enough memory
-	move.l	#gamename,d1
-	moveq	#-2,d2				;ACCESS_READ
-	jsr	DOS_Lock(a6)
-	lea	(msgload,pc),a0
-	move.l	d0,d1
-	beq.s	.say
-	jsr	DOS_UnLock(a6)
+	bsr	closewb
+	beq.s	.nomem				;(it could not be: other programs' windows on it)
+	bsr	flushmem
+	bsr	loadgame
+	bne	.run
+.nomem	bsr	openwb
+	bsr	memfigures
 	lea	(msgmem,pc),a0
+	lea	memargs,a1
+	bsr	ezrequesta
+	bra.s	.err
 .say	bsr	ezrequest
-	moveq	#20,d7
+.err	moveq	#20,d7
 	bra	.free
 .run	movem.l	(sp),d0/a0
 	movea.l	seglist,a1
@@ -85,7 +96,8 @@ start
 	bsr	pakfree
 	bra.s	.free
 .unl	jsr	DOS_UnLoadSeg(a6)
-.free	movea.l	(4).w,a6
+.free	bsr	openwb
+	movea.l	(4).w,a6
 	movea.l	dosbase,a1
 	jsr	EXEC_CloseLibrary(a6)
 	move.l	d7,d0
@@ -102,6 +114,104 @@ start
 .x	rts
 
 	include	"request.i"
+
+;	The game loaded (seglist, and packed set if from NHL94.pak): Z clear. Else Z set, a0 = why
+;	not (msgmem: not enough memory). a6 = dos.library. Uses d0-d2/a0-a1.
+loadgame	bsr	pakload
+	tst.l	d0
+	bmi.s	.no				;(a0: why not)
+	move.l	d0,seglist
+	bne.s	.x
+	move.l	#gamename,d1
+	jsr	DOS_LoadSeg(a6)
+	move.l	d0,seglist
+	bne.s	.x
+	move.l	#gamename,d1			;there but not loaded: not enough memory
+	moveq	#-2,d2				;ACCESS_READ
+	jsr	DOS_Lock(a6)
+	lea	(msgload,pc),a0
+	move.l	d0,d1
+	beq.s	.no
+	jsr	DOS_UnLock(a6)
+	lea	(msgmem,pc),a0
+.no	moveq	#0,d0
+.x	rts
+
+;	The system asked to free what it can (an allocation it cannot meet: unused libraries,
+;	devices and fonts are expunged first). Keeps all registers.
+flushmem
+	movem.l	d0-d1/a0-a1/a6,-(sp)
+	movea.l	(4).w,a6
+	move.l	#$7FFFFFF0,d0
+	moveq	#1,d1				;MEMF_PUBLIC
+	jsr	EXEC_AllocMem(a6)
+	tst.l	d0
+	beq.s	.x
+	movea.l	d0,a1
+	move.l	#$7FFFFFF0,d0
+	jsr	EXEC_FreeMem(a6)
+.x	movem.l	(sp)+,d0-d1/a0-a1/a6
+	rts
+
+;	The Workbench screen closed: Z clear if it was (openwb opens it again). Keeps d2-d7/a2-a5.
+closewb	move.l	a6,-(sp)
+	movea.l	(4).w,a6
+	lea	(intname,pc),a1
+	moveq	#36,d0
+	jsr	EXEC_OpenLibrary(a6)
+	move.l	d0,intbase
+	beq.s	.x
+	movea.l	d0,a6
+	jsr	INT_CloseWorkBench(a6)
+	tst.l	d0
+	bne.s	.c
+	movea.l	a6,a1				;(not closed)
+	movea.l	(4).w,a6
+	jsr	EXEC_CloseLibrary(a6)
+	clr.l	intbase
+	bra.s	.x
+.c	st	wbclosed
+.x	movea.l	(sp)+,a6
+	tst.b	wbclosed
+	rts
+
+;	The Workbench screen opened again if closewb closed it. Keeps all registers.
+openwb	tst.b	wbclosed
+	beq.s	.x
+	movem.l	d0-d1/a0-a1/a6,-(sp)
+	sf	wbclosed
+	movea.l	intbase,a6
+	jsr	INT_OpenWorkBench(a6)
+	movea.l	a6,a1
+	movea.l	(4).w,a6
+	jsr	EXEC_CloseLibrary(a6)
+	clr.l	intbase
+	movem.l	(sp)+,d0-d1/a0-a1/a6
+.x	rts
+
+;	memargs: the memory the game takes and the memory free now, in KB (msgmem's figures).
+memfigures
+	movem.l	d0-d1/a0-a1/a6,-(sp)
+	lea	memargs,a0
+	move.l	#CHIPKB,(a0)+
+	move.l	#CHIPBLKKB,(a0)+
+	move.l	#ANYKB,(a0)+
+	movea.l	(4).w,a6
+	moveq	#MEMF_CHIP,d1
+	bsr.s	.kb
+	move.l	#MEMF_CHIP|MEMF_LARGEST,d1
+	bsr.s	.kb
+	moveq	#MEMF_FAST,d1
+	bsr.s	.kb
+	movem.l	(sp)+,d0-d1/a0-a1/a6
+	rts
+.kb	move.l	a0,-(sp)
+	jsr	EXEC_AvailMem(a6)
+	movea.l	(sp)+,a0
+	moveq	#10,d1
+	lsr.l	d1,d0
+	move.l	d0,(a0)+
+	rts
 
 ;	NHL94.pak, if it is there: d0 = its seglist (hunks allocated as LoadSeg does: a long of the
 ;	size, the next hunk's BPTR, the contents), 0 if there is no NHL94.pak, -1 with a0 = the
@@ -384,15 +494,20 @@ pakfree	move.l	a6,-(sp)
 
 	include	"build.i"			;(the version string: the build, build.sh)
 dosname		dc.b	'dos.library',0
+intname		dc.b	'intuition.library',0
 gamename	dc.b	'PROGDIR:NHL94.game',0
 pakname		dc.b	'PROGDIR:NHL94.pak',0
 msgpak		dc.b	'NHL94.pak is damaged.',0
 msgload		dc.b	'Cannot load NHL94.game.',10
 		dc.b	'It must be in the same directory as NHL94.',0
 msgmem		dc.b	'Not enough memory to load NHL94.game.',10,10
-		dc.b	'NHL 94 needs an AGA Amiga (A1200 / A4000)',10
-		dc.b	'with fast RAM: 2 MB chip RAM and',10
-		dc.b	'at least 2 MB fast RAM.',0
+		dc.b	'It takes %ld KB of chip RAM (in blocks of up to %ld KB)',10
+		dc.b	'and %ld KB of fast RAM. Free now: %ld KB of chip RAM',10
+		dc.b	'(the largest block %ld KB) and %ld KB of fast RAM.',10,10
+		dc.b	'Quit other programs, close their windows on the',10
+		dc.b	'Workbench screen, or start NHL 94 from a startup-',10
+		dc.b	'sequence (an AGA Amiga with 2 MB chip RAM and',10
+		dc.b	'at least 2 MB fast RAM).',0
 msgdos		dc.b	'NHL 94 must be started from a Shell,',10
 		dc.b	'a startup-sequence or the Workbench.',0
 	even
@@ -401,6 +516,8 @@ MAXHUNKS	equ	16
 
 	section	stubbss,bss
 dosbase		ds.l	1
+intbase		ds.l	1				;(the Workbench closed: closewb)
+memargs		ds.l	6				;(msgmem's figures)
 wbmsg		ds.l	1
 seglist		ds.l	1
 pakbuf		ds.l	1
@@ -410,5 +527,6 @@ pakhdr		ds.l	3+2*MAXHUNKS+1			;its header
 hunks		ds.l	1				;the seglist being built
 hunkbase	ds.l	MAXHUNKS
 packed		ds.b	1
+wbclosed	ds.b	1
 		even
 ifwork		ds.b	IF_SIZE

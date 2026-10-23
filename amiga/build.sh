@@ -35,14 +35,26 @@ python3 amiga/tools/fepack.py Extracted/NHL94/Graphics output/amiga/src/fe.i
 cd output/amiga/src
 # Twice: the second time with the list of the places that hold RAM window addresses, which
 # ramrel.py takes from the first (its hunk is the last, so the others do not move).
-HUNKS="hal_header bss_start chip_start sndchip_start RAMBASE ram_relocs"
+HUNKS="hal_header bss_start chip_start scr0_start scr1_start scr2_start ring_start sndchip_start RAMBASE ram_relocs"
 printf 'ram_relocs\n\tdc.l\t0\n' > ramrel.i
 "$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS -o ../nhl94.game nhl94_amiga.asm
-python3 ../../../amiga/tools/ramrel.py ../nhl94.game 4 ramrel.i $HUNKS
+python3 ../../../amiga/tools/ramrel.py ../nhl94.game 8 ramrel.i $HUNKS
 "$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS -o ../nhl94.game -L ../nhl94.lst nhl94_amiga.asm
-python3 ../../../amiga/tools/ramrel.py ../nhl94.game 4 ramrel2.i $HUNKS >/dev/null
+python3 ../../../amiga/tools/ramrel.py ../nhl94.game 8 ramrel2.i $HUNKS >/dev/null
 cmp -s ramrel.i ramrel2.i || { echo "build.sh: the RAM window places moved between the passes"; exit 1; }
 ls -l ../nhl94.game
+# The memory the game's hunks take, for the launcher's message (KB: chip, its largest hunk,
+# any other: fast RAM if there is some)
+python3 - ../nhl94.game >> build.i <<'PY'
+import struct, sys
+d = open(sys.argv[1], 'rb').read()
+n = struct.unpack('>I', d[16:20])[0] - struct.unpack('>I', d[12:16])[0] + 1   # (no resident names)
+s = struct.unpack('>%dI' % n, d[20:20 + 4 * n])
+chip = [(v & 0x3FFFFFFF) * 4 for v in s if v & 0x40000000]
+other = [(v & 0x3FFFFFFF) * 4 for v in s if not v & 0x40000000]
+kb = lambda b: (b + 1023) // 1024
+print('CHIPKB\tequ\t%d\nCHIPBLKKB\tequ\t%d\nANYKB\tequ\t%d' % (kb(sum(chip)), kb(max(chip)), kb(sum(other))))
+PY
 "$VASM" -Fhunkexe -m68000 -nocase -quiet -o ../NHL94 stub.asm
 ls -l ../NHL94
 python3 ../../../amiga/tools/mkicon.py ../NHL94.info
