@@ -14,7 +14,7 @@ cp amiga/src/*.asm amiga/src/*.i output/amiga/src/
 BUILDNO=$(git rev-list --count HEAD 2>/dev/null || echo 0)
 BUILDID=$(git rev-parse --short HEAD 2>/dev/null || echo none)
 git diff --quiet HEAD -- amiga src tools 2>/dev/null || BUILDID="$BUILDID+"
-printf 'BUILDNO\tequ\t%s\nbuildver\tdc.b\t"$VER: NHL94 b%s (%s)",0\n' "$BUILDNO" "$BUILDNO" "$BUILDID" \
+printf 'buildver\tdc.b\t"$VER: NHL94 b%s (%s)",0\n' "$BUILDNO" "$BUILDID" \
   > output/amiga/src/build.i
 # The FM patches and the PCM sounds as samples (kept: they only change with their sources or
 # the tools)

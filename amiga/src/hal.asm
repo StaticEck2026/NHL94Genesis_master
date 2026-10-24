@@ -97,37 +97,34 @@ hal_set_rate
 	move.l	(sp)+,d1
 	rts
 
-;	Debug block, read by the test harness:
-;	+0  the layout a frame is drawn with (rd_layout)  +4 vm_data  +8 colours (ds_pal)  +12 vertical scroll
-;	(rd_vs)  +16 exception info (16 longs)
-;	+20 frame counter  +24 pad state ... +76 the renderer's self-check (VERIFY builds)
-;	+80 chip buffers (the harness' blitter statistics by kind)
+;	Debug block, read by the test harness: what it reads, at these places
+;	+0  the layout a frame is drawn with (rd_layout)  +4 vm_data  +8 exception info (16 longs)
+;	+12 frame counter  +16 pad state ... +64 the renderer's self-check (VERIFY builds)
+;	+68 chip buffers (the harness' blitter statistics by kind)
 hal_debug
-	dc.l	rd_layout,vm_data,ds_pal,rd_vs,hal_exc_info,hal_frames,hal_padstate
-	dc.l	rd_count,0
+	dc.l	rd_layout,vm_data,hal_exc_info,hal_frames,hal_padstate
+	dc.l	rd_count
 	dc.l	bmB,rd_cw,rd_colours
 	dc.l	tp_pl,tp_mk,tp_cls
 	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
 	dc.l	rd_dbg_key,rd_vfail
 	dc.l	rd_scr0,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
-	dc.l	RAMBASE				;+108: the Genesis RAM window
-	dc.l	game_code			;+112: the converted game's code
-	dc.l	rd_lastframe,rd_busy		;+116: the renderer's pacing
-	dc.l	hal_starve			;+124
-	dc.l	ctx_cur				;+128
-	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full ;+132: the renderer's wait loops
-	dc.l	ctx_to_game,hal_idle_no		;+148: the renderer gives way, the game idles
-	dc.l	Spritetiles,SPRTSIZE		;+156: the players' sprite tiles (planar, not in video memory)
-	dc.l	vm_tsrc			;+164: where each tile's data was loaded from
-	dc.l	game_code_end			;+168: the converted game's code ends
-	dc.b	'SCX1'				;+172: the sprite image ring's second part: its
+	dc.l	RAMBASE				;+96: the Genesis RAM window
+	dc.l	game_code			;+100: the converted game's code
+	dc.l	rd_lastframe,rd_busy		;+104: the renderer's pacing
+	dc.l	hal_starve			;+112
+	dc.l	ctx_cur				;+116
+	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full ;+120: the renderer's wait loops
+	dc.l	ctx_to_game,hal_idle_no		;+136: the renderer gives way, the game idles
+	dc.l	game_code_end			;+144: the converted game's code ends
+	dc.b	'SCX1'				;+148: the sprite image ring's second part: its
 	dc.l	rd_scx				;address, then bytes (the harness may give one)
-	dc.b	'ERL1'				;+180: hal_tick_early's switch (the harness turns
+	dc.b	'ERL1'				;+156: hal_tick_early's switch (the harness turns
 	dc.l	hal_early			;it off unless asked: NHL_EARLY=1)
-	dc.l	rd_scr1,rd_scr2,BUFSIZE		;+188: the other screen buffers, their size
-	dc.b	'WIN1'				;+200: the Genesis RAM window the harness gives
+	dc.l	rd_scr1,rd_scr2,BUFSIZE		;+164: the other screen buffers, their size
+	dc.b	'WIN1'				;+176: the Genesis RAM window the harness gives
 	dc.l	hal_hwin
-	dc.b	'SND1'				;+208: the sound's statistics (STATS builds)
+	dc.b	'SND1'				;+184: the sound's statistics (STATS builds)
 	dc.l	snd_stats
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
@@ -769,8 +766,9 @@ hal_vbtick	ds.b	1			;the game ticks come from the vertical blank
 hal_vbreq	ds.b	1			;(one asked for)
 hal_swpend	ds.b	1			;a context switch waits for an interrupt handler's end
 		cnop	0,4
-rend_stack	ds.b	4096			;(the most it held in long runs of the harness: some
-rend_stack_top					;360 bytes; a game tick switches to the game's stack)
+		ds.b	4096			;the renderer's stack (the most it held in long runs of
+rend_stack_top					;the harness: some 360 bytes; a game tick switches to the
+						;game's stack)
 
 	section	chip,bss_c
 	IFD	MEMBENCH

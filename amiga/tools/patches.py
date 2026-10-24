@@ -85,6 +85,18 @@ def remove_routine(rel, label, table=PRE):
     rule(table, rel, pat, '', 1, True)
 
 
+def remove_equates(rel, names, table=PRE):
+    """Remove the definitions (equ, =) of names."""
+    for name in names.split():
+        rule(table, rel, r'^%s[ \t]*(?:[ \t]equ\b|=)[^\n]*\n' % re.escape(name), '', 1, True)
+
+
+def remove_macro(rel, name, table=PRE):
+    """Remove the macro 'name', its definition to its endm."""
+    rule(table, rel, r'^%s[ \t]+(?i:macro)\b[^\n]*\n(?:[^\n]*\n)*?[ \t]+(?i:endm)\b[^\n]*\n' % re.escape(name), '',
+         1, True)
+
+
 # ---------------------------------------------------------------------------------------------
 # Hardware ports. The Amiga has no Z80, PSG or pad ports of the Genesis kind: the code that used
 # them is rewritten below, and their addresses are left undefined so that none is missed.
@@ -367,3 +379,35 @@ P('display94.asm', """	move.b	(Crowdframe).w,d0
 	move.b	(Crowdframe+1).w,d0
 	bra.w	.sc
 """)
+
+# ---------------------------------------------------------------------------------------------
+# What nothing in the build reaches (amiga/tools/unused.py lists it): routines and tables never
+# called or read (the cartridge's exception handlers and its vertical blank vector's jump among
+# them: hal.asm has its own), and the names of addresses and values nothing uses (the video
+# chip's registers and command words, the Z80's YM2612 port, RAM the 4 way adaptor's code used).
+for _rel, _labels in (('hockey94.asm', 'VBjsr'), ('checks94.asm', 'SkateToTempTarget'),
+                      ('video94.asm', 'UnpackNibbles waitjoy'),
+                      ('attract94.asm', 'dotb ClearRosterName setoptions_printpos2 PickStartingGoalie'),
+                      ('data94.asm', 'AddError Illinst ZeroDiv crash'), ('fourway94.asm', 'Set4WayPlayer'),
+                      ('crowd94.asm', 'Clamp0to100'), ('optsetup94.asm', 'SetFrameRectUnused CheckNOPUnused'),
+                      ('scout94.asm', 'ScoutCrowdRecordBy ScoutEmptyTxt ScoutByTxt ScoutSpaceTxt GetTeamCity '
+                                      'ScoutStub'),
+                      ('period94.asm', 'ClampPositionBox PositionBoxes PositionBoxesTop SkipNameNumber'),
+                      ('goalie94.asm', 'SetCameraTop'), ('title94.asm', 'TerminateLogName PuckComingToward')):
+    for _label in _labels.split():
+        remove_routine(_rel, _label)
+remove_equates(j('stubinc', 'ports.inc'), 'VDPR_AUTOINC VDPR_MODE1 VDPR_MODE2 VDPR_PLANEA VDPR_WINDOW VDPR_PLANEB VDPR_SPRITE '
+               'VDPR_BGCOL VDPR_HINT VDPR_MODE3 VDPR_MODE4 VDPR_HSCROLL VDPR_PLANESIZE VDPR_WINX VDPR_WINY '
+               'VDPR_DMALENL VDPR_DMALENH VDPR_DMASRCL VDPR_DMASRCM VDPR_DMASRCH VRAM_W CRAM_W VSRAM_W')
+remove_equates(j('stubinc', 'equals.inc'), 'bbut Sortobjs tmshots TXHF TXVF SFXoooh SFXhithigh SFXhitlow SFXpass '
+               'SFXplayerwall2 SFXplayerwall3 SFXplayerwall4 SFXpuckpost SFX26 SFX27 SFXpuckwall1 SFXpuckwall2 '
+               'SFXpuckwall3 SFXpuckwall4 RecordsBytes')
+remove_equates(j('stubinc', 'ram_addrs.inc'), 'puckcross4 pad4wayword pad4waysave1 pad4waysave2 pad4waysave3 '
+               'pad4waysave4 PenWhistle PenGoal PenOffsides PenRoughing2 PenNoText PenSlashing PenCrossChk '
+               'PenHooking PenTripping PenInterference PenHolding PenFighting PenFighting2 PenInst PenDelay '
+               'PenHookingPS PenTrippingPS PenGhold2 PenInterferencePS PenRoughingPS PenChargingPS PenCrossChkPS '
+               'PenSlashingPS dmaram lognametext Z80_YM2612')
+remove_equates('teamdata94.asm', 'Playerdata Palettedata Teamname LineSets ScoutReport GoalieOdds')
+remove_equates('frames94.asm', 'SPAgready2 SPAfake')
+for _name in ('VmInc', 'String', 'HEX2', 'PLAYER'):
+    remove_macro(j('macros', 'genesis.mac'), _name)

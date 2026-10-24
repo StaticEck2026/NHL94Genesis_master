@@ -77,7 +77,3 @@ game_code_end					;(the renderer after the game: a change to it does not
 
 	section	game,code
 game_end
-	section	bss,bss
-bss_end
-	section	chip,bss_c
-chip_end

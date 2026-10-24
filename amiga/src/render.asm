@@ -154,9 +154,6 @@ rd_colours	ds.w	64			;high nibbles of the 24 bit colours ($0RGB)
 rd_colourslo	ds.w	64			;and the low nibbles
 rd_pall		ds.l	256			;a colour word's low byte (green, red), its high (blue):
 rd_palh		ds.l	16			;their part of rd_colours (high word), rd_colourslo (low)
-rd_mode		ds.w	1
-rd_clipx0	ds.w	1
-rd_clipx1	ds.w	1
 rd_pass		ds.w	1			;0 low priority pass, $8000 high
 rd_tmp		ds.l	8
 rd_cellpri	ds.w	1
@@ -5518,8 +5515,6 @@ rd_inwindow
 ;	interleaved planes) and mask (the same 6 times) in chip RAM, the blitter cuts it into the
 ;	screen at any pixel position. Two image buffers: the next sprite is built while the blitter
 ;	draws the last one.
-SPRMAXB		equ	6			;bytes a row: up to 32 pixels and the shift word
-
 rd_sprites_planar
 	move.w	(rd_spn).l,d5
 	lea	(rd_sprites).l,a4
@@ -8715,7 +8710,6 @@ rd_scw		ds.w	1
 rd_sat		ds.w	1
 rd_spal		ds.w	1
 rd_colx		ds.w	1
-rd_ctile	ds.l	1
 rd_fixchk	ds.b	1			;rd_fixcell: look in rd_cover
 rd_fixsw	ds.b	1			;(rd_fixups: the rows' halves swapped)
 	even
@@ -8860,38 +8854,12 @@ rd_fps
 	move.w	#5*NPLANES,$05C(a6)		;BLTSIZV
 	move.w	#1,$05E(a6)			;BLTSIZH
 	bra	rd_bq_go
-.font
-rd_font	dc.b	$E0,$A0,$A0,$A0,$E0, $40,$C0,$40,$40,$E0, $E0,$20,$E0,$80,$E0, $E0,$20,$60,$20,$E0
+.font	dc.b	$E0,$A0,$A0,$A0,$E0, $40,$C0,$40,$40,$E0, $E0,$20,$E0,$80,$E0, $E0,$20,$60,$20,$E0
 	dc.b	$A0,$A0,$E0,$20,$20, $E0,$80,$E0,$20,$E0, $E0,$80,$E0,$A0,$E0, $E0,$20,$40,$40,$40
 	dc.b	$E0,$A0,$E0,$A0,$E0, $E0,$A0,$E0,$20,$E0
 	dc.b	$40,$A0,$E0,$A0,$A0, $C0,$A0,$C0,$A0,$C0, $60,$80,$80,$80,$60, $C0,$A0,$A0,$A0,$C0
 	dc.b	$E0,$80,$C0,$80,$E0, $E0,$80,$C0,$80,$80
 	even
-
-;	Debug: the long d0 as 8 hex digits from byte a0 of a screen (all planes). Keeps a1.
-rd_hex8
-	movem.l	d0-d4/a0-a3,-(sp)
-	moveq	#7,d4
-.d	rol.l	#4,d0
-	moveq	#15,d1
-	and.w	d0,d1
-	lea	(rd_font,pc),a1
-	mulu.w	#5,d1
-	adda.w	d1,a1
-	movea.l	a0,a2
-	moveq	#4,d2
-.r	move.b	(a1)+,d3
-	movea.l	a2,a3
-	moveq	#NPLANES-1,d1
-.p	move.b	d3,(a3)
-	lea	SBPR(a3),a3
-	dbf	d1,.p
-	lea	SROW(a2),a2
-	dbf	d2,.r
-	addq.l	#1,a0
-	dbf	d4,.d
-	movem.l	(sp)+,d0-d4/a0-a3
-	rts
 
 ;	------------------------------------------------------------------------------------------
 ;	The back buffer's copper list: 6 interleaved planes, 4x fetch (FMODE 3), 320 (H40) or 256
@@ -9245,7 +9213,6 @@ rd_showbuf	ds.w	1			;(its buffer)
 rd_c4m		ds.w	1			;$FFFF: 4 columns, $FF00: 3
 		cnop	0,4
 rd_spalm	ds.l	2
-rd_gp2		ds.l	1
 rd_bcol		ds.w	1
 rd_btr		ds.w	1
 rd_btile	ds.w	1

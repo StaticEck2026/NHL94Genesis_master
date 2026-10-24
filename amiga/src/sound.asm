@@ -45,7 +45,7 @@ PAULACLK	equ	3546895
 
 ;	voice
 V_OWNER		equ	0			;.b -1 free, 0-6 FM channel, 7 PCM
-V_STATE		equ	1			;.b
+V_STATE		equ	1			;.b (0: free)
 V_FRAMES	equ	2			;.w frames left of the attack / one shot sample
 V_ENV		equ	4			;.l envelope attenuation, 8.8 units (1023 = 96 dB)
 V_TL		equ	8			;.w note attenuation (units)
@@ -56,7 +56,6 @@ V_SL		equ	20			;.l decay left before the sustain (8.8)
 V_REL		equ	24			;.b released (key off)
 V_SIZE		equ	32
 
-ST_FREE		equ	0
 ST_ATTACK	equ	1			;the sample's attack is playing
 ST_DECAY	equ	2
 ST_SUSTAIN	equ	3

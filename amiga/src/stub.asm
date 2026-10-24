@@ -8,7 +8,6 @@
 ;	which the launcher loads itself when it is there.
 
 EXEC_Forbid		equ	-132
-EXEC_Permit		equ	-138
 EXEC_FindTask		equ	-294
 EXEC_GetMsg		equ	-372
 EXEC_ReplyMsg		equ	-378
@@ -22,7 +21,6 @@ EXEC_CacheClearU	equ	-636
 DOS_Open		equ	-30
 DOS_Close		equ	-36
 DOS_Read		equ	-42
-DOS_Seek		equ	-66
 DOS_LoadSeg		equ	-150
 DOS_Lock		equ	-84
 DOS_UnLock		equ	-90

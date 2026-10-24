@@ -238,6 +238,20 @@ width (256 or 320), the planes' size, the rows of the window, at each screen's s
 `hal_pal50`. The cartridge's header, vectors, start-up code and ROM checksum are not part of
 the build: `hal.asm` starts the game.
 
+Nothing the build does not use is in it. `amiga/tools/unused.py output/amiga/src -d -l` lists
+what nothing reaches, from the program's first code (AmigaDOS starts there) and the names the
+build script, the tools and the test harness use: each block of code or data from a label to
+the next is followed to the labels, equates and macros it names, and into the next block when
+it can run on into it (the code does not end in a jump; a table is read past its label, as the
+animation tables from `SPAlist` are). Both sides of every `IF` are read, so what a variant
+build uses counts. `-t=stub.asm` looks at the launcher. What it found is left out by
+`patches.py`: 29 routines and tables of the game no code calls or reads (among them the
+cartridge's exception handlers and its vertical blank vector's jump, the 4 way adaptor's
+player set-up, debug and "unused" routines), the names of addresses and values nothing uses
+(the video chip's registers and command words, the Z80's YM2612 port, RAM the 4 way adaptor's
+code used, sound and penalty numbers) and 4 macros; the Amiga code's own were taken out of
+it. It lists nothing now.
+
 The hardware layer:
 
 - `hal.asm`: start-up, interrupt vectors, the 50 / 60 Hz CIA timer that stands in for the Genesis

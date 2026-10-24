@@ -35,7 +35,6 @@ DOS_Open		equ	-30
 DOS_Close		equ	-36
 DOS_Read		equ	-42
 DOS_Write		equ	-48
-DOS_Output		equ	-60
 CIA_AbleICR		equ	-18
 MEMF_PUBLIC		equ	1
 MEMF_CHIP		equ	2

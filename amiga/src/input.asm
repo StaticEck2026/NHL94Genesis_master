@@ -12,13 +12,9 @@
 ;	filter, F8 the game's speed (50 / 60 frames a second).
 
 CIAA_PRA	equ	$BFE001
-CIAA_DDRA	equ	$BFE201
 CIAA_SDR	equ	$BFEC01
 CIAA_ICR	equ	$BFED01
 CIAA_CRA	equ	$BFEE01
-CIAA_CRB	equ	$BFEF01
-CIAA_TBLO	equ	$BFE601
-CIAA_TBHI	equ	$BFE701
 
 JOY0DAT		equ	$00A
 JOY1DAT		equ	$00C

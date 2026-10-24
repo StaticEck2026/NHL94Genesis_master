@@ -78,8 +78,8 @@ static uint32_t pend_qtime, pend_qpc;   /* the blit's queue time, the pc that qu
 static uint32_t custom_read(uint32_t a, int size)
 {
     uint32_t off = a & 0xFFE;
-    if (off == 0x006 && (det || getenv("NHL_FIXEDHV")) && dbg && m68k_get_reg(NULL, M68K_REG_PPC) >= rd32(dbg + 112) &&
-        m68k_get_reg(NULL, M68K_REG_PPC) < rd32(dbg + 168)) {
+    if (off == 0x006 && (det || getenv("NHL_FIXEDHV")) && dbg && m68k_get_reg(NULL, M68K_REG_PPC) >= rd32(dbg + 100) &&
+        m68k_get_reg(NULL, M68K_REG_PPC) < rd32(dbg + 144)) {
         /* the game's reads (its "random" numbers): the same every run and every build, from
            the frame and the read's number in it (our own timing loops read the beam) */
         static uint32_t reads; static int rframe;
@@ -267,7 +267,7 @@ static int det_int_ack(int level)
 }
 
 /* NHL_BLITKINDS: the blitter's time from frame 1700 by kind, the kind being which of the
-   renderer's chip buffers (the debug block from +80) each channel starts in */
+   renderer's chip buffers (the debug block from +68) each channel starts in */
 static struct { char key[48]; long long time, words, n; } bk[64];
 static int bkn;
 static unsigned bk_frames0;
@@ -279,12 +279,12 @@ static char bk_region(uint32_t a)
     if (!a) return '-';
     if (a >= scx_lo && a < scx_hi) return 'c';
     for (int k = 0; k < 3; k++) {       /* the screen buffers: hunks of their own */
-        uint32_t s = k ? rd32(dbg + 184 + 4 * k) : rd32(dbg + 80);
-        if (a >= s && a < s + rd32(dbg + 196)) return 'S';
+        uint32_t s = k ? rd32(dbg + 160 + 4 * k) : rd32(dbg + 68);
+        if (a >= s && a < s + rd32(dbg + 172)) return 'S';
     }
-    st[0] = rd32(dbg + 80); st[1] = rd32(dbg + 36); st[2] = rd32(dbg + 84); st[3] = rd32(dbg + 100);
-    st[4] = rd32(dbg + 88); st[5] = rd32(dbg + 60); st[6] = rd32(dbg + 92); st[7] = rd32(dbg + 104);
-    st[8] = rd32(dbg + 64); st[9] = rd32(dbg + 96);
+    st[0] = rd32(dbg + 68); st[1] = rd32(dbg + 24); st[2] = rd32(dbg + 72); st[3] = rd32(dbg + 88);
+    st[4] = rd32(dbg + 76); st[5] = rd32(dbg + 48); st[6] = rd32(dbg + 80); st[7] = rd32(dbg + 92);
+    st[8] = rd32(dbg + 52); st[9] = rd32(dbg + 84);
     if (a >= st[4] && a < st[4] + 0x40000) return 'C';     /* the sprite image ring: its own hunk */
     int best = -1;                      /* the others: the nearest start below */
     for (int i = 1; i < 10; i++)
@@ -988,7 +988,7 @@ static int pad_at(int fr)
 
 static void dump_exception(void)
 {
-    uint32_t exc = rd32(dbg + 16);
+    uint32_t exc = rd32(dbg + 8);
     fprintf(stderr, "EXCEPTION at frame %d: sr/pc %08x %08x %08x %08x\n", frame,
             rd32(exc), rd32(exc + 4), rd32(exc + 8), rd32(exc + 12));
     uint32_t regs = exc + 16;
@@ -1037,30 +1037,30 @@ int main(int argc, char **argv)
     /* 'ERL1': game ticks run before their vertical blank when the game waits and the renderer
        is done (hal_tick_early) only with NHL_EARLY=1: the reference picture is the VDP at the
        frame's end, which is then part way through the next game frame at times */
-    if (rd32(dbg + 180) == 0x45524C31 && !(getenv("NHL_EARLY") && atoi(getenv("NHL_EARLY"))))
-        wr8(rd32(dbg + 184), 0);
-    if (high && rd32(dbg + 200) == 0x57494E31) {     /* 'WIN1': the Genesis RAM window */
-        wr32(rd32(dbg + 204), HIGHBASE | 0xC00000);
+    if (rd32(dbg + 156) == 0x45524C31 && !(getenv("NHL_EARLY") && atoi(getenv("NHL_EARLY"))))
+        wr8(rd32(dbg + 160), 0);
+    if (high && rd32(dbg + 176) == 0x57494E31) {     /* 'WIN1': the Genesis RAM window */
+        wr32(rd32(dbg + 180), HIGHBASE | 0xC00000);
         fast_lo[nfast] = 0xC00000; fast_hi[nfast] = 0xC10000; nfast++;
     }
-    if (rd32(dbg + 172) == 0x53435831) {  /* 'SCX1': the sprite image ring's second part, as the
+    if (rd32(dbg + 148) == 0x53435831) {  /* 'SCX1': the sprite image ring's second part, as the
                                              launcher takes it from the chip memory left
                                              (NHL_SCX=bytes, default 256K; 0: none) */
         uint32_t sz = getenv("NHL_SCX") ? strtoul(getenv("NHL_SCX"), NULL, 0) : 0x40000;
         if (sz && nchip < 8) {
             scx_lo = 0xE00000; scx_hi = scx_lo + sz;
             chip_lo[nchip] = scx_lo; chip_hi[nchip] = scx_hi; nchip++;
-            wr32(rd32(dbg + 176), scx_lo);
-            wr32(rd32(dbg + 176) + 4, sz);
+            wr32(rd32(dbg + 152), scx_lo);
+            wr32(rd32(dbg + 152) + 4, sz);
         }
     }
     if (getenv("NHL_DETERM")) {
         det = 1;
         det_blit = getenv("NHL_DETBLIT") != NULL;
-        det_ctx = rd32(dbg + 128) & 0xFFFFFF;
-        for (int k = 0; k < 4; k++) det_heads[k] = rd32(dbg + 132 + 4 * k) & 0xFFFFFF;
-        det_yield = rd32(dbg + 148) & 0xFFFFFF;
-        det_idle = rd32(dbg + 152) & 0xFFFFFF;
+        det_ctx = rd32(dbg + 116) & 0xFFFFFF;
+        for (int k = 0; k < 4; k++) det_heads[k] = rd32(dbg + 120 + 4 * k) & 0xFFFFFF;
+        det_yield = rd32(dbg + 136) & 0xFFFFFF;
+        det_idle = rd32(dbg + 140) & 0xFFFFFF;
         if (getenv("NHL_DETLOG")) fprintf(stderr, "det: ctx %06x heads %06x %06x %06x %06x yield %06x idle %06x\n",
             det_ctx, det_heads[0], det_heads[1], det_heads[2], det_heads[3], det_yield, det_idle);
     }
@@ -1089,29 +1089,29 @@ int main(int argc, char **argv)
     m68k_set_reg(M68K_REG_SR, 0x2700);
     m68k_set_reg(M68K_REG_SP, 0x1000);
     uint32_t vdpregs = rd32(dbg), vram = rd32(dbg + 4);
-    uint32_t padstate = rd32(dbg + 24);
+    uint32_t padstate = rd32(dbg + 16);
     if (getenv("NHL_VWLOG")) {
         unsigned lo, hi;
         if (sscanf(getenv("NHL_VWLOG"), "%x:%x", &lo, &hi) == 2) { vw_lo = (vram & 0xFFFFFF) + lo; vw_hi = (vram & 0xFFFFFF) + hi; }
     }
     for (frame = 1; frame <= frames; frame++) {
-        if (frame == 1700) bk_frames0 = rd32(rd32(dbg + 28));
-        if (getenv("NHL_PHASE") && frame >= 1900 && frame < 2000 && !rd8(rd32(dbg + 120))) {
+        if (frame == 1700) bk_frames0 = rd32(rd32(dbg + 20));
+        if (getenv("NHL_PHASE") && frame >= 1900 && frame < 2000 && !rd8(rd32(dbg + 108))) {
             /* the game frames the renderer draws (every second one): odd or even ones, as
                NHL_PHASE says, from frame 2000 (the work differs between the two) */
-            uint32_t gf = rd32(rd32(dbg + 20)), want = atoi(getenv("NHL_PHASE")) & 1;
-            if ((gf & 1) != want) wr32(rd32(dbg + 116), gf - 1);
+            uint32_t gf = rd32(rd32(dbg + 12)), want = atoi(getenv("NHL_PHASE")) & 1;
+            if ((gf & 1) != want) wr32(rd32(dbg + 104), gf - 1);
         }
         if (getenv("NHL_DRAWLOG")) {        /* frames drawn so far, each frame (which ticks are drawn) */
             static FILE *df;
             if (!df) df = fopen(getenv("NHL_DRAWLOG"), "w");
-            fprintf(df, "%d %u %u\n", frame, rd32(rd32(dbg + 28)), rd32(rd32(dbg + 20)));
+            fprintf(df, "%d %u %u\n", frame, rd32(rd32(dbg + 20)), rd32(rd32(dbg + 12)));
         }
         if (getenv("NHL_RAMDUMP")) {        /* NHL_RAMDUMP=file:from:to: the Genesis RAM, each frame */
             static FILE *rf; char fn[256]; int f0 = 0, f1 = 0;
             if (sscanf(getenv("NHL_RAMDUMP"), "%255[^:]:%d:%d", fn, &f0, &f1) == 3 && frame >= f0 && frame <= f1) {
                 if (!rf) rf = fopen(fn, "wb");
-                fwrite(mem + (rd32(dbg + 108) & 0xFFFFFF), 1, 0x10000, rf);
+                fwrite(mem + (rd32(dbg + 96) & 0xFFFFFF), 1, 0x10000, rf);
             }
         }
         wr16(padstate, pad_at(frame));
@@ -1124,7 +1124,7 @@ int main(int argc, char **argv)
                                                cycles each frame, NHL_DETERM */
             static FILE *ff;
             if (!ff) ff = fopen(getenv("NHL_FREELOG"), "w");
-            fprintf(ff, "%d %lld %u\n", frame, det_free - free0, rd32(rd32(dbg + 28)));
+            fprintf(ff, "%d %lld %u\n", frame, det_free - free0, rd32(rd32(dbg + 20)));
         }
         if (red_screen) { dump_exception(); break; }
         if (vwn) {
@@ -1141,7 +1141,7 @@ int main(int argc, char **argv)
             int k;
             for (k = 0; k < 400 && (vb_irq || irq6_pending); k++) run_cycles(1000);
             if (k && getenv("NHL_DETLOG")) fprintf(stderr, "det frame %d: %d k cycles more for the interrupts\n", frame, k);
-            wr16(rd32(dbg + 124), 0);
+            wr16(rd32(dbg + 112), 0);
         }
         if (irq6_pending && getenv("NHL_TICKLOSS"))   /* the last tick still waits: this one is lost */
             fprintf(stderr, "tickloss: frame %d pc %06x sr %04x intena %04x\n", frame,
@@ -1156,8 +1156,8 @@ int main(int argc, char **argv)
         if (shot) {
             char name[512];
             if (getenv("NHL_BMB")) {
-                uint32_t bm = rd32(dbg + 36), cw = rd16(rd32(dbg + 40)), chh = rd16(rd32(dbg + 40) + 2);
-                uint32_t cols = rd32(dbg + 44);
+                uint32_t bm = rd32(dbg + 24), cw = rd16(rd32(dbg + 28)), chh = rd16(rd32(dbg + 28) + 2);
+                uint32_t cols = rd32(dbg + 32);
                 static uint8_t img[1024 * 512 * 3];
                 int W = cw * 8, H = chh * 8;
                 if (W * H <= 1024 * 512) {
@@ -1182,13 +1182,13 @@ int main(int argc, char **argv)
     if (wavf) { wav_header(); fclose(wavf); }
     if (getenv("NHL_DETLOG")) fprintf(stderr, "det: hook calls %lld, free cycles %lld\n", det_calls, det_free);
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn, %u game ticks\n", frame,
-            m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 28)), rd32(rd32(dbg + 20)));
-    if (getenv("NHL_BLITKINDS")) blitkind_print(rd32(rd32(dbg + 28)) - bk_frames0);
+            m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 20)), rd32(rd32(dbg + 12)));
+    if (getenv("NHL_BLITKINDS")) blitkind_print(rd32(rd32(dbg + 20)) - bk_frames0);
     if (getenv("NHL_STATS"))
         fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, sprites %.1f M, other %.1f M\n",
                 blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6, blitstat[3] / 1e6);
     if (getenv("NHL_STATS")) {   /* build with VASMFLAGS=-DSTATS=1 */
-        uint32_t k = rd32(dbg + 72);
+        uint32_t k = rd32(dbg + 60);
         fprintf(stderr, "renderer: sprites built %u, sprite lines %u, ntW %u tiles %u\n", rd32(k), rd32(k + 4), rd32(k + 8), rd32(k + 12));
         fprintf(stderr, "renderer: plane B tile scans %u, cells %u, high lists %u; A rebuilds %u, overlay redraws %u, cell updates %u\n",
                 rd32(k + 16), rd32(k + 20), rd32(k + 24), rd32(k + 28), rd32(k + 32), rd32(k + 36));
@@ -1205,15 +1205,15 @@ int main(int argc, char **argv)
                 rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
-        if (rd32(dbg + 208) == 0x534E4431) {    /* 'SND1': the sound's statistics */
-            uint32_t s = rd32(dbg + 212);
+        if (rd32(dbg + 184) == 0x534E4431) {    /* 'SND1': the sound's statistics */
+            uint32_t s = rd32(dbg + 188);
             fprintf(stderr, "sound: key ons %u, sounding FM voices taken %u (held %u); frames with voices "
                     "mixed %u, mixed voice frames %u; most voices sounding %u\n", rd32(s), rd32(s + 4),
                     rd32(s + 8), rd32(s + 12), rd32(s + 16), rd32(s + 20));
         }
     }
     {                                   /* VERIFY builds: the scroll buffers' self-check */
-        uint32_t v = rd32(rd32(dbg + 76));
+        uint32_t v = rd32(rd32(dbg + 64));
         if (v) fprintf(stderr, "renderer self-check failed: frame drawn %u, map row %u, column %u\n",
                        v >> 16, (v >> 8) & 255, v & 255);
     }
@@ -1232,15 +1232,15 @@ int main(int argc, char **argv)
     }
     if (getenv("NHL_DUMP")) {
         FILE *f = fopen(getenv("NHL_DUMP"), "wb");
-        fwrite(mem + (rd32(dbg + 48) & 0xFFFFFF), 1, 4096 * 32, f);
-        fwrite(mem + (rd32(dbg + 52) & 0xFFFFFF), 1, 4096 * 8, f);
-        fwrite(mem + (rd32(dbg + 56) & 0xFFFFFF), 1, 4096, f);
+        fwrite(mem + (rd32(dbg + 36) & 0xFFFFFF), 1, 4096 * 32, f);
+        fwrite(mem + (rd32(dbg + 40) & 0xFFFFFF), 1, 4096 * 8, f);
+        fwrite(mem + (rd32(dbg + 44) & 0xFFFFFF), 1, 4096, f);
         fwrite(mem + (vram & 0xFFFFFF), 1, 0x10000, f);
-        fwrite(mem + (rd32(dbg + 36) & 0xFFFFFF), 1, 2048 * 48, f);
+        fwrite(mem + (rd32(dbg + 24) & 0xFFFFFF), 1, 2048 * 48, f);
         fwrite(mem + (vdpregs & 0xFFFFFF), 1, 32, f);
-        fwrite(mem + (rd32(dbg + 60) & 0xFFFFFF), 1, 288 * 224, f);
-        fwrite(mem + (rd32(dbg + 64) & 0xFFFFFF), 1, 48 * 224 * 2, f);
-        fwrite(mem + (rd32(dbg + 68) & 0xFFFFFF), 1, 256, f);
+        fwrite(mem + (rd32(dbg + 48) & 0xFFFFFF), 1, 288 * 224, f);
+        fwrite(mem + (rd32(dbg + 52) & 0xFFFFFF), 1, 48 * 224 * 2, f);
+        fwrite(mem + (rd32(dbg + 56) & 0xFFFFFF), 1, 256, f);
         fclose(f);
     }
     return red_screen ? 2 : 0;
