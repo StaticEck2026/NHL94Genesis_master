@@ -166,7 +166,8 @@ for _label in ('ReadPad4Way1', 'ReadPad4Way2', 'ReadPad4Way3', 'ReadPad4Way4', '
     remove_routine('sound94.asm', _label)
 for _label in ('ReadJoySwapPad1', 'ReadJoySwapPad2', 'ReadJoySwapPad3', 'ReadJoySwapPad4'):
     remove_routine('fourway94.asm', _label)
-# The crowd noise was the PSG's (never heard on the Amiga): its level is still worked out (asv).
+# The crowd noise was the PSG's noise channel (white noise, clocked by its third tone channel, set
+# to 24 here each time): sound.asm plays a loop of that noise at the attenuation given it.
 P('display94.asm', """	move.b	#$C8,(Asound).l
 	move.b	#1,(Asound).l
 	move.b	(asv).w,d0
@@ -176,23 +177,10 @@ P('display94.asm', """	move.b	#$C8,(Asound).l
 """, """	move.b	(asv).w,d0
 	eori.b	#$F,d0
 	ori.b	#$F0,d0
+	move.b	d0,(snd_psg_att).l			;(sound.asm: the crowd noise)
 """)
-replace_routine('display94.asm', 'KillCrowd', "\trts\t\t\t\t;(the crowd noise was the PSG's)\n")
+replace_routine('display94.asm', 'KillCrowd', "\tst\t(snd_psg_att).l\t\t;(sound.asm: the crowd noise off)\n\trts\n")
 
-# The menu songs (title, end of period, scouting report: $78-$7A, the last) have more notes at once
-# than Paula's 4 voices: sound.asm mixes more while one plays (snd_song).
-P('video94.asm', """song
-	movem.l	d0-d7/a0-a6,-(sp)
-	clr.l	d0
-	move.w	$40(sp),d0				;$40 = 16*4
-	bmi.w	.none
-	jsr	(play_sfx_or_music_track).l""", """song
-	movem.l	d0-d7/a0-a6,-(sp)
-	clr.l	d0
-	move.w	$40(sp),d0				;$40 = 16*4
-	bmi.w	.none
-	jsr	(snd_song).l				;(sound.asm: the voices for it)
-	jsr	(play_sfx_or_music_track).l""")
 
 # The pictures of the EA Sports, title and game setup screens are not in the program as they
 # are: fepack.py deflates them (fe.i, their labels in its window), fe_open (render.asm) inflates

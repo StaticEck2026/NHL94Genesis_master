@@ -176,7 +176,9 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
   PC samples, so `amiga/tools/amilate.py LISTING nhl94.prof` can tell what the frames shown
   late (2 or more vertical blanks after the one before) spent their time on, against the frames
   on time, and list each late frame's busiest renderer routines.
-- `-DSTATS=1` counts renderer work for the test harness (`NHL_STATS=1`).
+- `-DSTATS=1` counts renderer and sound work for the test harness (`NHL_STATS=1`): for the sound,
+  the notes keyed on, sounding voices taken by another sound, the voices mixed and the most at
+  once.
 - `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
   of the 37 sprites a frame in play, about 9% of the renderer's time).
 - `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
@@ -222,9 +224,10 @@ writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94
 
 `amiga/tools/patches.py` makes the changes that need code written by hand. The sound driver
 hands its commands to `sound.asm` instead of a Z80: its command buffer, a PCM sound's start,
-rate and volume. The Z80 program, the Z80 bus and reset handshakes, the pad port readers
-(the pads are read by `input.asm`) and the PSG crowd noise are left out, and those ports'
-addresses are left undefined so that no use of them is missed. The save RAM (the cartridge's
+rate and volume; and the crowd noise's volume, which the game gave the PSG. The Z80 program,
+the Z80 bus and reset handshakes and the pad port readers (the pads are read by `input.asm`)
+are left out, and those ports' addresses are left undefined so that no use of them is
+missed. The save RAM (the cartridge's
 battery RAM, the odd bytes of a 16 KB range) is a plain buffer of its 8 KB, read from and
 written to `NHL94.sav`; the battery RAM's power-on tests (Start+A+C or Start+B+C held) are
 left out. Where the game set the video chip's registers, colour RAM and scroll RAM, it sets
@@ -367,17 +370,21 @@ The hardware layer:
   model of the YM2612. Each patch has an attack and a loop at each octave band it is used at, so
   every note plays at 14.1 to 28.3 kHz. The synthesis runs at 8 times the sample rate and is low-pass
   filtered before it is decimated, as FM harmonics above the sample rate would otherwise fold
-  back as harsh noise. The rest of each envelope is a volume envelope at run time. The 6 Genesis
-  channels share 4 voices: a new note takes a free voice, else the quietest released one, else
-  the oldest. A menu song (title, end of period, scouting report) has up to 6 notes at once
-  besides its drums, which took over each other's voices (a fifth of its notes cut another
-  short: chords lost notes, a part jumped to another's pitch), so while one plays Paula's fourth
-  voice plays a ring that the CPU mixes 5 more voices into, each as Paula would play it (its
-  registers in memory: its sample, then the loop it names; at the same 28.6 kHz): 8 voices,
-  3 on Paula. The mix is written a frame and some ahead of where Paula plays, which is counted
-  from the CIA-B TOD (horizontal syncs), so the two keep in step; it takes some 15% of the CPU
-  while extra voices play, on screens that mostly wait. The game's own songs in play go back to
-  Paula's 4 voices. The PCM sounds
+  back as harsh noise. The rest of each envelope is a volume envelope at run time.
+  Every sound the Genesis plays at once has a voice, so none cuts another short: a note on each
+  FM channel (a key on takes the voice of the channel's note before, still in its release, as
+  a key on ends that note on the Genesis), the PCM sound and the crowd noise. Paula's first 3
+  voices play them themselves; its fourth plays a ring that the CPU mixes the rest into, each
+  as Paula would play it (its registers in memory: its sample, then the loop it names; at the
+  same 28.6 kHz): 9 voices in all. A new sound takes Paula's own voices first, so the CPU mixes
+  only what more than 3 sounds at once need. The mix is written a frame and some ahead of
+  where Paula plays, which is counted from the CIA-B TOD (horizontal syncs), so the two keep in
+  step. The crowd noise was the PSG's: white noise clocked by its third tone channel (4661 Hz),
+  at a volume the game moves toward the crowd's excitement. It is a 3.5 second loop of that
+  noise, made at start-up from the PSG's noise register, played on a left and a right voice
+  (the PSG is heard in the middle; Paula's voices 0 and 3 are on the left, 1 and 2 on the
+  right): Paula's own when they are free, a mixed one on the left until Paula's 0 is. The PCM
+  sounds
   (crowd, shots, checks) are made into samples at build time too, by `amiga/tools/pcmrender.py`,
   at the game's own rates (6.5 to 12 kHz); the glass, which the game plays at 29 kHz, faster
   than Paula, is resampled to 28.6 kHz and played at a period that keeps its pitch. A frame's
@@ -508,7 +515,8 @@ display, presses keys at given times and takes screenshots. Add `fast_memory = 8
 ## Known limits
 
 - Speed on an unexpanded 68020 (above).
-- Only 4 sound voices in play for the Genesis' 6 (the menu songs get 8: 3 on Paula and 5 mixed),
-  so big chords lose notes. FM sounds are samples, so
-  notes do not change timbre as they decay, and the LFO, detune and SSG-EG are left out.
+- Paula's voices are each on the left or the right, where the Genesis plays its FM notes and
+  PCM sounds in the middle (the crowd noise is on both). Sounds beyond 3 at once are mixed by
+  the CPU. FM sounds are samples, so notes do not change timbre as they decay, and the LFO,
+  detune and SSG-EG are left out.
 - No 4 way play.

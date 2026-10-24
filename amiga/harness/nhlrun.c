@@ -1205,6 +1205,12 @@ int main(int argc, char **argv)
                 rd32(k + 72), rd32(k + 76), rd32(k + 80));
         fprintf(stderr, "renderer: name table hits: tiles %u (last block %x), data port %u (last %x)\n",
                 rd32(k + 40), rd32(k + 44), rd32(k + 48), rd32(k + 52));
+        if (rd32(dbg + 208) == 0x534E4431) {    /* 'SND1': the sound's statistics */
+            uint32_t s = rd32(dbg + 212);
+            fprintf(stderr, "sound: key ons %u, sounding FM voices taken %u (held %u); frames with voices "
+                    "mixed %u, mixed voice frames %u; most voices sounding %u\n", rd32(s), rd32(s + 4),
+                    rd32(s + 8), rd32(s + 12), rd32(s + 16), rd32(s + 20));
+        }
     }
     {                                   /* VERIFY builds: the scroll buffers' self-check */
         uint32_t v = rd32(rd32(dbg + 76));

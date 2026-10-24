@@ -6524,10 +6524,6 @@ fe_open
 	bsr	inflate
 .r	rts
 fe_close
-	move.l	d0,-(sp)			;(a game: the sound on Paula's 4 voices, snd_song)
-	moveq	#0,d0
-	jsr	(snd_mixmode).l
-	move.l	(sp)+,d0
 	tst.b	(fe_held).l
 	beq.s	.x
 	move.l	d1,-(sp)

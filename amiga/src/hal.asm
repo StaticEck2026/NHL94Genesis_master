@@ -127,6 +127,8 @@ hal_debug
 	dc.l	rd_scr1,rd_scr2,BUFSIZE		;+188: the other screen buffers, their size
 	dc.b	'WIN1'				;+200: the Genesis RAM window the harness gives
 	dc.l	hal_hwin
+	dc.b	'SND1'				;+208: the sound's statistics (STATS builds)
+	dc.l	snd_stats
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
 ;	the game frame timer and jumps to the cartridge's cold start.

@@ -15,9 +15,16 @@
 ;	signed, at the game's rates; one played faster than Paula can is resampled and played at a
 ;	longer period). All audio is 8 bit; the FM samples are rendered at 20000 Hz.
 ;
-;	While a menu song plays (snd_song) there are 8 voices: Paula's first 3, and 5 the CPU mixes
-;	into a ring Paula's fourth plays (snd_mix), each with registers in memory as Paula's (so the
-;	voice code is the same for both: snd_vregs).
+;	There are 9 voices: Paula's first 3, and 6 the CPU mixes into a ring Paula's fourth plays
+;	(snd_mix), each with registers in memory as Paula's (so the voice code is the same for both:
+;	snd_vregs). That is a voice for every sound the Genesis plays at once: a note on each FM
+;	channel (a key on takes the voice of the channel's note before, still in its release, as
+;	there), the PCM sound and the crowd noise (two: snd_crowd); none takes another's. A new sound takes Paula's
+;	own voices first, so the CPU mixes only what more than 3 sounds at once need.
+;
+;	The crowd noise was the Genesis' PSG's: its noise channel, white noise clocked by its third
+;	tone channel, at a volume the game moves toward its crowd level (updatesound). Here it is a
+;	loop of that noise (snd_noise_init) on voices of its own (snd_crowd).
 ;
 ;	The Amiga's audio low-pass filter (the "LED" filter, about 3.3 kHz) is on while the game
 ;	runs, as the Genesis model 1's output filter softens its sound; F7 switches it.
@@ -57,9 +64,17 @@ ST_ONESHOT	equ	4			;a sample with no loop is playing
 ST_PCM		equ	5
 
 PCM_OWNER	equ	7
+CROWD_L		equ	8			;(the crowd noise's voices: its left one,
+CROWD_R		equ	9			;its right one)
+ST_NOISE	equ	6			;the crowd noise is playing (its loop, for ever)
+NOISELEN	equ	16384			;the crowd noise loop's bytes: a byte a shift of the PSG's
+						;noise register, 3.5 seconds
+NOISEPER	equ	761			;its period: the PSG's third tone channel at 24, which clocks
+						;the noise, 3579545 / 32 / 24 = 4661 Hz
 
-NVOICES		equ	8			;voices: Paula's 4, or while a menu song plays Paula's
-						;first 3 and 5 mixed into its fourth (snd_mix)
+NVOICES		equ	9			;voices: Paula's first 3, and 6 mixed into its fourth
+						;(snd_mix)
+NHW		equ	3			;(Paula's own)
 ;	A mixed voice: its registers, as a Paula voice's (snd_vregs points at them, so the voice
 ;	code is the same), then its sound as it plays
 SV_LC		equ	0			;.l
@@ -80,7 +95,8 @@ MXMAX		equ	1664			;samples mixed at most at a time
 
 SDMAX		equ	8			;the delay line: game frames (a power of 2)
 SDREC		equ	40			;bytes a frame: the pending commands, the PCM volume and
-						;rate and address, the command buffer's channel bytes
+						;rate, the crowd noise's attenuation, the PCM address, the
+						;command buffer's channel bytes
 ;	the command buffer: each channel's attenuation, frequency, patch
 SCATT		equ	per_channel_attenuation_table-Z80_command_buffer
 SCFRQ		equ	per_channel_frequency_table-Z80_command_buffer
@@ -96,8 +112,10 @@ SCMDSIZE	equ	33
 snd_init
 	movem.l	d0-d2/a0-a2,-(sp)
 	bsr	snd_mix_tables
-	sf	(snd_mixon).l
-	bsr	snd_vtab			;(Paula's 4 voices)
+	bsr	snd_noise_init
+	st	(snd_psg_att).l			;(the crowd noise off)
+	st	(snd_psg_attd).l
+	bsr	snd_vtab
 	lea	(snd_voices).l,a0
 	moveq	#NVOICES-1,d0
 .v	move.b	#-1,V_OWNER(a0)
@@ -119,6 +137,7 @@ snd_init
 .q	clr.w	8(a0)
 	lea	$10(a0),a0
 	dbf	d0,.q
+	bsr	snd_mix_start
 	; the low-pass filter on (CIA-A port A bit 1 low); the OS's setting kept for the exit
 	move.b	(CIAA_PRA).l,d0
 	andi.b	#2,d0
@@ -132,8 +151,17 @@ snd_filter_toggle
 	bchg	#1,(CIAA_PRA).l
 	rts
 
-;	Back to the OS: the filter as it was.
+;	Back to the OS: the voices silent (the OS's DMA settings come back after: if they have the
+;	audio on, Paula would go on playing the last samples, a loop of the crowd noise or of the
+;	mix's ring), the filter as it was.
 snd_exit
+	move.l	a0,-(sp)
+	lea	(CUSTOM+AUD0LC).l,a0
+	clr.w	8(a0)
+	clr.w	8+$10(a0)
+	clr.w	8+$20(a0)
+	clr.w	8+$30(a0)
+	movea.l	(sp)+,a0
 	bclr	#1,(CIAA_PRA).l
 	tst.b	(snd_ledsave).l
 	beq.s	.x
@@ -249,12 +277,13 @@ snd_play_do
 .non	addq.w	#1,d1
 	tst.b	d0
 	bne	.on
-	; PCM
+	; PCM, the crowd noise
 	bsr	snd_pcm
+	bsr	snd_crowd
 	bra	.rec
 .due	; start the new sounds: their DMA off, then the sample, then on again (a mixed voice
 	; takes it as Paula's do, snd_soft_start)
-	tst.b	d7
+	tst.w	d7
 	beq	.nost
 	move.w	d7,d0
 	and.w	(snd_hwmask).l,d0
@@ -303,10 +332,7 @@ snd_play_do
 	cmp.w	(snd_nvoice).l,d1
 	bne	.rp
 .nost	bsr	snd_envelopes
-	tst.b	(snd_mixon).l
-	beq.s	.nm
-	bsr	snd_mix
-.nm	rts
+	bra	snd_mix
 
 ;	(snd_play_do) The mixed voices among d7's take their sample as Paula's voices do when their
 ;	DMA is switched on: the block their LC and LEN name, from its start. Keeps all.
@@ -348,7 +374,7 @@ snd_dly_push
 	sf	(snd_pcm_start).l
 	move.b	(snd_pcm_vol).l,(a0)+
 	move.b	(snd_pcm_rate).l,(a0)+
-	addq.l	#1,a0
+	move.b	(snd_psg_att).l,(a0)+
 	move.l	(snd_pcm_addr).l,(a0)+
 	lea	(Z80_command_buffer+SCATT).l,a1
 	moveq	#SCMDSIZE-SCATT-1,d0		;attenuations, frequencies, patches
@@ -374,7 +400,7 @@ snd_dly_pop
 	move.b	(a0)+,(snd_pcm_start).l
 	move.b	(a0)+,(snd_pcm_vold).l
 	move.b	(a0)+,(snd_pcm_rated).l
-	addq.l	#1,a0
+	move.b	(a0)+,(snd_psg_attd).l
 	move.l	(a0)+,(snd_pcm_addrd).l
 	lea	(snd_cmdd+SCATT).l,a1
 	moveq	#SCMDSIZE-SCATT-1,d0
@@ -475,12 +501,36 @@ snd_keyon
 	movem.l	d0-d1,-(sp)
 	bsr	snd_chan_voice
 	bpl	.have				;still on (no key off): play again on the same voice
-	moveq	#0,d2				;not PCM
+	lea	(snd_voices).l,a0		;its note before still in its release ends, as on the
+	moveq	#0,d2				;Genesis, where a key on ends what is left of the
+.tl	cmp.b	V_OWNER(a0),d1			;channel's note before: its voice silent and free
+	bne.s	.tn
+	tst.b	V_STATE(a0)
+	bne.s	.tail
+.tn	lea	V_SIZE(a0),a0
+	addq.w	#1,d2
+	cmpi.w	#NVOICES,d2
+	blo.s	.tl
+	bra.s	.new
+.tail	move.w	d2,d0
+	bsr	snd_voice_a0
+	clr.b	V_STATE(a0)
+	move.b	#-1,V_OWNER(a0)
+	clr.w	8(a1)
+	bclr	d0,d7				;(if started this frame)
+	cmpi.w	#NHW,d0
+	blo.s	.new
+	sf	SV_ON(a1)
+.new	moveq	#0,d2				;a voice, as for any sound (not PCM): Paula's own first
 	bsr	snd_alloc
 	lea	(snd_chvoice).l,a1
 	move.b	d2,(a1,d1.w)
 	bsr	snd_voice_a0
-.have	move.b	d1,V_OWNER(a0)
+.have
+	IFD	STATS
+	addq.l	#1,(snd_stats).l		;(statistics: key ons)
+	ENDC
+	move.b	d1,V_OWNER(a0)
 	sf	V_REL(a0)
 	clr.l	V_ENV(a0)
 	addq.w	#1,(snd_age).l
@@ -569,7 +619,7 @@ snd_alloc
 .rl	tst.b	V_REL(a0)
 	beq	.nrl
 	cmpi.b	#PCM_OWNER,V_OWNER(a0)
-	beq	.nrl
+	bhs	.nrl
 	move.l	V_ENV(a0),d1
 	cmp.l	d5,d1
 	ble	.nrl
@@ -587,7 +637,7 @@ snd_alloc
 	moveq	#0,d5				;greatest age
 	moveq	#0,d0
 .ol	cmpi.b	#PCM_OWNER,V_OWNER(a0)
-	beq	.nol
+	bhs	.nol				;(the PCM's, the crowd's)
 	move.w	d3,d1
 	sub.w	V_AGE(a0),d1
 	cmp.w	d5,d1
@@ -604,7 +654,23 @@ snd_alloc
 .idx	move.w	d4,d2
 	bra	.take
 .got	move.w	d0,d2
-.take	; the channel playing on it loses it
+.take
+	IFD	STATS
+	lea	(snd_voices).l,a0		;(statistics: a sounding FM voice taken, held)
+	move.w	d2,d0
+	lsl.w	#5,d0
+	adda.w	d0,a0
+	tst.b	V_STATE(a0)
+	beq.s	.sn
+	cmpi.b	#PCM_OWNER,V_OWNER(a0)
+	bhs.s	.sn
+	addq.l	#1,(snd_stats+4).l
+	tst.b	V_REL(a0)
+	bne.s	.sn
+	addq.l	#1,(snd_stats+8).l
+.sn
+	ENDC
+	; the channel playing on it loses it
 	lea	(snd_voices).l,a0
 	move.w	d2,d0
 	lsl.w	#5,d0
@@ -735,6 +801,8 @@ snd_envelopes
 	beq	.next
 	cmpi.b	#ST_PCM,d0
 	beq	.pcm
+	cmpi.b	#ST_NOISE,d0
+	beq	.noise
 	movea.l	V_PATCH(a0),a2
 	move.l	V_ENV(a0),d1
 	tst.b	V_REL(a0)
@@ -782,11 +850,14 @@ snd_envelopes
 	lea	fm_voltab(pc),a2
 	move.b	(a2,d1.w),d1
 	ext.w	d1
-	move.w	d1,8(a1)
+	bne.s	.vs
+	tst.b	V_REL(a0)			;released and down to silence: done (a mixed voice
+	bne.s	.free				;costs the CPU until it is)
+.vs	move.w	d1,8(a1)
 	bra	.next
 .pcm	subq.w	#1,V_FRAMES(a0)
 	beq	.free
-	move.w	V_TL(a0),8(a1)
+.noise	move.w	V_TL(a0),8(a1)			;(the PCM's, the crowd's: its Paula volume)
 	bra	.next
 .free	; done: the voice is free (its sample may still loop, silently; a mixed one is not
 	; mixed now)
@@ -808,95 +879,53 @@ snd_envelopes
 	addq.w	#1,d6
 	cmp.w	(snd_nvoice).l,d6
 	blo	.v
+	IFD	STATS
+	lea	(snd_voices).l,a0		;(statistics: most voices sounding)
+	moveq	#0,d0
+	moveq	#NVOICES-1,d1
+.cn	tst.b	V_STATE(a0)
+	beq.s	.cz
+	addq.l	#1,d0
+.cz	lea	V_SIZE(a0),a0
+	dbf	d1,.cn
+	cmp.l	(snd_stats+20).l,d0
+	bls.s	.cx
+	move.l	d0,(snd_stats+20).l
+.cx
+	ENDC
 	rts
 
-;	Each voice's registers (snd_vregs): Paula's 4 voices, or with the mix on (snd_mixon) its
-;	first 3, then the mixed voices' own. snd_nvoice voices are in use, snd_nhw on Paula
-;	(snd_hwmask their DMA bits).
+;	Each voice's registers (snd_vregs): Paula's first 3 voices', then the mixed voices' own.
 snd_vtab
-	movem.l	d0-d1/a0-a1,-(sp)
+	movem.l	d0/a0-a1,-(sp)
 	lea	(snd_vregs).l,a0
 	lea	(CUSTOM+AUD0LC).l,a1
-	moveq	#4,d1				;Paula's
-	tst.b	(snd_mixon).l
-	beq.s	.n
-	moveq	#3,d1
-.n	move.w	d1,(snd_nhw).l
 	moveq	#0,d0
 .p	move.l	a1,(a0)+
 	lea	$10(a1),a1
 	addq.w	#1,d0
-	cmp.w	d1,d0
+	cmpi.w	#NHW,d0
 	blo.s	.p
-	lea	(snd_soft).l,a1
-	move.w	d0,d1
-	mulu.w	#SV_SIZE,d1
-	adda.l	d1,a1
+	lea	(snd_soft+NHW*SV_SIZE).l,a1
 .s	move.l	a1,(a0)+
 	lea	SV_SIZE(a1),a1
 	addq.w	#1,d0
 	cmpi.w	#NVOICES,d0
 	blo.s	.s
-	move.w	#4,(snd_nvoice).l
-	move.w	#$000F,(snd_hwmask).l
-	tst.b	(snd_mixon).l
-	beq.s	.x
+	move.w	#NHW,(snd_nhw).l
 	move.w	#NVOICES,(snd_nvoice).l
-	move.w	#$0007,(snd_hwmask).l
-.x	movem.l	(sp)+,d0-d1/a0-a1
+	move.w	#(1<<NHW)-1,(snd_hwmask).l
+	movem.l	(sp)+,d0/a0-a1
 	rts
 
-;	The game starts sound d0. A menu song ($78-$7A: the title, end of period and scouting
-;	report songs) has up to 6 notes at once besides the drums, which Paula's 4 voices cannot
-;	play (they took over each other's notes: a chord lost notes, a part jumped to another's),
-;	so while one plays 5 more voices are mixed into Paula's fourth (snd_mix); the game's other
-;	songs ($30-$77) play on Paula's 4 again. Keeps all.
-snd_song
-	move.l	d0,-(sp)
-	cmpi.w	#$78,d0
-	bhs.s	.on
-	cmpi.w	#$30,d0
-	blo.s	.x				;(a sound effect: as it is)
-	moveq	#0,d0
-	bra.s	.m
-.on	moveq	#-1,d0
-.m	bsr.s	snd_mixmode
-.x	move.l	(sp)+,d0
-	rts
-
-;	The mix on (d0.b -1) or off (0): every voice made quiet and free, Paula's voice 3 given to
-;	the mix's ring (silent at first) or back. Keeps all.
-snd_mixmode
-	cmp.b	(snd_mixon).l,d0
-	beq	.x
+;	Paula's fourth voice plays the mix's ring (silent at first, snd_mix) from now on. Keeps all.
+snd_mix_start
 	movem.l	d0-d1/a0,-(sp)
-	move	sr,-(sp)
-	ori	#$0700,sr
-	move.b	d0,(snd_mixon).l
-	move.w	#$000F,(CUSTOM+DMACON).l
-	lea	(snd_voices).l,a0
-	moveq	#NVOICES-1,d1
-.v	move.b	#-1,V_OWNER(a0)
-	clr.b	V_STATE(a0)
-	lea	V_SIZE(a0),a0
-	dbf	d1,.v
-	lea	(snd_chvoice).l,a0
-	moveq	#7,d1
-.c	move.b	#-1,(a0)+
-	dbf	d1,.c
 	lea	(snd_soft).l,a0
 	moveq	#NVOICES-1,d1
 .s	sf	SV_ON(a0)
 	lea	SV_SIZE(a0),a0
 	dbf	d1,.s
-	lea	(CUSTOM+AUD0LC).l,a0
-	moveq	#3,d1
-.q	clr.w	8(a0)
-	lea	$10(a0),a0
-	dbf	d1,.q
-	bsr	snd_vtab
-	tst.b	(snd_mixon).l
-	beq.s	.r
 	lea	(mx_ring).l,a0
 	move.w	#MXRING/4-1,d1
 .z	clr.l	(a0)+
@@ -914,11 +943,144 @@ snd_mixmode
 	clr.l	(mx_play).l
 	clr.l	(mx_wr).l
 	clr.l	(mx_quiet).l
-.r	move	(sp)+,sr
 	movem.l	(sp)+,d0-d1/a0
-.x	rts
+	rts
 
-;	The mix (snd_mixon, from each vertical blank's sound work): the mixed voices' samples, at the
+;	The crowd noise (snd_psg_attd: the attenuation the game gave the PSG's noise channel, in
+;	2 dB steps, 15 = off; snd_crowd_vol the Paula volume for it): the noise loop on two voices,
+;	a left and a right one (Paula's 0 and 3 are on the left, 1 and 2 on the right), as the
+;	Genesis' PSG is heard in the middle. Paula's own voices when they are free (it plays all
+;	through a game: mixed only while it must be): the left one Paula's 0, else a mixed one (the
+;	mix is on the left) until 0 is free; the right one Paula's 1 or 2, else none until one of
+;	them is free. A note is never cut for it. d7 |= the voices started. Uses d0-d3, a0-a3.
+snd_crowd
+	moveq	#15,d1
+	and.b	(snd_psg_attd).l,d1		;attenuation
+	moveq	#CROWD_L,d3
+	lea	(.left,pc),a3
+	bsr.s	.part
+	moveq	#CROWD_R,d3
+	lea	(.right,pc),a3
+.part	; the part owned by d3, its voices a3 (in order; -2: any mixed one; -1: the end)
+	lea	(snd_voices).l,a0
+	moveq	#0,d0
+.f	cmp.b	V_OWNER(a0),d3
+	beq.s	.has
+	lea	V_SIZE(a0),a0
+	addq.w	#1,d0
+	cmpi.w	#NVOICES,d0
+	blo.s	.f
+	cmpi.w	#15,d1
+	beq	.x				;(none, and none wanted)
+	bsr	.free
+	bmi	.x
+	bra.s	.start
+.has	cmpi.w	#15,d1
+	beq.s	.off
+	cmpi.w	#NHW,d0
+	blo.s	.vol				;on Paula's
+	bsr	.free				;mixed: to Paula's if one of its own is free now
+	bmi.s	.vol
+	cmpi.w	#NHW,d2
+	bhs.s	.vol
+	move.w	d2,-(sp)
+	bsr.s	.off
+	move.w	(sp)+,d2
+.start	move.w	d2,d0				;d2: the voice
+	lsl.w	#5,d0
+	lea	(snd_voices).l,a0
+	adda.w	d0,a0
+	lea	(snd_vregs).l,a1
+	movea.l	(a1,d2.w*4),a1
+	move.b	d3,V_OWNER(a0)
+	move.b	#ST_NOISE,V_STATE(a0)
+	sf	V_REL(a0)
+	clr.l	V_ENV(a0)
+	move.l	#snd_noise_render,V_RENDER(a0)
+	move.w	#NOISEPER,6(a1)
+	bset	d2,d7
+.vol	lea	(snd_crowd_vol,pc),a2
+	moveq	#0,d2
+	move.b	(a2,d1.w),d2
+	move.w	d2,V_TL(a0)			;(its Paula volume: snd_envelopes)
+.x	rts
+.off	; voice d0 (a0) free: silent, not mixed
+	clr.b	V_STATE(a0)
+	move.b	#-1,V_OWNER(a0)
+	lea	(snd_vregs).l,a1
+	movea.l	(a1,d0.w*4),a1
+	clr.w	8(a1)
+	cmpi.w	#NHW,d0
+	blo.s	.o
+	sf	SV_ON(a1)
+.o	bclr	d0,d7				;(if started this frame)
+	rts
+.free	; d2 = the first of a3's voices that is free, N set if none. Uses a1, a2.
+	move.w	d0,-(sp)
+	movea.l	a3,a2
+.fn	move.b	(a2)+,d2
+	ext.w	d2
+	bmi.s	.fm
+	move.w	d2,d0
+	lsl.w	#5,d0
+	lea	(snd_voices).l,a1
+	tst.b	V_STATE(a1,d0.w)
+	bne.s	.fn
+	bra.s	.fy
+.fm	cmpi.w	#-2,d2				;-2: a free mixed voice
+	bne.s	.fz				;(-1: the end: none)
+	moveq	#NHW,d2
+	lea	(snd_voices+NHW*V_SIZE).l,a1
+.fq	tst.b	V_STATE(a1)
+	beq.s	.fy
+	lea	V_SIZE(a1),a1
+	addq.w	#1,d2
+	cmpi.w	#NVOICES,d2
+	blo.s	.fq
+.fz	move.w	(sp)+,d0
+	moveq	#-1,d2				;(N set)
+	rts
+.fy	move.w	(sp)+,d0
+	tst.w	d2				;(N clear)
+	rts
+.left	dc.b	0,-2,-1
+.right	dc.b	1,2,-1
+	even
+
+;	Paula volume for the crowd noise's attenuation (2 dB steps): 40 at none.
+snd_crowd_vol
+	dc.b	40,32,25,20,16,13,10,8,6,5,4,3,3,2,2,0
+
+;	The crowd noise loop (snd_noise): the PSG's noise register, 16 bits, white noise (its new
+;	top bit bits 0 and 3 of it, xored), from $8000, a byte a shift: high when its bit 0 is
+;	(+-100: a little under full scale, as noise is louder than a tone of the same peak).
+snd_noise_init
+	movem.l	d0-d2/a0,-(sp)
+	lea	(snd_noise).l,a0
+	move.w	#$8000,d0
+	move.w	#NOISELEN-1,d1
+.n	moveq	#100,d2
+	btst	#0,d0
+	bne.s	.h
+	moveq	#-100,d2
+.h	move.b	d2,(a0)+
+	move.w	d0,d2
+	lsr.w	#3,d2
+	eor.w	d0,d2
+	lsr.w	#1,d0
+	lsl.w	#8,d2
+	lsl.w	#7,d2				;(bit 0 to 15)
+	or.w	d2,d0
+	dbf	d1,.n
+	lea	(snd_noise_render).l,a0		;a render as fmrender.py's: the sample, its words, the
+	move.l	#snd_noise,(a0)+		;loop's start (bytes) and words: all of it, for ever
+	move.w	#NOISELEN/2,(a0)+
+	clr.w	(a0)+
+	move.w	#NOISELEN/2,(a0)+
+	movem.l	(sp)+,d0-d2/a0
+	rts
+
+;	The mix (from each vertical blank's sound work): the mixed voices' samples, at the
 ;	rate Paula's voice 3 plays its ring (a period of 124), written up to MXLEAD samples ahead of
 ;	where it plays. That is counted from the CIA-B TOD (horizontal syncs: 227 colour clocks on
 ;	a PAL display, 227.5 on NTSC), so the ring keeps in step with Paula however the calls come.
@@ -968,6 +1130,11 @@ snd_mix
 	dbf	d5,.vo
 	tst.w	d6
 	beq.s	.q
+	IFD	STATS
+	addq.l	#1,(snd_stats+12).l		;(statistics: mixing, voices mixed)
+	ext.l	d6
+	add.l	d6,(snd_stats+16).l
+	ENDC
 	clr.l	(mx_quiet).l
 	bra.s	.o0
 .q	move.l	(mx_quiet).l,d0			;silence: written until the ring is all silent
@@ -1166,7 +1333,13 @@ fm_silence	dc.w	0,0
 	section	chip,bss_c
 mx_ring		ds.b	MXRING			;(snd_mix)
 
+	section	ring,bss_c			;(with the sprite image ring: the largest chip hunk is
+snd_noise	ds.b	NOISELEN		;kept small) the crowd noise loop (snd_noise_init)
+
 	section	bss,bss
+snd_stats	ds.l	8			;(statistics, STATS builds: key ons, sounding FM voices
+						;taken, of them held; frames with voices mixed, mixed
+						;voice frames; most voices sounding at once)
 snd_voices	ds.b	NVOICES*V_SIZE
 snd_soft	ds.b	NVOICES*SV_SIZE		;the mixed voices (by voice number)
 snd_vregs	ds.l	NVOICES			;each voice's registers (snd_vtab)
@@ -1184,8 +1357,10 @@ mx_add		ds.w	1			;0: the first voice, stored)
 mx_acc		ds.w	MXMAX
 mx_vol		ds.w	65*256
 mx_clip		ds.b	8192
-snd_mixon	ds.b	1			;the mix is on (snd_song)
+snd_psg_att	ds.b	1			;the crowd noise's attenuation (the PSG's noise
+snd_psg_attd	ds.b	1			;channel, updatesound: 15 off), and delayed
 		even
+snd_noise_render ds.l	3			;(snd_noise_init)
 snd_pcm_render	ds.l	4
 snd_pcm_addr	ds.l	1
 snd_age		ds.w	1
