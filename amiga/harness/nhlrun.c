@@ -108,8 +108,30 @@ static uint32_t cop1lc;
 static uint16_t creg[0x100];
 static uint32_t cop2lc, cop_pc;
 static int cop_state;                   /* 0 stopped, 1 runs, 2 waits for the blitter */
+static int cop_dead;                    /* NHL_COPSTALL: the copper runs nothing (until the CPU's
+                                           COPJMP1) */
 static long long cop_cyc;               /* (cycles of moves since its last wait) */
 static int in_copper;
+/* NHL_GAPCHK=1: report writes (the CPU's, the blitter's) between the hunks or past the last
+   (where AmigaDOS keeps each hunk's size and link to the next: the launcher frees the hunks by
+   them), each code address once */
+static uint32_t hunk_lo[64], hunk_hi[64];
+static int nhunk, gapchk = -1;
+static uint32_t blit_qpc;               /* (the code that started the blit: NHL_GAPCHK) */
+static void gap_check(uint32_t a)
+{
+    static uint32_t seen[64]; static int nseen;
+    a &= 0xFFFFFF;
+    if (!nhunk || a < hunk_lo[0] || a >= hunk_hi[nhunk - 1] + 0x1000) return;
+    for (int i = 0; i < nhunk; i++) if (a >= hunk_lo[i] && a < hunk_hi[i]) return;
+    uint32_t pc = in_blit ? blit_qpc : m68k_get_reg(NULL, M68K_REG_PPC);
+    for (int i = 0; i < nseen; i++) if (seen[i] == pc) return;
+    if (nseen < 64) seen[nseen++] = pc;
+    int h = 0;
+    while (h < nhunk - 1 && a >= hunk_hi[h]) h++;
+    fprintf(stderr, "gap: frame %d %s pc %06x writes %06x (hunk %d %06x-%06x)\n", frame,
+            in_blit ? "a blit from" : "the CPU at", pc, a, h, hunk_lo[h], hunk_hi[h]);
+}
 static int cop_warn;
 static long cop_restarts;
 static long long blit_words;
@@ -333,6 +355,7 @@ static void do_blit(int h, int w)
     pend_h = h;
     pend_w = w;
     pend_run = 1;
+    blit_qpc = in_copper ? cop_insn : m68k_get_reg(NULL, M68K_REG_PPC);
     blit_busy_until = cycles_total + m68k_cycles_run() + 20 + (long long)h * w * (2 * n + 2) +
                       (in_copper ? cop_cyc : 0);
     blit_end_pending = 1;
@@ -411,7 +434,7 @@ static void blit_exec(void)
             for (int n = 0; n < 8; n++)
                 if (lf & (1 << n))
                     d |= ((n & 4) ? as : ~as) & ((n & 2) ? bs : ~bs) & ((n & 1) ? c : ~c);
-            if (useD) { wr16(dpt, d & 0xFFFF); dpt += step; }
+            if (useD) { if (gapchk > 0) gap_check(dpt); wr16(dpt, d & 0xFFFF); dpt += step; }
             blit_words++;
             blit_time += 2 * ((useA != 0) + (useB != 0) + (useC != 0) + (useD != 0)) + 2;
         }
@@ -523,6 +546,7 @@ static void copper_run(void)
 {
     static int stress = -1; static uint32_t rnd = 12345;
     if (stress < 0) stress = getenv("NHL_COPSTRESS") ? atoi(getenv("NHL_COPSTRESS")) : 0;
+    if (cop_dead) { cop_state = 0; return; }
     in_copper = 1;
     for (int n = 0; n < 1000000 && cop_state; n++) {
         if (stress) {               /* NHL_COPSTRESS=N: a vertical blank's restart (the display
@@ -601,7 +625,10 @@ static void custom_write(uint32_t a, uint32_t v)
     if (off == 0x084) cop2lc = (cop2lc & 0xFFFF) | (v << 16);
     if (off == 0x086) cop2lc = (cop2lc & 0xFFFF0000) | (v & 0xFFFF);
     if (off == 0x08A && !in_copper) { cop_pc = cop2lc; cop_state = 1; copper_run(); }
-    if (off == 0x088 && !in_copper) { cop_pc = cop1lc; cop_state = 1; copper_run(); }
+    if (off == 0x088 && !in_copper) {
+        if (cop_dead) fprintf(stderr, "frame %d: the copper started again\n", frame);
+        cop_dead = 0; cop_pc = cop1lc; cop_state = 1; copper_run();
+    }
     if (off == 0x058) do_blit((v >> 6) ? (v >> 6) : 1024, (v & 63) ? (v & 63) : 64);
     if (off == 0x05E) do_blit(creg[0x5C / 2] & 0x7FFF ? creg[0x5C / 2] & 0x7FFF : 0x8000, (v & 0x7FF) ? (v & 0x7FF) : 0x800);
     if (off == 0x180 && v == 0xF00) red_screen = 1;
@@ -680,7 +707,7 @@ static void amiga_png(const char *name)
         }
     /* hardware sprites: attached pairs of 64 pixel sprites (FMODE sprite bits 3), in front of
        the playfield, sprite 0 on top; HSTART = window start - 1 is screen x 0 */
-    if (((fmode >> 2) & 3) == 3)
+    if (((fmode >> 2) & 3) == 3 && !getenv("NHL_NOSPR"))   /* (NHL_NOSPR: none drawn) */
         for (int pr = 3; pr >= 0; pr--) {
             uint32_t ev = spr[2 * pr], od = spr[2 * pr + 1];
             if (!ev || !od) continue;
@@ -827,9 +854,9 @@ static void hz_mark(uint32_t a, int words)
     uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
     for (int i = 0; i < words; i++) { wtime[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = t; wpc[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = pc; }
 }
-void m68k_write_memory_8(unsigned int a, unsigned int v) { a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
-void m68k_write_memory_16(unsigned int a, unsigned int v) { a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); hz_mark(a, 1); }
-void m68k_write_memory_32(unsigned int a, unsigned int v) { a32_check(a, 1); chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); hz_mark(a, (a & 1) ? 3 : 2); }
+void m68k_write_memory_8(unsigned int a, unsigned int v) { if (gapchk > 0) gap_check(a); a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
+void m68k_write_memory_16(unsigned int a, unsigned int v) { if (gapchk > 0) gap_check(a); a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); hz_mark(a, 1); }
+void m68k_write_memory_32(unsigned int a, unsigned int v) { if (gapchk > 0) { gap_check(a); gap_check(a + 3); } a32_check(a, 1); chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); hz_mark(a, (a & 1) ? 3 : 2); }
 
 /* Run n cycles in slices, raising the blitter interrupt when a blit's time is up. */
 static int run_cycles(int n)
@@ -897,6 +924,7 @@ static uint32_t load_hunks(const char *path)
             fast_lo[nfast] = addr; fast_hi[nfast] = addr + sz; nfast++;
         }
         if (getenv("NHL_AUDLOG")) fprintf(stderr, "hunk %d at %06x\n", i, addr);
+        if (nhunk < 64) { hunk_lo[nhunk] = addr; hunk_hi[nhunk] = addr + sz; nhunk++; }
         addr = (addr + sz + 0x1000) & ~0xFFF;
         p += 4;
     }
@@ -1022,6 +1050,7 @@ int main(int argc, char **argv)
     }
     if (!exe) { fprintf(stderr, "usage: nhlrun [options] nhl94.game\n"); return 1; }
     high = getenv("NHL_HIGH") != NULL;
+    gapchk = getenv("NHL_GAPCHK") != NULL;
     mem = calloc(1, MEMSIZE + 16);
     uint32_t code = load_hunks(exe);
     if (rd32(code + 4) != 0x4E483934) { fprintf(stderr, "no NH94 header\n"); return 1; }
@@ -1117,6 +1146,13 @@ int main(int argc, char **argv)
             }
         }
         wr16(padstate, pad_at(frame));
+        if (getenv("NHL_COPSTALL")) {   /* NHL_COPSTALL=F[,F...]: from frame F the copper runs
+                                           nothing, as if stuck in a wait that never comes, until
+                                           the CPU starts it again from COP1LC (rd_requeue) */
+            const char *q = getenv("NHL_COPSTALL");
+            while (*q) { if (atoi(q) == frame) { cop_dead = 1; fprintf(stderr, "frame %d: the copper stalled (NHL_COPSTALL)\n", frame); }
+                         q = strchr(q, ','); if (!q) break; q++; }
+        }
         if (getenv("NHL_PROF") && frame >= (getenv("NHL_PROF_FROM") ? atoi(getenv("NHL_PROF_FROM")) : 0)) {
             if (!prof_f) prof_f = fopen(getenv("NHL_PROF"), "w");
         }
@@ -1186,6 +1222,13 @@ int main(int argc, char **argv)
     fprintf(stderr, "stopped at frame %d, pc=%06x sr=%04x, %u frames drawn, %u game ticks\n", frame,
             m68k_get_reg(NULL, M68K_REG_PC), m68k_get_reg(NULL, M68K_REG_SR), rd32(rd32(dbg + 20)), rd32(rd32(dbg + 12)));
     if (getenv("NHL_BLITKINDS")) blitkind_print(rd32(rd32(dbg + 20)) - bk_frames0);
+    if (rd32(dbg + 192) == 0x52435631) {  /* 'RCV1': the copper and the blitter set up again after
+                                             a stall (rd_stall); STATS builds: the longest wait */
+        uint32_t w = rd32(dbg + 196);
+        if (rd32(w)) fprintf(stderr, "renderer: the copper and the blit queue set up again %u times\n", rd32(w));
+        if (getenv("NHL_STATS")) fprintf(stderr, "renderer: longest wait for the copper, the blitter or a show: "
+                                         "%u vertical blanks\n", rd32(w + 4));
+    }
     if (getenv("NHL_STATS"))
         fprintf(stderr, "blitter from frame 1700: plane B %.1f M cycles, overlay %.1f M, sprites %.1f M, other %.1f M\n",
                 blitstat[0] / 1e6, blitstat[1] / 1e6, blitstat[2] / 1e6, blitstat[3] / 1e6);

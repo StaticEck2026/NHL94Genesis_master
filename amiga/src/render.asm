@@ -110,6 +110,7 @@ rd_brow0	ds.w	1			;buffer row of screen line 0
 rd_scroll	ds.w	1			;scroll mode this frame
 rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
+rd_copb		ds.l	1			;the first copper list (in rd_cop)
 rd_layout					;the layout this frame is drawn with (rd_snapshot: display.asm's)
 rd_lnta		ds.l	1			;where plane A's, plane B's and the window's cells are in
 rd_lntb		ds.l	1			;video memory
@@ -174,7 +175,8 @@ rd_scarena	ds.b	SCARENA			;sprite images (rd_sc_get)
 	cnop	0,8
 bmB		ds.b	BMAX*48			;plane B: cells * 8 rows * 6 planes
 mkB6		ds.b	BMAX*48			;its high priority mask in each plane's place (blitter)
-rd_cop		ds.l	NBUF*256			;a copper list per buffer
+rd_cop		ds.l	2*NBUF*256			;a copper list per buffer: in one 64K page of this
+						;(rd_copb)
 rd_cqbuf	ds.b	2*CQI			;the copper's blit ring (rd_cq_init)
 rd_ovl		ds.b	OSROW*SCRH		;plane A / window overlay
 rd_fpsimg	ds.w	5*NPLANES*NBUF		;the frame rate digits (rd_fps), per buffer
@@ -263,7 +265,18 @@ rd_init
 	bsr	rd_op_invall
 	move.w	#SCRX*8,(rd_xorg).l
 	clr.w	(rd_brow0).l
-	lea	(rd_cop).l,a0
+	lea	(rd_cop).l,a0			;the copper lists, all in one 64K page: COP1LC's high
+	move.l	a0,d0				;word stays (a write of it is two, rd_showdue)
+	move.l	a0,d1
+	addi.l	#NBUF*1024-1,d1
+	swap	d0
+	swap	d1
+	cmp.w	d0,d1
+	beq.s	.cp
+	clr.w	d1				;(across a page: from the next page on)
+	swap	d1
+	movea.l	d1,a0
+.cp	move.l	a0,(rd_copb).l
 	move.l	a0,(rd_backcop).l
 	moveq	#-1,d0
 	move.l	d0,(rd_Bkey).l
@@ -1323,6 +1336,24 @@ rd_verify
 	rts
 	ENDC
 
+;	The renderer's waits for the copper, the blitter and a show give up after RCVVB vertical
+;	blanks (2 seconds at 50 Hz; the longest in long harness runs of random play: 4): the copper or
+;	the blitter has stalled, and both are set up again (rd_stall). Each wait keeps the vertical
+;	blank it began at on the stack.
+RCVVB	equ	100
+;	(STATS builds) The longest wait so far, in vertical blanks, to rd_wstat+4: the wait's start
+;	at \1(sp). Uses d0.
+WMAX	MACRO
+	IFD	STATS
+	move.l	(rd_vblanks).l,d0
+	sub.l	\1(sp),d0
+	cmp.l	(rd_wstat+4).l,d0
+	bls.s	.wm\@
+	move.l	d0,(rd_wstat+4).l
+.wm\@
+	ENDC
+	ENDM
+
 ;	Wait until the back buffer is off the screen for good: the frame after it (the next
 ;	buffer's) has been given to the display and a vertical blank has passed since, so the
 ;	copper shows that one. Its copper list is free then too. With 3 buffers it nearly always is.
@@ -1337,31 +1368,60 @@ rd_vsync
 .n	lsl.w	#2,d1
 	lea	(rd_shownvb).l,a0
 	PEV	'v'				;(statistics: waiting for a buffer, got it)
+	move.l	(rd_vblanks).l,-(sp)		;(the wait's start: rd_stall)
 rd_spin_vs					;(the harness: the renderer waits here)
 .w	move.l	(rd_vblanks).l,d0
 	cmp.l	(a0,d1.w),d0
-	ble.s	.w				;(signed: $7FFFFFFF is not yet)
+	bgt.s	.d				;(signed: $7FFFFFFF is not yet)
+	sub.l	(sp),d0
+	cmpi.l	#RCVVB,d0
+	blo.s	.w
+	bsr	rd_stall
+	bra.s	.w
+.d	WMAX	0
+	addq.l	#4,sp
 	PEV	'V'
 	movem.l	(sp)+,d0-d1/a0
 	rts
 
 ;	Wait until the blits given to the copper are done: it has started them all (it stopped at
 ;	the ring's end, SOFT) and the blitter has finished. Keeps all.
+;	(The nop before a look at the copper's or the blitter's state after writing to them: a
+;	68040 or 68060 may still hold the writes, BLTSIZH or INTREQ, in its store buffer; nop waits
+;	until they are done.)
 rd_waitblit
 	tst.b	(rd_cqbat).l			;(a batch open: let go first)
 	beq.s	rd_wb_q
 	bsr	rd_cq_flush
-rd_wb_q	tst.b	(rd_cqidle).l			;nothing given to it since it stopped
+rd_wb_q	nop
+	move.l	d0,-(sp)
+	move.l	(rd_vblanks).l,-(sp)		;(the wait's start: rd_stall)
+	tst.b	(rd_cqidle).l			;nothing given to it since it stopped
 	bne.s	rd_wb_blt
 rd_spin_q
 .q	btst	#2,(CUSTOM+$01F).l		;INTREQR SOFT
-	beq	.q
-	st	(rd_cqidle).l
+	bne.s	.d
+	move.l	(rd_vblanks).l,d0
+	sub.l	(sp),d0
+	cmpi.l	#RCVVB,d0
+	blo.s	.q
+	bsr	rd_stall
+	bra.s	.q
+.d	st	(rd_cqidle).l
 rd_wb_blt
 	btst	#6,(CUSTOM+DMACONR).l		;(first read is early on old chips)
 rd_spin_w
 .w	btst	#6,(CUSTOM+DMACONR).l
-	bne	.w
+	beq.s	.d
+	move.l	(rd_vblanks).l,d0
+	sub.l	(sp),d0
+	cmpi.l	#RCVVB,d0
+	blo.s	.w
+	bsr	rd_stall
+	bra.s	.w
+.d	WMAX	0
+	addq.l	#4,sp
+	move.l	(sp)+,d0
 	rts
 rd_waitblit_end
 
@@ -1433,6 +1493,7 @@ rd_cq_open
 	lea	8(a6),a5
 	rts
 .slow	movem.l	d0-d2/a0,-(sp)
+	move.l	(rd_vblanks).l,-(sp)		;(the wait's start: rd_stall)
 	movea.l	(rd_cqring).l,a0
 rd_spin_full
 .full	move.l	(rd_cqwp).l,d0
@@ -1462,12 +1523,20 @@ rd_spin_full
 	move.w	d1,(rd_cqfree).l
 	movea.l	(rd_cqwp).l,a6
 .x	lea	8(a6),a5
+	WMAX	0
+	addq.l	#4,sp
 	movem.l	(sp)+,d0-d2/a0
 	rts
 .wait	btst	#2,(CUSTOM+$01F).l		;SOFT: the copper waits at the stop, all have run
-	beq.s	.full
-	move.l	(rd_cqwp).l,(rd_cqdp).l
-	bra.s	.full
+	bne.s	.s
+	move.l	(rd_vblanks).l,d0
+	sub.l	(sp),d0
+	cmpi.l	#RCVVB,d0
+	blo	.full
+	bsr	rd_stall
+	bra	.full
+.s	move.l	(rd_cqwp).l,(rd_cqdp).l
+	bra	.full
 
 ;	Close the block opened (a6, its moves up to a5): its move to COP2LCL (the next block's place:
 ;	a vertical blank's restart goes on there) and the stop after it, then it is let go (its wait
@@ -1493,6 +1562,7 @@ rd_cq_close
 	sub.l	a6,d1
 	sub.w	d1,(rd_cqfree).l
 	sf	(rd_cqidle).l
+	nop					;(the block in chip memory first: rd_waitblit)
 	btst	#2,(CUSTOM+$01F).l		;SOFT: the copper waits there: start it
 	bne.s	.kick
 	rts
@@ -1508,6 +1578,7 @@ rd_cq_close
 	beq.s	.k1
 	move.w	#$0004,(CUSTOM+INTREQ).l	;SOFT off
 	move.w	d0,(CUSTOM+$08A).l		;COPJMP2: to the stop's place (COP2LC)
+	nop					;(done before SOFT is looked at again)
 	move.l	d0,(rd_cqdp).l			;(what is before it has run)
 	IFD	PROFILE
 	addq.l	#1,(prof_mark+84).l		;(statistics: the copper started again)
@@ -1665,6 +1736,7 @@ rd_cq_kickm
 	move	sr,-(sp)
 	ori	#$0700,sr
 	bsr	rd_cq_safe
+	nop					;(COP2LCL written: rd_cq_mark)
 	btst	#1,(CUSTOM+$01F).l		;DSKBLK
 	bne.s	.k
 	moveq	#15,d0				;(a little later: 16 chip reads)
@@ -1674,6 +1746,7 @@ rd_cq_kickm
 	beq.s	.x
 .k	move.w	#$0002,(CUSTOM+INTREQ).l	;DSKBLK off
 	move.w	d0,(CUSTOM+$08A).l		;COPJMP2
+	nop					;(done before DSKBLK is looked at again)
 	IFD	PROFILE
 	addq.l	#1,(prof_mark+84).l		;(statistics: the copper started again)
 	ENDC
@@ -1685,7 +1758,13 @@ rd_cq_kickm
 ;	clears the state first). Interrupts off. Keeps all.
 rd_cq_safe
 	move.l	d0,-(sp)
-.w	move.l	(CUSTOM+$004).l,d0		;VPOSR, VHPOSR: V8, V7-0, H
+.w	move.w	(CUSTOM+$004).l,d0		;VPOSR: V8
+	swap	d0
+	move.w	(CUSTOM+$006).l,d0		;VHPOSR: V7-0, H
+	swap	d0
+	cmp.w	(CUSTOM+$004).l,d0		;(V8 again: line 0 or 256 may have begun between the
+	bne.s	.w				;two, and line 0 then reads as 256 on real chips)
+	swap	d0
 	andi.l	#$1FFFF,d0
 	cmpi.w	#$0010,d0			;(line 0 or 256: the high word tells)
 	bhs.s	.l
@@ -1774,6 +1853,134 @@ rd_cq_init
 	move.w	#$0016,(CUSTOM+INTREQ).l	;(SOFT, DSKBLK, COPER off)
 	rts
 
+;	A wait for the copper, the blitter or a show has gone on RCVVB vertical blanks: the copper or
+;	the blitter has stalled (a real chip set's timing, the game going on behind a picture that
+;	no longer changes). In the renderer: the copper and the blit queue set up again and the
+;	renderer started again (rd_recover, no return). In the game (fe_ring, with the renderer
+;	between frames): the copper and the blit queue set up again (rd_requeue); with a frame half
+;	drawn the renderer is let run, to stall in its own wait. The wait begins again (its start
+;	at 4(sp)). Keeps all.
+rd_stall
+	tst.b	(ctx_cur).l
+	bne	rd_recover
+	tst.b	(rd_busy).l
+	bne.s	.y
+	movem.l	d0-d2/a0-a1/a6,-(sp)
+	bsr	rd_requeue
+	movem.l	(sp)+,d0-d2/a0-a1/a6
+	bra.s	.t
+.y	jsr	(hal_yield).l
+.t	move.l	(rd_vblanks).l,4(sp)
+	rts
+
+;	The renderer started again at its loop (rend_main), its frame half drawn dropped, after
+;	the copper and the blit queue are set up again (rd_requeue). From its waits (rd_stall).
+rd_recover
+	move	#$2700,sr
+	bsr	rd_requeue
+	sf	(rd_busy).l
+	lea	(rend_stack_top).l,sp
+	move	#$2000,sr
+	jmp	(rend_main).l
+
+;	The copper and the blit queue set up again from nothing (rd_stall): the copper stopped and
+;	the blitter let finish, the ring empty, the empty display list (black until the next frame
+;	is shown), no show waiting and no buffer on the screen; the interrupts and DMA on. All the
+;	blits drew is taken as lost: each buffer drawn again whole and its copper list made again,
+;	the plane B bitmap, the overlay and the HUD made again, no image in the sprite image ring
+;	found. Never with a block of the ring open (a frame half drawn: only from the renderer's
+;	own waits). Counted (rd_wstat). Uses d0-d2, a0-a1, a6.
+rd_requeue
+	move	sr,-(sp)
+	ori	#$0700,sr
+	addq.l	#1,(rd_wstat).l
+	lea	(CUSTOM).l,a6
+	move.w	#$0080,$096(a6)			;the copper off, wherever it is
+	move.w	#$8240,$096(a6)			;the blitter on: its blit, if any, ends
+	nop
+	move.l	#$40000,d0			;(at most so many looks)
+	btst	#6,$002(a6)
+.bw	btst	#6,$002(a6)
+	beq.s	.bd
+	subq.l	#1,d0
+	bne.s	.bw
+.bd	sf	(rd_cqbat).l			;(no batch open)
+	bsr	rd_cq_init			;the ring: a stop at its start, COP2LC there
+	jsr	(hal_display_init).l		;the empty list at COP1LC, the copper on from its start
+	move.w	#$C000|$2000|$0020|$0010,$09A(a6)	;(the interrupts, as hal_start_timer)
+	clr.l	(rd_showcop).l
+	sf	(rd_bqhold).l
+	moveq	#-1,d0
+	lea	(rd_shownvb).l,a0		;(none on the screen)
+	moveq	#NBUF-1,d1
+.sv	move.l	d0,(a0)+
+	dbf	d1,.sv
+	lea	(rd_dirty).l,a0			;(nothing in the buffers)
+	move.w	#NBUF*DROWS-1,d1
+.dm	move.l	d0,(a0)+
+	dbf	d1,.dm
+	bsr	rd_op_invall
+	sf	(rd_stage).l
+	move.l	d0,(rd_Bkey).l			;(plane B, the overlay's list, the colours: all made
+	lea	(rd_akey).l,a0			;again, as the frame dropped may have taken the
+	moveq	#6-1,d1				;changes the game noted, vm_wmap, tc_dirty, and not
+.ak	move.l	d0,(a0)+			;drawn them; the name tables' copies compared whole)
+	dbf	d1,.ak
+	sf	(rd_ntsync).l
+	move.l	d0,(rd_palgen).l
+	move.l	d0,(rd_lastgen).l
+	move.l	d0,(rd_lastgen+4).l
+	lea	(rd_copgen).l,a0
+	moveq	#2*NBUF-1,d1
+.cg	move.l	d0,(a0)+
+	dbf	d1,.cg
+	lea	(rd_shkey).l,a0
+	moveq	#2*NBUF-1,d1
+.sk	move.l	d0,(a0)+
+	dbf	d1,.sk
+	lea	(rd_hudbd).l,a0
+	moveq	#NBUF-1,d1
+.hb	move.l	d0,(a0)+
+	dbf	d1,.hb
+	st	(rd_hudchg).l
+	moveq	#0,d0				;the overlay and its masks clear, every band drawn
+	lea	(rd_ovl).l,a0			;again (its clears and cells may have been lost)
+	move.w	#OSROW*SCRH/16-1,d1
+.oc	move.l	d0,(a0)+
+	move.l	d0,(a0)+
+	move.l	d0,(a0)+
+	move.l	d0,(a0)+
+	dbf	d1,.oc
+	lea	(rd_ovlmlo).l,a0		;(the high priority mask follows the low one)
+	move.w	#2*OSROW*SCRH/16-1,d1
+.om	move.l	d0,(a0)+
+	move.l	d0,(a0)+
+	move.l	d0,(a0)+
+	move.l	d0,(a0)+
+	dbf	d1,.om
+	lea	(rd_ovlcolf).l,a0
+	move.w	#2*32*48/4-1,d1
+.of	move.l	d0,(a0)+
+	dbf	d1,.of
+	lea	(rd_ovlrows).l,a0		;(no rows used)
+	moveq	#2*32-1,d1
+.or	move.l	#$7FFF8001,(a0)+
+	dbf	d1,.or
+	clr.l	(rd_ovlpart).l
+	st	(rd_ovldirty).l
+	move.l	(rd_scsize).l,d1		;every image's place in the ring two laps back
+	add.l	d1,d1
+	add.l	d1,(rd_scpos).l
+	st	(rd_bltch).l			;(and rd_bline's rows: theirs made again)
+	move.l	#$7FFFFFFF,(rd_scmin).l
+	move.l	#$7FFFFFFF,(rd_scmin+4).l
+	bsr	rd_bmrc_clr
+	clr.l	(rd_ovrd).l
+	clr.l	(rd_ovrd+4).l
+	clr.l	(rd_ovrd+8).l
+	move	(sp)+,sr
+	rts
+
 ;	The show waiting (rd_showcop), if it is due: each frame stays on the screen hal_pace
 ;	vertical blanks at least. Its copper list is set (from the next frame on), its buffer's rd_shownvb
 ;	noted. Interrupts off. Uses d0, a1.
@@ -1795,7 +2002,11 @@ rd_showdue
 	ENDC
 	move.l	(rd_vblanks).l,(rd_lastset).l
 	PEV	'C'				;(statistics: a copper list set)
+	move	sr,-(sp)			;COP1LC is set by two writes: the copper's restart from it
+	ori	#$0700,sr			;at a vertical blank is not to come between them (the lists
+	bsr	rd_cq_safe			;share a 64K page too, rd_copb)
 	move.l	(rd_showcop).l,(CUSTOM+$080).l	;COP1LC
+	move	(sp)+,sr
 	clr.l	(rd_showcop).l
 	move.w	(rd_showbuf).l,d0
 	lsl.w	#2,d0
@@ -9143,7 +9354,7 @@ rd_show
 	move.l	d0,(rd_dmap).l
 	move.w	d1,d0
 	mulu.w	#1024,d0
-	add.l	#rd_cop,d0
+	add.l	(rd_copb).l,d0
 	move.l	d0,(rd_backcop).l
 	rts
 
@@ -9207,6 +9418,8 @@ rd_bqhold	ds.b	1			;the copper waits at a show for a vertical blank
 	even
 rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
 rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)
+rd_wstat	ds.l	2			;the copper and the blitter set up again after a stall
+						;(rd_requeue); (STATS) the longest wait (vertical blanks)
 rd_snapvb	ds.l	NBUF			;rd_vblanks at the tick that gave each buffer's game state
 rd_showbuf	ds.w	1			;(its buffer)
 		even

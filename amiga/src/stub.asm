@@ -102,11 +102,11 @@ start
 	bra	.wb
 .nodos	moveq	#20,d0
 .wb	addq.l	#8,sp
-	move.l	wbmsg,d1
+	tst.l	wbmsg
 	beq	.x
 	move.l	d0,-(sp)
 	jsr	EXEC_Forbid(a6)			;(the Workbench unloads us once it has the message back)
-	movea.l	d1,a1
+	movea.l	wbmsg,a1
 	jsr	EXEC_ReplyMsg(a6)
 	move.l	(sp)+,d0
 .x	rts
@@ -473,19 +473,20 @@ alloc	move.l	a6,-(sp)
 .x	movea.l	(sp)+,a6
 	rts
 
-;	Free the hunks of the seglist d1 (from pakload). Keeps a6.
-pakfree	move.l	a6,-(sp)
+;	Free the hunks of the seglist d1 (from pakload). Keeps d2-d7/a2-a6.
+pakfree	movem.l	d2/a6,-(sp)
 	movea.l	(4).w,a6
-.n	tst.l	d1
+	move.l	d1,d2
+.n	tst.l	d2
 	beq.s	.x
-	lsl.l	#2,d1
-	movea.l	d1,a1
-	move.l	(a1),d1				;the next
+	lsl.l	#2,d2
+	movea.l	d2,a1
+	move.l	(a1),d2				;the next (in d2: FreeMem may change d0-d1/a0-a1)
 	subq.l	#4,a1
 	move.l	(a1),d0
 	jsr	EXEC_FreeMem(a6)
 	bra.s	.n
-.x	movea.l	(sp)+,a6
+.x	movem.l	(sp)+,d2/a6
 	rts
 
 	include	"inflate.i"

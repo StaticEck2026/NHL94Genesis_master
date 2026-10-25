@@ -126,6 +126,8 @@ hal_debug
 	dc.l	hal_hwin
 	dc.b	'SND1'				;+184: the sound's statistics (STATS builds)
 	dc.l	snd_stats
+	dc.b	'RCV1'				;+192: the copper and the blitter set up again after a
+	dc.l	rd_wstat			;stall; (STATS) the longest wait (rd_stall)
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
@@ -143,7 +145,10 @@ hal_game_main
 	bsr	vm_init
 	jsr	(snd_init).l
 	bsr	hal_set_vectors
-	jsr	(rd_init).l
+	tst.b	(hal_amiga).l
+	beq.s	.nc
+	bsr	hal_cpu_setup
+.nc	jsr	(rd_init).l
 	bsr	hal_display_init
 	bsr	ctx_init
 	IFD	SHOWFPS
@@ -180,6 +185,48 @@ hal_set_vectors
 	move.l	a1,$84(a0)			;trap #1
 	movec	a0,vbr
 	rts
+
+;	A 68040 or 68060, found by a control register only they have (DTT0: an illegal instruction
+;	before them), not by exec's AttnFlags (started from a floppy, a 68060 has no 68060.library
+;	to name it, and its caches are as the board left them): for the game its data cache and
+;	store buffer off, and the first 16 MB (chip memory, the custom chips, the CIAs) not cached
+;	and in order (DTT0: cache inhibited, precise), whatever the system had; so the copper, the
+;	blitter and Paula always see the CPU's writes, in order, and the CPU theirs. The
+;	instruction cache stays. Put back on quitting (hal_cpu_exit). Supervisor, interrupts off.
+hal_cpu_setup
+	movem.l	d0/a0-a2,-(sp)
+	lea	(hal_vectors).l,a0
+	move.l	4*4(a0),a2			;(the illegal instruction vector)
+	lea	(.no,pc),a1
+	move.l	a1,4*4(a0)
+	movea.l	sp,a1
+	dc.w	$4E7A,$0006			;movec dtt0,d0
+	move.l	d0,(hal_dtt0).l
+	movec	cacr,d0
+	move.l	d0,(hal_cacr0).l
+	dc.w	$F478				;cpusha dc: what the data cache holds to memory
+	andi.l	#~$A0000000,d0			;data cache (bit 31), the 68060's store buffer (29) off
+	movec	d0,cacr
+	move.l	#$0000C040,d0			;$00xxxxxx, user and supervisor, cache inhibited, precise
+	dc.w	$4E7B,$0006			;movec d0,dtt0
+	st	(hal_cpu40).l
+.no	movea.l	a1,sp				;(a 68020 or 68030: its exception frame dropped)
+	move.l	a2,4*4(a0)
+	movem.l	(sp)+,d0/a0-a2
+	rts
+
+;	The 68040's or 68060's cache settings as they were (hal_cpu_setup), with nothing left in
+;	the data cache from before the game (cinva dc: memory has changed since; exec turns it on
+;	again). Supervisor, interrupts off. Uses d0.
+hal_cpu_exit
+	tst.b	(hal_cpu40).l
+	beq.s	.x
+	dc.w	$F458				;cinva dc
+	move.l	(hal_dtt0).l,d0
+	dc.w	$4E7B,$0006			;movec d0,dtt0
+	move.l	(hal_cacr0).l,d0
+	movec	d0,cacr
+.x	rts
 
 ;	CIA-B timer A, continuous, at the game's frame rate (hal_hz), on level 6. The rate is the
 ;	display's, as on the console of each region: 50 Hz with a PAL display (a PAL Mega Drive
@@ -243,7 +290,7 @@ hal_int6
 	blo.s	.pc				;(bit 31 set)
 	cmpi.l	#rd_waitblit_end,d2
 	bhs.s	.pc
-	move.l	24(sp),d2
+	move.l	32(sp),d2			;(under the wait's start and d0)
 	bset	#31,d2
 .pc	btst	#6,(CUSTOM+DMACONR).l		;(the blitter busy: bit 30)
 	beq.s	.pb
@@ -735,6 +782,10 @@ hal_intxv	ds.w	2			;the last's vector word and INTREQR
 hal_int6x	ds.l	1			;level 6 calls from neither CIA-B's timers nor the
 						;vertical blank's tick
 hal_starve	ds.w	1
+hal_cpu40	ds.b	1			;a 68040 or 68060 (hal_cpu_setup): its settings before,
+	even
+hal_cacr0	ds.l	1			;CACR,
+hal_dtt0	ds.l	1			;DTT0
 	IFD	PROFILE
 prof_pos	ds.l	1
 prof_count	ds.l	1

@@ -328,6 +328,14 @@ cr_text
 	movec	cacr,d0
 	moveq	#8,d1
 	bsr	cr_hex
+	tst.b	(hal_cpu40).l			;(a 68040 or 68060: as the system had it, hal_cpu_setup)
+	beq.s	.c40
+	lea	(.twas,pc),a0
+	bsr	cr_puts
+	move.l	(hal_cacr0).l,d0
+	moveq	#8,d1
+	bsr	cr_hex
+.c40
 	; the program and the CPU
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
@@ -532,6 +540,7 @@ cr_text
 	dc.b	0
 .tpc	dc.b	'PC ',0
 .tcacr	dc.b	'   CACR ',0
+.twas	dc.b	' was ',0
 .tsr	dc.b	'   SR ',0
 .tfmt	dc.b	'   frame format ',0
 .tgame	dc.b	'   in the game',0
@@ -595,6 +604,7 @@ CRS	MACRO
 	CRS	8,'',rd_snapvb+8
 	CRS	2,'ahead',hal_ahead
 	CRS	8,'tick at',hal_tickvb
+	CRS	4,'restarts',rd_wstat+2
 	dc.w	-1
 	CRS	8,'other ints',hal_intx
 	CRS	8,'last',hal_intxv

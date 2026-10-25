@@ -94,9 +94,9 @@ _start
 	bra	.error
 .win	; only the 64K window in it kept: the block given back and the window taken (with no
 	; other task in between); if that fails, the block kept
+	move.l	d0,d2			;(in d2: calls may change d0-d1/a0-a1)
 	jsr	EXEC_Forbid(a6)
-	move.l	d0,d2
-	movea.l	d0,a1
+	movea.l	d2,a1
 	move.l	#$20000,d0
 	jsr	EXEC_FreeMem(a6)
 	move.l	d2,d1
@@ -117,8 +117,9 @@ _start
 	jsr	EXEC_Permit(a6)
 	lea	(.msgnomem,pc),a0
 	bra	.error
-.wa	jsr	EXEC_Permit(a6)
-	move.l	d0,(os_backup).l
+.wa	move.l	d0,(os_backup).l
+	jsr	EXEC_Permit(a6)
+	move.l	(os_backup).l,d0
 	addi.l	#$FFFF,d0
 	clr.w	d0
 	movea.l	d0,a0
@@ -307,6 +308,7 @@ hal_exit
 	move.b	d0,(CIAB_ICR).l
 	bsr	hal_kbd_exit
 	jsr	(snd_exit).l
+	jsr	(hal_cpu_exit).l		;(a 68040's or 68060's caches as they were)
 	move.l	(os_vbr).l,d0
 	movec	d0,vbr
 	movea.l	(os_ssp).l,sp

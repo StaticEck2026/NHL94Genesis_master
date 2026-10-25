@@ -85,6 +85,13 @@ directory.
 Battery save data (season, playoffs, records) is written to `NHL94.sav` next to the game when
 you quit, and is read when it starts.
 
+If the renderer waits for the copper, the blitter or a frame to be shown for 2 seconds (a
+wait that is never more than a few frames: the copper or the blitter has stalled, which a real
+chip set's timing could do where an emulator's does not), it sets both up again and goes on:
+the screen is black for a moment, the frame it was drawing is dropped, and everything is drawn
+again from scratch. The game goes on all the while. Each time is counted (`restarts` in the
+crash report).
+
 If the game stops on a CPU exception, no game frame has run for 10 seconds (stuck), an
 interrupt never stops asking (only interrupts have run for 10 seconds, or more than 10000 the
 game does not use came in that time), or the game goes on but no picture has been drawn for 10
@@ -266,7 +273,11 @@ The hardware layer:
   the PCMCIA slot and expansion cards, and one of those asking with no driver to answer would
   take the CPU from the game for good.
 - `os.asm`: takes the machine from the OS and gives it back (the 68020's instruction cache
-  on, a data cache off while the game runs); keeps the OS's memory in the `RAMBASE` window;
+  on, a data cache off while the game runs; on a 68040 or 68060, found by trying a control
+  register only they have, as a 68060 started from a floppy has no 68060.library to name it,
+  `hal.asm` also turns off the data cache and the 68060's store buffer itself and marks the
+  first 16 MB, chip memory and the custom chips, not cached and in order (DTT0), whatever the
+  system had, and puts all of it back on quitting); keeps the OS's memory in the `RAMBASE` window;
   loads and saves `NHL94.sav`; stops the floppy motors first (the file system stops one a
   second or two after its last read, and the game would take the machine before then).
 - `render.asm`: draws the game's cells and tiles (`vmem.asm`) with the layout it set
@@ -442,7 +453,22 @@ stopped. A show marker sends the copper to a parking place that sets DSKBLK and 
 3 interrupt (COPER), which sets the copper list when due and starts the copper again after the
 marker; a vertical blank while it waits there calls again, which is told apart by DSKBLK.
 The CPU never starts the copper near a vertical blank (the end of the last line to the start
-of line 0), so it never cuts a display list short. The test harness runs the copper too:
+of line 0), so it never cuts a display list short: the beam's line is read as VPOSR, VHPOSR,
+then VPOSR again (a long read is two, and on real chips line 0 can begin between them and
+read as line 256). COP1LC, two writes, is set away from a vertical blank too, and the copper
+lists share a 64K page, so the copper's restart from it never takes half an old address. After
+writing to the copper's ring or the blitter the CPU runs a `nop` before it looks at their
+state (a 68040 or 68060 may still hold the writes). Each wait of the renderer gives up after
+2 seconds and sets the copper and the blit queue up again (`rd_stall`; the longest wait in
+long harness runs of random play is 4 vertical blanks); in the renderer it starts again from
+its loop with all that blits drew taken as lost, in the game (a screen's wait for the queue,
+the renderer between frames) the queue is set up again. `NHL_COPSTALL=f,...` stops the copper
+at those frames (it runs nothing until the CPU starts it again from COP1LC) to check that: in
+the harness' game, pause menu and menu sessions each frame after the renderer starts again is
+the same as the reference, pixel for pixel (on the title screen one line of the credits stays
+until they next change; a stall in a screen's wait holds the game back as long).
+`NHL_GAPCHK=1` reports any write (the CPU's or the blitter's) between the hunks, where AmigaDOS
+and the launcher keep each hunk's size and link. The test harness runs the copper too:
 `NHL_COPSTRESS=n` restarts it at one in n of its instructions on average, as a vertical
 blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges n more cycles for each
 CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
