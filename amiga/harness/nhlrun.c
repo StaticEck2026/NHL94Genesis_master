@@ -961,14 +961,16 @@ static uint32_t load_hunks(const char *path)
 }
 
 /* ---- pad schedule ---- */
+#define MAXPAD 65536
 static int npad;
-static struct { int frame; int mask; } padsched[256];
+static struct { int frame; int mask; } padsched[MAXPAD];
 
 static void parse_pads(const char *s)
 {
-    while (*s && npad < 256) {
+    while (*s) {
         int f, m;
         if (sscanf(s, "%d:%x", &f, &m) != 2) break;
+        if (npad == MAXPAD) { fprintf(stderr, "-p: more than %d pad changes\n", MAXPAD); exit(1); }
         padsched[npad].frame = f;
         padsched[npad].mask = m;
         npad++;
@@ -978,11 +980,11 @@ static void parse_pads(const char *s)
     }
 }
 
-static int pad_at(int fr)
+static int pad_at(int fr)               /* (the changes in frame order: the last at or before fr) */
 {
-    int m = 0;
-    for (int i = 0; i < npad; i++)
-        if (padsched[i].frame <= fr) m = padsched[i].mask;
+    static int i, m;
+    if (i > 0 && padsched[i - 1].frame > fr) i = 0, m = 0;
+    while (i < npad && padsched[i].frame <= fr) m = padsched[i++].mask;
     return m;
 }
 
