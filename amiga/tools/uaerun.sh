@@ -14,10 +14,15 @@ cp "$ROOT/output/amiga/nhl94.game" "$W/hd/NHL94.game"
 cp "$ROOT/output/amiga/NHL94" "$ROOT/output/amiga/NHL94.info" "$W/hd/"
 printf "${UAESTARTUP:-NHL94\n}" > "$W/hd/S/startup-sequence"
 KICK=${KICK:-/opt/amiga/aros-amiga-m68k-rom.bin}
-KEXT=${KEXT:-/opt/amiga/aros-amiga-m68k-ext.bin}
+KEXT=${KEXT:-/opt/amiga/aros-amiga-m68k-ext.bin}      # (KEXT=none: a Kickstart with no extension ROM)
+EXTLINE="kickstart_ext_file = $KEXT"
+[ "$KEXT" = none ] && EXTLINE="" 
 # FLOPPY=image.adf boots that floppy instead of the hard drive directory (FLOPPYSPEED: 100 is
 # a real drive, 0 turbo)
-if [ -n "$FLOPPY" ]; then
+# HDF=image.hdf boots that hard drive image instead
+if [ -n "$HDF" ]; then
+  DRIVES="hard_drive_0 = $HDF"
+elif [ -n "$FLOPPY" ]; then
   DRIVES="floppy_drive_0 = $FLOPPY
 floppy_drive_speed = ${FLOPPYSPEED:-100}"
 else
@@ -28,7 +33,7 @@ cat > "$W/run.fs-uae" <<CFG
 [fs-uae]
 amiga_model = ${MODEL:-A1200}
 kickstart_file = $KICK
-kickstart_ext_file = $KEXT
+$EXTLINE
 $DRIVES
 fullscreen = 0
 window_width = 768

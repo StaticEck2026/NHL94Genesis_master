@@ -21,7 +21,12 @@ Genesis sources are not changed, so `main` still rebuilds the cartridge byte for
   leaves nearly all of 2 MB of fast RAM free, so it should fit there (not tested: the tests here
   use the AROS ROM, which keeps some 0.7 MB of the fast RAM for itself, so with it the game needs
   4 MB).
-- Kickstart 2.0 or later (3.x, or the AROS ROM, have been tested in FS-UAE and vAmiga).
+- Kickstart 2.04 or later. Tested in FS-UAE from the floppy and the hard drive image, playing
+  and quitting back to the Shell: 2.04 (37.175) on a 68020; 3.0 (39.106) on a 68020 and a
+  68060; 3.1 (40.63) on a 68020, a 68040 and a 68060 (started with no 68060.library, as from
+  the floppy); and the AROS ROM. Kickstart 1.x cannot run it: 1.3 does not boot the floppy (its
+  Fast File System) and 1.2 does not start on an A1200 at all; the game needs 2.04's calls too.
+  2.04 does not start on a 68040 or 68060 (no Kickstart before 3.0 does).
 - PAL or NTSC. The game runs at the display's rate, as on the console of that region: 50 game
   frames a second on a PAL Amiga (the speed of a PAL Mega Drive, a sixth slower than an NTSC
   Genesis), 60 on NTSC. At 50 the game is told it runs on a PAL console (`hal_pal50`, where it read
