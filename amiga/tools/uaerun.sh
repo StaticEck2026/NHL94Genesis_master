@@ -1,10 +1,6 @@
 #!/bin/sh
-# Run the Amiga build in FS-UAE (A1200, AROS ROM unless KICK is set) on a virtual X display and
-# take screenshots.  uaerun.sh <seconds> <outdir> [key events: "t:key" pairs, t in seconds]
-# EVERY: seconds between screenshots (5).
-# Needs: fs-uae, Xvfb, ImageMagick (import), xdotool.
-# Sound: UAEAUDIO=openal with ALSOFT_CONF naming an OpenAL Soft config with drivers=wave
-# and [wave] file=out.wav records it.
+# uaerun.sh SECONDS OUTDIR [t:key ...]: the build in FS-UAE on a virtual X display, with screenshots.
+# KICK, KEXT (none), HDF, FLOPPY, FLOPPYSPEED, EVERY, UAEEXTRA, UAEAUDIO; needs fs-uae, Xvfb, import, xdotool.
 set -e
 SECS=${1:-30}; OUT=${2:-/tmp/uae-shots}; shift 2 || true
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -14,12 +10,9 @@ cp "$ROOT/output/amiga/nhl94.game" "$W/hd/NHL94.game"
 cp "$ROOT/output/amiga/NHL94" "$ROOT/output/amiga/NHL94.info" "$W/hd/"
 printf "${UAESTARTUP:-NHL94\n}" > "$W/hd/S/startup-sequence"
 KICK=${KICK:-/opt/amiga/aros-amiga-m68k-rom.bin}
-KEXT=${KEXT:-/opt/amiga/aros-amiga-m68k-ext.bin}      # (KEXT=none: a Kickstart with no extension ROM)
+KEXT=${KEXT:-/opt/amiga/aros-amiga-m68k-ext.bin}
 EXTLINE="kickstart_ext_file = $KEXT"
-[ "$KEXT" = none ] && EXTLINE="" 
-# FLOPPY=image.adf boots that floppy instead of the hard drive directory (FLOPPYSPEED: 100 is
-# a real drive, 0 turbo)
-# HDF=image.hdf boots that hard drive image instead
+[ "$KEXT" = none ] && EXTLINE=""
 if [ -n "$HDF" ]; then
   DRIVES="hard_drive_0 = $HDF"
 elif [ -n "$FLOPPY" ]; then

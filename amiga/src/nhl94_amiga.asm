@@ -1,5 +1,4 @@
-;	Top level of the Amiga build. The converted Genesis modules (output/amiga/src) in cartridge
-;	order, with the Amiga hardware layer in front of them.
+;	Top level of the Amiga build.
 
 	machine	68020
 	include	"amiga.i"
@@ -8,13 +7,12 @@
 	include	"stubinc/ram_addrs.inc"
 	include	"macros/genesis.mac"
 
-	; the hunks, in this order (amiga/build.sh names them for ramrel.py)
-	section	game,code			;first hunk: AmigaDOS starts here
+	section	game,code
 	section	bss,bss
 bss_start
 	section	chip,bss_c
 chip_start
-	section	scr0,bss_c			;(the screen buffers and the sprite image ring: render.asm)
+	section	scr0,bss_c
 scr0_start
 	section	scr1,bss_c
 scr1_start
@@ -25,9 +23,9 @@ ring_start
 	section	sndchip,data_c
 sndchip_start
 	section	ramwin,bss
-RAMBASE		ds.l	1			;the Genesis RAM window: moved at start (ram_relocate)
+RAMBASE		ds.l	1
 	section	ramrel,data
-	include	"ramrel.i"			;where its address is used (ramrel.py)
+	include	"ramrel.i"
 	section	game,code
 
 	include	"hal.asm"
@@ -36,8 +34,7 @@ RAMBASE		ds.l	1			;the Genesis RAM window: moved at start (ram_relocate)
 	include	"vmem.asm"
 	include	"crash.asm"
 
-game_code						;(the converted game from here: the harness tells
-						;its beam position reads from ours)
+game_code
 	include	"teamdata94.asm"
 	include	"frames94.asm"
 	include	"hockey94.asm"
@@ -69,11 +66,10 @@ game_code						;(the converted game from here: the harness tells
 	include	"goalie94.asm"
 	include	"title94.asm"
 
-game_code_end					;(the renderer after the game: a change to it does not
-	include	"display.asm"			;move the game's code, so the game's RAM, its code
-	include	"render.asm"			;pointers too, can be compared between builds)
-	include	"sound.asm"			;Paula sound (after sound94.asm: it copies its samples)
-;checksum94.asm: not used (cartridge ROM check)
+game_code_end
+	include	"display.asm"
+	include	"render.asm"
+	include	"sound.asm"
 
 	section	game,code
 game_end

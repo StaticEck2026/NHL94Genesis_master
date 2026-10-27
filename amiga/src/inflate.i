@@ -1,28 +1,24 @@
 ;	Inflate (RFC 1951, raw deflate data) for the launcher: 68000 code.
-;	inflate: a0 = the compressed data, a1 = where the output goes; returns a1 = the end of the
-;	output. Keeps d0-d7/a2-a6. The caller provides IF_SIZE bytes at ifwork (no alignment needed
-;	beyond even). The data may be read up to 2 bytes past its end.
-;	Codes of up to 9 bits are decoded through a table, longer ones a bit at a time.
 
-TB_COUNT	equ	0				;codes per length (words, 16)
-TB_SYM		equ	32				;symbols by code (words, 288)
-TB_FAST		equ	32+576				;the next 9 bits -> symbol | length << 9 (512)
+TB_COUNT	equ	0
+TB_SYM		equ	32
+TB_FAST		equ	32+576
 TB_SIZE		equ	TB_FAST+1024
 
-IF_OFFS		equ	0				;(table building: words, 16)
-IF_LENS		equ	32				;code lengths (bytes, 320)
-IF_LTAB		equ	IF_LENS+320			;literal / length codes
-IF_DTAB		equ	IF_LTAB+TB_SIZE			;distance codes (also the code length codes)
+IF_OFFS		equ	0
+IF_LENS		equ	32
+IF_LTAB		equ	IF_LENS+320
+IF_DTAB		equ	IF_LTAB+TB_SIZE
 IF_SIZE		equ	IF_DTAB+TB_SIZE
 
 inflate
 	movem.l	d0-d7/a2-a6,-(sp)
 	lea	(ifwork).l,a5
-	moveq	#0,d7				;bit buffer (the next bit is bit 0)
-	moveq	#0,d6				;bits in it
+	moveq	#0,d7
+	moveq	#0,d6
 .block	moveq	#1,d0
 	bsr	if_bits
-	move.w	d1,-(sp)			;last block
+	move.w	d1,-(sp)
 	moveq	#2,d0
 	bsr	if_bits
 	tst.w	d1
@@ -31,14 +27,14 @@ inflate
 	beq	.fixed
 	subq.w	#1,d1
 	beq	.dynamic
-	addq.l	#2,sp				;(type 3: not deflate data)
+	addq.l	#2,sp
 	bra	.x
 .next	tst.w	(sp)+
 	beq.s	.block
 .x	movem.l	(sp)+,d0-d7/a2-a6
 	rts
 
-.stored	; whole bytes in the bit buffer go back; then the length, its complement, the bytes
+.stored
 	move.w	d6,d0
 	lsr.w	#3,d0
 	suba.w	d0,a0
@@ -84,15 +80,15 @@ inflate
 	moveq	#5,d0
 	bsr	if_bits
 	addi.w	#257,d1
-	move.w	d1,d3				;literal / length codes
+	move.w	d1,d3
 	moveq	#5,d0
 	bsr	if_bits
 	addq.w	#1,d1
-	move.w	d1,d4				;distance codes
+	move.w	d1,d4
 	moveq	#4,d0
 	bsr	if_bits
 	addq.w	#4,d1
-	move.w	d1,d5				;code length codes
+	move.w	d1,d5
 	lea	IF_LENS(a5),a3
 	moveq	#19-1,d0
 .cz	clr.b	(a3)+
@@ -110,11 +106,10 @@ inflate
 	lea	IF_DTAB(a5),a2
 	moveq	#19,d0
 	bsr	if_build
-	; the code lengths of both alphabets, one run after the other
 	movem.w	(sp),d3-d4
 	lea	IF_LENS(a5),a4
 	lea	(a4,d3.w),a6
-	adda.w	d4,a6				;their end
+	adda.w	d4,a6
 .ln	cmpa.l	a6,a4
 	bhs.s	.lnd
 	lea	IF_DTAB(a5),a2
@@ -124,7 +119,7 @@ inflate
 	move.b	d1,(a4)+
 	bra.s	.ln
 .rep	bne.s	.zeros
-	moveq	#2,d0				;16: the last length 3-6 times
+	moveq	#2,d0
 	bsr	if_bits
 	addq.w	#3-1,d1
 	move.b	-1(a4),d2
@@ -133,11 +128,11 @@ inflate
 	bra.s	.ln
 .zeros	cmpi.w	#17,d1
 	bne.s	.z18
-	moveq	#3,d0				;17: 3-10 zeros
+	moveq	#3,d0
 	bsr	if_bits
 	addq.w	#3-1,d1
 	bra.s	.z
-.z18	moveq	#7,d0				;18: 11-138 zeros
+.z18	moveq	#7,d0
 	bsr	if_bits
 	addi.w	#11-1,d1
 .z	clr.b	(a4)+
@@ -160,7 +155,7 @@ inflate
 	cmpi.w	#256,d1
 	blo.s	.lit
 	beq	.next
-	subi.w	#257,d1				;length
+	subi.w	#257,d1
 	lea	(.lext,pc),a4
 	moveq	#0,d0
 	move.b	(a4,d1.w),d0
@@ -170,7 +165,7 @@ inflate
 	bsr	if_bits
 	add.w	d1,d3
 	move.w	d3,-(sp)
-	lea	IF_DTAB(a5),a2			;distance
+	lea	IF_DTAB(a5),a2
 	bsr	if_decode
 	lea	(.dext,pc),a4
 	moveq	#0,d0
@@ -238,13 +233,12 @@ if_decode
 	beq.s	.slow
 	move.w	d1,d0
 	lsr.w	#8,d0
-	lsr.w	#1,d0				;length
+	lsr.w	#1,d0
 	lsr.l	d0,d7
 	sub.w	d0,d6
 	andi.w	#511,d1
 	rts
-.slow	; canonical codes a bit at a time: the code so far, the first code and the first symbol
-	; of this length
+.slow
 	moveq	#0,d3
 	moveq	#0,d4
 	moveq	#0,d5
@@ -273,7 +267,7 @@ if_decode
 	addq.w	#1,d0
 	cmpi.w	#16,d0
 	blt.s	.bit
-	move.w	#256,d1				;(not a code: end the block)
+	move.w	#256,d1
 	rts
 .found	add.w	d5,d1
 	add.w	d1,d1
@@ -295,10 +289,9 @@ if_build
 	addq.w	#1,d1
 	cmp.w	d0,d1
 	blt.s	.cc
-	clr.w	TB_COUNT(a2)			;(length 0: no code)
-	; symbols sorted by length, then by value
+	clr.w	TB_COUNT(a2)
 	moveq	#0,d2
-	moveq	#2,d1				;(length 1, as a word offset)
+	moveq	#2,d1
 .of	move.w	d2,IF_OFFS(a5,d1.w)
 	add.w	TB_COUNT(a2,d1.w),d2
 	addq.w	#2,d1
@@ -316,16 +309,14 @@ if_build
 .sn	addq.w	#1,d1
 	cmp.w	d0,d1
 	blt.s	.sy
-	; codes of up to 9 bits in the fast table, at each index that ends in the code's bits
-	; (reversed: the first bit is bit 0)
 	lea	TB_FAST(a2),a4
 	move.w	#511,d1
 .fz	clr.w	(a4)+
 	dbf	d1,.fz
 	lea	TB_FAST(a2),a4
-	moveq	#0,d3				;code
-	moveq	#0,d4				;symbol index
-	moveq	#1,d1				;length
+	moveq	#0,d3
+	moveq	#0,d4
+	moveq	#1,d1
 .len	move.w	d1,d2
 	add.w	d2,d2
 	move.w	TB_COUNT(a2,d2.w),d5
@@ -341,12 +332,12 @@ if_build
 	dbf	d6,.rev
 	move.w	d1,d7
 	lsl.w	#8,d7
-	add.w	d7,d7				;length << 9
+	add.w	d7,d7
 	move.w	d4,d0
 	add.w	d0,d0
 	or.w	TB_SYM(a2,d0.w),d7
 	moveq	#1,d0
-	lsl.w	d1,d0				;step
+	lsl.w	d1,d0
 .fill	move.w	d2,d6
 	add.w	d6,d6
 	move.w	d7,(a4,d6.w)

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build the Amiga 1200 version: convert src/ into output/amiga/src, then assemble with vasm.
+# Build the Amiga version: convert src/ into output/amiga/src, assemble with vasm, package.
 set -e
 cd "$(dirname "$0")/.."
 VASM=${VASM:-vasmm68k_mot}
@@ -9,15 +9,11 @@ rm -rf output/amiga/src
 mkdir -p output/amiga
 python3 amiga/tools/convert.py output/amiga/src
 cp amiga/src/*.asm amiga/src/*.i output/amiga/src/
-# The build number: the commits on this branch (and the commit, + if the sources differ from
-# it). It names the disk images and their volumes and is in the launcher's version string.
 BUILDNO=$(git rev-list --count HEAD 2>/dev/null || echo 0)
 BUILDID=$(git rev-parse --short HEAD 2>/dev/null || echo none)
 git diff --quiet HEAD -- amiga src tools 2>/dev/null || BUILDID="$BUILDID+"
 printf 'buildver\tdc.b\t"$VER: NHL94 b%s (%s)",0\n' "$BUILDNO" "$BUILDID" \
   > output/amiga/src/build.i
-# The FM patches and the PCM sounds as samples (kept: they only change with their sources or
-# the tools)
 FMI=output/amiga/fm_patches.i
 if [ ! -f $FMI ] || [ amiga/tools/fmrender.py -nt $FMI ] || [ Extracted/NHL94/Sound/fm_instrument_patches.bin -nt $FMI ]; then
   python3 -c 'import numpy' 2>/dev/null || { echo "build.sh: fmrender.py needs numpy (pip install numpy)"; exit 1; }
@@ -29,14 +25,10 @@ if [ ! -f $PCMI ] || [ amiga/tools/pcmrender.py -nt $PCMI ] || [ src/sound94.asm
   python3 amiga/tools/pcmrender.py src/sound94.asm Extracted/NHL94/Sound $PCMI
 fi
 cp $PCMI output/amiga/src/pcm.i
-# The pictures of the EA Sports, title and game setup screens, deflated (inflated into a window
-# only while their screen is shown: fe_open)
 python3 amiga/tools/fepack.py Extracted/NHL94/Graphics output/amiga/src/fe.i
 cd output/amiga/src
-# Twice: the second time with the list of the places that hold RAM window addresses, which
-# ramrel.py takes from the first (its hunk is the last, so the others do not move).
 HUNKS="hal_header bss_start chip_start scr0_start scr1_start scr2_start ring_start sndchip_start RAMBASE ram_relocs"
-game() {	# game OUT LISTING [flags]
+game() {
 	printf 'ram_relocs\n\tdc.l\t0\n' > ramrel.i
 	"$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS $3 -o "$1" nhl94_amiga.asm || exit 1
 	python3 ../../../amiga/tools/ramrel.py "$1" 8 ramrel.i $HUNKS
@@ -45,15 +37,12 @@ game() {	# game OUT LISTING [flags]
 	cmp -s ramrel.i ramrel2.i || { echo "build.sh: the RAM window places moved between the passes"; exit 1; }
 	ls -l "$1"
 }
-# The test harness' build (amiga/harness): the same with its hooks
 game ../harness.game ../harness.lst -DHARNESS
 game ../nhl94.game ../nhl94.lst
-# The memory the game's hunks take, for the launcher's message (KB: chip, its largest hunk,
-# any other: fast RAM if there is some)
 python3 - ../nhl94.game >> build.i <<'PY'
 import struct, sys
 d = open(sys.argv[1], 'rb').read()
-n = struct.unpack('>I', d[16:20])[0] - struct.unpack('>I', d[12:16])[0] + 1   # (no resident names)
+n = struct.unpack('>I', d[16:20])[0] - struct.unpack('>I', d[12:16])[0] + 1
 s = struct.unpack('>%dI' % n, d[20:20 + 4 * n])
 chip = [(v & 0x3FFFFFFF) * 4 for v in s if v & 0x40000000]
 other = [(v & 0x3FFFFFFF) * 4 for v in s if not v & 0x40000000]
@@ -63,8 +52,6 @@ PY
 "$VASM" -Fhunkexe -m68000 -nocase -quiet -o ../NHL94 stub.asm
 ls -l ../NHL94
 python3 ../../../amiga/tools/mkicon.py ../NHL94.info
-# A bootable hard drive image (one FFS partition, no RDB) for emulators: needs xdftool
-# (pip install amitools). Its startup-sequence starts the game.
 XDFTOOL=${XDFTOOL:-xdftool}
 if command -v "$XDFTOOL" >/dev/null 2>&1; then
   printf 'NHL94\n' > startup-sequence
@@ -74,7 +61,6 @@ if command -v "$XDFTOOL" >/dev/null 2>&1; then
     + write ../nhl94.game NHL94.game >/dev/null
   cp ../nhl94.hdf ../nhl94-b$BUILDNO.hdf
   ls -l ../nhl94.hdf ../nhl94-b$BUILDNO.hdf
-  # A bootable 880 KB floppy: the game packed (pack.py), the launcher loads it
   python3 ../../../amiga/tools/pack.py ../nhl94.game ../NHL94.pak
   rm -f ../nhl94.adf
   "$XDFTOOL" ../nhl94.adf create + format NHL94-b$BUILDNO ffs + boot install + makedir S \
@@ -85,9 +71,6 @@ if command -v "$XDFTOOL" >/dev/null 2>&1; then
 else
   echo "(no xdftool: nhl94.hdf and nhl94.adf not made; pip install amitools)"
 fi
-# An LHA archive to unpack onto a hard drive: a drawer NHL94 (the launcher, its icon and the
-# game) and the drawer's icon, level 1 headers, -lh5-. Needs an lha that makes archives, as LHa
-# for UNIX does (LHA=its path: the lha of lhasa only unpacks).
 LHA=${LHA:-lha}
 rm -rf lhastage ../nhl94.lha ../nhl94-b*.lha
 mkdir -p lhastage/NHL94

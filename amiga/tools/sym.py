@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sym.py LISTING ADDR... : name the code addresses the test harness prints (code hunk at $200000)."""
+"""sym.py LISTING ADDR..."""
 import re, sys, bisect
 
 def load(lst):

@@ -1,11 +1,4 @@
-;	NHL94: the launcher. Loads NHL94.game and runs it; started from the Workbench, it takes the
-;	Workbench message. What goes wrong is said in a requester (request.i). Assembled for the
-;	68000, so that it can say so on any Amiga. If there is not the memory to load the game, the
-;	system is asked to free what it can (unused libraries, devices and fonts) and the Workbench
-;	screen is closed (its bitmaps and pictures take chip RAM), each time loading it again; the
-;	Workbench opens again when the game ends.
-;	On the floppy the game is NHL94.pak (amiga/tools/pack.py: its hunks deflate compressed),
-;	which the launcher loads itself when it is there.
+;	NHL94: the launcher.
 
 EXEC_Forbid		equ	-132
 EXEC_FindTask		equ	-294
@@ -33,21 +26,21 @@ MEMF_LARGEST		equ	$20000
 
 	section	stub,code
 start
-	movem.l	d0/a0,-(sp)			;the command line, for the game
+	movem.l	d0/a0,-(sp)
 	movea.l	(4).w,a6
 	suba.l	a1,a1
 	jsr	EXEC_FindTask(a6)
 	movea.l	d0,a4
-	cmpi.b	#13,8(a4)			;NT_PROCESS: not run from a boot block or the like
+	cmpi.b	#13,8(a4)
 	beq.s	.proc
 	lea	(msgdos,pc),a0
 	bsr	ezrequest
 	addq.l	#8,sp
 	moveq	#20,d0
 	rts
-.proc	tst.l	$AC(a4)				;pr_CLI
+.proc	tst.l	$AC(a4)
 	bne	.cli
-	lea	$5C(a4),a0			;pr_MsgPort: the Workbench message
+	lea	$5C(a4),a0
 	jsr	EXEC_WaitPort(a6)
 	lea	$5C(a4),a0
 	jsr	EXEC_GetMsg(a6)
@@ -63,12 +56,11 @@ start
 	lea	(msgmem,pc),a1
 	cmpa.l	a1,a0
 	bne.s	.say
-	; not enough memory: what the system can free freed, then the Workbench screen closed
 	bsr	flushmem
 	bsr	loadgame
 	bne	.run
 	bsr	closewb
-	beq.s	.nomem				;(it could not be: other programs' windows on it)
+	beq.s	.nomem
 	bsr	flushmem
 	bsr	loadgame
 	bne	.run
@@ -85,7 +77,7 @@ start
 	movea.l	seglist,a1
 	adda.l	a1,a1
 	adda.l	a1,a1
-	jsr	4(a1)				;first hunk of the game
+	jsr	4(a1)
 	move.l	d0,d7
 	movea.l	dosbase,a6
 	move.l	seglist,d1
@@ -105,7 +97,7 @@ start
 	tst.l	wbmsg
 	beq	.x
 	move.l	d0,-(sp)
-	jsr	EXEC_Forbid(a6)			;(the Workbench unloads us once it has the message back)
+	jsr	EXEC_Forbid(a6)
 	movea.l	wbmsg,a1
 	jsr	EXEC_ReplyMsg(a6)
 	move.l	(sp)+,d0
@@ -113,19 +105,18 @@ start
 
 	include	"request.i"
 
-;	The game loaded (seglist, and packed set if from NHL94.pak): Z clear. Else Z set, a0 = why
-;	not (msgmem: not enough memory). a6 = dos.library. Uses d0-d2/a0-a1.
+;	The game loaded (seglist, and packed set if from NHL94.pak): Z clear. Uses d0-d2/a0-a1.
 loadgame	bsr	pakload
 	tst.l	d0
-	bmi.s	.no				;(a0: why not)
+	bmi.s	.no
 	move.l	d0,seglist
 	bne.s	.x
 	move.l	#gamename,d1
 	jsr	DOS_LoadSeg(a6)
 	move.l	d0,seglist
 	bne.s	.x
-	move.l	#gamename,d1			;there but not loaded: not enough memory
-	moveq	#-2,d2				;ACCESS_READ
+	move.l	#gamename,d1
+	moveq	#-2,d2
 	jsr	DOS_Lock(a6)
 	lea	(msgload,pc),a0
 	move.l	d0,d1
@@ -135,13 +126,13 @@ loadgame	bsr	pakload
 .no	moveq	#0,d0
 .x	rts
 
-;	The system asked to free what it can (an allocation it cannot meet: unused libraries,
-;	devices and fonts are expunged first). Keeps all registers.
+;	The system asked to free what it can (an allocation it cannot meet: unused
+;	libraries, devices and fonts are expunged first). Keeps all registers.
 flushmem
 	movem.l	d0-d1/a0-a1/a6,-(sp)
 	movea.l	(4).w,a6
 	move.l	#$7FFFFFF0,d0
-	moveq	#1,d1				;MEMF_PUBLIC
+	moveq	#1,d1
 	jsr	EXEC_AllocMem(a6)
 	tst.l	d0
 	beq.s	.x
@@ -163,7 +154,7 @@ closewb	move.l	a6,-(sp)
 	jsr	INT_CloseWorkBench(a6)
 	tst.l	d0
 	bne.s	.c
-	movea.l	a6,a1				;(not closed)
+	movea.l	a6,a1
 	movea.l	(4).w,a6
 	jsr	EXEC_CloseLibrary(a6)
 	clr.l	intbase
@@ -211,13 +202,8 @@ memfigures
 	move.l	d0,(a0)+
 	rts
 
-;	NHL94.pak, if it is there: d0 = its seglist (hunks allocated as LoadSeg does: a long of the
-;	size, the next hunk's BPTR, the contents), 0 if there is no NHL94.pak, -1 with a0 = the
-;	message if it cannot be loaded. a6 = dos.library.
-;	Memory: the hunks with data are allocated and inflated one at a time, each from its
-;	compressed bytes read into a buffer of their own (freed before the next), the others (BSS)
-;	after them: so the most taken at once is the hunks and the largest hunk's compressed bytes
-;	(not the whole file as well).
+;	NHL94.pak, if it is there: d0 = its seglist, 0 if there is no
+;	NHL94.pak, -1 with a0 = the message if it cannot be loaded.
 pakload
 	movem.l	d2-d7/a2-a5,-(sp)
 	clr.l	pakbuf
@@ -228,12 +214,10 @@ pakload
 .ch	clr.l	(a0)+
 	dbf	d0,.ch
 	move.l	#pakname,d1
-	move.l	#1005,d2			;MODE_OLDFILE
+	move.l	#1005,d2
 	jsr	DOS_Open(a6)
 	move.l	d0,pakfh
 	beq	.none
-	; the header: 'NHLZ', hunks, reloc table bytes; per hunk its size and compressed bytes;
-	; the reloc table's compressed bytes
 	lea	pakhdr,a2
 	moveq	#12,d3
 	movea.l	a2,a0
@@ -241,7 +225,7 @@ pakload
 	bne	.bad
 	cmpi.l	#'NHLZ',(a2)
 	bne	.bad
-	move.l	4(a2),d7			;hunks
+	move.l	4(a2),d7
 	beq	.bad
 	cmpi.l	#MAXHUNKS,d7
 	bhi	.bad
@@ -251,18 +235,17 @@ pakload
 	lea	12(a2),a0
 	bsr	pakread
 	bne	.bad
-	; the hunks with data, in order (their bytes follow each other in the file)
-	moveq	#0,d6				;hunk
+	moveq	#0,d6
 .hd	move.l	d6,d0
 	lsl.l	#3,d0
-	lea	12(a2,d0.l),a3			;its size, compressed bytes
+	lea	12(a2,d0.l),a3
 	tst.l	4(a3)
 	beq.s	.hdn
 	bsr	pakhunk
 	beq	.mem
-	move.l	4(a3),d0			;its compressed bytes
-	addq.l	#4,d0				;(the inflater may read a little past the end)
-	moveq	#1,d1				;MEMF_PUBLIC
+	move.l	4(a3),d0
+	addq.l	#4,d0
+	moveq	#1,d1
 	bsr	alloc
 	move.l	d0,pakbuf
 	beq	.mem
@@ -280,7 +263,6 @@ pakload
 .hdn	addq.l	#1,d6
 	cmp.l	d7,d6
 	blo.s	.hd
-	; the others (BSS)
 	moveq	#0,d6
 .hb	move.l	d6,d0
 	lsl.l	#3,d0
@@ -292,10 +274,9 @@ pakload
 .hbn	addq.l	#1,d6
 	cmp.l	d7,d6
 	blo.s	.hb
-	; the reloc table: inflated, then applied
 	move.l	d7,d0
 	lsl.l	#3,d0
-	move.l	12(a2,d0.l),d5			;its compressed bytes
+	move.l	12(a2,d0.l),d5
 	move.l	d5,d0
 	addq.l	#4,d0
 	moveq	#1,d1
@@ -319,8 +300,8 @@ pakload
 	lea	hunkbase,a4
 	move.w	d7,d6
 	subq.w	#1,d6
-.rh	movea.l	(a4)+,a1			;the hunk
-.rg	move.l	(a3)+,d5			;a group: count, target, offsets
+.rh	movea.l	(a4)+,a1
+.rg	move.l	(a3)+,d5
 	beq.s	.rn
 	move.l	(a3)+,d0
 	lsl.l	#2,d0
@@ -335,7 +316,6 @@ pakload
 .rn	dbf	d6,.rh
 	bsr	pakbufs
 	bsr	pakclose
-	; the seglist: each hunk's next-hunk long the BPTR of the next one's
 	lea	hunkbase,a4
 	move.l	(a4),d0
 	subq.l	#4,d0
@@ -351,7 +331,7 @@ pakload
 	move.l	d0,-4(a0)
 	dbf	d6,.ln
 .l1	movea.l	(4).w,a6
-	cmpi.w	#37,20(a6)			;(LIB_VERSION: CacheClearU from V37)
+	cmpi.w	#37,20(a6)
 	blo.s	.cc
 	jsr	EXEC_CacheClearU(a6)
 .cc	movea.l	dosbase,a6
@@ -372,7 +352,7 @@ pakload
 .x	movem.l	(sp)+,d2-d7/a2-a5
 	rts
 
-;	Read d3 bytes of NHL94.pak to a0: Z set if they were. a6 = dos.library. Uses d0-d3.
+;	Read d3 bytes of NHL94.pak to a0: Z set if they were. Uses d0-d3.
 pakread	move.l	pakfh,d1
 	move.l	a0,d2
 	move.l	d3,-(sp)
@@ -380,7 +360,7 @@ pakread	move.l	pakfh,d1
 	cmp.l	(sp)+,d0
 	rts
 
-;	Close NHL94.pak if it is open. Keeps all but d0-d1 (dos.library: a6).
+;	Close NHL94.pak if it is open.
 pakclose
 	move.l	pakfh,d1
 	beq.s	.x
@@ -388,18 +368,17 @@ pakclose
 	jsr	DOS_Close(a6)
 .x	rts
 
-;	Hunk d6 (a3: its size in longs with the memory type, as in HUNK_HEADER) allocated (cleared):
-;	hunkbase + 4 * d6 = its contents, the size and a long for the next hunk's BPTR before them.
-;	Z set if there is not the memory. Keeps d2-d7/a2-a6.
+;	Hunk d6 allocated (cleared): hunkbase + 4 * d6 = its contents, the size
+;	and a long for the next hunk's BPTR before them. Keeps d2-d7/a2-a6.
 pakhunk	move.l	(a3),d0
 	andi.l	#$3FFFFFFF,d0
 	lsl.l	#2,d0
 	addq.l	#8,d0
-	move.l	#$10001,d1			;MEMF_CLEAR | MEMF_PUBLIC
-	btst	#6,(a3)				;(bit 30: chip)
+	move.l	#$10001,d1
+	btst	#6,(a3)
 	beq.s	.nc
 	addq.l	#2,d1
-.nc	btst	#7,(a3)				;(bit 31: fast)
+.nc	btst	#7,(a3)
 	beq.s	.nf
 	addq.l	#4,d1
 .nf	move.l	d0,-(sp)
@@ -408,13 +387,13 @@ pakhunk	move.l	(a3),d0
 	tst.l	d0
 	beq.s	.x
 	movea.l	d0,a0
-	move.l	d1,(a0)+			;size
-	clr.l	(a0)+				;(the next hunk: linked at the end)
+	move.l	d1,(a0)+
+	clr.l	(a0)+
 	move.l	d6,d0
 	lsl.l	#2,d0
 	lea	hunkbase,a1
 	move.l	a0,(a1,d0.l)
-	moveq	#1,d0				;(not Z)
+	moveq	#1,d0
 .x	rts
 
 ;	Free the hunks pakhunk allocated (a failed load). Keeps a6.
@@ -453,12 +432,12 @@ pakbufs	move.l	a6,-(sp)
 .p	movea.l	(sp)+,a6
 	rts
 
-;	d0 = memory of d0 bytes (type d1) or 0; its size is kept in the long before it (for
-;	pakbufs: the hunks keep theirs in their own first long). Keeps a6.
+;	d0 = memory of d0 bytes (type d1) or 0; its size is kept in the long before
+;	it (for pakbufs: the hunks keep theirs in their own first long). Keeps a6.
 alloc	move.l	a6,-(sp)
 	movea.l	(4).w,a6
 	cmpi.l	#$10000,d1
-	bhs.s	.h				;(a hunk: the caller lays it out)
+	bhs.s	.h
 	addq.l	#4,d0
 	move.l	d0,-(sp)
 	jsr	EXEC_AllocMem(a6)
@@ -481,7 +460,7 @@ pakfree	movem.l	d2/a6,-(sp)
 	beq.s	.x
 	lsl.l	#2,d2
 	movea.l	d2,a1
-	move.l	(a1),d2				;the next (in d2: FreeMem may change d0-d1/a0-a1)
+	move.l	(a1),d2
 	subq.l	#4,a1
 	move.l	(a1),d0
 	jsr	EXEC_FreeMem(a6)
@@ -491,7 +470,7 @@ pakfree	movem.l	d2/a6,-(sp)
 
 	include	"inflate.i"
 
-	include	"build.i"			;(the version string: the build, build.sh)
+	include	"build.i"
 dosname		dc.b	'dos.library',0
 intname		dc.b	'intuition.library',0
 gamename	dc.b	'PROGDIR:NHL94.game',0
@@ -515,15 +494,15 @@ MAXHUNKS	equ	16
 
 	section	stubbss,bss
 dosbase		ds.l	1
-intbase		ds.l	1				;(the Workbench closed: closewb)
-memargs		ds.l	6				;(msgmem's figures)
+intbase		ds.l	1
+memargs		ds.l	6
 wbmsg		ds.l	1
 seglist		ds.l	1
 pakbuf		ds.l	1
 relbuf		ds.l	1
-pakfh		ds.l	1				;NHL94.pak while it is read
-pakhdr		ds.l	3+2*MAXHUNKS+1			;its header
-hunks		ds.l	1				;the seglist being built
+pakfh		ds.l	1
+pakhdr		ds.l	3+2*MAXHUNKS+1
+hunks		ds.l	1
 hunkbase	ds.l	MAXHUNKS
 packed		ds.b	1
 wbclosed	ds.b	1

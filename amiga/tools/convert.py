@@ -1,31 +1,13 @@
 #!/usr/bin/env python3
-"""Convert the Genesis sources in src/ into a vasm source tree for the Amiga build.
-
-The Genesis sources stay the single source of truth (they still build the byte-matching
-cartridge). This tool copies them to a build directory and rewrites what the Amiga cannot
-run as is:
-
-  * syntax: Windows include paths, the String / PLAYER macros (vasm cannot org backwards),
-    the <> operator;
-  * RAM: the Genesis work RAM at $FFFF0000 becomes RAMBASE (a fixed 64K aligned Amiga
-    address, amiga/src/amiga.i). Genesis code addresses RAM with sign-extended 16-bit
-    addresses, which only work at the top of the address space; the rules below turn
-    those into 32-bit forms while keeping the low 16 bits of every address unchanged;
-  * hardware: the game's uses of the Genesis video chip, Z80, sound chips and pad ports are
-    rewritten for the Amiga (amiga/src/*.asm), by the per-site patches in patches.py and by
-    the rule below for its writes through Vmaddr's pointer; a port use left over stops it.
-
-Usage: convert.py <outdir>
-"""
+"""Convert the Genesis sources in src/ into a vasm source tree for the Amiga build."""
 import os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 SRC = os.path.join(ROOT, 'src')
 sys.path.insert(0, HERE)
-import patches  # noqa: E402
+import patches
 
-# Files the Amiga build does not use: the cartridge vectors and header, Sega's hardware init.
 SKIP = {'main94.asm', 'checksum94.asm', os.path.join('sega', 'SegaInit.asm'), os.path.join('sega', 'SegaIDTable94.asm')}
 
 REGS = {'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'sp', 'pc',
@@ -54,7 +36,7 @@ def ci_resolve(base, rel):
 
 
 def split_comment(ln):
-    """Split a source line into code and comment, ignoring ; inside quotes."""
+    """Split a source line into code and comment, ignoring; inside quotes."""
     q = None
     for i, c in enumerate(ln):
         if q:
@@ -123,7 +105,7 @@ def is_abs_symbol(inner):
 
 
 def ram_rules(op, sz, args, ctx):
-    """Rewrite 16-bit RAM addressing forms. Returns (op, sz, args, extra_lines)."""
+    """Rewrite 16-bit RAM addressing forms."""
     opl = op.lower()
     szl = (sz or '').lower()
     extra = []
@@ -131,7 +113,6 @@ def ram_rules(op, sz, args, ctx):
         return op, sz, args, extra
     ops = split_operands(args)
 
-    # (symbol).w absolute short -> long. Genesis RAM and the low ROM routines both used it.
     def fix_abs(o):
         out = o
         i = out.lower().find(').w')
@@ -171,11 +152,10 @@ def ram_rules(op, sz, args, ctx):
                         sz = '.l'
                         ops = ['#RAMBASE+$%04X' % v, dst]
                 elif re.match(r'^[A-Za-z_]', e):
-                    sz = '.l'          # movea.w #RomLabel (labels below $8000 in the cartridge)
+                    sz = '.l'
         elif re.match(r'^(a[0-7]|sp)$', src.lower()):
-            sz = '.l'                  # copy of a RAM pointer, keep all 32 bits
+            sz = '.l'
         elif opl == 'movea':
-            # word pointer fetched from memory: sign extended $FFFFxxxx -> RAMBASE+xxxx
             extra.append('\tadda.l\t#RAMFIX,' + dst)
             report.append('%s: wordptr %s %s' % (ctx, op + (sz or ''), args))
         else:
@@ -193,25 +173,16 @@ def convert_line(code, ctx):
     if args is not None and re.match(r'^(equ|=|set)$', op, re.I):
         return [code]
     op2, sz2, args2, extra = ram_rules(op, sz, args, ctx)
-    # The game's mask 5 or 3 keeps out the Genesis line interrupts. On the Amiga levels 1-5 are
-    # the port's own (the blit queue and vertical blank on 3): the game's code lets them in, or
-    # the blitter would wait while the game runs.
     if op2.lower() == 'move' and args2 and re.match(r'^#\$2[1-5]00,sr$', args2, re.I):
         args2 = '#$2000,sr'
-    # Code grows (32-bit RAM addresses), so let vasm size every branch (bra.l on the 68020).
     if sz2 and re.match(r'^(bra|bsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo))$', op2, re.I) \
-            and '*' not in (args2 or ''):     # bra.w *+4 counts on the branch's own size
+            and '*' not in (args2 or ''):
         sz2 = None
     line = lab + ws + op2 + (sz2 or '') + ((ws2 + args2) if args2 is not None else '')
     return [line] + extra
 
 
-# ---------------------------------------------------------------------------------------------
-# Video memory. The game's Vmaddr (and xyVmMap through it) returns in a0 a pointer to where the
-# data for a video memory address goes (amiga/src/vmem.asm): the writes the game made through
-# the data port at a0 become (a0)+ stores. A forward data-flow pass finds the address registers
-# that hold such a pointer. Any other access to the video chip's ports is an error: the
-# patches (patches.py) give each of the game's a native form.
+# Video memory.
 
 PORT_RETURNERS = {'vmaddr': 'a0', 'xymmap': None, 'xyvmmap': 'a0'}
 BRANCH = re.compile(r'^(bra|bsr|jmp|jsr|b(hi|ls|cc|cs|ne|eq|vc|vs|pl|mi|ge|lt|gt|le|hs|lo)|db[a-z]+)$', re.I)
@@ -225,11 +196,7 @@ def _target(args):
 
 
 def vmem_pass(rel, lines):
-    """Rewrite the data port writes through Vmaddr's pointer. lines: list of (code, comment).
-    Returns the new list.
-
-    Iterates to a fixed point so backward branches and local subroutines (bsr .x) see the
-    register state of every path into them."""
+    """Rewrite the data port writes through Vmaddr's pointer."""
     labin = {}
     for _ in range(6):
         before = repr(sorted((k, sorted(v.items())) for k, v in labin.items()))
@@ -240,7 +207,7 @@ def vmem_pass(rel, lines):
 
 
 def _vmem_once(rel, lines, labin, final):
-    state = {}            # reg -> 'data' / 'ctrl'
+    state = {}
     routine = ''
     out = []
     for idx, (code, com) in enumerate(lines):
@@ -283,7 +250,6 @@ def _vmem_once(rel, lines, labin, final):
                     new = op + sz + '\t' + ','.join(o.strip() for o in ops)
             if new and final:
                 vmem_report.append('%s: %s  ->  %s' % (ctx, body, new))
-        # state updates
         if op in ('movea', 'lea', 'move') and len(ops) == 2:
             s0, d0 = ops[0].strip().lower(), ops[1].strip().lower()
             if re.match(r'^a[0-7]$', d0):
@@ -317,7 +283,6 @@ def _vmem_once(rel, lines, labin, final):
         elif len(ops) == 2 and re.match(r'^a[0-7]$', ops[1].strip().lower()) and op not in (
                 'cmpa', 'cmp', 'tst', 'btst'):
             state.pop(ops[1].strip().lower(), None)
-        # control flow
         if BRANCH.match(op):
             t = _target(args)
             if t.startswith('.') and state:
@@ -335,12 +300,11 @@ def _vmem_once(rel, lines, labin, final):
 WAITOPS = ('cmp', 'cmpi', 'tst', 'btst')
 
 
-IDLE_SKIP = {'sound94.asm'}     # its loops are the sound driver's own, in the vblank code
+IDLE_SKIP = {'sound94.asm'}
 
 
 def idle_pass(rel, lines):
-    """Put jsr hal_idle at the top of busy-wait loops: a local label, at most 3 compare / test
-    instructions, then a conditional branch back to the label. The renderer runs meanwhile."""
+    """Put jsr hal_idle at the top of busy-wait loops: a local label."""
     out = list(lines)
     if rel in IDLE_SKIP:
         return out
@@ -370,7 +334,7 @@ def idle_pass(rel, lines):
                 pass
             elif opn in ('move', 'sub', 'subi', 'and', 'andi') and len(ops) == 2 \
                     and re.match(r'^d[0-7]$', ops[1].strip(), re.I):
-                pass                # reads into a data register only
+                pass
             else:
                 break
             k += 1
@@ -379,7 +343,7 @@ def idle_pass(rel, lines):
         mb = re.match(r'^b(ne|eq|pl|mi|lt|ge|gt|le|cc|cs|hi|ls)(\.[sw])?\s+(\S+)$', body[k], re.I)
         if not mb or mb.group(3) != lab:
             continue
-        if m.group(2):      # label and instruction on one line: split them
+        if m.group(2):
             cm = split_comment(lines[i])[1]
             out[i] = lab + '\n\tjsr\t(hal_idle).l\n\t' + m.group(2) + cm
         else:

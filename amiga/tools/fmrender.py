@@ -1,41 +1,23 @@
 #!/usr/bin/env python3
-"""Render the game's 32 YM2612 FM patches as Amiga samples (build step of the Amiga port).
-
-Paula has no FM synthesis, so each patch is played as a sample: 8 bit, rendered at 20000 Hz.
-A patch is rendered at the pitch bands it is used at in the songs and sound effects (an octave
-a band), so every note plays back at 0.71 to 1.41 times the render rate (14.1 to 28.3 kHz: the
-top is as fast as Paula plays, a period of 124). A sound that holds is the attack (the envelopes until they
-settle) then a loop of 2 periods; the rest of its envelope (decay, and the release at key off)
-is a volume envelope at run time (amiga/src/sound.asm). A sound that dies away by itself is one
-sample with no loop.
-
-The synthesis is a floating point model of the YM2612: 4 operators, the 8 algorithms,
-operator 1 feedback, MUL, TL, AR/D1R/D2R/SL envelopes with key scaling. Carriers are rendered
-at TL 0 (the driver sets their TL from the note volume); modulators keep the patch TL.
-Detune, SSG-EG and the LFO are left out. FM with feedback has harmonics far above the sample
-rate, which would fold back as harsh inharmonic noise: the patches are synthesised at OS times
-the rate and low-pass filtered (windowed sinc) before they are decimated.
-
-Needs numpy. Usage: fmrender.py <Extracted/NHL94/Sound directory> out.i
-"""
+"""Render the game's 32 YM2612 FM patches as Amiga samples (build step of the Amiga port)."""
 import glob, math, os, sys
 import numpy as np
 
-SR = 20000                # render rate: a note at the band's pitch plays back at this rate
-OS = 8                    # synthesis at OS * SR
-BANDS = [20.0 * 2 ** k for k in range(8)]   # band pitches (Hz); a note f uses the highest <= f*sqrt 2
-ATTACK_MAX = 0.25         # at most this much attack before the loop (seconds)
-SETTLE = 0.04             # attack continues this long after the last operator's attack ends
-ONESHOT_MAX = 0.70        # length limit of a sound with no loop
-DIES = 0.50               # a sound silent this long after its attack is one shot
-FPS = 60                  # run time envelope steps a second
-PAULA = 3546895           # Paula clock (PAL)
-FSTEP = 7670454 / 144 / 2 ** 21   # Hz per fnum unit at block 0 (0.025399)
-EGCLK = 7670454 / 144 / 3         # envelope generator clock (Hz)
-TAPS = 511                # low-pass filter length at OS * SR
-CUTOFF = 0.42             # its cut off, as a fraction of SR
+SR = 20000
+OS = 8
+BANDS = [20.0 * 2 ** k for k in range(8)]
+ATTACK_MAX = 0.25
+SETTLE = 0.04
+ONESHOT_MAX = 0.70
+DIES = 0.50
+FPS = 60
+PAULA = 3546895
+FSTEP = 7670454 / 144 / 2 ** 21
+EGCLK = 7670454 / 144 / 3
+TAPS = 511
+CUTOFF = 0.42
 
-SLOT_OF_BYTE = [0, 2, 1, 3]   # patch byte i -> operator (the chip orders them S1, S3, S2, S4)
+SLOT_OF_BYTE = [0, 2, 1, 3]
 CARRIERS = {0: [3], 1: [3], 2: [3], 3: [3], 4: [1, 3], 5: [1, 2, 3], 6: [1, 2, 3], 7: [0, 1, 2, 3]}
 FNUM = [0x146, 0x159, 0x16E, 0x184, 0x19B, 0x1B3, 0x1CD, 0x1E8, 0x205, 0x224, 0x245, 0x268]
 
@@ -87,7 +69,7 @@ def setup(patch, f0, rate):
         o['rr_'] = rate_step(4 * o['rr'] + 2 + ksr)
         o['slatt'] = 992.0 if o['sl'] == 15 else o['sl'] * 32.0
         o['att'] = 1023.0
-        o['stage'] = 0                  # 0 attack, 1 decay, 2 sustain (second decay)
+        o['stage'] = 0
         o['phase'] = 0.0
         o['inc'] = f0 * (0.5 if o['mul'] == 0 else o['mul']) / rate
     return ops, alg, fb
@@ -117,13 +99,10 @@ def env_step(o, clocks):
 
 
 def render(patch, f0, n, freeze=None):
-    """n samples at OS * SR of the patch keyed on at pitch f0; the envelopes stop moving at
-    sample freeze. Returns (samples, operator states at the end, sample at which every attack
-    had ended)."""
+    """n samples at OS * SR of the patch keyed on at pitch f0."""
     rate = SR * OS
     ops, alg, fb = setup(patch, f0, rate)
     carriers = CARRIERS[alg]
-    # envelopes: stepped at the EG clock, then spread over the samples
     ticks = int(n * EGCLK / rate) + 2
     tfreeze = ticks if freeze is None else int(freeze * EGCLK / rate) + 1
     att = np.zeros((4, ticks))
@@ -144,7 +123,6 @@ def render(patch, f0, n, freeze=None):
     t = np.arange(n)
     ph = [(t * o['inc']) % 1.0 for o in ops]
     tau = 2 * math.pi
-    # operator 1 with its feedback, one sample after the other
     s1 = np.empty(n)
     g0, p0 = gain[0], ph[0]
     k = 2.0 ** (fb - 7) if fb else 0.0
@@ -194,26 +172,23 @@ def decimate(x):
 
 
 def make_sample(patch, band):
-    """One render of the patch for a band. Returns (data, loop start, loop length, carrier op
-    state at the loop) with loop length 0 for a one shot sound."""
-    spc = max(2, round(SR / band))      # samples a period
+    """One render of the patch for a band."""
+    spc = max(2, round(SR / band))
     f0 = SR / spc
-    per2 = 2 * spc                      # the loop: 2 periods (MUL 0 is half the pitch)
+    per2 = 2 * spc
     first, ops, attacked = render(patch, f0, int((ATTACK_MAX + DIES) * SR * OS))
     if attacked is None:
         attacked = int(ATTACK_MAX * SR * OS)
     attacked //= OS
     loop = max(per2, -(-int(attacked + SETTLE * SR) // per2) * per2)
     loop = min(loop, max(per2, int(ATTACK_MAX * SR) // per2 * per2))
-    main = ops[3]                       # S4 is a carrier in every algorithm
+    main = ops[3]
     if main['att'] >= 1000 or (main['stage'] == 2 and main['rd2'] * EGCLK * DIES > 1023):
-        # dies away: one shot, cut where it is silent
         full = decimate(render(patch, f0, int(ONESHOT_MAX * SR * OS))[0])
         loud = np.nonzero(np.abs(full) > 0.004)[0]
         n = int(loud[-1]) + 1 if len(loud) else 2
         n += n & 1
         return full[:n], n, 0, None
-    # the envelopes stop at the loop; the loop starts once the filter has settled after that
     settle = -(-(TAPS // OS + 2) // per2) * per2
     total = loop + settle + per2
     full, ops, _ = render(patch, f0, total * OS, freeze=loop * OS)
@@ -259,8 +234,8 @@ def main():
     lines = [';\tGenerated by amiga/tools/fmrender.py from the game\'s FM patches: the patches as',
              ';\tsamples (signed 8 bit) at the pitch bands they are used at.', '',
              'FM_BANDS\tequ\t%d' % len(BANDS), '', '\tsection\tsndchip,data_c']
-    renders = []        # (label, words, loop start, loop words, K)
-    patches = []        # (render per band, r1, sl, r2, rr)
+    renders = []
+    patches = []
     total = 0
     for p in range(len(raw) // 32):
         patch = raw[p * 32:p * 32 + 32]
@@ -274,7 +249,7 @@ def main():
             if op is not None and main is None:
                 main = op
         peak = max(float(np.abs(d[1]).max()) for d in datas)
-        scale = 127.0 / max(peak, 1.0)        # quiet patches stay quiet
+        scale = 127.0 / max(peak, 1.0)
         for b, data, ls, ll in datas:
             label = 'fm_p%02d_b%d' % (p, b)
             lines.append(label)
@@ -284,7 +259,7 @@ def main():
             for i in range(0, len(bs), 32):
                 lines.append('\tdc.b\t' + ','.join('$%02X' % x for x in bs[i:i + 32]))
             spc = max(2, round(SR / BANDS[b]))
-            k = int(round(PAULA / (spc * FSTEP)))     # Paula period = k / (fnum << block)
+            k = int(round(PAULA / (spc * FSTEP)))
             made[b] = len(renders)
             renders.append((label, len(bs) // 2, ls, ll // 2, k))
             total += len(bs)

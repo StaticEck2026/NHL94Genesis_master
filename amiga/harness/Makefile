@@ -1,5 +1,4 @@
-# Test harness: build with  make MUSASHI=/path/to/Musashi  (its sources: the CPU core is built
-# here with the instruction hook and the interrupt acknowledge callback on, for NHL_DETERM)
+# make MUSASHI=/path/to/Musashi (the core is built with its instruction hook and interrupt acknowledge callback)
 MUSASHI ?= /opt/amiga/musashi
 CFLAGS = -O2 -g -Wall -I$(MUSASHI)
 CORE = -DM68K_INSTRUCTION_HOOK=M68K_OPT_ON -DM68K_EMULATE_INT_ACK=M68K_OPT_ON -O2 -I$(MUSASHI) -w

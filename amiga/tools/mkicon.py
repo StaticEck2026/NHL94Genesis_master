@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""Write the Workbench tool icon of the launcher (NHL94.info): a 4 colour (Workbench 2+
-palette: grey, black, white, blue) puck and stick with "NHL 94". With "drawer", the same
-picture as the icon of a drawer (the drawer the LHA archive unpacks to).
-
-Usage: mkicon.py out.info [drawer]
-"""
+"""Write the Workbench tool icon of the launcher: a 4 colour puck and stick with "NHL 94"."""
 import struct, sys
 
 W, H = 48, 28
-# 0 grey, 1 black, 2 white, 3 blue
 ART = [
     "................................................",
     "..1111.......11..11.11......11111.....11....11..",
@@ -62,9 +56,6 @@ def main():
                                                                0, 0 if drawer else 16384)
     image = struct.pack('>hhhhhIBBI', 0, 0, W, H, 2, 1, 3, 0, 0)
     if drawer:
-        # its window (an old NewWindow: place, size, default pens, no flags, minimum and maximum
-        # size, the Workbench screen) and where it shows its contents; after the image, as icons
-        # of revision 1 have it: show the default (icons), view by default
         window = struct.pack('>hhhhBBIIIIIIIhhHHH', 50, 50, 320, 120, 255, 255, 0, 0, 0, 0, 0, 0, 0,
                              90, 40, 0xFFFF, 0xFFFF, 1)
         dd = window + struct.pack('>ii', 0, 0)

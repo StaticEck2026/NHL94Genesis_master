@@ -1,23 +1,7 @@
 #!/usr/bin/env python3
-"""The code and data of the Amiga build that nothing reaches (a report: unused.py
-output/amiga/src [output/amiga/nhl94.lst] [-d] [-l] [-t=FILE]).
+"""unused.py SRC [LISTING] [-d] [-l] [-t=FILE]: the code and data of the Amiga build nothing reaches.
 
-The assembled sources (output/amiga/src: the converted game and the Amiga code, from
-nhl94_amiga.asm through its includes; -t=stub.asm: the launcher) are cut into blocks, each
-from a global label to the next (or to a change of section). A block reaches the labels,
-equates and macros its lines name, and the block after it in its section when it can run on
-into it: its last instruction is not rts, rte, bra or jmp, or its last line is a local label
-(the next block's start). Equates and macros reach what their definitions name. Both sides of
-every IF are read, so what the harness build (HARNESS) uses counts. From the
-first block (hal_header: AmigaDOS starts there), what comes before each section's first label,
-and every name the build script, the tools, the test harness and the launcher use, what is not reached is
-listed with its bytes in the listing. Symbols are compared without case (the build assembles
-with -nocase).
-
--d: a data block (dc, ds, incbin only) also runs on into a data block after it (a table read
-past its label). -l: the unused equates and macros too, and the unused labels with nothing
-after them.
-"""
+-d: a data block runs on into the next; -l: unused equates, macros and empty labels too."""
 import os, re, sys
 
 ID = r'[A-Za-z_][A-Za-z0-9_]*'
@@ -61,8 +45,7 @@ def read(src, name, out, seen):
 def parse(src, top='nhl94_amiga.asm'):
     lines = []
     read(src, top, lines, set())
-    blocks = []                         # [name, section, file, first line, last line, refs, last op, data,
-                                        #  holds anything]
+    blocks = []
     eqs, macros = {}, {}
     cur = None
     section = 'game'
@@ -98,9 +81,8 @@ def parse(src, top='nhl94_amiga.asm'):
         elif re.match(r'^\.\w+:?', line) or re.match(r'^%s\$:?' % ID, line):
             body = ' ' + re.sub(r'^\S+', '', line)
             if cur is not None:
-                cur[6] = None           # (a local label: what follows it is reached; if
-                                        # nothing does in this block, the next block is)
-        if cur is None:                 # (before a section's first label: always kept)
+                cur[6] = None
+        if cur is None:
             cur = ['<%s %s:%d>' % (section, fn, n), section, fn, n, n, set(), None, True, False]
             blocks.append(cur)
         cur[4] = n
@@ -116,10 +98,10 @@ def parse(src, top='nhl94_amiga.asm'):
             cur[5] |= set(x.lower() for x in re.findall(r'(?<![\.\w])' + ID, ' '.join(t[1:])))
             continue
         cur[6] = op
-        cur[8] = True                   # (it holds code or data)
+        cur[8] = True
         if base not in DATA:
             cur[7] = False
-        cur[5].add(op)                  # (a macro's name)
+        cur[5].add(op)
         cur[5] |= set(x.lower() for x in re.findall(r'(?<![\.\w])' + ID, ' '.join(t[1:])))
     return blocks, eqs, macros
 
@@ -134,19 +116,15 @@ def main():
     byname = {}
     for b in blocks:
         byname.setdefault(b[0], []).append(b)
-    # roots: the first block, and the names the build, tools and harness use
-    roots = {blocks[0][0]} | {b[0] for b in blocks if b[0].startswith('<')}   # (and what comes
-                                        # before a section's first label: always assembled)
+    roots = {blocks[0][0]} | {b[0] for b in blocks if b[0].startswith('<')}
     here = os.path.dirname(os.path.abspath(__file__))
-    other = [os.path.join(here, '..', 'src', 'stub.asm')] if not top else []   # (the launcher
+    other = [os.path.join(here, '..', 'src', 'stub.asm')] if not top else []
     for f in [os.path.join(here, '..', 'build.sh')] + other + \
              [os.path.join(here, x) for x in os.listdir(here) if x.endswith('.py') and x != 'unused.py'] + \
              [os.path.join(here, '..', 'harness', x) for x in os.listdir(os.path.join(here, '..', 'harness'))
               if x.endswith(('.c', '.sh', '.py'))]:
-        words = set(w.lower() for w in re.findall(ID, open(f, encoding='latin-1').read()))   # (reads
-                                        # build.i's figures too)
+        words = set(w.lower() for w in re.findall(ID, open(f, encoding='latin-1').read()))
         roots |= words & (set(byname) | set(eqs) | set(macros))
-    # what follows a block that runs on into it
     nxt = {}
     last = {}
     for b in blocks:
@@ -164,7 +142,7 @@ def main():
             seenb.add(id(b))
             todo += [r for r in b[5] if r not in live]
             n = nxt.get(id(b))
-            if b[7]:                    # data: into data after it, with -d
+            if b[7]:
                 runs_on = '-d' in opts and n is not None and n[7]
             else:
                 runs_on = b[6] not in TRANSFER
@@ -172,7 +150,6 @@ def main():
                 todo.append(n[0])
         todo += [r for r in eqs.get(name, ()) if r not in live]
         todo += [r for r in macros.get(name, ()) if r not in live]
-    # the listing's addresses: bytes of each unused block
     addr = {}
     if os.path.exists(lst):
         txt = open(lst, encoding='latin-1').read()

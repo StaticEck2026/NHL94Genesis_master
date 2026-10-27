@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""List the places that hold Genesis RAM window addresses (build step of the Amiga port).
-
-The game's references to its RAM window (RAMBASE, a hunk of its own) are ordinary hunk
-relocations. The window must be 64K aligned, which AmigaDOS cannot do, so the game moves it
-at start (ram_relocate, os.asm): it adds the distance to every long listed here.
-
-Usage: ramrel.py nhl94.game WINDOW_HUNK out.i LABEL0 LABEL1 ...
-  WINDOW_HUNK: the window hunk's number; LABELn: a label at the start of hunk n.
-The include lists each place as LABELn+offset, so it is relocated with the rest.
-"""
+"""List the places that hold Genesis RAM window addresses (build step of the Amiga port)."""
 import struct, sys
 
 HUNK_UNIT, HUNK_NAME, HUNK_CODE, HUNK_DATA, HUNK_BSS = 0x3E7, 0x3E8, 0x3E9, 0x3EA, 0x3EB
@@ -34,18 +25,18 @@ def relocs(path):
 
     assert long() == HUNK_HEADER
     while long():
-        pass                                    # resident library names (none)
-    long()                                      # table size
+        pass
+    long()
     first, last = long(), long()
     nh = last - first + 1
     for _ in range(nh):
         long()
-    out = []                                    # (hunk, offset, target)
+    out = []
     h = 0
     while p < len(d) and h < nh:
         t = long() & 0x3FFFFFFF
         if t in (HUNK_CODE, HUNK_DATA):
-            n = long() & 0x3FFFFFFF             # (the size can carry the memory type)
+            n = long() & 0x3FFFFFFF
             p += n * 4
         elif t == HUNK_BSS:
             long()

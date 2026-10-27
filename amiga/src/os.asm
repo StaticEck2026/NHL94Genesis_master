@@ -1,9 +1,5 @@
 ;	AmigaDOS side: checks the machine, loads the save file, stops the floppy motors, takes the
-;	machine over and runs the game; on exit (Esc) gives the machine back to the OS and writes the
-;	save file.
-;
-;	The Genesis work RAM window is a 64K aligned block taken at start, in fast memory if there is
-;	some; ram_relocate moves the program's references to it there.
+;	machine over and runs the game; on exit gives the machine back to the OS and writes the save file.
 
 EXEC_Forbid		equ	-132
 EXEC_Permit		equ	-138
@@ -60,25 +56,23 @@ _start
 	jsr	EXEC_OpenLibrary(a6)
 	move.l	d0,(os_gfx).l
 	beq	.fail
-	; 68020 or better, AGA
-	btst	#1,$129(a6)			;AttnFlags: AFB_68020
+	btst	#1,$129(a6)
 	bne	.cpu
 	lea	(.msgcpu,pc),a0
 	bra	.error
 .cpu	movea.l	(os_gfx).l,a0
-	btst	#2,$EC(a0)			;ChipRevBits0: GFXB_AA_ALICE
+	btst	#2,$EC(a0)
 	bne	.aga
-	move.w	(CUSTOM+$07C).l,d0		;Lisa id: $F8 on AGA
+	move.w	(CUSTOM+$07C).l,d0
 	cmpi.b	#$F8,d0
 	beq	.aga
 	lea	(.msgaga,pc),a0
 	bra	.error
-.aga	; PAL or NTSC display
+.aga
 	movea.l	(os_gfx).l,a0
-	btst	#2,$CE+1(a0)			;DisplayFlags: PAL
+	btst	#2,$CE+1(a0)
 	sne	(hal_pal).l
 	sne	(hal_palclk).l
-	; the Genesis RAM window: 64K aligned in a 128K block, fast memory if there is some
 	movea.l	(os_exec).l,a6
 	move.l	#$20000,d0
 	moveq	#MEMF_FAST,d1
@@ -92,9 +86,8 @@ _start
 	bne	.win
 	lea	(.msgnomem,pc),a0
 	bra	.error
-.win	; only the 64K window in it kept: the block given back and the window taken (with no
-	; other task in between); if that fails, the block kept
-	move.l	d0,d2			;(in d2: calls may change d0-d1/a0-a1)
+.win
+	move.l	d0,d2
 	jsr	EXEC_Forbid(a6)
 	movea.l	d2,a1
 	move.l	#$20000,d0
@@ -124,10 +117,8 @@ _start
 	clr.w	d0
 	movea.l	d0,a0
 	bsr	ram_relocate
-	jsr	EXEC_CacheClearU(a6)		;the code has changed
+	jsr	EXEC_CacheClearU(a6)
 	bsr	os_load_sram
-	; the sprite image ring's second part (rd_sc_alloc): in the chip memory left, up to
-	; SCXMAX, 32K left over (none if under 32K would be)
 	move.l	#MEMF_CHIP|MEMF_LARGEST,d1
 	jsr	EXEC_AvailMem(a6)
 	subi.l	#$8000,d0
@@ -144,7 +135,7 @@ _start
 	beq.s	.nx
 	move.l	d0,(rd_scx).l
 	move.l	d2,(rd_scxsz).l
-.nx	; ciab.resource: which CIA-B interrupts the OS has on
+.nx
 	lea	(.cianame,pc),a1
 	jsr	EXEC_OpenResource(a6)
 	move.l	d0,(os_ciab).l
@@ -162,16 +153,15 @@ _start
 	moveq	#0,d0
 	jsr	CIA_AbleICR(a6)
 	move.b	d0,(os_ciaamask).l
-.nocia2	; data cache off (the blitter and the CPU share the screens), instruction cache on
+.nocia2
 	movea.l	(os_exec).l,a6
 	moveq	#CACRF_EnableI,d0
 	move.l	#CACRF_EnableI|CACRF_EnableD,d1
 	jsr	EXEC_CacheControl(a6)
 	move.l	d0,(os_cacr).l
 	bsr	os_motors
-	; take the display and the blitter
 	movea.l	(os_gfx).l,a6
-	move.l	$22(a6),(os_view).l		;ActiView
+	move.l	$22(a6),(os_view).l
 	suba.l	a1,a1
 	jsr	GFX_LoadView(a6)
 	jsr	GFX_WaitTOF(a6)
@@ -190,25 +180,23 @@ _start
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
 	move.w	#$7FFF,INTREQ(a0)
-	; run the game in supervisor mode
 	lea	(os_super,pc),a5
 	jsr	EXEC_Supervisor(a6)
-	; back from the game: user mode, interrupts still disabled by Disable()
 	lea	(CUSTOM).l,a0
-	tst.b	(hal_beam).l			;the display's own rate again
+	tst.b	(hal_beam).l
 	beq.s	.beam
 	moveq	#0,d0
 	tst.b	(hal_palclk).l
 	beq.s	.bn
 	moveq	#$20,d0
-.bn	move.w	d0,$1DC(a0)			;BEAMCON0
+.bn	move.w	d0,$1DC(a0)
 .beam
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
 	move.w	(os_adkcon).l,d0
 	ori.w	#$8000,d0
 	move.w	#$7FFF,$09E(a0)
-	move.w	d0,$09E(a0)			;ADKCON
+	move.w	d0,$09E(a0)
 	move.w	(os_dmacon).l,d0
 	ori.w	#$8000,d0
 	move.w	d0,DMACON(a0)
@@ -218,7 +206,7 @@ _start
 	jsr	EXEC_Enable(a6)
 	jsr	EXEC_Permit(a6)
 	movea.l	(os_gfx).l,a6
-	move.l	$26(a6),(CUSTOM+$080).l		;copinit
+	move.l	$26(a6),(CUSTOM+$080).l
 	movea.l	(os_view).l,a1
 	jsr	GFX_LoadView(a6)
 	jsr	GFX_WaitTOF(a6)
@@ -262,8 +250,8 @@ _start
 .msgnomem	dc.b	'Not enough memory.',0
 	even
 
-;	Move the Genesis RAM window to a0 (64K aligned): add the distance to every long listed in
-;	ram_relocs (ramrel.py), which hold addresses in it. Called once, before the window is used.
+;	Move the Genesis RAM window to a0 (64K aligned): add the distance to
+;	every long listed in ram_relocs (ramrel.py), which hold addresses in it.
 ram_relocate
 	movem.l	d0-d1/a1-a2,-(sp)
 	move.l	a0,d1
@@ -285,35 +273,33 @@ os_super
 	move.l	d0,(os_vbr).l
 	jmp	hal_game_main
 
-;	Back to the OS (Esc). Called in supervisor mode from anywhere in the game.
+;	Back to the OS (Esc).
 hal_exit
 	move	#$2700,sr
 	lea	(CUSTOM).l,a0
 	move.w	#$7FFF,INTENA(a0)
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
-	move.w	#0,$02E(a0)			;COPCON: the copper off the blitter again
-	move.w	#$000F,DMACON(a0)		;sound off
-	move.b	#$7F,(CIAB_ICR).l		;CIA-B: our timer off, the OS's interrupts back
+	move.w	#0,$02E(a0)
+	move.w	#$000F,DMACON(a0)
+	move.b	#$7F,(CIAB_ICR).l
 	move.b	(os_ciabcra).l,(CIAB_CRA).l
 	move.b	(os_ciabmask).l,d0
 	ori.b	#$80,d0
 	move.b	d0,(CIAB_ICR).l
 	bsr	hal_kbd_exit
 	jsr	(snd_exit).l
-	jsr	(hal_cpu_exit).l		;(a 68040's or 68060's caches as they were)
+	jsr	(hal_cpu_exit).l
 	move.l	(os_vbr).l,d0
 	movec	d0,vbr
 	movea.l	(os_ssp).l,sp
 	movea.l	(os_exec).l,a6
-	rte					;returns from Supervisor()
+	rte
 
 	include	"request.i"
 
-;	The floppy drives' motors off: the file system stops one a second or two after its last
-;	read, and the game takes the machine before then (it has just read the save file), which
-;	would leave a drive started from spinning all game. TD_MOTOR 0 to each trackdisk unit
-;	there is.
+;	The floppy drives' motors off: the file system stops one a second or
+;	two after its last read, and the game takes the machine before then.
 os_motors
 	movem.l	d0-d4/a0-a1/a6,-(sp)
 	movea.l	(os_exec).l,a6
@@ -321,21 +307,21 @@ os_motors
 	move.l	d0,d3
 	beq.s	.x
 	movea.l	d0,a0
-	moveq	#56,d0				;(an IOExtTD)
+	moveq	#56,d0
 	jsr	EXEC_CreateIORequest(a6)
 	move.l	d0,d2
 	beq.s	.np
-	moveq	#0,d4				;the unit
+	moveq	#0,d4
 .u	lea	(.tdname,pc),a0
 	move.l	d4,d0
 	movea.l	d2,a1
 	moveq	#0,d1
 	jsr	EXEC_OpenDevice(a6)
 	tst.b	d0
-	bne.s	.n				;(no such drive)
+	bne.s	.n
 	movea.l	d2,a1
-	move.w	#9,28(a1)			;io_Command: TD_MOTOR
-	clr.l	36(a1)				;io_Length 0: off
+	move.w	#9,28(a1)
+	clr.l	36(a1)
 	jsr	EXEC_DoIO(a6)
 	movea.l	d2,a1
 	jsr	EXEC_CloseDevice(a6)
@@ -356,7 +342,7 @@ os_load_sram
 	movem.l	d1-d4/a0-a1/a6,-(sp)
 	movea.l	(os_dos).l,a6
 	move.l	#os_savename,d1
-	move.l	#1005,d2			;MODE_OLDFILE
+	move.l	#1005,d2
 	jsr	DOS_Open(a6)
 	move.l	d0,d4
 	beq	.x
@@ -386,7 +372,7 @@ os_save_sram
 	dbf	d0,.cp
 	movea.l	(os_dos).l,a6
 	move.l	#os_savename,d1
-	move.l	#1006,d2			;MODE_NEWFILE
+	move.l	#1006,d2
 	jsr	DOS_Open(a6)
 	move.l	d0,d4
 	beq	.x
@@ -398,7 +384,6 @@ os_save_sram
 	jsr	DOS_Close(a6)
 .x	movem.l	(sp)+,d1-d4/a0-a1/a6
 	rts
-
 
 os_savename	dc.b	'PROGDIR:NHL94.sav',0
 	even
@@ -412,8 +397,8 @@ os_dos		ds.l	1
 os_gfx		ds.l	1
 os_ciab		ds.l	1
 os_view		ds.l	1
-os_backup	ds.l	1			;the RAM window's memory,
-os_backsz	ds.l	1			;its size
+os_backup	ds.l	1
+os_backsz	ds.l	1
 os_cacr		ds.l	1
 os_intena	ds.w	1
 os_dmacon	ds.w	1
@@ -422,9 +407,9 @@ os_ciabmask	ds.b	1
 os_ciabcra	ds.b	1
 os_ciaamask	ds.b	1
 os_sramok	ds.b	1
-hal_pal		ds.b	1			;PAL display (50 Hz; F8 switches it)
-hal_palclk	ds.b	1			;PAL machine (its clocks)
-hal_beam	ds.b	1			;the display's rate was switched (BEAMCON0)
+hal_pal		ds.b	1
+hal_palclk	ds.b	1
+hal_beam	ds.b	1
 		even
 os_iobuf	ds.b	$2000
 

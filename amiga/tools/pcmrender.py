@@ -1,19 +1,10 @@
 #!/usr/bin/env python3
-"""The game's PCM sounds as Amiga samples (build step of the Amiga port): signed 8 bit, at most
-MAXHZ samples a second (as fast as Paula plays: a period of 124).
-
-The Z80 driver plays a PCM sound from its start (pcm_sample_table) up to the first 0 byte, at a
-rate set per note. They are kept as they are (6.5 to 12 kHz), but the one played faster than
-Paula can (the glass at 29 kHz), which is resampled down a little, and the voice plays it at a
-period longer by the same factor (sound.asm), so it keeps its pitch.
-
-Needs numpy. Usage: pcmrender.py <src/sound94.asm> <Extracted/NHL94/Sound directory> out.i
-"""
+"""The game's PCM sounds as Amiga samples: signed 8 bit, at most MAXHZ samples a second."""
 import glob, math, os, re, sys
 import numpy as np
 
-MAXHZ = 28600                       # Paula's clock / 124
-PCMHZ = 30594                       # the Z80 PCM loop: a rate step is 1/256 sample at this
+MAXHZ = 28600
+PCMHZ = 30594
 FNUM = [0x146, 0x159, 0x16E, 0x184, 0x19B, 0x1B3, 0x1CD, 0x1E8, 0x205, 0x224, 0x245, 0x268]
 
 
@@ -97,19 +88,19 @@ def main():
             lines.append('\tdc.b\t' + ','.join('$%02X' % v for v in bs[i:i + 32]))
         return len(bs)
 
-    emit(data)                                  # the sounds kept as they are, all in one
+    emit(data)
     entries = []
-    slow = {}                                   # start label -> (its own label, bytes, factor)
+    slow = {}
     for p, label in enumerate(table):
         if label is None:
             entries.append(None)
             continue
         start = labels[label]
-        n = blob.index(0, start) - start        # up to the 0 that ends it
+        n = blob.index(0, start) - start
         users = [q for q, l in enumerate(table) if l == label]
         top = max(rates.get(q, 0) for q in users)
         if top <= MAXHZ:
-            entries.append(('pcm_rom+%d' % start, n & ~1, 256))   # (whole words: not the 0)
+            entries.append(('pcm_rom+%d' % start, n & ~1, 256))
             continue
         if label not in slow:
             f = top / MAXHZ

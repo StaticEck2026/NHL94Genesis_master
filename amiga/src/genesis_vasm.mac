@@ -1,7 +1,6 @@
-;	vasm versions of the macros in src/macros/genesis.mac. vasm cannot org backwards inside a
-;	section, so the length words are forward references instead.
+;	vasm versions of the macros in src/macros/genesis.mac.
 
-VmInc MACRO							;set video auto inc. mode
+VmInc MACRO
 	VCTLW	#$8f00+(\1&255)
 	ENDM
 

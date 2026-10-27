@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
-"""Pack nhl94.game for a floppy (build step of the Amiga port): NHL94.pak.
-
-A hunk executable does not fit on an 880 KB disk, so its hunks are deflate compressed, each on
-its own, and the launcher (stub.asm, inflate.i) loads them itself: it allocates each hunk,
-inflates it in place, then applies the relocations. Layout (big endian longs):
-
-  'NHLZ', hunks, reloc table bytes
-  per hunk: size in longs with the memory type in bits 30 / 31 (as in HUNK_HEADER),
-            compressed bytes (0: nothing to inflate, a BSS hunk)
-  the reloc table's compressed bytes
-  the hunks' deflate data, one after the other, then the reloc table's
-The reloc table (inflated): per hunk, groups of (count, target hunk, count offsets), a 0 count
-after the hunk's last group.
-
-Usage: pack.py nhl94.game NHL94.pak
-"""
+"""Pack nhl94.game for a floppy (build step of the Amiga port): NHL94.pak."""
 import struct, sys, zlib
 
 HUNK_UNIT, HUNK_NAME, HUNK_CODE, HUNK_DATA, HUNK_BSS = 0x3E7, 0x3E8, 0x3E9, 0x3EA, 0x3EB
@@ -23,7 +8,7 @@ HUNK_RELOC32SHORT, HUNK_DREL32 = 0x3FC, 0x3F7
 
 
 def parse(d):
-    """sizes (longs, with memory bits), data per hunk (bytes), relocs per hunk {target: [offset]}"""
+    """sizes, data per hunk (bytes), relocs per hunk {target: [offset]}."""
     p = 0
 
     def long():
@@ -105,7 +90,7 @@ def main():
         table += struct.pack('>I', 0)
     streams = [deflate(b) if b else b'' for b in data]
     rstream = deflate(table)
-    for b, s in zip(data, streams):                 # the packed data must give the hunks back
+    for b, s in zip(data, streams):
         assert not b or zlib.decompress(s, -15) == b
     out = b'NHLZ' + struct.pack('>II', len(sizes), len(table))
     for sz, s in zip(sizes, streams):

@@ -1,18 +1,13 @@
 #!/bin/sh
-# golden.sh record|check GAME DIR [SESSION...]: scripted sessions of the game in the harness's
-# deterministic mode (NHL_DETERM: every build plays the same game and draws every frame whole),
-# with the Amiga screen saved at many frames. "record" keeps them in DIR as the reference;
-# "check" plays them again and reports each frame whose screen is not the same, pixel for pixel.
-# Sessions: attract (no input), menus (Start every 120 frames: title, setup, into a game, pauses),
-# game (Start until the game begins, then play), tour (in a game, each item of the pause menu),
-# playoffs (the setup screen set to the playoffs: the playoff tree, paged, then the matchups).
+# golden.sh record|check GAME DIR [SESSION...]: scripted harness sessions (NHL_DETERM), each
+# screen kept, or compared pixel for pixel. Sessions: attract menus game tour playoffs.
 MODE=$1; GAME=$2; DIR=$3; shift 3
 SESSIONS=${*:-attract menus game tour playoffs}
 cd "$(dirname "$0")/../.." || exit 1
-pads() {    # "from step to": Start pressed for 10 frames every step frames
+pads() {
     P=""; for f in $(seq "$1" "$2" "$3"); do P="$P$f:80,$((f+10)):0,"; done; echo "${P%,}"
 }
-tour() {    # into a game, then each item of the pause menu in turn: down to it, C, C back, Start
+tour() {
     P=$(pads 700 120 1180); t=2000
     for i in $(seq 1 13); do
         P="$P,$t:80,$((t+10)):0"; u=$((t+150))
@@ -22,7 +17,7 @@ tour() {    # into a game, then each item of the pause menu in turn: down to it,
     done
     echo "$P"
 }
-session() { # name: frames, shot step, pads
+session() {
     case $1 in
     attract) echo "9000 30 0:0" ;;
     menus)   echo "6000 20 $(pads 700 120 3000)" ;;

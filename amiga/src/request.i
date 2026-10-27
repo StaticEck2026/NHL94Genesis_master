@@ -1,7 +1,5 @@
-;	A message for the user in a requester (it stays until OK is clicked, also when the program
-;	was started from a startup-sequence whose console closes at once). Shared by the launcher
-;	and the game. ezrequest: a0 = the text (0 ended, lines split by 10). Keeps all registers.
-;	ezrequesta: the same, with a1 = the text's arguments (a long for each %ld in it).
+;	A message for the user in a requester (it stays until OK is clicked, also when
+;	the program was started from a startup-sequence whose console closes at once).
 
 ez_OpenLibrary		equ	-552
 ez_CloseLibrary		equ	-414
@@ -24,7 +22,7 @@ ezrequesta
 	tst.l	d0
 	beq.s	.x
 	movea.l	d0,a6
-	suba.l	a0,a0				;no window: the Workbench screen
+	suba.l	a0,a0
 	lea	ez_struct,a1
 	suba.l	a2,a2
 	jsr	ez_EasyRequestArgs(a6)
@@ -35,11 +33,11 @@ ezrequesta
 	rts
 
 ez_struct
-	dc.l	20				;es_StructSize
-	dc.l	0				;es_Flags
-	dc.l	ez_title			;es_Title
-ez_text	dc.l	0				;es_TextFormat
-	dc.l	ez_ok				;es_GadgetFormat
+	dc.l	20
+	dc.l	0
+	dc.l	ez_title
+ez_text	dc.l	0
+	dc.l	ez_ok
 ez_intname	dc.b	'intuition.library',0
 ez_title	dc.b	'NHL 94',0
 ez_ok		dc.b	'OK',0

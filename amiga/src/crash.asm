@@ -1,58 +1,44 @@
-;	The crash report: when the game stops on a CPU exception (hal_exception), no game frame has
-;	run for 10 seconds, only interrupts have run for 10 seconds, or the game has changed the
-;	picture but none has been drawn for 10 seconds (cr_watch, from the vertical blank), the
-;	screen shows what is needed to find why, for a photo: the exception, the code address and
-;	registers (the renderer's if the picture stopped), the stack, the CPU, where the program
-;	is, the code the last game ticks interrupted, the interrupts counted, and the state of the
-;	renderer's blit queue and shows. It is drawn with the ROM's topaz 8 (graphics.library's
-;	font list). The machine must be reset after it.
+;	The crash report: when the game stops on a CPU exception, no game
+;	frame has run for 10 seconds, only interrupts have run for 10 seconds.
 
-CR_ROWB		equ	80			;bytes a line: 640 pixels, one bitplane
-CR_LH		equ	9			;lines a text row
-CR_PLANE	equ	rd_scr0+1024		;(a screen buffer: chip RAM; the copper list before it)
+CR_ROWB		equ	80
+CR_LH		equ	9
+CR_PLANE	equ	rd_scr0+1024
 
 	section	bss,bss
 	cnop	0,4
-cr_regs		ds.l	16			;d0-d7/a0-a7 when it stopped
-cr_frame	ds.l	1			;its exception frame
-cr_font		ds.l	1			;topaz 8 (0: none: no text)
-cr_ticks	ds.l	1			;(cr_watch: the game ticks at its last look)
-cr_rdc		ds.l	1			;(cr_watch: frames drawn at its last look,
-cr_rdgen	ds.l	1			;and ds_gen when that changed)
-cr_vpos		ds.l	1			;VPOSR, VHPOSR,
-cr_intreq	ds.w	1			;INTREQR, DMACONR when it stopped
+cr_regs		ds.l	16
+cr_frame	ds.l	1
+cr_font		ds.l	1
+cr_ticks	ds.l	1
+cr_rdc		ds.l	1
+cr_rdgen	ds.l	1
+cr_vpos		ds.l	1
+cr_intreq	ds.w	1
 cr_dmacon	ds.w	1
-cr_intena	ds.w	1			;and INTENAR
-cr_busy		ds.b	1			;(the report is being drawn: cr_nested)
+cr_intena	ds.w	1
+cr_busy		ds.b	1
 cr_nest		ds.b	1
-cr_why		ds.w	1			;the vector, or -1: no game frame for 10 seconds, -2: no
-						;picture drawn for 10 seconds while the game changed it,
-						;-3: ticks but no code outside interrupts for 10 seconds
-cr_col		ds.w	1			;the cursor: column, text row
+cr_why		ds.w	1
+cr_col		ds.w	1
 cr_row		ds.w	1
-cr_wdn		ds.w	1			;(cr_watch: vertical blanks with no game tick,
-cr_rdn		ds.w	1			;and with no picture drawn, one due,
-cr_mn		ds.w	1			;and ticks with no code outside interrupts run,
-cr_xn		ds.w	1			;and vertical blanks since cr_x0 was taken)
+cr_wdn		ds.w	1
+cr_rdn		ds.w	1
+cr_mn		ds.w	1
+cr_xn		ds.w	1
 	cnop	0,4
-cr_ipl0		ds.l	1			;(cr_watch: hal_ipl0 at its last look,
-cr_x0		ds.l	1			;and the interrupts not used counted then)
+cr_ipl0		ds.l	1
+cr_x0		ds.l	1
 		ds.b	2048
-cr_stack					;(its own stack: the game's may be the trouble)
+cr_stack
 
 	section	game,code
 
-;	A vertical blank (level 3, rd_bq_int): the report if no game tick has run for 10 seconds,
-;	the ticks go on but neither the game's code outside them nor the renderer has run for 10
-;	seconds (hal_ipl0: an interrupt that never stops asking takes the CPU), more than 10000
-;	interrupts the game does not use came in 10 seconds (the same, the code creeping on
-;	between them), or no picture has been drawn for 10 seconds while the game changed it
-;	(ds_gen), a0 = the level 3 exception frame (d0-d1/a0-a1 saved under it). Uses d0.
+;	A vertical blank: the report if no game tick has run for 10 seconds, the ticks go on but
+;	neither the game's code outside them nor the renderer has run for 10 seconds. Uses d0.
 cr_watch
-	; interrupts the game does not use, more than 10000 in 10 seconds: one that never stops
-	; asking, even if the code outside interrupts still creeps on between them
 	addq.w	#1,(cr_xn).l
-	cmpi.w	#10*50,(cr_xn).l		;(vertical blanks: 50 or 60 a second)
+	cmpi.w	#10*50,(cr_xn).l
 	blo.s	.xw
 	clr.w	(cr_xn).l
 	move.l	(hal_intx).l,d0
@@ -66,14 +52,14 @@ cr_watch
 	beq.s	.same
 	move.l	d0,(cr_ticks).l
 	clr.w	(cr_wdn).l
-	move.l	(hal_ipl0).l,d0			;a tick: the code outside the interrupts since?
+	move.l	(hal_ipl0).l,d0
 	cmp.l	(cr_ipl0).l,d0
 	beq.s	.msame
 	move.l	d0,(cr_ipl0).l
 	clr.w	(cr_mn).l
 	bra.s	.pic
 .msame	addq.w	#1,(cr_mn).l
-	cmpi.w	#10*50,(cr_mn).l		;(ticks: 50 or 60 a second)
+	cmpi.w	#10*50,(cr_mn).l
 	bhs	.main
 	bra.s	.pic
 .same	addq.w	#1,(cr_wdn).l
@@ -88,12 +74,10 @@ cr_watch
 .x	rts
 .psame	move.l	(ds_gen).l,d0
 	cmp.l	(cr_rdgen).l,d0
-	beq.s	.x				;(nothing new to draw)
+	beq.s	.x
 	addq.w	#1,(cr_rdn).l
 	cmpi.w	#10*60,(cr_rdn).l
 	blo.s	.x
-	; the picture stopped: where the renderer is (this interrupt's frame if it was running,
-	; else its context, saved under its frame: ctx_to_game)
 	move	#$2700,sr
 	bsr	cr_hw
 	tst.b	(ctx_cur).l
@@ -103,9 +87,9 @@ cr_watch
 	moveq	#15-1,d0
 .rc	move.l	(a1)+,(a2)+
 	dbf	d0,.rc
-	movea.l	a1,a0				;its frame
+	movea.l	a1,a0
 	lea	8(a0),a1
-	move.l	a1,(a2)				;(a7)
+	move.l	a1,(a2)
 	moveq	#-2,d0
 	bra	cr_show2
 .rhere	moveq	#-2,d0
@@ -118,16 +102,16 @@ cr_watch
 	bsr	cr_hw
 	moveq	#-1,d0
 .regs	movem.l	d0-d7/a0-a7,(cr_regs).l
-	move.l	-16(a0),(cr_regs).l		;(d0, d1, a0, a1 as they were: saved under the frame)
+	move.l	-16(a0),(cr_regs).l
 	move.l	-12(a0),(cr_regs+4).l
 	move.l	-8(a0),(cr_regs+8*4).l
 	move.l	-4(a0),(cr_regs+9*4).l
 	lea	8(a0),a1
-	move.l	a1,(cr_regs+15*4).l		;(a7 before the interrupt)
+	move.l	a1,(cr_regs+15*4).l
 	bra.s	cr_show2
 
 ;	The custom chips' state as it stopped (before cr_show2 turns DMA off). Keeps all.
-cr_hw	move.l	(CUSTOM+$004).l,(cr_vpos).l	;VPOSR, VHPOSR
+cr_hw	move.l	(CUSTOM+$004).l,(cr_vpos).l
 	move.w	(CUSTOM+INTREQR).l,(cr_intreq).l
 	move.w	(CUSTOM+DMACONR).l,(cr_dmacon).l
 	move.w	(CUSTOM+INTENAR).l,(cr_intena).l
@@ -148,15 +132,14 @@ cr_show2
 	st	(cr_busy).l
 	move.w	d0,(cr_why).l
 	move.l	a0,(cr_frame).l
-	move.w	#$0F00,(CUSTOM+$180).l		;red (the test harness stops at this)
+	move.w	#$0F00,(CUSTOM+$180).l
 	IFD	HARNESS
 	bra	.hang
 	ENDC
 	lea	(cr_stack).l,sp
 	move.w	#$7FFF,(CUSTOM+INTENA).l
-	move.w	#$7FFF,(CUSTOM+DMACON).l	;all DMA off: the copper, the blitter, sprites, sound
+	move.w	#$7FFF,(CUSTOM+DMACON).l
 	bsr	cr_findfont
-	; the screen: 640 x 256, one bitplane, white on dark red
 	lea	(CR_PLANE).l,a0
 	move.w	#CR_ROWB*256/4-1,d0
 .cl	clr.l	(a0)+
@@ -174,26 +157,25 @@ cr_show2
 	swap	d0
 	move.w	d0,(a0)+
 	move.l	#$FFFFFFFE,(a0)
-	move.l	#rd_scr0,(CUSTOM+$080).l	;COP1LC
-	move.w	d0,(CUSTOM+$088).l		;COPJMP1
-	move.w	#$8380,(CUSTOM+DMACON).l	;DMA on: bitplanes, copper
+	move.l	#rd_scr0,(CUSTOM+$080).l
+	move.w	d0,(CUSTOM+$088).l
+	move.w	#$8380,(CUSTOM+DMACON).l
 	bsr	cr_text
 .hang	bra.s	.hang
-.cop	dc.l	$01FC0000,$01060000,$010C0011	;FMODE 0, BPLCON3, BPLCON4
-	dc.l	$008E2C81,$00902CC1,$0092003C,$009400D4	;DIWSTRT, DIWSTOP, DDFSTRT, DDFSTOP
-	dc.l	$01009200,$01020000,$01040000	;BPLCON0: hires, 1 plane; BPLCON1, 2
-	dc.l	$01080000,$010A0000		;modulos
-	dc.l	$01800600,$01820FFF		;colours
+.cop	dc.l	$01FC0000,$01060000,$010C0011
+	dc.l	$008E2C81,$00902CC1,$0092003C,$009400D4
+	dc.l	$01009200,$01020000,$01040000
+	dc.l	$01080000,$010A0000
+	dc.l	$01800600,$01820FFF
 	dc.l	0
 
-;	An exception while the report is drawn: the rest of it is not drawn, but this one's vector,
-;	frame and where the report had got to, on the last row (cr_putc does not fault: it drew
-;	what is above). d0 = the vector, a0 = its frame.
+;	An exception while the report is drawn: the rest of it is not drawn, but
+;	this one's vector, frame and where the report had got to, on the last row.
 cr_nested
 	lea	(cr_stack).l,sp
 	addq.b	#1,(cr_nest).l
 	cmpi.b	#1,(cr_nest).l
-	bne.s	.hang				;(a fault in this too)
+	bne.s	.hang
 	move.l	a0,a2
 	move.w	d0,d2
 	move.w	#27,(cr_row).l
@@ -217,19 +199,19 @@ cr_nested
 .tn	dc.b	'Fault in the report: vector $',0
 	even
 
-;	cr_font = the ROM's topaz 8 from graphics.library's font list (or its default font if that is
-;	8 or 9 lines high and not proportional), 0 if neither.
+;	cr_font = the ROM's topaz 8 from graphics.library's font list (or its default
+;	font if that is 8 or 9 lines high and not proportional), 0 if neither.
 cr_findfont
 	clr.l	(cr_font).l
 	move.l	(os_gfx).l,d0
 	beq.s	.x
 	movea.l	d0,a0
-	movea.l	$8C(a0),a1			;gb_TextFonts: its first
-.n	tst.l	(a1)				;(ln_Succ 0: the list's end)
+	movea.l	$8C(a0),a1
+.n	tst.l	(a1)
 	beq.s	.def
-	cmpi.w	#8,$14(a1)			;tf_YSize
+	cmpi.w	#8,$14(a1)
 	bne.s	.nx
-	movea.l	10(a1),a2			;ln_Name
+	movea.l	10(a1),a2
 	lea	(.topaz,pc),a3
 .c	move.b	(a2)+,d1
 	cmp.b	(a3)+,d1
@@ -240,12 +222,12 @@ cr_findfont
 	rts
 .nx	movea.l	(a1),a1
 	bra.s	.n
-.def	movea.l	$9A(a0),a1			;gb_DefaultFont
+.def	movea.l	$9A(a0),a1
 	cmpi.w	#CR_LH,$14(a1)
 	bhi.s	.x
-	btst	#5,$17(a1)			;FPF_PROPORTIONAL
+	btst	#5,$17(a1)
 	bne.s	.x
-	cmpi.w	#8,$18(a1)			;tf_XSize
+	cmpi.w	#8,$18(a1)
 	bhi.s	.x
 	move.l	a1,(cr_font).l
 .x	rts
@@ -255,12 +237,11 @@ cr_findfont
 ;	The report's text.
 cr_text
 	clr.l	(cr_col).l
-	lea	(buildver+6,pc),a0		;(build.i: "NHL94 b<number> (<commit>)")
+	lea	(buildver+6,pc),a0
 	bsr	cr_puts
 	lea	(.t0,pc),a0
 	bsr	cr_puts
 	move.w	#2,(cr_row).l
-	; why
 	clr.w	(cr_col).l
 	move.w	(cr_why).l,d0
 	bpl.s	.ex
@@ -274,7 +255,7 @@ cr_text
 .fz	bsr	cr_puts
 	bra.s	.w1
 .ex	lea	(.tvec,pc),a0
-.vn	move.b	(a0)+,d1			;the names: vector, text, 0
+.vn	move.b	(a0)+,d1
 	beq.s	.vg
 	cmp.b	d0,d1
 	beq.s	.vf
@@ -293,7 +274,7 @@ cr_text
 	bsr	cr_hex
 	moveq	#')',d0
 	bsr	cr_putc
-.w1	; where
+.w1
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	movea.l	(cr_frame).l,a2
@@ -316,18 +297,18 @@ cr_text
 	moveq	#1,d1
 	bsr	cr_hex
 	lea	(.trend,pc),a0
-	cmpi.w	#-2,(cr_why).l			;(the picture stopped: the renderer's)
+	cmpi.w	#-2,(cr_why).l
 	beq.s	.g
 	tst.b	(ctx_cur).l
 	bne.s	.g
 	lea	(.tgame,pc),a0
 .g	bsr	cr_puts
-	lea	(.tcacr,pc),a0			;(the caches: a 68060 started from a floppy has no
-	bsr	cr_puts				;68060.library to set them)
+	lea	(.tcacr,pc),a0
+	bsr	cr_puts
 	movec	cacr,d0
 	moveq	#8,d1
 	bsr	cr_hex
-	tst.b	(hal_cpu40).l			;(a 68040 or 68060: as the system had it, hal_cpu_setup)
+	tst.b	(hal_cpu40).l
 	beq.s	.c40
 	lea	(.twas,pc),a0
 	bsr	cr_puts
@@ -335,7 +316,6 @@ cr_text
 	moveq	#8,d1
 	bsr	cr_hex
 .c40
-	; the program and the CPU
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.tcode,pc),a0
@@ -356,8 +336,8 @@ cr_text
 	bsr	cr_hex
 	lea	(.tcpu,pc),a0
 	bsr	cr_puts
-	movea.l	(os_exec).l,a0			;(not (4).w: an MMU may guard page 0, its handler gone)
-	move.w	$128(a0),d2			;AttnFlags
+	movea.l	(os_exec).l,a0
+	move.w	$128(a0),d2
 	lea	(.t060,pc),a0
 	btst	#7,d2
 	bne.s	.cp
@@ -377,14 +357,12 @@ cr_text
 	bsr	cr_hex
 	moveq	#')',d0
 	bsr	cr_putc
-	; registers
 	move.w	#4,(cr_row).l
 	lea	(cr_regs).l,a2
 	moveq	#'D',d3
 	bsr	.regs
 	moveq	#'A',d3
 	bsr	.regs
-	; the stack from the frame on
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.tstk,pc),a0
@@ -392,7 +370,6 @@ cr_text
 	movea.l	(cr_frame).l,a2
 	moveq	#4-1,d3
 	bsr	.longs
-	; the code the last game ticks interrupted
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.ttck,pc),a0
@@ -400,7 +377,6 @@ cr_text
 	lea	(hal_pcring).l,a2
 	moveq	#2-1,d3
 	bsr	.longs
-	; counts
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.tcnt,pc),a0
@@ -418,24 +394,23 @@ cr_text
 	move.l	(rd_vblanks).l,d0
 	moveq	#8,d1
 	bsr	cr_hex
-	; the renderer's blit queue and shows
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.tstate,pc),a2
-.st	move.w	(a2)+,d2			;digits (0: the table's end; -1: a new row)
+.st	move.w	(a2)+,d2
 	beq.s	.ste
 	bpl.s	.st1
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	bra.s	.st
-.st1	movea.l	a2,a0				;its name
+.st1	movea.l	a2,a0
 .sn	tst.b	(a2)+
 	bne.s	.sn
 	move.l	a2,d0
 	addq.l	#1,d0
 	andi.w	#-2,d0
 	movea.l	d0,a2
-	movea.l	(a2)+,a1			;its address
+	movea.l	(a2)+,a1
 	bsr	cr_puts
 	moveq	#' ',d0
 	bsr	cr_putc
@@ -453,7 +428,7 @@ cr_text
 .sp	bsr	cr_hex
 	addq.w	#2,(cr_col).l
 	bra.s	.st
-.ste	; the copper ring where the copper stops, the show taken last and the next queued
+.ste
 	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	lea	(.tring,pc),a0
@@ -478,8 +453,8 @@ cr_text
 	clr.w	(cr_col).l
 	lea	(.treset,pc),a0
 	bra	cr_puts
-.show	bsr	cr_puts				;show marker rd_cqmh + d2 (its place, where the copper
-	add.w	(rd_cqmh).l,d2			;goes on, its copper list, its buffer)
+.show	bsr	cr_puts
+	add.w	(rd_cqmh).l,d2
 	andi.w	#7,d2
 	lsl.w	#4,d2
 	lea	(rd_cqmq).l,a2
@@ -494,7 +469,7 @@ cr_text
 	move.w	(a2),d0
 	moveq	#2,d1
 	bra	cr_hex
-.regs	moveq	#0,d4				;d3 = 'D' or 'A', a2 = its 8 registers: two rows of 4
+.regs	moveq	#0,d4
 .r	move.w	d4,d0
 	andi.w	#3,d0
 	bne.s	.r1
@@ -515,7 +490,7 @@ cr_text
 	cmpi.w	#8,d4
 	blo.s	.r
 	rts
-.longs	addq.w	#1,(cr_row).l			;d3 + 1 rows of 8 longs from a2
+.longs	addq.w	#1,(cr_row).l
 	clr.w	(cr_col).l
 	moveq	#8-1,d4
 .l	move.l	(a2)+,d0
@@ -563,7 +538,7 @@ cr_text
 .tmark	dc.b	'Shows: last ',0
 .tmnx	dc.b	'  next ',0
 	even
-;	digits, name, (even) address; -1 a new row, 0 the end
+;	digits, name, (even) address; -1 a new row, 0 the end.
 CRS	MACRO
 	dc.w	\1
 	dc.b	\2,0
@@ -626,7 +601,7 @@ cr_hex	movem.l	d0-d2,-(sp)
 	moveq	#8,d0
 	sub.w	d1,d0
 	lsl.w	#2,d0
-	rol.l	d0,d2				;(the first digit wanted on top)
+	rol.l	d0,d2
 	subq.w	#1,d1
 .d	rol.l	#4,d2
 	moveq	#15,d0
@@ -643,20 +618,20 @@ cr_putc	movem.l	d0-d5/a0-a2,-(sp)
 	move.l	(cr_font).l,d1
 	beq	.n
 	cmpi.w	#CR_ROWB,(cr_col).l
-	bhs	.n				;(past the line's end)
+	bhs	.n
 	movea.l	d1,a1
 	moveq	#0,d1
 	move.b	d0,d1
 	moveq	#0,d2
-	move.b	$20(a1),d2			;tf_LoChar
+	move.b	$20(a1),d2
 	sub.w	d2,d1
 	bcs	.n
 	moveq	#0,d2
-	move.b	$21(a1),d2			;tf_HiChar
+	move.b	$21(a1),d2
 	sub.b	$20(a1),d2
 	cmp.w	d2,d1
 	bhi	.n
-	movea.l	$28(a1),a2			;tf_CharLoc: bit offset, bit width
+	movea.l	$28(a1),a2
 	move.w	(a2,d1.w*4),d3
 	ext.l	d3
 	move.w	2(a2,d1.w*4),d4
@@ -664,17 +639,17 @@ cr_putc	movem.l	d0-d5/a0-a2,-(sp)
 	bls.s	.w
 	moveq	#8,d4
 .w	move.w	#$FF00,d2
-	lsr.w	d4,d2				;(its width's bits of a byte: the low byte)
-	movea.l	$22(a1),a2			;tf_CharData
+	lsr.w	d4,d2
+	movea.l	$22(a1),a2
 	lea	(CR_PLANE).l,a0
 	move.w	(cr_row).l,d5
 	mulu.w	#CR_LH*CR_ROWB,d5
 	adda.l	d5,a0
 	adda.w	(cr_col).l,a0
 	moveq	#0,d5
-	move.w	$26(a1),d5			;tf_Modulo
-	lsl.l	#3,d5				;(bits)
-	move.w	$14(a1),d1			;tf_YSize
+	move.w	$26(a1),d5
+	lsl.l	#3,d5
+	move.w	$14(a1),d1
 	cmpi.w	#CR_LH,d1
 	bls.s	.h
 	moveq	#CR_LH,d1
@@ -689,5 +664,5 @@ cr_putc	movem.l	d0-d5/a0-a2,-(sp)
 	movem.l	(sp)+,d0-d5/a0-a2
 	rts
 
-	include	"build.i"			;(buildver: the build's number and commit)
+	include	"build.i"
 	even

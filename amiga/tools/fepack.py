@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-"""The screens shown only now and then, kept deflated (build step of the Amiga port).
-
-The EA Sports screen, the title screen and the game setup screen take their pictures from data
-the game reads only while it sets the screen up (and the setup screen when it moves its menu
-frame). Those files are not in the program as they are: each screen's are deflated into one
-block here, and their labels are addresses in a window that holds the three screens' one after
-another: fe_open (render.asm) inflates a screen's block into its place when the screen begins
-and it is not there yet (the first, the EA Sports screen's, all three: one wait at the start
-rather than one at each screen). The window is the top of the sprite image cache, given back
-when a game starts (fe_close). graphics94.asm loses the files (patches.py).
-
-Usage: fepack.py <Extracted/NHL94/Graphics directory> out.i
-"""
+"""The screens shown only now and then, kept deflated (build step of the Amiga port)."""
 import os, sys, zlib
 
-GROUPS = [                      # (screen, [(label, file)])
+GROUPS = [
     ('the EA Sports screen', [('EASportsMap', 'EASportsMap.bin')]),
     ('the title screen', [('TitleScreenImg', 'Title94-1.map.jim'), ('NHLShieldImg', 'Title94-2.map.jim'),
                           ('PAlogoImg', 'Title94-3.map.jim'), ('TitleImg', 'Title94-4.map.jim')]),
@@ -31,7 +19,7 @@ def deflate(b):
 def main():
     gdir, outname = sys.argv[1:3]
     blocks, equs, sizes = [], [], []
-    at = 0                                  # (the screen's place in the window)
+    at = 0
     for name, files in GROUPS:
         data = bytearray()
         for label, fn in files:
@@ -54,7 +42,7 @@ def main():
         lines.append('\tdc.l\tfe_block%d,%d\t\t;%s' % (i, at, name))
     for i, (name, z, n, at) in enumerate(blocks):
         lines.append('fe_block%d\t\t\t\t;%s: %d bytes, %d deflated' % (i, name, n, len(z)))
-        zz = z + b'\0\0'                    # (the inflater may read 2 bytes past the end)
+        zz = z + b'\0\0'
         for k in range(0, len(zz), 32):
             lines.append('\tdc.b\t' + ','.join('$%02X' % v for v in zz[k:k + 32]))
         lines.append('\teven')

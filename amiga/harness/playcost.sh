@@ -1,11 +1,6 @@
 #!/bin/sh
-# The renderer's CPU time in uninterrupted play: Start is pressed only until the game begins,
-# the harness is deterministic (NHL_DETERM: every build plays the same game, the renderer's
-# own work taking none of its time),
-# and the harness' PC samples (one each 1000 cycles) are counted from frame FROM to END. The
-# renderer draws every second game frame: the odd ones or the even ones (NHL_PHASE), and the
-# work differs between the two, so both are measured and the mean is given (PHASES="0" for one).
-# Usage: amiga/harness/playcost.sh [FROM] [END]   (defaults 2000 6000; FROM >= 2000)
+# playcost.sh [FROM] [END]: the renderer's cycles a frame in uninterrupted play (NHL_DETERM),
+# by routine, for both phases (PHASES="0" for one); defaults 2000 6000, FROM >= 2000.
 FROM=${1:-2000}; END=${2:-6000}
 cd "$(dirname "$0")/../.." || exit 1
 T=${TMPDIR:-/tmp}/playcost.$$
@@ -44,9 +39,6 @@ print('frames %s-%s: the renderer %.1f k cycles a frame (%s)' % (f0, f1, rd / fr
 for k, v in tot.most_common(40):
     if k.startswith('rd_') and v / frs >= 2: print('  %-22s %6.1f k' % (k, v / frs))
 PY
-# the game's state at the end (its RAM): builds compare exactly only when it is the same (the
-# game's course can still depend on the renderer's timing; a change to the game's code moves
-# the code addresses its stack holds)
 PH0=$(echo ${PHASES:-0 1} | cut -d" " -f1)
 echo "game at frame $END: $(sed -n 's/^game RAM //p' $T/run_${PH0}_$END.txt)"
 rm -rf $T
