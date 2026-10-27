@@ -1,6 +1,7 @@
 #!/bin/sh
 # uaerun.sh SECONDS OUTDIR [t:key ...]: the build in FS-UAE on a virtual X display, with screenshots.
-# KICK, KEXT (none), HDF, FLOPPY, FLOPPYSPEED, EVERY, UAEEXTRA, UAEAUDIO; needs fs-uae, Xvfb, import, xdotool.
+# KICK, KEXT (none), HDF, FLOPPY, FLOPPYSPEED, EVERY, UAEEXTRA, UAEAUDIO, UAEDISP, UAEWORK, UAESTARTUP;
+# needs fs-uae, Xvfb, ImageMagick (import), xdotool.
 set -e
 SECS=${1:-30}; OUT=${2:-/tmp/uae-shots}; shift 2 || true
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
