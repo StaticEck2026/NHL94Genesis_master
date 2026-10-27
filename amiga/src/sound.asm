@@ -412,8 +412,9 @@ snd_dly_pop
 
 ;	Wait while Paula notices a DMA change: 4 lines.
 snd_dmawait
-	tst.b	(hal_amiga).l
-	beq	.x
+	IFD	HARNESS
+	rts
+	ENDC
 	movem.l	d0-d1,-(sp)
 	moveq	#3,d1
 .l	move.b	(CUSTOM+$006).l,d0
@@ -526,9 +527,6 @@ snd_keyon
 	move.b	d2,(a1,d1.w)
 	bsr	snd_voice_a0
 .have
-	IFD	STATS
-	addq.l	#1,(snd_stats).l		;(statistics: key ons)
-	ENDC
 	move.b	d1,V_OWNER(a0)
 	sf	V_REL(a0)
 	clr.l	V_ENV(a0)
@@ -654,21 +652,6 @@ snd_alloc
 	bra	.take
 .got	move.w	d0,d2
 .take
-	IFD	STATS
-	lea	(snd_voices).l,a0		;(statistics: a sounding FM voice taken, held)
-	move.w	d2,d0
-	lsl.w	#5,d0
-	adda.w	d0,a0
-	tst.b	V_STATE(a0)
-	beq.s	.sn
-	cmpi.b	#PCM_OWNER,V_OWNER(a0)
-	bhs.s	.sn
-	addq.l	#1,(snd_stats+4).l
-	tst.b	V_REL(a0)
-	bne.s	.sn
-	addq.l	#1,(snd_stats+8).l
-.sn
-	ENDC
 	; the channel playing on it loses it
 	lea	(snd_voices).l,a0
 	move.w	d2,d0
@@ -878,20 +861,6 @@ snd_envelopes
 	addq.w	#1,d6
 	cmp.w	(snd_nvoice).l,d6
 	blo	.v
-	IFD	STATS
-	lea	(snd_voices).l,a0		;(statistics: most voices sounding)
-	moveq	#0,d0
-	moveq	#NVOICES-1,d1
-.cn	tst.b	V_STATE(a0)
-	beq.s	.cz
-	addq.l	#1,d0
-.cz	lea	V_SIZE(a0),a0
-	dbf	d1,.cn
-	cmp.l	(snd_stats+20).l,d0
-	bls.s	.cx
-	move.l	d0,(snd_stats+20).l
-.cx
-	ENDC
 	rts
 
 ;	Each voice's registers (snd_vregs): Paula's first 3 voices', then the mixed voices' own.
@@ -1129,11 +1098,6 @@ snd_mix
 	dbf	d5,.vo
 	tst.w	d6
 	beq.s	.q
-	IFD	STATS
-	addq.l	#1,(snd_stats+12).l		;(statistics: mixing, voices mixed)
-	ext.l	d6
-	add.l	d6,(snd_stats+16).l
-	ENDC
 	clr.l	(mx_quiet).l
 	bra.s	.o0
 .q	move.l	(mx_quiet).l,d0			;silence: written until the ring is all silent
@@ -1336,9 +1300,6 @@ mx_ring		ds.b	MXRING			;(snd_mix)
 snd_noise	ds.b	NOISELEN		;kept small) the crowd noise loop (snd_noise_init)
 
 	section	bss,bss
-snd_stats	ds.l	8			;(statistics, STATS builds: key ons, sounding FM voices
-						;taken, of them held; frames with voices mixed, mixed
-						;voice frames; most voices sounding at once)
 snd_voices	ds.b	NVOICES*V_SIZE
 snd_soft	ds.b	NVOICES*SV_SIZE		;the mixed voices (by voice number)
 snd_vregs	ds.l	NVOICES			;each voice's registers (snd_vtab)

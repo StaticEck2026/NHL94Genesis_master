@@ -13,8 +13,9 @@ mkdir -p $T
 P=""; for f in $(seq 700 120 1180); do P="$P$f:80,$((f+10)):0,"; done
 for PH in ${PHASES:-0 1}; do
   for F in $FROM $END; do
-    NHL_PHASE=$PH NHL_DETERM=1 NHL_PROF=$T/prof_${PH}_$F.txt NHL_RAMDUMP=$T/ram_${PH}_$F:$F:$F \
-      amiga/harness/nhlrun -c 8000000 -f $F -p "${P%,}" -o $T output/amiga/nhl94.game 2>&1 | grep stopped | sed 's/.*, \([0-9]*\) frames drawn.*/\1/' > $T/fd_${PH}_$F.txt
+    NHL_PHASE=$PH NHL_DETERM=1 NHL_PROF=$T/prof_${PH}_$F.txt \
+      amiga/harness/nhlrun -c 8000000 -f $F -p "${P%,}" -o $T output/amiga/harness.game > $T/run_${PH}_$F.txt 2>&1
+    sed -n 's/.*, \([0-9]*\) frames drawn.*/\1/p' $T/run_${PH}_$F.txt > $T/fd_${PH}_$F.txt
   done
 done
 python3 - $T $FROM $END <<'PY'
@@ -22,7 +23,7 @@ import bisect, collections, sys
 sys.path.insert(0, 'amiga/tools')
 from sym import load
 t, f0, f1 = sys.argv[1], sys.argv[2], sys.argv[3]
-syms = load('output/amiga/nhl94.lst'); keys = [a for a, n in syms]
+syms = load('output/amiga/harness.lst'); keys = [a for a, n in syms]
 def count(p):
     c = collections.Counter()
     for line in open(p):
@@ -47,5 +48,5 @@ PY
 # game's course can still depend on the renderer's timing; a change to the game's code moves
 # the code addresses its stack holds)
 PH0=$(echo ${PHASES:-0 1} | cut -d" " -f1)
-echo "game at frame $END: $(md5sum < $T/ram_${PH0}_$END | cut -c1-12)"
+echo "game at frame $END: $(sed -n 's/^game RAM //p' $T/run_${PH0}_$END.txt)"
 rm -rf $T

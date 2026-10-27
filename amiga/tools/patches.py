@@ -104,8 +104,7 @@ for _port in ('IO_CT1_CTRL equ $A10008', 'IO_CT1_DATA equ $A10002', 'IO_CT2_CTRL
               'IO_CT2_DATA equ $A10004', 'IO_Z80BUS equ $A11100', 'IO_Z80RES equ $A11200',
               'Asound equ $C00011'):
     P(j('stubinc', 'ports.inc'), _port, ';%s (not on the Amiga)' % _port.split()[0])
-P(j('stubinc', 'ports.inc'), 'HVcount equ $C00008', '\tIFD\tBENCH\nHVcount equ hal_hv\t\t\t\t;(benchmark builds: a number per game frame)\n'
-  '\tELSE\nHVcount equ $DFF006\t\t\t\t;Amiga VHPOSR: beam position\n\tENDC')
+P(j('stubinc', 'ports.inc'), 'HVcount equ $C00008', 'HVcount equ $DFF006')
 P(j('stubinc', 'ram_addrs.inc'), 'Z80_RAM equ $A00000', ';Z80_RAM (no Z80 on the Amiga)')
 
 # Native player objects: addframe2 is the renderer's (render.asm hal_addframe2: the same
@@ -365,20 +364,12 @@ P('video94.asm', '\tmove.l\t#$C000,d0\n\tmove.b\td6,d0\n\tswap\td0\n\tmove.l\td0
 P('video94.asm', '\tmovea.l\t#Vdata,a0\n\tmove.l\t#CRAM_W,Vctrl-Vdata(a0)\n\tmoveq\t#$1F,d0\n.0\n\tmove.l\t(a1)+,(a0)\n\tdbf\td0,.0\n',
   '\tjsr\t(ds_colours).l\t\t\t;(display.asm)\n')
 
-# The animated crowd in the stands (two sprite frames, showcrowd) is left out: in play it is
-# about a tenth of the renderer's time. The penalty box players are still drawn. CROWD=1 keeps it.
+# No animated crowd (a tenth of the renderer's time in play).
 P('display94.asm', """	move.b	(Crowdframe).w,d0
 	bsr.w	.sc
 	move.b	(Crowdframe+1).w,d0
 	bra.w	.sc
-""", """	IFND	CROWD
-	rts						;(Amiga: no animated crowd)
-	ENDC
-	move.b	(Crowdframe).w,d0
-	bsr.w	.sc
-	move.b	(Crowdframe+1).w,d0
-	bra.w	.sc
-""")
+""", '\trts\n')
 
 # ---------------------------------------------------------------------------------------------
 # What nothing in the build reaches (amiga/tools/unused.py lists it): routines and tables never

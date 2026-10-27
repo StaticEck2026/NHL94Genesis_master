@@ -18,50 +18,22 @@ CIAB_ICR	equ	$BFDD00
 CIAB_CRA	equ	$BFDE00
 CIAB_TALO	equ	$BFD400
 CIAB_TAHI	equ	$BFD500
-CIAB_CRB	equ	$BFDF00
-CIAB_TBLO	equ	$BFD600
-CIAB_TBHI	equ	$BFD700
 CIAB_TODLO	equ	$BFD800			;(the TOD counts horizontal syncs: 64 us)
 CIAB_TODMID	equ	$BFD900
 CIAB_TODHI	equ	$BFDA00
 
-	IFD	PROFILE
-;	(statistics) The time since the last mark (CIA-B TOD lines) into prof_mark's bucket n: 0
-;	the game, 1 the renderer, 2 the game's vblank code and the sound. Keeps everything.
-PACCT	macro
-	move.l	d1,-(sp)
-	moveq	#\1,d1
-	jsr	(prof_acct).l
-	move.l	(sp)+,d1
-	endm
-	ENDC
-;	(statistics, PROFILE builds) An event of the frame pipeline into prof_ev, with the time.
-;	Keeps everything but the flags.
-PEV	macro
-	IFD	PROFILE
-	move.w	#\1,-(sp)
-	jsr	(prof_event).l
-	addq.l	#2,sp
-	ENDC
-	endm
-PEVMAX		equ	65536
-PROFMAX		equ	65536
-
 CIA_CLOCK	equ	709379			;PAL E clock
 CIA_CLOCK_NTSC	equ	715909
-	IFND	RDPACE
 RDPACE		equ	1			;hal_pace at the start
-	ENDC
-	IFND	BENCHTP
-BENCHTP		equ	60			;(BENCH: ticks put off at most, hal_int6)
-	ENDC
 
 	section	game,code
 hal_header
 	bra.w	_start
+	IFD	HARNESS
 	dc.b	'NH94'
 	dc.l	hal_game_main
 	dc.l	hal_debug
+	ENDC
 
 ;	The timer period for hal_hz frames a second (a running timer takes it at its next
 ;	underflow). Keeps all but d0.
@@ -97,47 +69,26 @@ hal_set_rate
 	move.l	(sp)+,d1
 	rts
 
-;	Debug block, read by the test harness: what it reads, at these places
-;	+0  the layout a frame is drawn with (rd_layout)  +4 vm_data  +8 exception info (16 longs)
-;	+12 frame counter  +16 pad state ... +64 the renderer's self-check (VERIFY builds)
-;	+68 chip buffers (the harness' blitter statistics by kind)
+	IFD	HARNESS
+;	Read by the test harness (amiga/harness/nhlrun.c: DB_*).
 hal_debug
-	dc.l	rd_layout,vm_data,hal_exc_info,hal_frames,hal_padstate
-	dc.l	rd_count
-	dc.l	bmB,rd_cw,rd_colours
-	dc.l	tp_pl,tp_mk,tp_cls
-	dc.l	rd_ovl,rd_ovlmlo,rd_ovlrows
-	dc.l	rd_dbg_key,rd_vfail
-	dc.l	rd_scr0,mkB6,rd_scarena,rd_fpsimg,rd_ovlmhi,rd_cop,rd_hudsd
-	dc.l	RAMBASE				;+96: the Genesis RAM window
-	dc.l	game_code			;+100: the converted game's code
-	dc.l	rd_lastframe,rd_busy		;+104: the renderer's pacing
-	dc.l	hal_starve			;+112
-	dc.l	ctx_cur				;+116
-	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full ;+120: the renderer's wait loops
-	dc.l	ctx_to_game,hal_idle_no		;+136: the renderer gives way, the game idles
-	dc.l	game_code_end			;+144: the converted game's code ends
-	dc.b	'SCX1'				;+148: the sprite image ring's second part: its
-	dc.l	rd_scx				;address, then bytes (the harness may give one)
-	dc.b	'ERL1'				;+156: hal_tick_early's switch (the harness turns
-	dc.l	hal_early			;it off unless asked: NHL_EARLY=1)
-	dc.l	rd_scr1,rd_scr2,BUFSIZE		;+164: the other screen buffers, their size
-	dc.b	'WIN1'				;+176: the Genesis RAM window the harness gives
-	dc.l	hal_hwin
-	dc.b	'SND1'				;+184: the sound's statistics (STATS builds)
-	dc.l	snd_stats
-	dc.b	'RCV1'				;+192: the copper and the blitter set up again after a
-	dc.l	rd_wstat			;stall; (STATS) the longest wait (rd_stall)
+	dc.l	hal_exc_info,hal_frames,hal_padstate,rd_count
+	dc.l	game_code,game_code_end,rd_lastframe,rd_busy
+	dc.l	hal_starve,ctx_cur
+	dc.l	rd_spin_vs,rd_spin_q,rd_spin_w,rd_spin_full
+	dc.l	ctx_to_game,hal_idle_no,rd_scx,hal_early
+	dc.l	hal_hwin,rd_wstat,RAMBASE
+	ENDC
 
 ;	Game entry with interrupts off and the machine ours. Sets up the vectors and video memory, starts
 ;	the game frame timer and jumps to the cartridge's cold start.
 hal_game_main
 	move	#$2700,sr
-	tst.b	(hal_amiga).l
-	bne	.win				;started from AmigaDOS: the window is in place
-	movea.l	(hal_hwin).l,a0			;the test harness: the one it gives
+	IFD	HARNESS
+	movea.l	(hal_hwin).l,a0
 	bsr	ram_relocate
-.win	lea	(RAMBASE).l,a0			;clear the Genesis work RAM
+	ENDC
+	lea	(RAMBASE).l,a0			;clear the Genesis work RAM
 	move.w	#$10000/4-1,d0
 .clr	clr.l	(a0)+
 	dbf	d0,.clr
@@ -145,19 +96,16 @@ hal_game_main
 	bsr	vm_init
 	jsr	(snd_init).l
 	bsr	hal_set_vectors
-	tst.b	(hal_amiga).l
-	beq.s	.nc
+	IFND	HARNESS
 	bsr	hal_cpu_setup
-.nc	jsr	(rd_init).l
+	ENDC
+	jsr	(rd_init).l
 	bsr	hal_display_init
 	bsr	ctx_init
-	IFD	SHOWFPS
-	st	(hal_fpsshow).l
-	ENDIF
-	tst.b	(hal_amiga).l
-	beq	.nokbd
+	IFND	HARNESS
 	bsr	hal_kbd_init
-.nokbd	bsr	hal_start_timer
+	ENDC
+	bsr	hal_start_timer
 	jmp	Begin
 
 ;	Fill the vector table (VBR) with the trap, then the interrupt handlers.
@@ -243,13 +191,6 @@ hal_start_timer
 .hz	bsr	hal_set_rate
 	move.b	#$81,(CIAB_ICR).l		;timer A interrupt on
 	move.b	#$11,(CIAB_CRA).l		;start, continuous, force load
-	IFD	PROFILE
-	move.b	#0,(CIAB_CRB).l
-	move.b	#355&$FF,(CIAB_TBLO).l		;~2 kHz
-	move.b	#355>>8,(CIAB_TBHI).l
-	move.b	#$82,(CIAB_ICR).l
-	move.b	#$11,(CIAB_CRB).l
-	ENDIF
 	move.w	#$2000,(CUSTOM+INTREQ).l
 	move.w	#$C000|$2000|$0020|$0010,(CUSTOM+INTENA).l	;master, EXTER (level 6), VERTB and
 							;COPER (level 3: the blit queue's shows)
@@ -281,30 +222,6 @@ hal_int6
 	move.l	d0,-(sp)
 	move.b	(CIAB_ICR).l,d0			;reading acknowledges
 	move.w	#$2000,(CUSTOM+INTREQ).l
-	IFD	PROFILE
-	btst	#1,d0				;timer B: sample the interrupted pc
-	beq.s	.np
-	movem.l	d1-d2/a0,-(sp)
-	move.l	18(sp),d2
-	cmpi.l	#rd_waitblit,d2			;waiting for the blitter: the caller instead
-	blo.s	.pc				;(bit 31 set)
-	cmpi.l	#rd_waitblit_end,d2
-	bhs.s	.pc
-	move.l	32(sp),d2			;(under the wait's start and d0)
-	bset	#31,d2
-.pc	btst	#6,(CUSTOM+DMACONR).l		;(the blitter busy: bit 30)
-	beq.s	.pb
-	bset	#30,d2
-.pb	move.l	(prof_pos).l,d1
-	lea	(prof_buf).l,a0
-	move.l	d2,(a0,d1.l*4)
-	addq.l	#1,d1
-	andi.l	#PROFMAX-1,d1
-	move.l	d1,(prof_pos).l
-	addq.l	#1,(prof_count).l
-	movem.l	(sp)+,d1-d2/a0
-.np
-	ENDIF
 	tst.b	(hal_vbreq).l
 	bne.s	.vb
 	btst	#0,d0
@@ -336,51 +253,9 @@ hal_int6
 	cmpi.w	#$0600,d0
 	movem.l	(sp)+,d0/a0			;(the flags stay)
 	bne.s	.gm
-	IFD	BENCH
-	bra	.tp				;(a benchmark build: at the game's next wait)
-	ELSE
 	rte
-	ENDC
 .gm
-	IFD	BENCH
-	; benchmark builds: a tick that comes while the game runs (not waiting since the last
-	; one: a frame that took the renderer more than a vertical blank too) waits for the game's
-	; next wait (hal_idle), so the game's course does not depend on the renderer's timing (the
-	; game never sees two ticks pass at once); BENCHTP ticks on, it runs anyway (a wait loop
-	; without hal_idle)
-	tst.b	(hal_yielding).l		;(the renderer on for the game, which does not wait
-	bne.s	.tp				;for a tick: hal_yield)
-	tst.b	(hal_idled).l
-	bne.s	.tw
-.tp	addq.b	#1,(hal_tickpend).l
-	cmpi.b	#BENCHTP,(hal_tickpend).l
-	bhs.s	.tf
-	IFD	PROFILE
-	IFND	MEMBENCH
-	addq.l	#1,(prof_mark+92).l		;(statistics: ticks put off)
-	ENDC
-	ENDC
-	rte
-.tf
-	IFD	PROFILE
-	IFND	MEMBENCH
-	addq.l	#1,(prof_mark+96).l		;(statistics: ticks run all the same)
-	ENDC
-	ENDC
-.tw	sf	(hal_idled).l
-	sf	(hal_tickpend).l
-	jsr	(bench_wait).l
-	ENDC
 	addq.l	#1,(hal_frames).l
-	IFD	PROFILE
-	tst.b	(ctx_cur).l			;(statistics: the context interrupted until now)
-	bne.s	.pr
-	PACCT	0
-	bra.s	.pg
-.pr	PACCT	1
-.pg
-	ENDC
-	PEV	'T'				;(statistics: a game tick)
 	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the sound's delay, rd_showdue)
 	jsr	(snd_frame).l
 	tst.l	(VBint).l			;(never a vblank code at 0)
@@ -391,9 +266,6 @@ hal_int6
 	move.l	(VBint).l,-(sp)
 	rts					;into the game's vblank code
 .post
-	IFD	PROFILE
-	PACCT	2				;(statistics: the vblank code)
-	ENDC
 	btst	#2,(sp)				;the interrupted code's interrupt mask
 	bne.s	.nest
 	btst	#1,(sp)
@@ -403,11 +275,7 @@ hal_int6
 	tst.b	(ctx_cur).l
 	bne	ctx_to_game			;renderer interrupted: back to the waiting game
 	; the game has not waited for a vblank for a while (a wait loop the converter did not
-	; mark): give the renderer this frame's time anyway (not in BENCH builds: the game's time
-	; would depend on the renderer's)
-	IFD	BENCH
-	rte
-	ENDC
+	; mark): give the renderer this frame's time anyway
 	addq.w	#1,(hal_starve).l
 	cmpi.w	#3,(hal_starve).l
 	blo.s	.rte
@@ -436,37 +304,12 @@ hal_int6
 ;	movem, swap stacks, movem, rte.
 
 hal_idle
-	IFD	CRASHTEST			;(a test of the crash report: CRASHTEST seconds in,
-	IFNE	CRASHKIND-3			;CRASHKIND 1: an exception, 2: stuck with no tick, 3:
-	cmpi.l	#CRASHTEST*50,(hal_frames).l	;the renderer stuck (rd_frame), 4: an interrupt that
-	blo.s	.ct				;never stops asking (level 1: SOFT, the blit queue's)
-	IFEQ	CRASHKIND-1
-	illegal
-	ENDC
-	IFEQ	CRASHKIND-2
-	move.w	#$2000,(CUSTOM+INTENA).l
-	move	#$2000,sr
-.fz	bra.s	.fz
-	ENDC
-	IFEQ	CRASHKIND-4
-	move.w	#$8004,(CUSTOM+INTENA).l
-	ENDC
-.ct
-	ENDC
-	ENDC
 	move.l	d0,-(sp)
 	move	sr,d0
 	andi.w	#$0700,d0
 	cmpi.w	#$0600,d0
 	bhs	.no				;called from interrupt code: never switch there
 	addq.l	#1,(hal_ipl0).l			;(the game's code runs: cr_watch)
-	IFD	BENCH
-	st	(hal_idled).l			;(the game waits)
-	tst.b	(hal_tickpend).l
-	beq.s	.nt
-	bsr	hal_tick_late
-.nt
-	ENDC
 	tst.b	(rd_busy).l
 	bne.s	.go				;a frame half drawn: on with it
 	move.l	(hal_frames).l,d0
@@ -477,7 +320,6 @@ hal_idle
 	beq	.no
 	move.l	(sp)+,d0
 	clr.w	(hal_starve).l
-	PEV	'R'				;(statistics: the renderer gets the CPU)
 	trap	#0
 	rts
 .early	bsr	hal_tick_early			;(the renderer has drawn the last state)
@@ -488,21 +330,12 @@ hal_idle_no					;(the harness: the game waits, nothing to draw)
 	rts
 
 ;	The game waits for the renderer to finish a frame half drawn (fe_ring), not for a game
-;	tick: the renderer gets the CPU as in hal_idle, but a BENCH build's tick count is left
-;	alone (a tick that comes meanwhile waits for the game's next wait), so the game's course
-;	does not depend on whether a frame was half drawn. Keeps all.
+;	tick: the renderer gets the CPU as in hal_idle. Keeps all.
 hal_yield
 	tst.b	(ctx_ready).l
 	beq.s	.x
 	clr.w	(hal_starve).l
-	PEV	'R'
-	IFD	BENCH
-	st	(hal_yielding).l
-	ENDC
 	trap	#0
-	IFD	BENCH
-	sf	(hal_yielding).l
-	ENDC
 .x	rts
 
 ;	The game waits for a tick and the renderer has drawn its last state: the next vertical
@@ -514,8 +347,10 @@ hal_yield
 hal_tick_early
 	move	sr,-(sp)
 	ori	#$0700,sr
+	IFD	HARNESS
 	tst.b	(hal_early).l
 	beq	.x
+	ENDC
 	tst.b	(hal_ahead).l
 	bne	.x
 	tst.b	(hal_vbtick).l
@@ -530,12 +365,7 @@ hal_tick_early
 	move.l	(sp)+,d0
 	bne	.x				;(this vertical blank's tick not run yet)
 	st	(hal_ahead).l
-	IFD	BENCH
-	sf	(hal_idled).l
-	jsr	(bench_wait).l
-	ENDC
 	addq.l	#1,(hal_frames).l
-	PEV	'T'
 	move.l	(rd_vblanks).l,(hal_tickvb).l	;(its vertical blank: the next)
 	addq.l	#1,(hal_tickvb).l
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -550,42 +380,15 @@ hal_tick_early
 .r
 .x	move	(sp)+,sr
 	rts
+	IFD	HARNESS
 hal_early	dc.b	1			;(hal_tick_early on)
 	even
-
-	IFD	BENCH
-;	A game tick put off while the game ran (hal_int6), now that it waits: as the interrupt
-;	would have run it, at level 6. Keeps all.
-hal_tick_late
-	move	sr,-(sp)
-	ori	#$0700,sr
-	sf	(hal_tickpend).l
-	sf	(hal_idled).l
-	jsr	(bench_wait).l
-	addq.l	#1,(hal_frames).l
-	PEV	'T'
-	move.l	(rd_vblanks).l,(hal_tickvb).l
-	movem.l	d0-d7/a0-a6,-(sp)
-	jsr	(snd_frame).l
-	movem.l	(sp)+,d0-d7/a0-a6
-	tst.l	(VBint).l			;(never a vblank code at 0)
-	beq.s	.r
-	move.w	#$0078,-(sp)			;format 0 frame for the game handler's rte
-	pea	(.r).l
-	move.w	4+2(sp),-(sp)			;(the sr from before)
-	andi	#$FEFF,sr			;level 6 (as the interrupt)
-	move.l	(VBint).l,-(sp)
-	rts
-.r	move	(sp)+,sr
-	rts
 	ENDC
+
 
 ;	trap #0: game -> renderer
 ctx_to_render
 	ori.w	#$0700,sr			;no vblank half way through the switch
-	IFD	PROFILE
-	PACCT	0
-	ENDC
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	sp,(ctx_game_sp).l
 	st	(ctx_cur).l
@@ -596,9 +399,6 @@ ctx_to_render
 ;	trap #1, or a vblank while drawing: renderer -> game
 ctx_to_game
 	ori.w	#$0700,sr
-	IFD	PROFILE
-	PACCT	1
-	ENDC
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	sp,(ctx_rend_sp).l
 	sf	(ctx_cur).l
@@ -606,71 +406,7 @@ ctx_to_game
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
 
-	IFD	PROFILE
-;	(statistics) The time since the last mark into bucket d1 of prof_mark+116. Keeps all.
-prof_acct
-	movem.l	d0/d2/a0,-(sp)
-	moveq	#0,d0
-	move.b	(CIAB_TODHI).l,d0		;(reading it latches the others)
-	lsl.w	#8,d0
-	move.b	(CIAB_TODMID).l,d0
-	lsl.l	#8,d0
-	move.b	(CIAB_TODLO).l,d0
-	move.l	d0,d2
-	sub.l	(prof_last).l,d0
-	andi.l	#$FFFFFF,d0
-	move.l	d2,(prof_last).l
-	lea	(prof_mark+116).l,a0
-	add.l	d0,(a0,d1.w*4)
-	movem.l	(sp)+,d0/d2/a0
-	rts
-	ENDC
 
-	IFD	PROFILE
-;	(statistics) An event (the code: the word pushed before the call) into the ring prof_ev:
-;	the code in the top byte, the time (CIA-B TOD, lines) below. Keeps everything.
-prof_event
-	move	sr,-(sp)
-	ori	#$0700,sr
-	movem.l	d0-d1/a0,-(sp)
-	moveq	#0,d0
-	move.b	(CIAB_TODHI).l,d0		;(reading it latches the others)
-	lsl.w	#8,d0
-	move.b	(CIAB_TODMID).l,d0
-	lsl.l	#8,d0
-	move.b	(CIAB_TODLO).l,d0
-	moveq	#0,d1
-	move.b	12+2+4+1(sp),d1			;the code
-	ror.l	#8,d1
-	or.l	d1,d0
-	move.l	(prof_evpos).l,d1
-	lea	(prof_ev).l,a0
-	move.l	d0,(a0,d1.l*4)
-	addq.l	#1,d1
-	andi.l	#PEVMAX-1,d1
-	move.l	d1,(prof_evpos).l
-	addq.l	#1,(prof_evcount).l
-	IFD	PROFMARK
-	move.b	12+2+4+1(sp),d0			;(a frame's start and end among the PC samples:
-	cmpi.b	#'S',d0				;$3F0000 and the code)
-	beq.s	.pm
-	cmpi.b	#'D',d0
-	bne.s	.npm
-.pm	andi.l	#$FF,d0
-	ori.l	#$3F000000,d0
-	move.l	(prof_pos).l,d1
-	lea	(prof_buf).l,a0
-	move.l	d0,(a0,d1.l*4)
-	addq.l	#1,d1
-	andi.l	#PROFMAX-1,d1
-	move.l	d1,(prof_pos).l
-	addq.l	#1,(prof_count).l
-.npm
-	ENDC
-	movem.l	(sp)+,d0-d1/a0
-	move	(sp)+,sr
-	rts
-	ENDC
 
 ;	The renderer's loop: draw each new frame, then give the CPU back.
 rend_main
@@ -681,9 +417,7 @@ rend_main
 	blo	.yield
 	move.l	(hal_frames).l,(rd_lastframe).l
 	st	(rd_busy).l
-	PEV	'S'				;(statistics: a frame begun, ended)
 	jsr	(rd_frame).l
-	PEV	'E'
 	sf	(rd_busy).l
 .yield	trap	#1
 	bra	rend_main
@@ -755,7 +489,9 @@ hal_pace	dc.l	RDPACE			;1: a new frame each game tick if there is time for it
 						;each shown for 2 vertical blanks at least (a steady 25
 						;or 30 a second); F6
 hal_hz		dc.w	0			;game frames a second (0: from the display)
-hal_hwin	dc.l	$C00000				;(the test harness' Genesis RAM window)
+	IFD	HARNESS
+hal_hwin	dc.l	$C00000
+	ENDC
 hal_pal50	dc.w	0			;bit 0: the game runs at 50 Hz (a PAL console's rate: the
 						;game reads it at its start, hal_set_rate)
 
@@ -769,9 +505,6 @@ hal_tickvb	ds.l	1			;rd_vblanks at the last game tick
 hal_ahead	ds.b	1			;the next vertical blank's tick has run (hal_tick_early)
 	even
 hal_pcring	ds.l	17
-hal_idled	ds.b	1			;(BENCH: the game waited since the last tick)
-hal_yielding	ds.b	1			;(BENCH: the game in hal_yield)
-hal_tickpend	ds.b	1			;(BENCH: ticks put off)
 	even
 hal_pcpos	ds.w	1
 	cnop	0,4
@@ -786,27 +519,7 @@ hal_cpu40	ds.b	1			;a 68040 or 68060 (hal_cpu_setup): its settings before,
 	even
 hal_cacr0	ds.l	1			;CACR,
 hal_dtt0	ds.l	1			;DTT0
-	IFD	PROFILE
-prof_pos	ds.l	1
-prof_count	ds.l	1
-prof_mark	ds.l	5+8+16+4		;(+20: frames shown 1 ... 8+ vertical blanks; +52: vertical
-					;blanks from a frame's game state to its showing, 0 ... 6+;
-					;+116: time in the game, the renderer, the game's vblank code)
-prof_last	ds.l	1
-prof_buf	ds.l	PROFMAX
-prof_intreq	ds.l	1
-	IFD	BENCH
-bench_tlog	ds.l	8192			;(the game RAM's sum at each tick: bench_wait)
-	IFD	BENCHDUMP
-bench_ram	ds.b	$10000			;(the game RAM at tick BENCHDUMP)
-	ENDC
-	ENDC
-prof_evpos	ds.l	1
-prof_evcount	ds.l	1
-prof_ev		ds.l	PEVMAX			;events: code (top byte), CIA-B TOD
-	ENDIF
 hal_padstate	ds.w	1			;pad 2 : pad 1, active high
-hal_hv		ds.w	1			;(BENCH builds: the game's HVcount)
 hal_sram	ds.b	$2000			;the save RAM (the cartridge's battery RAM)
 ctx_game_sp	ds.l	1
 ctx_rend_sp	ds.l	1
@@ -822,10 +535,6 @@ rend_stack_top					;the harness: some 360 bytes; a game tick switches to the
 						;game's stack)
 
 	section	chip,bss_c
-	IFD	MEMBENCH
-mb_chip		ds.b	2048
-mb_blt		ds.b	128*64
-	ENDC
 hal_copempty	ds.l	4+16
 
 	section	game,code

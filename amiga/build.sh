@@ -36,13 +36,18 @@ cd output/amiga/src
 # Twice: the second time with the list of the places that hold RAM window addresses, which
 # ramrel.py takes from the first (its hunk is the last, so the others do not move).
 HUNKS="hal_header bss_start chip_start scr0_start scr1_start scr2_start ring_start sndchip_start RAMBASE ram_relocs"
-printf 'ram_relocs\n\tdc.l\t0\n' > ramrel.i
-"$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS -o ../nhl94.game nhl94_amiga.asm
-python3 ../../../amiga/tools/ramrel.py ../nhl94.game 8 ramrel.i $HUNKS
-"$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS -o ../nhl94.game -L ../nhl94.lst nhl94_amiga.asm
-python3 ../../../amiga/tools/ramrel.py ../nhl94.game 8 ramrel2.i $HUNKS >/dev/null
-cmp -s ramrel.i ramrel2.i || { echo "build.sh: the RAM window places moved between the passes"; exit 1; }
-ls -l ../nhl94.game
+game() {	# game OUT LISTING [flags]
+	printf 'ram_relocs\n\tdc.l\t0\n' > ramrel.i
+	"$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS $3 -o "$1" nhl94_amiga.asm || exit 1
+	python3 ../../../amiga/tools/ramrel.py "$1" 8 ramrel.i $HUNKS
+	"$VASM" -Fhunkexe -m68020 -nocase -quiet $VASMFLAGS $3 -o "$1" -L "$2" nhl94_amiga.asm || exit 1
+	python3 ../../../amiga/tools/ramrel.py "$1" 8 ramrel2.i $HUNKS >/dev/null
+	cmp -s ramrel.i ramrel2.i || { echo "build.sh: the RAM window places moved between the passes"; exit 1; }
+	ls -l "$1"
+}
+# The test harness' build (amiga/harness): the same with its hooks
+game ../harness.game ../harness.lst -DHARNESS
+game ../nhl94.game ../nhl94.lst
 # The memory the game's hunks take, for the launcher's message (KB: chip, its largest hunk,
 # any other: fast RAM if there is some)
 python3 - ../nhl94.game >> build.i <<'PY'

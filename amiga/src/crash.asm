@@ -49,8 +49,6 @@ cr_stack					;(its own stack: the game's may be the trouble)
 ;	between them), or no picture has been drawn for 10 seconds while the game changed it
 ;	(ds_gen), a0 = the level 3 exception frame (d0-d1/a0-a1 saved under it). Uses d0.
 cr_watch
-	tst.b	(hal_amiga).l			;(the test harness watches itself)
-	beq	.x
 	; interrupts the game does not use, more than 10000 in 10 seconds: one that never stops
 	; asking, even if the code outside interrupts still creeps on between them
 	addq.w	#1,(cr_xn).l
@@ -151,8 +149,9 @@ cr_show2
 	move.w	d0,(cr_why).l
 	move.l	a0,(cr_frame).l
 	move.w	#$0F00,(CUSTOM+$180).l		;red (the test harness stops at this)
-	tst.b	(hal_amiga).l
-	beq	.hang
+	IFD	HARNESS
+	bra	.hang
+	ENDC
 	lea	(cr_stack).l,sp
 	move.w	#$7FFF,(CUSTOM+INTENA).l
 	move.w	#$7FFF,(CUSTOM+DMACON).l	;all DMA off: the copper, the blitter, sprites, sound

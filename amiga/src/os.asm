@@ -190,7 +190,6 @@ _start
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
 	move.w	#$7FFF,INTREQ(a0)
-	st	(hal_amiga).l
 	; run the game in supervisor mode
 	lea	(os_super,pc),a5
 	jsr	EXEC_Supervisor(a6)
@@ -229,9 +228,6 @@ _start
 	move.l	#CACRF_EnableI|CACRF_EnableD,d1
 	jsr	EXEC_CacheControl(a6)
 	bsr	os_save_sram
-	IFD	PROFILE
-	bsr	os_save_prof
-	ENDIF
 	movea.l	(os_backup).l,a1
 	move.l	(os_backsz).l,d0
 	jsr	EXEC_FreeMem(a6)
@@ -293,9 +289,6 @@ os_super
 hal_exit
 	move	#$2700,sr
 	lea	(CUSTOM).l,a0
-	IFD	PROFILE
-	move.w	$01E(a0),(prof_intreq+2).l	;(statistics: the blit queue's copper state)
-	ENDC
 	move.w	#$7FFF,INTENA(a0)
 	move.w	#$7FFF,DMACON(a0)
 	move.w	#$7FFF,INTREQ(a0)
@@ -406,88 +399,6 @@ os_save_sram
 .x	movem.l	(sp)+,d1-d4/a0-a1/a6
 	rts
 
-	IFD	PROFILE
-;	PC samples: the code base, the count, then the samples.
-os_save_prof
-	movem.l	d1-d4/a0-a1/a6,-(sp)
-	movea.l	(os_dos).l,a6
-	move.l	#.name,d1
-	move.l	#1006,d2
-	jsr	DOS_Open(a6)
-	move.l	d0,d4
-	beq	.x
-	lea	hal_header(pc),a0
-	move.l	a0,(os_iobuf).l
-	move.l	#PROFMAX,d0
-	cmp.l	(prof_count).l,d0
-	bls.s	.full
-	move.l	(prof_count).l,d0
-.full	move.l	d0,(os_iobuf+4).l
-	move.l	d4,d1
-	move.l	#os_iobuf,d2
-	moveq	#8,d3
-	jsr	DOS_Write(a6)
-	move.l	d4,d1
-	move.l	#prof_buf,d2
-	move.l	(os_iobuf+4).l,d3
-	lsl.l	#2,d3
-	jsr	DOS_Write(a6)
-	; then frames drawn and game frames at the F9 mark and now, and the game frame rate
-	move.l	(rd_count).l,(prof_mark+8).l
-	move.l	(hal_frames).l,(prof_mark+12).l
-	moveq	#0,d0
-	move.w	(hal_hz).l,d0
-	move.l	d0,(prof_mark+16).l
-	move.w	(snd_delay).l,d0		;(and the sound's delay now: the last slot)
-	move.l	d0,(prof_mark+52+60).l
-	IFD	PROFMARK
-	move.l	(prof_pos).l,(prof_mark+52+52).l	;(the samples' ring position)
-	ENDC
-	move.l	d4,d1
-	move.l	#prof_mark,d2
-	move.l	#52+64+16,d3
-	jsr	DOS_Write(a6)
-	; then the events (prof_ev): count, position, the ring
-	move.l	d4,d1
-	move.l	#prof_evpos,d2
-	moveq	#8,d3
-	jsr	DOS_Write(a6)
-	move.l	d4,d1
-	move.l	#prof_ev,d2
-	move.l	#PEVMAX*4,d3
-	jsr	DOS_Write(a6)
-	; then the blit queue's copper ring: INTREQR at the exit, rd_cqwp .. rd_cqmq, the ring
-	move.l	d4,d1
-	move.l	#prof_intreq,d2
-	moveq	#4,d3
-	jsr	DOS_Write(a6)
-	move.l	d4,d1
-	move.l	#rd_cqwp,d2
-	move.l	#32+128,d3
-	jsr	DOS_Write(a6)
-	move.l	d4,d1
-	move.l	(rd_cqring).l,d2
-	move.l	#CQI,d3
-	jsr	DOS_Write(a6)
-	IFD	BENCH
-	move.l	d4,d1				;then the game RAM's sums at each tick (BENCH)
-	move.l	#bench_tlog,d2
-	move.l	#8192*4,d3
-	jsr	DOS_Write(a6)
-	IFD	BENCHDUMP
-	move.l	d4,d1
-	move.l	#bench_ram,d2
-	move.l	#$10000,d3
-	jsr	DOS_Write(a6)
-	ENDC
-	ENDC
-	move.l	d4,d1
-	jsr	DOS_Close(a6)
-.x	movem.l	(sp)+,d1-d4/a0-a1/a6
-	rts
-.name	dc.b	'PROGDIR:nhl94.prof',0
-	even
-	ENDIF
 
 os_savename	dc.b	'PROGDIR:NHL94.sav',0
 	even
@@ -511,7 +422,6 @@ os_ciabmask	ds.b	1
 os_ciabcra	ds.b	1
 os_ciaamask	ds.b	1
 os_sramok	ds.b	1
-hal_amiga	ds.b	1			;set when started from AmigaDOS (not the test harness)
 hal_pal		ds.b	1			;PAL display (50 Hz; F8 switches it)
 hal_palclk	ds.b	1			;PAL machine (its clocks)
 hal_beam	ds.b	1			;the display's rate was switched (BEAMCON0)

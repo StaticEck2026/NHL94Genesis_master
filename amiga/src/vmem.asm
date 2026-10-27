@@ -48,17 +48,6 @@ vm_load
 	addq.l	#1,(ds_gen).l
 	rts
 .cp
-	IFD	STATS
-	movem.l	d0,-(sp)			;(statistics: words sent, those of the sprite tiles)
-	andi.l	#$FFFF,d0
-	add.l	d0,(rd_dbg_x+76).l
-	cmpa.l	#Spritetiles,a0
-	blo.s	.st
-	cmpa.l	#Spritetiles+264352,a0
-	bhs.s	.st
-	add.l	d0,(rd_dbg_x+80).l
-.st	movem.l	(sp)+,d0
-	ENDC
 	movem.l	d0-d4/a0-a2,-(sp)
 	addq.l	#1,(ds_gen).l
 	lea	(vm_data).l,a1

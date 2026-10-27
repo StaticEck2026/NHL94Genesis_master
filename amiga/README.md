@@ -35,8 +35,7 @@ Genesis sources are not changed, so `main` still rebuilds the cartridge byte for
   display between 50 and 60 Hz (AGA shows either on any Amiga, if the monitor takes it), and
   the game's rate with it.
 
-Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, the benchmark game of a
-`-DBENCH=1` build), the screen is updated as often as there is time for, up to every vertical
+Speed: on a stock 14 MHz A1200 with fast RAM (FS-UAE, cycle exact, a game in play), the screen is updated as often as there is time for, up to every vertical
 blank: at 50 Hz 49.3 frames a second (all of them on the screen for one vertical blank: the
 rest are frames with nothing new to draw), at 60 Hz 57.4 a second (98% for one); the others
 are heavy moments (many new animation frames at once, a scene change). The game itself
@@ -125,7 +124,7 @@ take either pad as ever.
 second as there is time for (up to the display's 50 or 60, the start) and a steady 25 or 30.
 `F7` switches the Amiga's audio low-pass filter (on at start, like the output filter of a model
 1 Genesis). `F8` switches the display between 50 and 60 Hz and the game between 50 and 60 frames
-a second with it.
+a second with it. `F10` shows the frames drawn in the last second in the top left corner.
 
 ### Screen
 
@@ -143,62 +142,9 @@ vasm (`vasmm68k_mot`, Motorola syntax; on the `PATH`, in `$VASM`, or at `/opt/am
 
     amiga/build.sh
 
-writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94.info`. With
-`VASMFLAGS`:
-
-- `-DCRASHTEST=n` tests the crash report (below): `n` seconds into the game an illegal
-  instruction (`-DCRASHKIND=1`), the game stuck with no game frame (`-DCRASHKIND=2`), the
-  renderer stuck while the game goes on (`-DCRASHKIND=3`), or an interrupt that never stops
-  asking (`-DCRASHKIND=4`).
-- `-DSHOWFPS=1` shows the frame rate in the corner (F10 toggles it).
-- `-DPROFILE=1` samples the program counter 2000 times a second and writes `nhl94.prof` on
-  exit; `amiga/tools/amiprof.py` turns it into a list of routines (time spent waiting for the
-  blitter is put on the caller), the frame rate since `F9` was pressed, how many frames were
-  on the screen for 1, 2, 3 ... vertical blanks, how many vertical blanks passed from each
-  frame's game state to its showing, the sound's delay at the end, and the time spent in the
-  game, its vblank code and the renderer (counted on the CIA-B clock at every switch, so time
-  with interrupts off, which the PC samples cannot see into, is counted too).
-- `-DRDPACE=2` starts with the frame rate capped at 25 or 30 a second (as `F6`).
-- `-DBENCH=1` makes a benchmark build that plays the same game every run and every build:
-  everything is counted in the game's waits for a frame (one a game frame, however late the
-  frames come): its random numbers (its reads of the beam position) come from that count,
-  Start is pressed at the test harness' counts (into a game from the attract mode), and with
-  `-DPROFILE=1` the frame rate count starts at 2000 (as `F9`) and the game quits at 6000
-  (`BENCHSTART`, `BENCHEND`); the renderer does not take the game's time when it runs long.
-  Delete `NHL94.sav` before each run: the game reads it. A game tick that comes while the
-  game runs, or while the renderer has the CPU after the game already had a tick in this wait
-  (a frame drawn over more than a vertical blank), waits for the game's next wait (`hal_idle`,
-  at most `BENCHTP` ticks): the game never sees two ticks pass at once (it would move its
-  players two frames' worth), so its course does not depend on the renderer's timing, and
-  runs of one build give the same frame rate to a hundredth (FS-UAE, several at once too), so
-  one run tells two builds apart. The profile has a sum at each tick of the places and speeds
-  of the players and the puck (`bench_tlog`: no pointers in it, so it compares across builds
-  and load addresses; `-DBENCHDUMP=n`: the whole RAM at tick n) to find where two runs part
-  (`-DBENCHFULL=1`: a sum of all of the game's RAM but the stacks' last 1 KB instead; FS-UAE
-  can load the game at another address each run, which changes the code pointers in its RAM,
-  and so that sum, but not the game). Builds can still play different games (the course can
-  change before play starts), so compare their sums before their frame rates. The renderer is linked after the game's code, so a change to
-  it does not move the game's code (or the code pointers in its RAM). With `-DMEMBENCH=1` the profile also has the colour
-  clocks of 1024 writes to chip memory, fast memory and a custom register, 1024 chip reads and
-  256 chip writes while a blit runs (measured at count 2001).
-- `-DPROFILE=1` also logs the frame pipeline's events with the time (a frame begun and ended,
-  waiting for a buffer, the show queued, the queue at it or held, the copper list set, vertical
-  blanks, game ticks), written after the profile (`prof_ev`).
-- `-DPROFMARK=1` (with `-DPROFILE=1`) also puts each frame's start and end of drawing among the
-  PC samples, so `amiga/tools/amilate.py LISTING nhl94.prof` can tell what the frames shown
-  late (2 or more vertical blanks after the one before) spent their time on, against the frames
-  on time, and list each late frame's busiest renderer routines.
-- `-DSTATS=1` counts renderer and sound work for the test harness (`NHL_STATS=1`): for the sound,
-  the notes keyed on, sounding voices taken by another sound, the voices mixed and the most at
-  once.
-- `-DCROWD=1` draws the animated crowd in the stands, which is left out by default (about 4
-  of the 37 sprites a frame in play, about 9% of the renderer's time).
-- `-DVERIFY=1` makes the renderer check its scroll buffers every frame: every part of plane B
-  not listed for repair (nor drawn over by the blits listed for the frame) must match the
-  bitmap. It also compares every name table each frame
-  and fails if one changed that the write marks said could not have (or, written only by loads,
-  fills and copies, outside the blocks they marked). The test harness reports the first
-  failure.
+writes `output/amiga/nhl94.game`, `output/amiga/NHL94` (the launcher) and `NHL94.info`, and
+`output/amiga/harness.game`: the same game assembled with `-DHARNESS`, which adds the hooks the
+test harness needs (below). `nhl94.game` has none of them.
 
 ## How it works
 
@@ -297,8 +243,8 @@ The hardware layer:
   BPLCON1 delay. The planes are fetched 64 bits at a time (FMODE 3), which leaves the most of
   the chip bus to the blitter and the CPU. Only what was drawn over it two frames ago and the
   cells the game changed are blitted back from the bitmap (a dirty map per buffer, 16 pixels
-  by 8 lines a bit; `-DDLS=n` makes it 2^n lines, 1 or 2: finer rows restore fewer words
-  but take more blits, and each blit costs the CPU its copper block). A buffer keeps what was
+  by 8 lines a bit: finer rows would restore fewer words but take more blits, and each blit
+  costs the CPU its copper block). A buffer keeps what was
   drawn into it, and in a still scene (a faceoff, a goal) nearly all of it is the same again,
   in play often much of it: so a frame's cut blits (sprites, overlay, plane B's high priority
   cells) are first listed, each with its box of the dirty map, and matched in order with the
@@ -479,11 +425,7 @@ blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges 
 CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
 the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does. The
 harness gives the sprite image ring a second part as the launcher would, 256 KB
-(`NHL_SCX=bytes`, 0 for none). `NHL_BLITFRAMES=file` writes a line for each frame shown: the game frame and the
-blitter's cycles and blits since the frame before by kind (copies A to D, cookie cuts, D only,
-other), with NHL_DETERM the same game every build. `NHL_BLITLOG=file` writes every blit: the
-frames shown so far, the game frame, BLTCON0, BLTCON1, the first and last word masks, the A, B,
-C and D pointers (0: not used), words, lines and its time. `NHL_HAZARD=n` reports (up to n)
+(`NHL_SCX=bytes`, 0 for none). `NHL_HAZARD=n` reports (up to n)
 blits that read a word the CPU wrote after the blit was queued (after it wrote the copper's
 move that starts it), with the pc of that write and of the queueing: what a queued blit reads
 has to stay as it was until it has run, a vertical blank's restart included. (A cookie cut's
@@ -497,12 +439,14 @@ picture is the game's at the frame's end, which could then be part way into the 
 enough of the Amiga custom chips (blitter, copper list, Paula):
 
     make -C amiga/harness MUSASHI=/path/to/Musashi
-    amiga/harness/nhlrun -c 8000000 -f 3000 -S 100 -p 700:80,710:0 -o /tmp/shots output/amiga/nhl94.game
+    amiga/harness/nhlrun -c 8000000 -f 3000 -S 100 -p 700:80,710:0 -o /tmp/shots output/amiga/harness.game
 
 runs 3000 frames, presses Start at frame 700 (`-p`: from a frame, the pads' bits held) and
 saves the Amiga screen, taken from the copper list, every 100 frames (`-S`; `-s` lists frames)
-as `ami_<frame>.png`. `golden.sh` (below) checks a build's screens against an earlier one's.
-`NHL_WAV=out.wav` writes the sound; `NHL_AUDLOG=1` logs every sample start;
+as `ami_<frame>.png`. It runs `harness.game` only (`nhl94.game` has no harness hooks). At the end
+it prints a fingerprint of the Genesis RAM (`game RAM`), the same for two builds that played
+the same game. `golden.sh` (below) checks a build's screens against an earlier one's.
+`NHL_WAV=out.wav` writes the sound;
 `NHL_PROF=file` writes a PC sample every 1000 cycles (the instruction running then), which
 `amiga/harness/rdcost.py` sums. `NHL_A32=1` reports each instruction that reads or writes an
 address with a top byte (a stock A1200's 68EC020 has 24 address lines and ignores it, a 68030
@@ -526,7 +470,6 @@ interrupt acknowledge callback for it. With `NHL_DETBLIT=1` as well, blits take 
 (the CPU's work and the blitter's overlap, as on the Amiga; a wait of the renderer for the
 blitter ends the blit at once), but the game's course is no longer the same for every build:
 the renderer's waits for a free buffer then end frames at other points.
-`NHL_DRAWLOG=file` writes each frame's count of frames drawn and of game frames run;
 `NHL_TICKLOSS=1` reports each game frame lost (its timer interrupt came while the one before
 still waited: the game held them off too long). `NHL_POKE=addr:word,...` writes words once
 the program is loaded (hex), e.g. `hal_hz` = 50 to run as on a PAL Amiga.
@@ -535,18 +478,9 @@ begins, then the renderer's harness cycles per frame drawn are counted over unin
 play, by routine, to compare builds; it prints a fingerprint of the game at the end, which is
 the same for two builds that played the same game. The renderer draws every second game frame, the odd or
 the even ones depending on its timing earlier on, and the work can differ between the two:
-`NHL_PHASE=0` or `1` sets which (from frame 2000), and playcost.sh measures both. `NHL_RAMDUMP=file:from:to` writes the Genesis RAM every
-frame. `NHL_FREELOG=file` (with `NHL_DETERM`) writes the renderer's cycles each frame, for the
-spread of the cost per frame drawn (the PC samples of `NHL_PROF` carry their frame too). `NHL_BLITKINDS=1` splits the blitter's time from frame 1700 by which of the renderer's chip
-buffers each blit reads and writes (plane B restores, sprites, overlay, clears). The harness'
-Start presses pause and resume the game every 120 frames, and each resume restores whole
-screens, so these are not the steady figures of play. For those, a build with `-DSPRLOG=1`
-logs every sprite blit (`NHL_DBGPORT=1`), and `amiga/harness/rstsim.py log` replays the log:
-the words a frame for the sprites and for restoring under them, whole boxes or trimmed, and
-dirty maps of 8 to 1 lines, all on the same frames (builds that differ play differently: the
-game's random numbers depend on its timing).
+`NHL_PHASE=0` or `1` sets which (from frame 2000), and playcost.sh measures both.
 
-`amiga/harness/golden.sh record GAME DIR` plays scripted sessions in the harness's
+`amiga/harness/golden.sh record GAME DIR` (GAME: a `harness.game`) plays scripted sessions in the harness's
 deterministic mode (attract mode; Start every 120 frames through the menus into a game; a long
 game; a tour of the pause menu's items; the playoff tree and its matchups) and keeps the
 Amiga screen at many frames (2230 in all); `golden.sh check GAME DIR` plays them again with another build and reports every screen
@@ -565,3 +499,5 @@ display, presses keys at given times and takes screenshots. Add `fast_memory = 8
   the CPU. FM sounds are samples, so notes do not change timbre as they decay, and the LFO,
   detune and SSG-EG are left out.
 - No 4 way play.
+- The crowd in the stands is not animated (it would take about a tenth of the renderer's time in
+  play).

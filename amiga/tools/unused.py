@@ -8,7 +8,7 @@ from a global label to the next (or to a change of section). A block reaches the
 equates and macros its lines name, and the block after it in its section when it can run on
 into it: its last instruction is not rts, rte, bra or jmp, or its last line is a local label
 (the next block's start). Equates and macros reach what their definitions name. Both sides of
-every IF are read, so what any variant build (STATS, PROFILE, BENCH ...) uses counts. From the
+every IF are read, so what the harness build (HARNESS) uses counts. From the
 first block (hal_header: AmigaDOS starts there), what comes before each section's first label,
 and every name the build script, the tools, the test harness and the launcher use, what is not reached is
 listed with its bytes in the listing. Symbols are compared without case (the build assembles

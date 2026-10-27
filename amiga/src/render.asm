@@ -27,9 +27,7 @@ SCRX		equ	4			;byte of plane x 0 (scroll mode) / screen x 0 (otherwise)
 BUFH		equ	480			;rows: plane B's 256, then its first 224 again (vertical wrap)
 BUFSIZE		equ	SROW*BUFH
 NBUF		equ	3			;screen buffers: one shown, one waiting to be, one drawn
-	IFND	DLS
 DLS		equ	3			;dirty maps: a row is 1 << DLS lines
-	ENDC
 DLH		equ	1<<DLS
 DROWS		equ	BUFH>>DLS		;rows of the dirty maps
 DWRAP		equ	256>>DLS		;(the row the buffer's second copy of plane B begins at)
@@ -108,10 +106,8 @@ rd_bufi		ds.w	1			;the back buffer's number
 rd_xorg		ds.w	1			;bit in a buffer row of screen x 0
 rd_brow0	ds.w	1			;buffer row of screen line 0
 rd_scroll	ds.w	1			;scroll mode this frame
-rd_vfail	ds.l	1			;self-check (VERIFY builds): first failure
 rd_backcop	ds.l	1			;its copper list
 rd_copb		ds.l	1			;the first copper list (in rd_cop)
-rd_layout					;the layout this frame is drawn with (rd_snapshot: display.asm's)
 rd_lnta		ds.l	1			;where plane A's, plane B's and the window's cells are in
 rd_lntb		ds.l	1			;video memory
 rd_lntw		ds.l	1
@@ -653,14 +649,6 @@ rd_rev8
 ;	One frame into the back buffer, then shown. Skipped when nothing changed for two frames (the
 ;	layout, cells, tiles and colours: ds_gen, ds_palgen).
 rd_frame
-	IFD	CRASHTEST			;(CRASHKIND 3: the renderer stuck, the game going on)
-	IFEQ	CRASHKIND-3
-	cmpi.l	#CRASHTEST*50,(hal_frames).l
-	blo.s	.ct
-.fz	bra.s	.fz
-.ct
-	ENDC
-	ENDC
 	movem.l	d0-d7/a0-a6,-(sp)
 	move.l	(ds_gen).l,d0
 	add.l	(ds_palgen).l,d0
@@ -1282,77 +1270,14 @@ rd_fast
 	bsr	rd_ovl_blit
 .hs	bsr	rd_sprites_planar
 	bsr	rd_op_end
-	IFD	VERIFY
-	bsr	rd_waitblit
-	bra	rd_verify
-	ENDC
 	rts					;(the blitter goes on; rd_show queues the swap)
 
-	IFD	VERIFY
-;	Debug: in scroll mode every part of the back buffer its dirty map does not name must be the
-;	bitmap's. The first that is not: rd_vfail = frame, map row, column (once).
-rd_verify
-	tst.w	(rd_scroll).l
-	beq	.x
-	tst.l	(rd_vfail).l
-	bne	.x
-	movea.l	(rd_dmap).l,a2
-	lea	(rd_vmap).l,a3
-	moveq	#0,d7				;cell row
-.r	move.l	(a2,d7.w*4),d6
-	or.l	(a3,d7.w*4),d6			;(and what the frame's listed blits drew)
-	moveq	#0,d5				;column
-.c	btst	#31,d6
-	bne.s	.n
-	move.w	d7,d0
-	mulu.w	#DLH*SROW,d0
-	movea.l	(rd_buf).l,a0
-	adda.l	d0,a0
-	lea	SCRX(a0,d5.w*2),a0
-	moveq	#DWRAP-1,d0
-	and.w	d7,d0
-	mulu.w	#DLH*64*6,d0
-	lea	(bmB).l,a1
-	adda.l	d0,a1
-	lea	(a1,d5.w*2),a1
-	moveq	#DLH*6-1,d4
-.l	move.w	(a0),d0
-	cmp.w	(a1),d0
-	bne.s	.fail
-	lea	SBPR(a0),a0
-	lea	64(a1),a1
-	dbf	d4,.l
-.n	lsl.l	#1,d6
-	addq.w	#1,d5
-	cmpi.w	#32,d5
-	blt.s	.c
-	addq.w	#1,d7
-	cmpi.w	#DROWS,d7
-	blt.s	.r
-.x	rts
-.fail	move.w	(rd_count+2).l,(rd_vfail).l
-	move.b	d7,(rd_vfail+2).l
-	move.b	d5,(rd_vfail+3).l
-	rts
-	ENDC
 
 ;	The renderer's waits for the copper, the blitter and a show give up after RCVVB vertical
 ;	blanks (2 seconds at 50 Hz; the longest in long harness runs of random play: 4): the copper or
 ;	the blitter has stalled, and both are set up again (rd_stall). Each wait keeps the vertical
 ;	blank it began at on the stack.
 RCVVB	equ	100
-;	(STATS builds) The longest wait so far, in vertical blanks, to rd_wstat+4: the wait's start
-;	at \1(sp). Uses d0.
-WMAX	MACRO
-	IFD	STATS
-	move.l	(rd_vblanks).l,d0
-	sub.l	\1(sp),d0
-	cmp.l	(rd_wstat+4).l,d0
-	bls.s	.wm\@
-	move.l	d0,(rd_wstat+4).l
-.wm\@
-	ENDC
-	ENDM
 
 ;	Wait until the back buffer is off the screen for good: the frame after it (the next
 ;	buffer's) has been given to the display and a vertical blank has passed since, so the
@@ -1367,7 +1292,6 @@ rd_vsync
 	moveq	#0,d1
 .n	lsl.w	#2,d1
 	lea	(rd_shownvb).l,a0
-	PEV	'v'				;(statistics: waiting for a buffer, got it)
 	move.l	(rd_vblanks).l,-(sp)		;(the wait's start: rd_stall)
 rd_spin_vs					;(the harness: the renderer waits here)
 .w	move.l	(rd_vblanks).l,d0
@@ -1378,9 +1302,8 @@ rd_spin_vs					;(the harness: the renderer waits here)
 	blo.s	.w
 	bsr	rd_stall
 	bra.s	.w
-.d	WMAX	0
+.d
 	addq.l	#4,sp
-	PEV	'V'
 	movem.l	(sp)+,d0-d1/a0
 	rts
 
@@ -1419,11 +1342,10 @@ rd_spin_w
 	blo.s	.w
 	bsr	rd_stall
 	bra.s	.w
-.d	WMAX	0
+.d
 	addq.l	#4,sp
 	move.l	(sp)+,d0
 	rts
-rd_waitblit_end
 
 ;	------------------------------------------------------------------------------------------
 ;	Blit queue: the copper starts the blits. Each is written into a ring of copper code in chip
@@ -1445,9 +1367,7 @@ rd_waitblit_end
 ;	for the copper (rd_cq_safe).
 ;	A block runs again if a vertical blank comes in the middle of it, which a blit allows (it
 ;	reads the same and writes the same again).
-	IFND	RGAP
 RGAP	equ	2				;rd_restore: runs this many columns apart are one blit
-	ENDC
 BQE	equ	$38				;the blit being written: laid out as the blitter's
 						;registers $040-$077
 CQSIZE	equ	16384				;the ring's bytes (a power of 2)
@@ -1523,7 +1443,6 @@ rd_spin_full
 	move.w	d1,(rd_cqfree).l
 	movea.l	(rd_cqwp).l,a6
 .x	lea	8(a6),a5
-	WMAX	0
 	addq.l	#4,sp
 	movem.l	(sp)+,d0-d2/a0
 	rts
@@ -1580,9 +1499,6 @@ rd_cq_close
 	move.w	d0,(CUSTOM+$08A).l		;COPJMP2: to the stop's place (COP2LC)
 	nop					;(done before SOFT is looked at again)
 	move.l	d0,(rd_cqdp).l			;(what is before it has run)
-	IFD	PROFILE
-	addq.l	#1,(prof_mark+84).l		;(statistics: the copper started again)
-	ENDC
 .k1	move	(sp)+,sr
 	rts
 
@@ -1595,9 +1511,6 @@ rd_cq_close
 CQBATCH	equ	4
 
 rd_cq_blit
-	IFD	PROFILE
-	addq.l	#1,(prof_mark+80).l		;(statistics: blits)
-	ENDC
 	addq.b	#1,(rd_cqbat).l
 	cmpi.b	#1,(rd_cqbat).l
 	beq	rd_cq_open			;(the batch's first)
@@ -1660,9 +1573,6 @@ rd_bq_go
 	lea	(rd_bqe).l,a0
 	tst.w	$05E-$040(a0)
 	beq	.mark
-	IFD	PROFILE
-	addq.l	#1,(prof_mark+80).l		;(statistics: blits)
-	ENDC
 	bsr	rd_cq_open
 	sf	(rd_cqkind).l
 	move.w	(a0),d3				;BLTCON0
@@ -1747,9 +1657,6 @@ rd_cq_kickm
 .k	move.w	#$0002,(CUSTOM+INTREQ).l	;DSKBLK off
 	move.w	d0,(CUSTOM+$08A).l		;COPJMP2
 	nop					;(done before DSKBLK is looked at again)
-	IFD	PROFILE
-	addq.l	#1,(prof_mark+84).l		;(statistics: the copper started again)
-	ENDC
 .x	move	(sp)+,sr
 	rts
 
@@ -1807,7 +1714,6 @@ rd_cq_mark
 	bsr	rd_showdue
 	bra	rd_cq_kickm
 .hold	st	(rd_bqhold).l
-	PEV	'H'
 .x	rts
 
 ;	The ring (in rd_cqbuf, within a 64K page, so only COP2LCL changes), the copper stopped at
@@ -1991,17 +1897,7 @@ rd_showdue
 	sub.l	(rd_lastset).l,d0
 	sub.l	(hal_pace).l,d0
 	bmi	.x
-	IFD	PROFILE
-	add.l	(hal_pace).l,d0			;(statistics: vertical blanks the frame before was
-	subq.l	#1,d0				;shown for)
-	cmpi.l	#7,d0
-	bls.s	.h
-	moveq	#7,d0
-.h	lea	(prof_mark+20).l,a1
-	addq.l	#1,(a1,d0.l*4)
-	ENDC
 	move.l	(rd_vblanks).l,(rd_lastset).l
-	PEV	'C'				;(statistics: a copper list set)
 	move	sr,-(sp)			;COP1LC is set by two writes: the copper's restart from it
 	ori	#$0700,sr			;at a vertical blank is not to come between them (the lists
 	bsr	rd_cq_safe			;share a 64K page too, rd_copb)
@@ -2025,10 +1921,6 @@ rd_showdue
 	bls.s	.l6
 	moveq	#6,d1
 .l6
-	IFD	PROFILE
-	lea	(prof_mark+52).l,a1		;(statistics)
-	addq.l	#1,(a1,d1.w*4)
-	ENDC
 	lsl.w	#8,d1
 	addi.w	#128,d1
 	sub.w	(snd_latf).l,d1
@@ -2110,9 +2002,6 @@ rd_snaptime
 ;	rd_vsync; the keyboard read).
 rd_bq_int
 	movem.l	d0-d1/a0-a1,-(sp)
-	IFD	PROFILE
-	addq.l	#1,(prof_mark+88).l		;(statistics: level 3 interrupts)
-	ENDC
 	move.w	(CUSTOM+$01E).l,-(sp)		;INTREQR
 	btst	#4,1(sp)
 	beq.s	.nm
@@ -2120,16 +2009,16 @@ rd_bq_int
 	move.w	#$0010,(CUSTOM+INTREQ).l
 	btst	#1,(CUSTOM+$01F).l		;(DSKBLK: it waits there; else a call left over from
 	beq.s	.nm				;a vertical blank's restart: the copper went on)
-	PEV	'M'				;(statistics: the copper at a show)
 	bsr	rd_cq_mark
 .nm	btst	#5,1(sp)
 	beq.s	.x
 	move.w	#$0020,(CUSTOM+INTREQ).l
 	move.w	#$0020,(CUSTOM+INTREQ).l
-	PEV	'B'				;(statistics: a vertical blank)
 	addq.l	#1,(rd_vblanks).l
+	IFND	HARNESS
 	lea	18(sp),a0			;(its frame, the registers saved under it: cr_watch)
 	bsr	cr_watch			;(crash.asm: no game tick for 10 seconds)
+	ENDC
 	tst.b	(hal_vbtick).l
 	beq.s	.nt
 	lea	18(sp),a0
@@ -2190,23 +2079,9 @@ rd_ntwritten
 	beq.s	.w0
 	st	(rd_ntfull).l
 .w0	or.l	d4,d2
-	IFD	STATS
-	tst.l	d4
-	beq.s	.s1
-	addq.l	#1,(rd_dbg_x+32).l
-	move.l	d0,(rd_dbg_x+36).l
-.s1
-	ENDC
 	bfclr	(a0){d0:d3}
 	bfextu	(a1){d0:d3},d4
 	or.l	d4,d2
-	IFD	STATS
-	tst.l	d4
-	beq.s	.s2
-	addq.l	#1,(rd_dbg_x+24).l
-	move.l	d0,(rd_dbg_x+28).l
-.s2
-	ENDC
 	add.l	d3,d0
 	sub.l	d3,d1
 	bne.s	.l
@@ -2268,36 +2143,7 @@ rd_ntblocks
 	movem.l	(sp)+,d0-d1
 	rts
 
-	IFD	VERIFY
-;	Debug: the name table's long at a0 - 4 changed, rd_ntwritten said only blocks of tc_chg
-;	could have and its is not one: rd_ntfail with d0 (the table) + $10. Keeps all.
-rd_ntblkchk
-	tst.b	(rd_ntfull).l
-	bne.s	.x
-	movem.l	d0-d1,-(sp)
-	move.l	a0,d1
-	subq.l	#4,d1
-	subi.l	#vm_data,d1
-	lsr.l	#5,d1
-	bftst	(tc_chg).l{d1:1}
-	bne.s	.ok
-	addi.w	#$10,d0
-	bsr	rd_ntfail
-.ok	movem.l	(sp)+,d0-d1
-.x	rts
-	ENDC
 
-	IFD	VERIFY
-;	Debug: a name table changed that rd_ntwritten said could not have (d0 = 1 plane B, 2 plane
-;	A, 3 window): rd_vfail = frame, $FE, d0 (once).
-rd_ntfail
-	tst.l	(rd_vfail).l
-	bne.s	.x
-	move.w	(rd_count+2).l,(rd_vfail).l
-	move.b	#$FE,(rd_vfail+2).l
-	move.b	d0,(rd_vfail+3).l
-.x	rts
-	ENDC
 
 ;	Bring the plane B bitmap up to date with the name table and the tiles.
 rd_updateB
@@ -2364,11 +2210,6 @@ rd_updateB
 	dbf	d4,.tu
 	movea.l	(sp)+,a3
 .tun	move.l	d3,(rd_btchg).l
-	IFD	STATS
-	beq.s	.st0
-	addq.l	#1,(rd_dbg_x+0).l
-.st0
-	ENDC
 	clr.w	(rd_hiBok).l
 	move.w	d0,d7
 	mulu.w	d1,d7
@@ -2382,16 +2223,13 @@ rd_updateB
 	bne	.cell
 	; changed entries, if the name table was written to: found quickly as changed longs; then
 	; the cells of the tiles converted again (rd_btiles)
-	IFND	VERIFY
 	tst.b	(rd_ntcur).l
 	beq	.fdone
-	ENDC
 	move.l	a0,(rd_tmp).l			;name table start
 	addq.w	#1,d7
 	lsr.w	#1,d7
 	subq.w	#1,d7				;longs - 1
 	sf	(rd_ntblkm).l
-	IFND	VERIFY
 	tst.b	(rd_ntfull).l			;(only blocks a load, fill or copy wrote: those)
 	bne.s	.f
 	st	(rd_ntblkm).l
@@ -2403,7 +2241,6 @@ rd_updateB
 	lea	(shB).l,a1
 	adda.l	d0,a1
 	moveq	#7,d7
-	ENDC
 .f	cmpm.l	(a0)+,(a1)+
 	dbne	d7,.f
 	beq	.fend
@@ -2422,28 +2259,6 @@ rd_updateB
 	beq	.fn
 	move.w	d1,(a1,d0.l*2)
 	clr.w	(rd_hiBok).l
-	IFD	VERIFY
-	tst.b	(rd_ntcur).l
-	bne.s	.vok
-	move.l	d0,-(sp)
-	moveq	#1,d0
-	bsr	rd_ntfail
-	move.l	(sp)+,d0
-.vok	tst.b	(rd_ntfull).l			;(a load's block?)
-	bne.s	.vk2
-	movem.l	d0/d1,-(sp)
-	move.l	(rd_tmp).l,d1
-	subi.l	#vm_data,d1
-	add.l	d0,d1
-	add.l	d0,d1
-	lsr.l	#5,d1
-	bftst	(tc_chg).l{d1:1}
-	bne.s	.vk1
-	moveq	#$11,d0
-	bsr	rd_ntfail
-.vk1	movem.l	(sp)+,d0/d1
-.vk2
-	ENDC
 	moveq	#0,d4
 	move.w	d0,d4
 	divu.w	(rd_cw).l,d4
@@ -2461,10 +2276,8 @@ rd_updateB
 	movem.l	(sp)+,d7/a0-a1
 	dbf	d7,.f
 .fend
-	IFND	VERIFY
 	tst.b	(rd_ntblkm).l
 	bne	.fb
-	ENDC
 .fdone	tst.l	(rd_btchg).l
 	beq.s	.fd2
 	bsr	rd_btiles
@@ -2561,12 +2374,6 @@ rd_btiles
 ;	Draw entry d0 at cell d4 (column), d5 (row) of the plane B bitmap. The blits of the frame
 ;	before may still read the bitmap: they are let finish first.
 rd_cellB
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+4).l
-	ENDC
-	IFD	PROFMARK
-	PEV	'c'
-	ENDC
 	; a blit queued that reads it in the bitmap (rd_bmrc): let them all finish first
 	move.l	d0,-(sp)
 	bsr	rd_bmrc_row
@@ -2575,9 +2382,6 @@ rd_cellB
 	lsr.w	#1,d1				;(its 16 pixel column)
 	bftst	d0{d1:1}
 	beq.s	.nw
-	IFD	PROFMARK
-	PEV	'w'
-	ENDC
 	bsr	rd_waitblit
 	bsr	rd_bmrc_clr
 .nw	move.l	(sp)+,d0
@@ -2589,9 +2393,6 @@ rd_cellB
 	moveq	#31,d2
 	and.w	d5,d2
 	lea	(rd_dirty).l,a1
-	IFNE	3-DLS
-	lsl.w	#3-DLS,d2			;(its first map row)
-	ENDC
 	lea	(a1,d2.w*4),a1
 	moveq	#(8>>DLS)-1,d3
 .mr	bfset	(a1){d1:1}
@@ -2946,17 +2747,11 @@ rd_rowB
 	bsr	rd_rowB_defer
 	tst.l	d0
 	beq.s	.nw
-	IFD	PROFMARK
-	PEV	'W'
-	ENDC
 	bsr	rd_waitblit
 	bsr	rd_bmrc_clr
 .nw	; all buffers are to be mended there (as rd_cellB)
 	moveq	#31,d1
 	and.w	d5,d1
-	IFNE	3-DLS
-	lsl.w	#3-DLS,d1			;(its first map row)
-	ENDC
 	lea	(rd_dirty).l,a1
 	lea	(a1,d1.w*4),a1
 	moveq	#(8>>DLS)-1,d3
@@ -2992,9 +2787,6 @@ rd_rowB
 	add.w	a5,d1				;the cell
 	lea	(shB).l,a1
 	move.w	(a1,d1.w*2),d0			;its entry
-	IFD	PROFMARK
-	PEV	'c'
-	ENDC
 	moveq	#0,d2				;its tile used, converted if it waits (before its class
 	move.w	d0,d2				;is looked at)
 	andi.w	#$7FF,d2
@@ -3017,9 +2809,6 @@ rd_rowB
 	movem.l	(sp)+,d4-d6/a5
 	bra	.c
 .fast
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+4).l
-	ENDC
 	lea	(rd_hibits).l,a1		;(low priority, or an empty tile: no bit, no mask)
 	bfclr	(a1){d1:1}
 	bsr	rd_tl_set
@@ -3185,9 +2974,6 @@ rd_bp_add
 
 ;	List the high priority cells of plane B (for the fixups).
 rd_list_hiB
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+8).l
-	ENDC
 	lea	(rd_hibits).l,a1
 	moveq	#BMAX/32-1,d0
 .cb	clr.l	(a1)+
@@ -3298,9 +3084,6 @@ rd_restore
 	cmp.l	(a2,d7.w*4),d6
 	beq.s	.same
 .grp	; rows d5 .. d7-1, the columns of d6: the runs
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+68).l		;(statistics: groups of rows)
-	ENDC
 .run	bfffo	d6{0:0},d1			;first column
 	move.l	d6,d2
 	lsl.l	d1,d2
@@ -3361,11 +3144,6 @@ rd_restore
 	CQV	$05C,d0,d4			;BLTSIZV
 	lsr.w	#1,d3
 	CQV	$05E,d3,d4			;BLTSIZH
-	IFD	STATS
-	mulu.w	d3,d0
-	add.l	d0,(rd_dbg_x+52).l		;(statistics: words restored and blits)
-	addq.l	#1,(rd_dbg_x+48).l
-	ENDC
 	bsr	rd_cq_endblit
 	tst.l	d6
 	bne	.run
@@ -3964,9 +3742,6 @@ rd_hud_off
 ;	All of it, into rd_hudm.
 rd_hud_build
 	movem.l	d0-d7/a0-a6,-(sp)
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+44).l
-	ENDC
 	bsr	rd_hud_off
 	sf	(rd_hudchg).l
 	move.w	(rd_w).l,(rd_hudw).l
@@ -4188,9 +3963,6 @@ rd_hud_cell
 	dbf	d7,.fg
 	bra	.full
 .fd
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+72).l		;(statistics: HUD cells made again)
-	ENDC
 	; the bands of 8 lines it is in, of its group: each buffer's copy takes them (rd_show)
 	moveq	#0,d0
 	move.w	d2,d0
@@ -4394,9 +4166,6 @@ rd_hud_byte
 
 rd_ovl_redraw
 	st	(rd_hudchg).l
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+16).l
-	ENDC
 	sf	(rd_ovldirty).l
 	st	(rd_ovlrst).l
 	addq.l	#1,(rd_ovlgen).l
@@ -4531,14 +4300,6 @@ rd_ovl_redraw
 	cmpi.w	#32,d7
 	blo.s	.ir
 	bsr	rd_waitblit
-	IFD	VERIFY
-	tst.l	(rd_ovlpart).l
-	bne.s	.nvz
-	lea	(rd_ovlmlo).l,a0		;(the masks all clear now)
-	move.w	#OSROW*SCRH/2-1,d0
-	bsr.s	.vz
-.nvz
-	ENDC
 	; draw the cells (those over a band drawn again)
 	lea	(rd_alist).l,a4
 	move.w	(rd_alistn).l,d7
@@ -4573,17 +4334,6 @@ rd_ovl_redraw
 	rts
 .in1	moveq	#1,d0
 	rts
-	IFD	VERIFY
-.vz	tst.l	(a0)+				;d0 + 1 longs from a0 clear, else rd_vfail: frame, $FD
-	bne.s	.vf
-	dbf	d0,.vz
-	rts
-.vf	tst.l	(rd_vfail).l
-	bne.s	.vx
-	move.w	(rd_count+2).l,(rd_vfail).l
-	move.w	#$FD00,(rd_vfail+2).l
-.vx	rts
-	ENDC
 
 ;	The words of band a0 (rd_ovlrows: low priority there, high 32 bands on) that its cells
 ;	cover, either priority: d0 the first, d1 the last (in a row of the overlay); N set if none.
@@ -5049,9 +4799,6 @@ rd_ovl_rects
 ;	Redraw the overlay cells of the listed changed name table longs (rd_chgA, rd_chgW), plane A
 ;	scrolled by whole cells. d6 = plane cells across, d7 = down.
 rd_ovl_cells_changed
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+20).l
-	ENDC
 	lea	(rd_aused).l,a3
 	lea	(rd_chgA).l,a4
 	move.w	(rd_nchgA).l,d4
@@ -5363,9 +5110,7 @@ rd_buildA
 	bsr	rd_ntwritten
 	movem.l	(sp)+,d2-d4
 	move.b	d0,(rd_ntcur).l
-	IFND	VERIFY
 	beq	.caw				;not written to: as it was
-	ENDC
 	move.b	#2,(rd_nttab).l
 	lea	(vm_data).l,a0
 	adda.l	(rd_abase).l,a0
@@ -5386,9 +5131,7 @@ rd_buildA
 	bsr	rd_ntwritten
 	movem.l	(sp)+,d2-d4
 	move.b	d0,(rd_ntcur).l
-	IFND	VERIFY
 	beq	.cww
-	ENDC
 	move.b	#3,(rd_nttab).l
 	lea	(vm_data).l,a0
 	adda.l	(rd_wbase).l,a0
@@ -5437,7 +5180,6 @@ rd_buildA
 	bra	.keep
 .cmpd	; the same, only the blocks a load, fill or copy wrote if no more can have changed
 	; (rd_ntfull)
-	IFND	VERIFY
 	tst.b	(rd_ntfull).l
 	bne.s	.cmp
 	move.l	a0,(rd_tmp+16).l
@@ -5456,7 +5198,6 @@ rd_buildA
 	bsr.s	.cs
 	bra.s	.cdb
 .cdx	rts
-	ENDC
 .cmp	; the name table a0 against its copy a1, d4 + 1 longs: changed longs listed (.note) and
 	; copied. Uses d0-d2, d4, a0-a1.
 	move.l	a0,(rd_tmp+16).l
@@ -5477,16 +5218,6 @@ rd_buildA
 	bne.s	.nwc
 	st	(rd_wchg).l
 .nwc
-	IFD	VERIFY
-	move.l	d0,-(sp)
-	moveq	#0,d0
-	move.b	(rd_nttab).l,d0
-	tst.b	(rd_ntcur).l
-	bne.s	.nok
-	bsr	rd_ntfail
-.nok	bsr	rd_ntblkchk
-	move.l	(sp)+,d0
-	ENDC
 	moveq	#1,d1
 	cmpi.w	#2,d5
 	beq.s	.n2
@@ -5575,9 +5306,6 @@ rd_buildA
 	subq.w	#1,d0
 .cpw	move.l	(a0)+,(a1)+
 	dbf	d0,.cpw
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+12).l
-	ENDC
 	lea	(rd_akeynew).l,a0
 	lea	(rd_akey).l,a1
 	moveq	#5,d0
@@ -5793,19 +5521,6 @@ rd_sprite_blit
 	lsl.w	#3,d4
 	add.w	d3,d4
 	ble	.x
-	IFD	STATS
-	movem.l	d0-d1/a0,-(sp)
-	addq.l	#1,(rd_dbg_ntw).l		;(statistics: sprites drawn, those of new tiles)
-	move.w	(rd_sat).l,d0
-	andi.l	#$7FF,d0
-	move.w	(rd_scw).l,d1
-	mulu.w	(rd_sch).l,d1
-	lea	(tc_chg).l,a0
-	bftst	(a0){d0:d1}
-	beq.s	.st0
-	addq.l	#1,(rd_dbg_til).l
-.st0	movem.l	(sp)+,d0-d1/a0
-	ENDC
 	bsr	rd_spr_geom
 	; from the image cache: the sprite as 6 interleaved planes and a mask, the box of its pixels
 	; cut into the screen by one blit (queued: the CPU goes on). Columns dropped on the left:
@@ -5924,27 +5639,6 @@ rd_spr_cut
 	lsr.w	#4,d3
 	sub.w	d2,d3
 	addq.w	#1,d3				;words
-	IFD	SPRLOG
-	movem.l	d0/a0,-(sp)			;(harness: each sprite blit, NHL_DBGPORT)
-	lea	(CUSTOM+$1F0).l,a0
-	move.w	#$8000,(a0)
-	move.w	(rd_bufi).l,(a0)
-	move.w	(rd_count+2).l,(a0)
-	move.w	(rd_xorg).l,(a0)
-	move.w	(rd_brow0).l,(a0)
-	move.w	(rd_colx).l,(a0)
-	move.w	(rd_sy).l,(a0)
-	move.w	(rd_r0).l,(a0)
-	move.w	(rd_r1).l,(a0)
-	move.w	(rd_ncol).l,(a0)
-	move.w	(rd_wb).l,(a0)
-	move.w	(rd_bp0).l,(a0)
-	move.w	(rd_bp1).l,(a0)
-	move.w	d6,(a0)
-	move.w	d5,(a0)
-	move.w	d3,(a0)
-	movem.l	(sp)+,d0/a0
-	ENDC
 	move.w	(rd_wb).l,d4			;bytes a plane row of the image: 2 to 8
 	move.w	d6,d7				;its first line: * 6 * wb
 	cmpi.w	#4,d4
@@ -6172,9 +5866,6 @@ rd_op_blit
 rd_op_fallback
 	movem.l	d0-d7/a0-a6,-(sp)
 	sf	(rd_stage).l
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+92).l		;(statistics: listings ended half way)
-	ENDC
 	bsr	rd_op_old
 	movea.l	(rd_dmap).l,a2
 	movea.l	a3,a1
@@ -6310,16 +6001,11 @@ rd_op_end
 	dbf	d5,.cw
 .nw	bsr	rd_restore
 	movem.l	(sp)+,d4/d7/a4
-	IFD	STATS
-	add.l	d7,(rd_dbg_x+96).l		;(statistics: blits listed, drawn)
-	ENDC
 	tst.w	d4
 	bne.s	.w
 	; none matched: all drawn
 	bra.s	.ae
-.a	IFD	STATS
-	addq.l	#1,(rd_dbg_x+100).l
-	ENDC
+.a
 	movem.l	d7/a4,-(sp)
 	movea.l	a4,a1
 	bsr	rd_op_blit
@@ -6360,9 +6046,6 @@ rd_op_end
 .es	or.l	d5,(a0)+			;(drawn: the blits after it over it are too)
 	dbf	d3,.es
 .eb
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+100).l
-	ENDC
 	movem.l	d6-d7/a3-a4,-(sp)
 	movea.l	a4,a1
 	bsr	rd_op_blit
@@ -6371,20 +6054,6 @@ rd_op_end
 .ee	dbf	d6,.e
 	bra	.ae
 .done	bsr	rd_cq_flush
-	IFD	VERIFY
-	lea	(rd_vmap).l,a0			;(rd_verify: the list's boxes)
-	moveq	#DROWS-1,d0
-.cv	clr.l	(a0)+
-	dbf	d0,.cv
-	movea.l	(rd_opnew).l,a1
-	lea	OPREC-4(a1),a1
-	lea	(rd_vmap).l,a2
-	move.w	(rd_opn).l,d5
-	bra.s	.ve
-.v	bsr	rd_box_set
-	lea	OPREC(a1),a1
-.ve	dbf	d5,.v
-	ENDC
 	; the list the buffer's
 	move.w	(rd_bufi).l,d0
 	lea	(rd_opold).l,a0
@@ -6562,19 +6231,10 @@ rd_sc_get
 .found	movea.l	12(a4),a2			;found
 	bra	.mask
 .bkey
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+56).l		;(statistics: built: not in the table,
-	ENDC
 	bra.s	.build
 .bring
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+60).l		;the ring came round,
-	ENDC
 	bra.s	.build
 .btile
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+64).l		;a tile converted since)
-	ENDC
 .build	move.l	d7,d1
 	add.l	d1,d1				;room in the ring for image and mask
 	bsr	rd_sc_alloc
@@ -6654,9 +6314,6 @@ rd_sc_alloc
 	move.l	(rd_scmin+4).l,d4
 .m	cmp.l	d3,d4
 	bge.s	.free
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+40).l		;(statistics: waits for the blitter here)
-	ENDC
 	tst.b	(rd_stage).l			;(this frame's blits listed: drawn first)
 	beq.s	.nl
 	bsr	rd_op_fallback
@@ -7092,9 +6749,6 @@ rd_obj_blit
 	sub.l	8(a2),d1
 	cmp.l	(rd_scsize).l,d1
 	bls.s	.hit
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+108).l		;(statistics: object images built again: the ring
-	ENDC					;came round)
 .miss	bsr	rd_obj_gather
 	bne	.no
 	movem.l	a2/a4-a5,-(sp)
@@ -7102,9 +6756,6 @@ rd_obj_blit
 	movem.l	(sp)+,a2/a4-a5
 	bne	.no				;(too big)
 .hit
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+84).l		;(statistics: objects drawn as one image)
-	ENDC
 	move.l	8(a2),d1			;(the oldest image used in this frame)
 	move.l	d1,(rd_imgpos).l		;(which image: rd_cut_emit)
 	cmp.l	(rd_scmin).l,d1
@@ -7141,9 +6792,6 @@ rd_obj_blit
 	bne	.mf
 	cmp.l	OMPOS(a0),d1
 	bne	.mf
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+104).l		;(statistics: objects as in the frame before)
-	ENDC
 	move.l	(rd_count).l,(a0)
 	btst	#0,OMFLG+1(a0)
 	beq	.yes				;(nothing on the screen)
@@ -7353,9 +7001,6 @@ rd_obj_build
 	bhi	.big
 	cmpi.w	#8,d3
 	bhi	.big
-	IFD	STATS
-	addq.l	#1,(rd_dbg_x+88).l		;(statistics: object images built)
-	ENDC
 	move.w	d2,(rd_oscw).l
 	move.w	d3,(rd_osch).l
 	addq.w	#1,d2
@@ -8228,9 +7873,6 @@ SPRLINE	MACRO					;one line of one column; \1 = bytes a plane row
 	ENDM
 
 rd_spr_build
-	ifd	STATS
-	addq.l	#1,(rd_dbg_key).l		;(statistics: sprites built)
-	endif
 	bsr	rd_spr_tiles
 	movem.l	a2-a3,-(sp)
 	; clear both: lines * 6 * wb bytes each
@@ -8292,10 +7934,6 @@ rd_spr_build
 .t1	sub.w	d0,d1				;lines in this tile row
 	ble	.ntr
 	move.w	d1,d2
-	ifd	STATS
-	ext.l	d1
-	add.l	d1,(rd_dbg_nta).l		;(statistics: lines built)
-	endif
 	subq.w	#1,d2				;loop count
 	; source tile row (vertical flip: from the other end) and line
 	move.w	(rd_btr).l,d1
@@ -8474,9 +8112,6 @@ rd_fixups
 .nsr	addq.w	#1,d7
 	cmpi.w	#SCRH/8,d7
 	blt	.sr
-	IFD	VERIFY
-	bsr	rd_fixverify
-	ENDC
 	; the cells, row by row
 	sf	(rd_fixchk).l
 	tst.w	(rd_scroll).l
@@ -8527,62 +8162,6 @@ rd_fixups
 
 ;	Plane B cell d4 (column), d5 (row): if it is on the screen (and, with rd_fixchk set, under a
 ;	cell of rd_cover), its high priority pixels are drawn again. Keeps everything.
-	IFD	VERIFY
-;	Debug: every high priority cell the search through rd_hiB and rd_iscovered would draw again
-;	must be in rd_fixmap: else rd_vfail = frame, $FD, column (once).
-rd_fixverify
-	movem.l	d0-d7/a0-a4,-(sp)
-	move.w	(rd_hiBn).l,d7
-	subq.w	#1,d7
-	bmi	.x
-	lea	(rd_hiB).l,a4
-.each	move.w	(a4)+,d4
-	move.w	(a4)+,d5
-	; screen position (wrapping)
-	move.w	d4,d0
-	lsl.w	#3,d0
-	sub.w	(rd_bx0).l,d0
-	move.w	(rd_cw).l,d1
-	lsl.w	#3,d1
-	subq.w	#1,d1
-	and.w	d1,d0
-	cmp.w	(rd_w).l,d0
-	blt	.xok
-	sub.w	d1,d0
-	subq.w	#1,d0				;- plane width
-	cmpi.w	#-8,d0
-	ble	.next
-.xok	move.w	d5,d2
-	lsl.w	#3,d2
-	sub.w	(rd_by0).l,d2
-	move.w	(rd_ch).l,d1
-	lsl.w	#3,d1
-	subq.w	#1,d1
-	and.w	d1,d2
-	cmpi.w	#SCRH,d2
-	blt	.yok
-	sub.w	d1,d2
-	subq.w	#1,d2
-	cmpi.w	#-8,d2
-	ble	.next
-.yok	bsr	rd_iscovered
-	beq	.next
-	move.w	d5,d0
-	lsl.w	#6,d0
-	add.w	d4,d0
-	ext.l	d0
-	lea	(rd_fixmap).l,a0
-	bftst	(a0){d0:1}
-	bne	.next
-	tst.l	(rd_vfail).l
-	bne	.next
-	move.w	(rd_count+2).l,(rd_vfail).l
-	move.b	#$FD,(rd_vfail+2).l
-	move.b	d4,(rd_vfail+3).l
-.next	dbf	d7,.each
-.x	movem.l	(sp)+,d0-d7/a0-a4
-	rts
-	ENDC
 
 rd_fixcell
 	movem.l	d0-d7/a0-a4,-(sp)
@@ -9333,7 +8912,6 @@ rd_show
 	move.w	(rd_bufi).l,d1
 	lea	(rd_shownvb).l,a1
 	move.l	#$7FFFFFFF,(a1,d1.w*4)		;(not on the screen yet)
-	PEV	'D'				;(statistics: drawn, the show queued)
 	bsr	rd_bq_allocq
 	move.l	(rd_backcop).l,$048(a6)		;the copper list
 	move.w	d1,$04C(a6)			;the buffer
@@ -9389,7 +8967,7 @@ rd_hudmo	ds.b	HUDMO*16		;bytes made (rd_hud_byte): the key (8), sprite bytes (4)
 rd_hudmap	ds.b	16			;sprite colour -> overlay colour
 rd_nchgA	ds.w	1
 rd_ntcur	ds.b	1			;the name table being compared was written (rd_ntwritten)
-rd_nttab	ds.b	1			;(VERIFY: which)
+rd_nttab	ds.b	1			;2 plane A, 3 the window
 rd_ntsync	ds.b	1			;0: compare all name tables with their copies
 	even
 rd_sbit		ds.w	1
@@ -9418,8 +8996,8 @@ rd_bqhold	ds.b	1			;the copper waits at a show for a vertical blank
 	even
 rd_lastset	ds.l	1			;rd_vblanks when the last copper list was set
 rd_showcop	ds.l	1			;a copper list waiting to be set (0: none)
-rd_wstat	ds.l	2			;the copper and the blitter set up again after a stall
-						;(rd_requeue); (STATS) the longest wait (vertical blanks)
+rd_wstat	ds.l	1			;the copper and the blitter set up again after a stall
+						;(rd_requeue)
 rd_snapvb	ds.l	NBUF			;rd_vblanks at the tick that gave each buffer's game state
 rd_showbuf	ds.w	1			;(its buffer)
 		even
@@ -9433,12 +9011,6 @@ rd_blitnoc	ds.w	1
 rd_nchgW	ds.w	1
 rd_chgA		ds.w	CHGMAX
 rd_chgW		ds.w	CHGMAX
-		cnop	0,4
-rd_dbg_key	ds.l	1
-rd_dbg_nta	ds.l	1
-rd_dbg_ntw	ds.l	1
-rd_dbg_til	ds.l	1
-rd_dbg_x	ds.l	30			;(statistics: see nhlrun)
 		cnop	0,4
 rd_ovldirty	ds.w	1
 rd_ovlrows	ds.l	2*32			;per priority, per band: x min, x max
@@ -9466,9 +9038,6 @@ rd_opbox	ds.l	1				;the box of the blit being made (rd_mark_u)
 rd_imgpos	ds.l	1				;its image (rd_sc_get, rd_obj_blit)
 rd_wmap		ds.l	DROWS				;what is restored or drawn (rd_op_end)
 rd_rmask	ds.l	1				;(rd_restore)
-	IFD	VERIFY
-rd_vmap		ds.l	DROWS				;(rd_verify: the list's boxes)
-	ENDC
 rd_opkeep	ds.b	OPMAX				;per blit: the same as in the last list
 rd_ophb		ds.w	OPHASH				;rd_op_end: the last list's blits by C/D
 rd_ophn		ds.w	OPMAX
