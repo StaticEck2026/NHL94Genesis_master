@@ -564,14 +564,31 @@ static void amiga_png(const char *name)
 }
 
 static int harness_ncyc = 233000;
+static int tod_stop;
+static uint32_t tod_base;
+static double tod_t0;
+static double tod_now(void)
+{
+    double t = (frame - 1) + (double)(cycles_total + m68k_cycles_run() - vb_cycles) / harness_ncyc;
+    return t * (3546895.0 / 60 / 227.5);
+}
+static uint32_t tod_value(void)
+{
+    return tod_stop ? tod_base : (tod_base + (uint32_t)(tod_now() - tod_t0)) & 0xFFFFFF;
+}
+static void tod_write(uint32_t a, uint32_t v)
+{
+    int sh = a == 0xBFDA00 ? 16 : a == 0xBFD900 ? 8 : 0;
+    tod_base = (tod_value() & ~(0xFFu << sh)) | (v & 0xFF) << sh;
+    tod_t0 = tod_now();
+    if (a == 0xBFDA00) tod_stop = 1;
+    if (a == 0xBFD800) tod_stop = 0;
+}
 static uint32_t io_read(uint32_t a, int size)
 {
     if (a == 0xBFD800 || a == 0xBFD900 || a == 0xBFDA00) {
         static uint32_t latch; static int held;
-        if (!held) {
-            double t = (frame - 1) + (double)(cycles_total + m68k_cycles_run() - vb_cycles) / harness_ncyc;
-            latch = (uint32_t)(t * (3546895.0 / 60 / 227.5)) & 0xFFFFFF;
-        }
+        if (!held) latch = tod_value();
         if (a == 0xBFDA00) held = 1;
         if (a == 0xBFD800) held = 0;
         return a == 0xBFD800 ? latch & 0xFF : a == 0xBFD900 ? (latch >> 8) & 0xFF : (latch >> 16) & 0xFF;
@@ -670,7 +687,7 @@ static void hz_mark(uint32_t a, int words)
     uint32_t pc = m68k_get_reg(NULL, M68K_REG_PPC);
     for (int i = 0; i < words; i++) { wtime[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = t; wpc[((a >> 1) + i) & (MEMSIZE / 2 - 1)] = pc; }
 }
-void m68k_write_memory_8(unsigned int a, unsigned int v) { if (gapchk > 0) gap_check(a); a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
+void m68k_write_memory_8(unsigned int a, unsigned int v) { if (gapchk > 0) gap_check(a); a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); else if ((a & 0xFFFFFF) == 0xBFD800 || (a & 0xFFFFFF) == 0xBFD900 || (a & 0xFFFFFF) == 0xBFDA00) tod_write(a & 0xFFFFFF, v); return; } wr8(a, v); hz_mark(a, 1); }
 void m68k_write_memory_16(unsigned int a, unsigned int v) { if (gapchk > 0) gap_check(a); a32_check(a, 1); chip_access(a); if (is_io(a)) { if ((a & 0xFFFFFF) >= 0xDFF000) custom_write(a & 0xFFFFFF, v); return; } wr16(a, v); hz_mark(a, 1); }
 void m68k_write_memory_32(unsigned int a, unsigned int v) { if (gapchk > 0) { gap_check(a); gap_check(a + 3); } a32_check(a, 1); chip_access(a); if (is_io(a)) { m68k_write_memory_16(a, v >> 16); m68k_write_memory_16(a + 2, v & 0xFFFF); return; } wr32(a, v); hz_mark(a, (a & 1) ? 3 : 2); }
 
@@ -840,6 +857,7 @@ int main(int argc, char **argv)
     int frames = 600, every = 0, ncyc = 233000;
     const char *outdir = ".", *exe = NULL;
     int shots[256], nshots = 0;
+    tod_stop = getenv("NHL_TODSTOP") != NULL;
     if (getenv("NHL_WATCH")) watch_addr = strtoul(getenv("NHL_WATCH"), NULL, 16) & 0xFFFFFE;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-f")) frames = atoi(argv[++i]);

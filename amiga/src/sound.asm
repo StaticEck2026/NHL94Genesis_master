@@ -839,6 +839,7 @@ snd_mix_start
 	move.w	#64,8(a0)
 	bsr	snd_dmawait
 	move.w	#$8008,(CUSTOM+DMACON).l
+	bsr	mx_todrun
 	bsr	mx_tod24
 	move.l	d0,(mx_tod).l
 	clr.l	(mx_ccr).l
@@ -1156,6 +1157,25 @@ mx_voice
 	move.l	d5,SV_END(a2)
 	movem.l	(sp)+,d5-d7/a2
 	rts
+
+;	The CIA-B TOD counting: its count written back (after a reset it waits for a write). Uses d0-d1.
+mx_todrun
+	move.b	(CIAB_CRB).l,d1
+	bclr	#7,(CIAB_CRB).l
+	move.b	d1,-(sp)
+	bsr	mx_tod24
+	move.l	d0,d1
+	swap	d1
+	move.b	d1,(CIAB_TODHI).l
+	move.w	d0,d1
+	lsr.w	#8,d1
+	move.b	d1,(CIAB_TODMID).l
+	move.b	d0,(CIAB_TODLO).l
+	move.b	(sp)+,d1
+	btst	#7,d1
+	beq.s	.x
+	bset	#7,(CIAB_CRB).l
+.x	rts
 
 ;	d0 = the CIA-B TOD (24 bits). Uses d0.
 mx_tod24

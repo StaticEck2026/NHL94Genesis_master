@@ -355,7 +355,8 @@ The hardware layer:
   same 28.6 kHz): 9 voices in all. A new sound takes Paula's own voices first, so the CPU mixes
   only what more than 3 sounds at once need. The mix is written a frame and some ahead of
   where Paula plays, which is counted from the CIA-B TOD (horizontal syncs), so the two keep in
-  step. The crowd noise was the PSG's: white noise clocked by its third tone channel (4661 Hz),
+  step. The game writes the TOD's count back to it at start-up: after a reset the TOD waits for
+  that write before it counts (vAmiga emulates this), and a Kickstart need not make it. The crowd noise was the PSG's: white noise clocked by its third tone channel (4661 Hz),
   at a volume the game moves toward the crowd's excitement. It is a 3.5 second loop of that
   noise, made at start-up from the PSG's noise register, played on a left and a right voice
   (the PSG is heard in the middle; Paula's voices 0 and 3 are on the left, 1 and 2 on the
@@ -425,7 +426,8 @@ blank could, to check the ring survives that anywhere. `NHL_CHIPWAIT=n` charges 
 CPU access to chip memory or a custom register (8 is about what FS-UAE's A1200 takes while
 the blitter runs), so the renderer's cycles weigh its chip writes as the Amiga does. The
 harness gives the sprite image ring a second part as the launcher would, 256 KB
-(`NHL_SCX=bytes`, 0 for none). `NHL_HAZARD=n` reports (up to n)
+(`NHL_SCX=bytes`, 0 for none). `NHL_TODSTOP=1` starts the CIA-B TOD stopped, as after a reset,
+until the program writes it. `NHL_HAZARD=n` reports (up to n)
 blits that read a word the CPU wrote after the blit was queued (after it wrote the copper's
 move that starts it), with the pc of that write and of the queueing: what a queued blit reads
 has to stay as it was until it has run, a vertical blank's restart included. (A cookie cut's
