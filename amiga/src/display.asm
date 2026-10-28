@@ -16,6 +16,7 @@ ds_wide		ds.b	1
 ds_big		ds.b	1
 ds_win		ds.b	1
 ds_lines	ds.b	1
+ds_rink		ds.b	1
 
 	section	game,code
 
@@ -32,6 +33,7 @@ ds_setup
 	move.w	(VmMAP3).l,(ds_ntw).l
 	sf	(ds_win).l
 	sf	(ds_lines).l
+	sf	(ds_rink).l
 	clr.l	(ds_vs).l
 	lea	(ds_hs).l,a0
 	moveq	#224/4-1,d0

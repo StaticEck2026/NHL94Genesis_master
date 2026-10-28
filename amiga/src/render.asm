@@ -69,6 +69,9 @@ rd_skey		ds.l	1
 rd_spn		ds.w	1
 rd_w		ds.w	1
 rd_cells	ds.w	1
+rd_gx		ds.w	1
+rd_gw		ds.w	1
+rd_acells	ds.w	1
 rd_cw		ds.w	1
 rd_ch		ds.w	1
 rd_bx0		ds.w	1
@@ -632,11 +635,19 @@ rd_frame
 	move.w	#256,d0
 	moveq	#33,d1
 	tst.b	(rd_lwide).l
-	beq	.h32
-	move.w	#320,d0
+	bne.s	.h40
+	tst.w	(rd_gx).l
+	beq.s	.h32
+.h40	move.w	#320,d0
 	moveq	#41,d1
 .h32	move.w	d0,(rd_w).l
 	move.w	d1,(rd_cells).l
+	tst.w	(rd_gx).l
+	beq.s	.gw
+	move.w	#256,d0
+	moveq	#33,d1
+.gw	move.w	d0,(rd_gw).l
+	move.w	d1,(rd_acells).l
 	tst.b	(rd_llines).l
 	beq.s	.hw
 	tst.b	(rd_hsuni).l
@@ -2874,13 +2885,27 @@ rd_scrollpos
 	mulu.w	#SROW,d1
 	add.l	(rd_buf).l,d1
 	move.l	d1,(rd_back).l
-	rts
+	bra.s	.mode
 .copy	move.w	d0,(rd_bx0).l
 	clr.w	(rd_scroll).l
 	move.w	#SCRX*8,(rd_xorg).l
 	clr.w	(rd_brow0).l
 	move.l	(rd_buf).l,(rd_back).l
-	rts
+.mode	; the buffer drawn the other way last time: all of it again
+	move.w	(rd_bufi).l,d0
+	lea	(rd_bmode).l,a0
+	move.b	(rd_scroll+1).l,d1
+	cmp.b	(a0,d0.w),d1
+	beq.s	.x
+	move.b	d1,(a0,d0.w)
+	lea	(rd_opoldn).l,a0
+	move.w	#-1,(a0,d0.w*2)
+	movea.l	(rd_dmap).l,a0
+	moveq	#-1,d1
+	moveq	#DROWS-1,d0
+.d	move.l	d1,(a0)+
+	dbf	d0,.d
+.x	rts
 
 ;	Scroll mode: blit the parts of the back buffer its dirty map names back from the plane B bitmap.
 rd_restore
@@ -3179,6 +3204,8 @@ rd_snapshot
 	bsr	rd_layout_take
 	move.l	(ds_vs).l,(rd_vs).l
 	move.l	(ds_hs).l,(rd_hs).l
+	move.w	(rd_gx).l,d0
+	add.w	d0,(rd_hs+2).l
 	sf	(rd_hsuni).l
 	sf	(rd_hslb).l
 	tst.b	(ds_lines).l
@@ -3274,8 +3301,20 @@ rd_snapshot
 	move	(sp)+,sr
 	rts
 
-;	The layout (display.asm) this frame is drawn with (rd_layout). Uses d0.
+;	The layout (display.asm) this frame is drawn with; the rink in play is drawn 320 wide, the
+;	game's 256 in its middle (rd_gx). Uses d0.
 rd_layout_take
+	clr.w	(rd_gx).l
+	tst.b	(ds_rink).l
+	beq.s	.g
+	tst.b	(ds_wide).l
+	bne.s	.g
+	tst.b	(ds_win).l
+	bne.s	.g
+	btst	#sfhor,(sflags).l
+	bne.s	.g
+	move.w	#32,(rd_gx).l
+.g
 	move.b	(ds_wide).l,(rd_lwide).l
 	move.b	(ds_lines).l,(rd_llines).l
 	move.b	(ds_win).l,(rd_lwin).l
@@ -4579,10 +4618,14 @@ rd_ovl_cells_changed
 	move.w	d7,d5
 	subq.w	#1,d5
 	and.w	d5,d1
-	cmp.w	(rd_cells).l,d2
+	cmp.w	(rd_acells).l,d2
 	bhi.s	.askip
 	cmpi.w	#28,d1
 	bhi.s	.askip
+	move.w	d2,d5
+	lsl.w	#3,d5
+	cmp.w	(rd_gw).l,d5
+	bhs.s	.askip
 	movem.l	d0-d1,-(sp)
 	move.w	d2,d4
 	move.w	d1,d5
@@ -4594,6 +4637,7 @@ rd_ovl_cells_changed
 	lsl.w	#3,d2
 	lsl.w	#3,d1
 	exg	d1,d2
+	add.w	(rd_gx).l,d1
 	bsr	rd_ovl_setcell
 .askip	movem.l	(sp)+,d0/d3-d4/a4
 	addq.w	#1,d0
@@ -4622,6 +4666,7 @@ rd_ovl_cells_changed
 	lsl.w	#3,d2
 	lsl.w	#3,d1
 	exg	d1,d2
+	add.w	(rd_gx).l,d1
 	bsr	rd_ovl_setcell
 .wskip	movem.l	(sp)+,d0/d3-d4/a4
 	addq.w	#1,d0
@@ -4833,7 +4878,8 @@ rd_buildA
 	move.w	d0,(a3)+
 	move.w	d6,(a3)+
 	move.w	d7,(a3)+
-	move.w	(rd_cells).l,(a3)+
+	move.w	(rd_acells).l,(a3)+
+	move.w	(rd_gx).l,(a3)+
 	lea	(rd_akeynew).l,a0
 	lea	(rd_akey).l,a1
 	moveq	#0,d5
@@ -4982,8 +5028,8 @@ rd_buildA
 	move.l	14(a0),d0
 	cmp.l	14(a1),d0
 	bne	.fa
-	move.w	18(a0),d0
-	cmp.w	18(a1),d0
+	move.l	18(a0),d0
+	cmp.l	18(a1),d0
 	bne	.fa
 	move.w	(rd_tcn).l,d0
 	beq.s	.pt
@@ -5073,7 +5119,7 @@ rd_buildA
 	lsl.w	#3,d2
 	bsr	rd_addcell
 .wn	addq.w	#1,d4
-	cmp.w	(rd_cells).l,d4
+	cmp.w	(rd_acells).l,d4
 	blt	.wc
 	addq.w	#1,d5
 	cmpi.w	#28,d5
@@ -5125,7 +5171,7 @@ rd_buildA
 	bne	.an
 	bsr	rd_addcell
 .an	addq.w	#1,d4
-	cmp.w	(rd_cells).l,d4
+	cmp.w	(rd_acells).l,d4
 	ble	.ac
 	addq.w	#1,d5
 	cmpi.w	#28,d5
@@ -5156,9 +5202,11 @@ rd_addcell
 	ble	.x
 	cmpi.w	#SCRH,d2
 	bge	.x
-	cmp.w	(rd_w).l,d1
+	cmp.w	(rd_gw).l,d1
 	bge	.x
-	move.w	d1,(a2)+
+	move.w	(rd_gx).l,d3
+	add.w	d1,d3
+	move.w	d3,(a2)+
 	move.w	d2,(a2)+
 	move.w	d0,(a2)+
 .x	move.l	(sp)+,d3
@@ -5232,6 +5280,7 @@ rd_sprite_blit
 	move.w	6(a4),d3
 	andi.w	#$1FF,d3
 	subi.w	#128,d3
+	add.w	(rd_gx).l,d3
 	move.w	d3,(rd_sx).l
 	move.w	4(a4),(rd_sat).l
 	cmpi.w	#SCRH,d0
@@ -6464,6 +6513,7 @@ rd_obj_blit
 	move.w	6(a5),d3
 	andi.w	#$1FF,d3
 	subi.w	#128,d3
+	add.w	(rd_gx).l,d3
 	add.w	24(a2),d3
 	move.w	d3,(rd_sx).l
 	move.w	(a5),d0
@@ -8582,6 +8632,8 @@ rd_oplists	ds.b	(NBUF+1)*OPMAX*OPREC
 rd_octab	ds.l	8*OBJSLOTS
 rd_opold	ds.l	NBUF
 rd_opoldn	ds.w	NBUF
+rd_bmode	ds.b	NBUF
+	even
 rd_opnew	ds.l	1
 rd_opn		ds.w	1
 rd_opbox	ds.l	1

@@ -128,8 +128,16 @@ a second with it. `F10` shows the frames drawn in the last second in the top lef
 
 ### Screen
 
-Every screen is shown as the Genesis shows it: the menus 320 pixels wide, the rink 256 (the
-Genesis' H32 mode), centred.
+The rink in play fills the screen's width, 320 pixels, where the Genesis shows 256 of it (its H32
+mode): the view takes in 32 more pixels of the rink at each side, and the camera moves 32 pixels
+less to either side, so the rink's 384 pixel width, boards and stands, still fills it at the
+camera's limits. Players, the puck and the arrows to players off screen count as on screen to
+the new edges. The score and clock boxes, the faceoff and goal boxes and the other overlays keep
+their places in the middle. The pictures the Genesis draws only 256 pixels wide (the title, the
+pause and scoreboard screens) are shown that size, centred; the menus are 320. Every screen is
+224 lines high: the rink's plane holds 32 rows of cells and the game writes each new row only 2
+rows beyond the view, so the view cannot be taller than the Genesis' (at 60 Hz the picture
+fills the screen's height; at 50 Hz there is a border of 16 lines above and below).
 
 In vAmigaWeb, set "visible display area" to "viewport tracking" in the settings: it then zooms to
 the picture the game shows, without the borders. The 4 way play adaptor modes are not
@@ -280,14 +288,18 @@ The hardware layer:
   menus are mostly overlay: a full cut takes the blitter some 2 frames). When only plane A's
   scroll changed, the bands the window fills are kept and only the others drawn again (the title
   screen's credits scroll under its picture, which is the window). On
-  the 256 pixel wide screens (the rink) the overlay's high priority part,
+  the 256 pixel wide screens the overlay's high priority part,
   the score and clock boxes, is shown by up to 4 attached pairs of AGA 64 pixel wide hardware
   sprites (15 colours of their own) instead of being blitted every frame; only the bytes of a
   cell the game changes are made again (a clock digit). Each screen buffer shows its own copy
   of the sprites, brought up to date when its frame is made (the bands of 8 lines changed since
   its last copy), so a frame queued before a change keeps the HUD of its own moment (a clock
   digit changes with the picture). If it does not fit
-  (wider, more than 4 groups of 8 columns, 64 lines or 15 colours) it is blitted as before.
+  (wider, more than 4 groups of 8 columns, 64 lines or 15 colours) it is blitted as before, and on
+  the 320 pixel wide screens it always is (the display's early fetch takes the sprites' DMA
+  slots). The rink drawn 320 wide is the game's 256 with its plane B scrolled 32 pixels further,
+  its sprites placed 32 to the right and plane A and the window drawn only over the middle 256
+  (`rd_gx`): beyond them the game keeps tiles in the planes' unseen columns.
   Sprites are blits of images kept in a cache in chip RAM, built once from the tiles (in fast
   memory, then copied in longs; rows without a spare word for the shift: the blit reads past
   the row and its last word mask clears what it read). An image

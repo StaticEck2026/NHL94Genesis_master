@@ -987,7 +987,7 @@ int main(int argc, char **argv)
     {
         uint32_t w = rd32(rd32(dbg + DB_RCV));
         if (w) fprintf(stderr, "renderer: the copper and the blit queue set up again %u times\n", w);
-        uint32_t h = 2166136261u, r = rd32(rd32(dbg + DB_RAM)) & 0xFFFFFF;
+        uint32_t h = 2166136261u, r = rd32(dbg + DB_RAM) & 0xFFFFFF;
         for (uint32_t i = 0; i < 0x10000; i++) h = (h ^ mem[(r + i) & 0xFFFFFF]) * 16777619u;
         fprintf(stderr, "game RAM %08x\n", h);
     }

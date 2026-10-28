@@ -253,6 +253,21 @@ P('video94.asm', """	movem.l	d0-d4/a0-a2,-(sp)
 
 # The picture's layout: colours, scroll, screen width.
 P('hockey94.asm', '\tmove.w\t(Vctrl).l,d0\n', '\tmove.w\t(hal_pal50).l,d0\n')
+# The rink 320 wide (render.asm rd_gx): the camera moves 32 less each way, on screen is 32 further.
+P('setup94.asm', '\tbsr.w\tsetVram\n\tbclr\t#sfpz,(sflags).w', '\tbsr.w\tsetVram\n\tst\t(ds_rink).l\n\tbclr\t#sfpz,(sflags).w')
+P('replay94.asm', '\tcmp.w\t#$3C,d0\n\tblt.w\t.4\n\tmove.w\t#$3C,d0\n.4\n\tcmp.w\t#$FFC4,d0\n\tbgt.w\t.1\n\tmove.w\t#$FFC4,d0\n',
+  '\tcmp.w\t#$1C,d0\n\tblt.w\t.4\n\tmove.w\t#$1C,d0\n.4\n\tcmp.w\t#$FFE4,d0\n\tbgt.w\t.1\n\tmove.w\t#$FFE4,d0\n')
+P('replay94.asm', '\tmove.w\t#$3C,d0\n\tcmp.w\t(Hpos).w,d0\n\tblt.w\t.0\n\tmove.w\t#$FFC4,d0\n',
+  '\tmove.w\t#$1C,d0\n\tcmp.w\t(Hpos).w,d0\n\tblt.w\t.0\n\tmove.w\t#$FFE4,d0\n')
+P('replay94.asm', '\tcmp.w\t#$FFC4,d1\n\tbge.w\t.4\n\tmove.w\t#$FFC4,d1\n', '\tcmp.w\t#$FFE4,d1\n\tbge.w\t.4\n\tmove.w\t#$FFE4,d1\n')
+P('replay94.asm', '\tcmp.w\t#$3C,d1\n\tble.w\t.4\n\tmove.w\t#$3C,d1\n', '\tcmp.w\t#$1C,d1\n\tble.w\t.4\n\tmove.w\t#$1C,d1\n')
+P('display94.asm', '.crange\n\tcmp.w\t#$90,d0\n\tbgt.w\t.offscr\n\tcmp.w\t#$FF70,d0\n',
+  '.crange\n\tcmp.w\t#$B0,d0\n\tbgt.w\t.offscr\n\tcmp.w\t#$FF50,d0\n')
+P('display94.asm', '\tcmp.w\t#$74,d0\t\t\t\t\t;.xoff = 116\n', '\tcmp.w\t#$94,d0\n')
+P('display94.asm', '\tcmp.w\t#$FF8C,d0\t\t\t\t;-.xoff\n', '\tcmp.w\t#$FF6C,d0\n')
+P('checks94.asm', "\tcmp.w\t#$74,d0\t\t\t\t\t;'t'   ; compare $74 to Xpos diff\n", '\tcmp.w\t#$94,d0\n')
+P('checks94.asm', '\tcmp.w\t#$FF8C,d0\t\t\t\t;compare -$74 to Xpos diff\n', '\tcmp.w\t#$FF6C,d0\n')
+P('period94.asm', '\tsubi.w\t#$90,d0\n\taddi.w\t#$80,d1\n', '\tsubi.w\t#$B0,d0\n\taddi.w\t#$A0,d1\n')
 _NOWIN = '\tsf\t(ds_win).l\t\t\t;(display.asm: no window)\n\taddq.l\t#1,(ds_gen).l\n'
 P('hockey94.asm', '.hor\tmovea.l\t#Vdata,a0\n\tmove.w\t#VDPR_WINX,Vctrl-Vdata(a0)\n\tmove.w\t#VDPR_WINY,Vctrl-Vdata(a0)\n',
   '.hor\n' + _NOWIN)
